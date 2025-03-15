@@ -142,25 +142,6 @@ const SignIn = () => {
               </Link>
             </p>
 
-            <div className="mt-8">
-              <p className="text-xs text-center text-gray-500">
-                For demo purposes, use these emails:
-              </p>
-              <div className="mt-2 space-y-2">
-                <div className="text-xs text-gray-500 flex items-center justify-center">
-                  <Check size={12} className="text-green-500 mr-1" />
-                  admin@example.com (Admin)
-                </div>
-                <div className="text-xs text-gray-500 flex items-center justify-center">
-                  <Check size={12} className="text-green-500 mr-1" />
-                  landlord@example.com (Landlord)
-                </div>
-                <div className="text-xs text-gray-500 flex items-center justify-center">
-                  <Check size={12} className="text-green-500 mr-1" />
-                  tenant@example.com (Tenant)
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </motion.div>

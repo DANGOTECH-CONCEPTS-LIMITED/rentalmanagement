@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock login - in a real app, you would call an API
+      // Mock login
       let mockUser: User;
       
       if (email === 'admin@example.com') {
@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock registration - in a real app, you would call an API
+      // Mock registration 
       const mockUser: User = {
         id: Math.random().toString(36).substring(2, 11),
         name,
