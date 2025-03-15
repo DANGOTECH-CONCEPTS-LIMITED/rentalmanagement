@@ -48,8 +48,8 @@ const SignIn = () => {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="p-8">
             <div className="mb-8 text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h1>
-              <p className="text-gray-600">Please sign in to continue</p>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Rental Hub</h1>
+              <p className="text-gray-600">Your one stop property management solution</p>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -138,7 +138,7 @@ const SignIn = () => {
                 to="/signup"
                 className="font-medium text-primary hover:text-primary/80"
               >
-                Sign up
+                contact Admin
               </Link>
             </p>
 

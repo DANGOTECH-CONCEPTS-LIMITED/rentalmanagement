@@ -1,5 +1,4 @@
-RENTAL MANAGEMENT APP - https://DANGOTECH-CONCEPTS-LIMITED.github.io/rentalmanagement/
-              
+RENTAL MANAGEMENT APP 
 For demo purposes, use these emails
     admin@example.com (Admin)
     landlord@example.com (Landlord)
