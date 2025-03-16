@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,7 +21,7 @@ import TenantDashboard from "./pages/Dashboard/TenantDashboard";
 import RegisterLandlord from "./pages/Admin/RegisterLandlord";
 import RegisterProperty from "./pages/Admin/RegisterProperty";
 import ManageUsers from "./pages/Admin/ManageUsers";
-import LandlordProperties from "./pages/Admin/LandlordProperties";  
+import LandlordProperties from "./pages/Admin/LandlordProperties";
 import Reports from "./pages/Admin/Reports";
 import SystemSettings from "./pages/Admin/SystemSettings";
 
@@ -40,7 +39,9 @@ import ManageTenants from "./pages/Landlord/ManageTenants";
 import TrackPayments from "./pages/Landlord/TrackPayments";
 import Index from "./pages/Index";
 
-const queryClient = new QueryClient();
+// ✅ Dynamically set `basename` for correct routing in GitHub Pages
+const isProduction = import.meta.env.MODE === "production";
+const basename = isProduction ? "/rentalmanagement" : "";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -48,7 +49,9 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+
+        {/* Fix for both local & GitHub Pages */}
+        <BrowserRouter basename={basename}>
           <ScrollToTop />
           <Routes>
             {/* Home/Auth Routes */}
