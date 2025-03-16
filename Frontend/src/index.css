@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
@@ -94,6 +93,11 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  /* Make sure images and tables don't overflow on mobile */
+  img, table {
+    @apply max-w-full;
+  }
 }
 
 @layer components {
@@ -136,6 +140,49 @@
   .input-field {
     @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
+  
+  /* Responsive table utilities */
+  .table-container {
+    @apply w-full overflow-x-auto rounded-md border;
+  }
+  
+  .responsive-table {
+    @apply w-full table-auto;
+  }
+  
+  /* Mobile card view for tables */
+  .mobile-card {
+    @apply p-4 bg-card border rounded-lg shadow-sm mb-3;
+  }
+  
+  .mobile-card-row {
+    @apply flex justify-between py-2 border-b last:border-b-0;
+  }
+  
+  .mobile-card-label {
+    @apply text-xs text-muted-foreground;
+  }
+  
+  .mobile-card-value {
+    @apply font-medium;
+  }
+  
+  /* Responsive layout helpers */
+  .page-container {
+    @apply p-4 md:p-6;
+  }
+  
+  .page-header {
+    @apply flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6;
+  }
+  
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4;
+  }
+  
+  .responsive-form {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
 }
 
 .shimmer {
@@ -172,6 +219,7 @@
   transition: opacity 300ms, transform 300ms;
 }
 
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -188,4 +236,31 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(156, 163, 175, 0.7);
+}
+
+/* Media query for touch devices to improve scrolling */
+@media (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Additional responsive utilities */
+@media (max-width: 640px) {
+  .sm\:hidden {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .md\:hidden {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lg\:hidden {
+    display: none;
+  }
 }

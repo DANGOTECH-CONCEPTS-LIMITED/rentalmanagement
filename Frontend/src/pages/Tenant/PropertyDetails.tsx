@@ -18,12 +18,12 @@ const PropertyDetails = () => {
     leaseStart: '2023-01-01',
     leaseEnd: '2024-01-01',
     landlord: {
-      name: 'Jojo J',
-      phone: '(256) 123-4567',
-      email: 'jojo@example.com'
+      name: 'John Doe',
+      phone: '(555) 123-4567',
+      email: 'john.doe@example.com'
     },
     amenities: ['Air Conditioning', 'Dishwasher', 'Laundry', 'Parking', 'Gym Access'],
-    imageUrl: '../uploads/studioroom.jpg'
+    imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60'
   });
 
   return (

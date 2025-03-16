@@ -1,9 +1,11 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Search, Plus, Edit, Trash2, Eye, Filter, Download } from 'lucide-react';
+import { FileText, Search, Plus, Edit, Trash2, Eye, Filter, Download, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import ContractGenerator from '@/components/contract/ContractGenerator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 interface Contract {
@@ -19,6 +21,7 @@ interface Contract {
 const RentalContracts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showContractGenerator, setShowContractGenerator] = useState(false);
   
   // Mock data for rental contracts
   const [contracts, setContracts] = useState<Contract[]>([
@@ -106,9 +109,12 @@ const RentalContracts = () => {
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Rental Contracts</h1>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          <span>New Contract</span>
+        <Button 
+          className="flex items-center gap-2"
+          onClick={() => setShowContractGenerator(true)}
+        >
+          <FilePlus className="h-4 w-4" />
+          <span>Add New Contract</span>
         </Button>
       </div>
 
@@ -203,6 +209,13 @@ const RentalContracts = () => {
           </table>
         </div>
       </div>
+
+      {/* Contract Generator Dialog */}
+      <Dialog open={showContractGenerator} onOpenChange={setShowContractGenerator}>
+        <DialogContent className="max-w-5xl">
+          <ContractGenerator onClose={() => setShowContractGenerator(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

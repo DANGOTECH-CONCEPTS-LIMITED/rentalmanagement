@@ -1,4 +1,3 @@
-
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/layout/Header";
@@ -18,10 +17,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ role }) => {
   const effectiveRole = user?.role || role;
   
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar role={effectiveRole} />
       
-      <div className={`flex-1 flex flex-col ${isMobile ? 'pl-0' : 'pl-64'}`}>
+      <div className={`flex-1 flex flex-col ${isMobile ? 'pl-0' : 'pl-64'} w-full`}>
         <Header />
         
         <motion.main 
@@ -30,7 +29,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ role }) => {
           transition={{ duration: 0.3 }}
           className="flex-1 overflow-auto"
         >
-          <div className={`mx-auto p-4 md:p-6 ${isMobile ? 'max-w-full' : 'container'}`}>
+          <div className={`mx-auto p-2 sm:p-4 md:p-6 ${isMobile ? 'max-w-full' : 'container'}`}>
             <Outlet />
           </div>
         </motion.main>

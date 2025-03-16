@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Users, Search, Eye, Edit, Trash, CheckCircle, XCircle, Calendar, Home, CreditCard, Phone, X } from 'lucide-react';
+import { Users, Search, Eye, Edit, Trash, CheckCircle, XCircle, Calendar, Home, CreditCard, XIcon, PhoneIcon } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 interface Tenant {
@@ -251,7 +251,7 @@ const ManageTenants = () => {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Tenant Details</h2>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedTenant(null)}>
-                  <X className="h-4 w-4" />
+                  <XIcon className="h-4 w-4" />
                 </Button>
               </div>
               
@@ -282,7 +282,7 @@ const ManageTenants = () => {
                         <div>
                           <span className="text-xs text-muted-foreground">Phone</span>
                           <p className="flex items-center">
-                            <Phone size={14} className="mr-1" />
+                            <PhoneIcon size={14} className="mr-1" />
                             {selectedTenant.phone}
                           </p>
                         </div>
@@ -341,7 +341,10 @@ const ManageTenants = () => {
                     <div className="flex space-x-3">
                       <Button>Record Payment</Button>
                       <Button variant="outline">Update Information</Button>
-                      <Button variant="destructive">Remove Tenant</Button>
+                      <Button variant="destructive">
+                        <Trash size={14} className="mr-1" />
+                        Remove Tenant
+                      </Button>
                     </div>
                   </div>
                 </div>

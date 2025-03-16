@@ -1,8 +1,9 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -20,28 +21,27 @@ import TenantDashboard from "./pages/Dashboard/TenantDashboard";
 // Admin Pages
 import RegisterLandlord from "./pages/Admin/RegisterLandlord";
 import RegisterProperty from "./pages/Admin/RegisterProperty";
-import ManageUsers from "./pages/Admin/ManageUsers";
 import LandlordProperties from "./pages/Admin/LandlordProperties";
+import ManageUsers from "./pages/Admin/ManageUsers";
 import Reports from "./pages/Admin/Reports";
 import SystemSettings from "./pages/Admin/SystemSettings";
 
 // Tenant Pages
 import PropertyDetails from "./pages/Tenant/PropertyDetails";
+import AvailableProperties from "./pages/Tenant/AvailableProperties";
 import MakePayment from "./pages/Tenant/MakePayment";
 import PaymentHistory from "./pages/Tenant/PaymentHistory";
 import SubmitComplaint from "./pages/Tenant/SubmitComplaint";
 
 // Landlord Pages
 import RegisterTenants from "./pages/Landlord/RegisterTenants";
+import ManageTenants from "./pages/Landlord/ManageTenants";
 import RentalContracts from "./pages/Landlord/RentalContracts";
 import HandleComplaints from "./pages/Landlord/HandleComplaints";
-import ManageTenants from "./pages/Landlord/ManageTenants";
 import TrackPayments from "./pages/Landlord/TrackPayments";
 import Index from "./pages/Index";
 
-// ✅ Dynamically set `basename` for correct routing in GitHub Pages
-const isProduction = import.meta.env.MODE === "production";
-const basename = isProduction ? "/rentalmanagement" : "";
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -49,9 +49,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-
-        {/* Fix for both local & GitHub Pages */}
-        <BrowserRouter basename={basename}>
+        <HashRouter>
           <ScrollToTop />
           <Routes>
             {/* Home/Auth Routes */}
@@ -64,8 +62,8 @@ const App = () => (
                 <Route index element={<AdminDashboard />} />
                 <Route path="register-landlord" element={<RegisterLandlord />} />
                 <Route path="register-property" element={<RegisterProperty />} />
-                <Route path="manage-users" element={<ManageUsers />} />
                 <Route path="landlord-properties" element={<LandlordProperties />} />
+                <Route path="manage-users" element={<ManageUsers />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="system-settings" element={<SystemSettings />} />
               </Route>
@@ -76,9 +74,9 @@ const App = () => (
               <Route path="/landlord-dashboard" element={<AppLayout role="landlord" />}>
                 <Route index element={<LandlordDashboard />} />
                 <Route path="register-tenants" element={<RegisterTenants />} />
+                <Route path="manage-tenants" element={<ManageTenants />} />
                 <Route path="rental-contracts" element={<RentalContracts />} />
                 <Route path="complaints" element={<HandleComplaints />} />
-                <Route path="manage-tenants" element={<ManageTenants />} />
                 <Route path="payments" element={<TrackPayments />} />
               </Route>
             </Route>
@@ -88,6 +86,7 @@ const App = () => (
               <Route path="/tenant-dashboard" element={<AppLayout role="tenant" />}>
                 <Route index element={<TenantDashboard />} />
                 <Route path="property-details" element={<PropertyDetails />} />
+                <Route path="available-properties" element={<AvailableProperties />} />
                 <Route path="make-payment" element={<MakePayment />} />
                 <Route path="payment-history" element={<PaymentHistory />} />
                 <Route path="submit-complaint" element={<SubmitComplaint />} />
@@ -97,7 +96,7 @@ const App = () => (
             {/* Fallback Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>

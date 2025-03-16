@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { House, Search, Eye, Edit, Trash } from 'lucide-react';
+import { House, Search, Eye, Edit, Trash, XIcon } from 'lucide-react';
 
 interface Property {
   id: string;
@@ -39,7 +39,7 @@ const LandlordProperties = () => {
           address: '123 Main St, Kampala, Uganda',
           type: 'Apartment',
           units: 8,
-          landlordName: 'Jojo J',
+          landlordName: 'John Doe',
           landlordId: 'land1',
           images: [
             'https://images.unsplash.com/photo-1460317442991-0ec209397118',
@@ -78,7 +78,7 @@ const LandlordProperties = () => {
           address: '101 Business Blvd, Kampala, Uganda',
           type: 'Commercial',
           units: 5,
-          landlordName: 'Jojo J',
+          landlordName: 'John Doe',
           landlordId: 'land1',
           images: [
             'https://images.unsplash.com/photo-1497366754035-f200968a6e72',
@@ -188,7 +188,7 @@ const LandlordProperties = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">{selectedProperty.name}</h2>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedProperty(null)}>
-                  <X className="h-4 w-4" />
+                  <XIcon className="h-4 w-4" />
                 </Button>
               </div>
               
