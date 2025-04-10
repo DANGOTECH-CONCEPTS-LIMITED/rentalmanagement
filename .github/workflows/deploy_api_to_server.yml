@@ -1,0 +1,55 @@
+name: Deploy RENTALMANAGEMENT .NET API to AWS EC2 Windows (IIS)
+
+on:
+  push:
+    branches: [ main ]  # Adjust to your preferred branch
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. Set up .NET (adjust the version as needed)
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.x'
+
+      # 3. Restore dependencies from your solution
+      - name: Restore Dependencies
+        run: dotnet restore Backend/PropertyManagementApi.sln
+
+      # 4. Build the solution in Release configuration
+      - name: Build Solution
+        run: dotnet build Backend/PropertyManagementApi.sln --configuration Release --no-restore
+
+      # 5. Publish the API project to a folder called 'publish'
+      - name: Publish API
+        run: dotnet publish Backend/API/API.csproj --configuration Release --output ./publish --no-build
+
+      # 6. Copy the published files to your EC2 Windows instance using SCP
+      - name: Copy Published Files to EC2
+        uses: appleboy/scp-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          source: "./publish/"
+          # Adjust the target path to match your IIS website's physical path
+          target: "C:/inetpub/wwwroot/PropertyManagementApi"
+
+      # 7. Restart the IIS website on the EC2 Windows instance via SSH
+      - name: Restart IIS Website on EC2
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Import-Module WebAdministration; Stop-Website -Name 'PropertyManagementApi'; Start-Website -Name 'PropertyManagementApi'"
