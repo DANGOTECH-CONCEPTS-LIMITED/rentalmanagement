@@ -61,7 +61,12 @@ using (var scope = app.Services.CreateScope())
 
 // Always show Swagger
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    // If your site uses a base path, uncomment and set it accordingly:
+    // c.RoutePrefix = "PropertyManagementApi";
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Property Management API v1");
+});
 
 app.UseAuthorization();
 app.MapControllers();

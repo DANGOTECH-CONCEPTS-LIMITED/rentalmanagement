@@ -113,3 +113,4 @@ D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debu
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
