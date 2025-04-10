@@ -1,67 +1,62 @@
-name: Deploy RENTALMANAGEMENT .NET API to AWS EC2 Windows (IIS)
+name: Deploy .NET API to Windows EC2 with Zip & Unzip
 
 on:
   push:
-    branches: [ main ]  # Adjust to your preferred branch
+    branches: [ main ]
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest  # Use Ubuntu runner for container actions
+    runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the repository
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      # 2. List all files to verify the file structure
-      - name: List Repository Files
-        run: |
-          echo "Listing all files in the repository:"
-          find .
-      
-      # 3. Set up .NET (adjust the version as needed)
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.x'
-      
-      # 4. Restore dependencies from your solution
-      - name: Restore Dependencies
+
+      - name: Restore
         run: dotnet restore Backend/PropertyManagementApi/PropertyManagementApi.sln
 
-      # 5. Build the solution in Release configuration
-      - name: Build Solution
+      - name: Build
         run: dotnet build Backend/PropertyManagementApi/PropertyManagementApi.sln --configuration Release --no-restore
 
-      # 6. Publish the API project to a folder called 'publish'
-      - name: Publish API
+      - name: Publish
         run: dotnet publish Backend/PropertyManagementApi/API/API.csproj --configuration Release --output ./publish --no-build
 
-      # 7. Pre-create the target folder on the EC2 Windows instance
-      - name: Create target folder on EC2
-        uses: appleboy/ssh-action@v0.1.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          password: ${{ secrets.EC2_PASSWORD }}
-          port: 22
-          script: |
-            powershell -Command "New-Item -ItemType Directory -Force -Path 'C:\inetpub\wwwroot\PropertyManagementApi'"
+      # 1) Create a zip of the publish folder (on the GitHub runner)
+      - name: Zip Published Files
+        run: |
+          zip -r publish.zip ./publish
 
-      # 8. Copy the published files to your EC2 Windows instance using SCP
-      - name: Copy Published Files to EC2
+      # 2) Copy the zip file to the Windows server
+      - name: Copy Zip File to EC2
         uses: appleboy/scp-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
-          source: "./publish/"
+          source: "publish.zip"
+          # Use a Unix-style path so scp can write to the Windows drive.
           target: "/c/inetpub/wwwroot/PropertyManagementApi"
-          debug: true
 
-      # 9. Restart the IIS website on the EC2 Windows instance via SSH
-      - name: Restart IIS Website on EC2
+      # 3) SSH into Windows and unzip using PowerShell
+      - name: Unzip on Windows EC2
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          # Expand-Archive overwrites existing files with -Force
+          script: |
+            powershell -Command "Expand-Archive -Path 'C:\\inetpub\\wwwroot\\PropertyManagementApi\\publish.zip' -DestinationPath 'C:\\inetpub\\wwwroot\\PropertyManagementApi' -Force"
+      
+      # 4) Restart IIS
+      - name: Restart IIS Website
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
