@@ -26,18 +26,13 @@ jobs:
         with:
           dotnet-version: '9.x'
 
-      # 4. Restore dependencies from your solution
-      # If your solution file is at the repository root, use "PropertyManagementApi.sln"
-      # If it's inside the Backend folder, use "Backend/PropertyManagementApi.sln"
+      # 4. Restore dependencies from your solution in the Backend folder
       - name: Restore Dependencies
-        run: dotnet restore PropertyManagementApi.sln
-        # To use the file inside the "Backend" folder, change the above line to:
-        # run: dotnet restore Backend/PropertyManagementApi.sln
+        run: dotnet restore Backend/PropertyManagementApi.sln
 
-      # 5. Build the solution in Release configuration
+      # 5. Build the solution in Release configuration from the Backend folder
       - name: Build Solution
-        run: dotnet build PropertyManagementApi.sln --configuration Release --no-restore
-        # Similarly, update the solution path if needed.
+        run: dotnet build Backend/PropertyManagementApi.sln --configuration Release --no-restore
 
       # 6. Publish the API project to a folder called 'publish'
       - name: Publish API
