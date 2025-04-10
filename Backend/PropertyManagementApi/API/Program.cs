@@ -18,18 +18,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddControllers()
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;  // EF Core 5.0+ way
-            });
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles; // EF Core 5.0+ way
+    });
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -49,17 +49,14 @@ var app = builder.Build();
 // Configure CORS
 app.UseCors("AllowAll");
 
-// Apply pending migrations and create the database if it doesn't exist
+// Apply pending migrations (remove EnsureCreated and EnsureDeleted for production)
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // These lines will drop and recreate the DB - adjust as needed for production!
-    dbContext.Database.EnsureCreated();
-    dbContext.Database.EnsureDeleted(); // Note: This line deletes the database; remove it for production!
     dbContext.Database.Migrate();
 }
 
-// Always show Swagger
+// Always show Swagger (adjust the endpoint if your app runs in a subdirectory)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
