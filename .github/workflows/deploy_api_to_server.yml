@@ -52,8 +52,8 @@ jobs:
           script: |
             powershell -Command "Import-Module WebAdministration; Stop-WebAppPool -Name 'PropertyManagementApi'"
 
-      # 9. Delete the existing publish folder on EC2 (if it exists)
-      - name: Delete Target Folder on EC2
+      # 9. Clear the contents of the target folder on EC2
+      - name: Clear Target Folder on EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -61,9 +61,9 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "if (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi') { Remove-Item 'C:\inetpub\wwwroot\PropertyManagementApi' -Recurse -Force }"
+            powershell -Command "Start-Sleep -Seconds 5; Get-ChildItem 'C:\inetpub\wwwroot\PropertyManagementApi' -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 
-      # 10. Create the target folder on EC2
+      # 10. (Optional) Delete and re-create the target folder if needed
       - name: Create Target Folder on EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
@@ -72,9 +72,9 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "New-Item -ItemType Directory -Force -Path 'C:\inetpub\wwwroot\PropertyManagementApi'"
+            powershell -Command "if (-Not (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi')) { New-Item -ItemType Directory -Force -Path 'C:\inetpub\wwwroot\PropertyManagementApi' }"
 
-      # 11. Install sshpass (needed for direct scp command)
+      # 11. Install sshpass to use scp directly
       - name: Install sshpass
         run: |
           sudo apt-get update
