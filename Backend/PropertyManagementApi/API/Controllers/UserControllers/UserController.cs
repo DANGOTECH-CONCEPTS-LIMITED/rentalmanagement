@@ -15,7 +15,7 @@ namespace API.Controllers.UserControllers
             _userService = userService;
         }
 
-        [HttpPost("/RegisterUser1")]
+        [HttpPost("/RegisterUser")]
         public async Task<IActionResult> Register([FromBody] User user)
         {
             try
@@ -29,7 +29,7 @@ namespace API.Controllers.UserControllers
             }            
         }
 
-        [HttpGet("/GetAllUsers1")]
+        [HttpGet("/GetAllUsers")]
         public async Task<IActionResult> GetAll()
         {
             try
