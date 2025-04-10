@@ -48,7 +48,8 @@ jobs:
           script: |
             # Attempt to create the target directory;
             # if it exists, ignore the error.
-            mkdir "C:/inetpub/wwwroot/PropertyManagementApi" || echo "Folder may already exist."
+            # mkdir "C:/inetpub/wwwroot/PropertyManagementApi" || echo "Folder may already exist."
+            powershell -Command "New-Item -ItemType Directory -Force -Path 'C:\inetpub\wwwroot\PropertyManagementApi'"
 
       # 8. Copy the published files to your EC2 Windows instance using SCP
       - name: Copy Published Files to EC2
