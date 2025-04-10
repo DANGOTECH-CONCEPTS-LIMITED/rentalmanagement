@@ -13,25 +13,36 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 2. Set up .NET (adjust the version as needed)
+      # 2. List all files to verify the file structure
+      - name: List Repository Files
+        run: |
+          echo "Listing all files in the repository:"
+          dir /s
+
+      # 3. Set up .NET (adjust the version as needed)
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.x'
 
-      # 3. Restore dependencies from your solution
+      # 4. Restore dependencies from your solution
+      # If your solution file is at the repository root, use "PropertyManagementApi.sln"
+      # If it's inside the Backend folder, use "Backend/PropertyManagementApi.sln"
       - name: Restore Dependencies
-        run: dotnet restore Backend/PropertyManagementApi.sln
+        run: dotnet restore PropertyManagementApi.sln
+        # To use the file inside the "Backend" folder, change the above line to:
+        # run: dotnet restore Backend/PropertyManagementApi.sln
 
-      # 4. Build the solution in Release configuration
+      # 5. Build the solution in Release configuration
       - name: Build Solution
-        run: dotnet build Backend/PropertyManagementApi.sln --configuration Release --no-restore
+        run: dotnet build PropertyManagementApi.sln --configuration Release --no-restore
+        # Similarly, update the solution path if needed.
 
-      # 5. Publish the API project to a folder called 'publish'
+      # 6. Publish the API project to a folder called 'publish'
       - name: Publish API
         run: dotnet publish Backend/API/API.csproj --configuration Release --output ./publish --no-build
 
-      # 6. Copy the published files to your EC2 Windows instance using SCP
+      # 7. Copy the published files to your EC2 Windows instance using SCP
       - name: Copy Published Files to EC2
         uses: appleboy/scp-action@v0.1.0
         with:
@@ -40,10 +51,10 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           source: "./publish/"
-          # Adjust the target path to match your IIS website's physical path
+          # Adjust the target path to match your IIS website's physical path on the EC2 instance.
           target: "C:/inetpub/wwwroot/PropertyManagementApi"
 
-      # 7. Restart the IIS website on the EC2 Windows instance via SSH
+      # 8. Restart the IIS website on the EC2 Windows instance via SSH
       - name: Restart IIS Website on EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
