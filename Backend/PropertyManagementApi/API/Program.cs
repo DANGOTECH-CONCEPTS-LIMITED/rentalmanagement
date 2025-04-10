@@ -21,7 +21,8 @@ builder.Services.AddControllers()
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;  // EF Core 5.0+ way
-            }); ;
+            });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -31,6 +32,7 @@ builder.Services.AddCors(options =>
                .AllowAnyHeader();
     });
 });
+
 // Set up Swagger for generating the API documentation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -41,8 +43,6 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1"
     });
 });
-// Remove or comment out the following line if you don't need it
-// builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -53,19 +53,15 @@ app.UseCors("AllowAll");
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    //create database if it doesnt exist
+    // These lines will drop and recreate the DB - adjust as needed for production!
     dbContext.Database.EnsureCreated();
-    //skip any existing table if it exists
-    dbContext.Database.EnsureDeleted();
-    //apply migrations
+    dbContext.Database.EnsureDeleted(); // Note: This line deletes the database; remove it for production!
     dbContext.Database.Migrate();
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Always show Swagger
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthorization();
 app.MapControllers();
