@@ -26,17 +26,17 @@ jobs:
         with:
           dotnet-version: '9.x'
 
-      # 4. Restore dependencies from your solution in the Backend folder
+      # 4. Restore dependencies from your solution in the correct folder
       - name: Restore Dependencies
-        run: dotnet restore Backend/PropertyManagementApi.sln
+        run: dotnet restore Backend/PropertyManagementApi/PropertyManagementApi.sln
 
-      # 5. Build the solution in Release configuration from the Backend folder
+      # 5. Build the solution in Release configuration
       - name: Build Solution
-        run: dotnet build Backend/PropertyManagementApi.sln --configuration Release --no-restore
+        run: dotnet build Backend/PropertyManagementApi/PropertyManagementApi.sln --configuration Release --no-restore
 
       # 6. Publish the API project to a folder called 'publish'
       - name: Publish API
-        run: dotnet publish Backend/API/API.csproj --configuration Release --output ./publish --no-build
+        run: dotnet publish Backend/PropertyManagementApi/API/API.csproj --configuration Release --output ./publish --no-build
 
       # 7. Copy the published files to your EC2 Windows instance using SCP
       - name: Copy Published Files to EC2
