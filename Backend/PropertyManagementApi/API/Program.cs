@@ -53,6 +53,9 @@ app.UseCors("AllowAll");
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    //create database if it doesnt exist
+    dbContext.Database.EnsureCreated();
+    //apply migrations
     dbContext.Database.Migrate();
 }
 
