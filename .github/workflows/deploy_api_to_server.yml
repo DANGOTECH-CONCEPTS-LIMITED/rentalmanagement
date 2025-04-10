@@ -41,8 +41,30 @@ jobs:
       - name: Zip Published Files
         run: zip -r publish.zip ./publish
 
-      # 8. Pre-create the target folder on the Windows EC2 instance
-      - name: Create target folder on EC2
+      # 8. Stop the IIS application pool on the EC2 Windows instance
+      - name: Stop Application Pool on EC2
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Import-Module WebAdministration; Stop-WebAppPool -Name 'PropertyManagementApiAppPool'"
+
+      # 9. Delete the existing publish folder on EC2 (if it exists)
+      - name: Delete Target Folder on EC2
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "if (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi') { Remove-Item 'C:\inetpub\wwwroot\PropertyManagementApi' -Recurse -Force }"
+
+      # 10. Create the target folder on EC2
+      - name: Create Target Folder on EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -52,18 +74,18 @@ jobs:
           script: |
             powershell -Command "New-Item -ItemType Directory -Force -Path 'C:\inetpub\wwwroot\PropertyManagementApi'"
 
-      # 9. Install sshpass to use scp directly
+      # 11. Install sshpass (needed for direct scp command)
       - name: Install sshpass
         run: |
           sudo apt-get update
           sudo apt-get install sshpass -y
 
-      # 10. Copy the zip file to the EC2 Windows instance using sshpass and scp
+      # 12. Copy the zip file to the EC2 Windows instance using sshpass and scp
       - name: Copy Zip File to EC2 using scp
         run: |
           sshpass -p "${{ secrets.EC2_PASSWORD }}" scp -o StrictHostKeyChecking=no publish.zip ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:"C:\\inetpub\\wwwroot\\PropertyManagementApi\\"
 
-      # 11. Unzip the file on the Windows EC2 instance using PowerShell
+      # 13. Unzip the file on the EC2 Windows instance using PowerShell
       - name: Unzip on Windows EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
@@ -74,7 +96,7 @@ jobs:
           script: |
             powershell -Command "Expand-Archive -Path 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -DestinationPath 'C:\inetpub\wwwroot\PropertyManagementApi' -Force"
 
-      # 12. Remove the zip file from the target folder (optional cleanup)
+      # 14. Remove the zip file from the target folder (optional cleanup)
       - name: Remove Zip File on Windows EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
@@ -85,8 +107,8 @@ jobs:
           script: |
             powershell -Command "Remove-Item 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -Force"
 
-      # 13. Restart the IIS website on the Windows EC2 instance
-      - name: Restart IIS Website on EC2
+      # 15. Start the IIS application pool on the EC2 Windows instance
+      - name: Start Application Pool on EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -94,4 +116,4 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Import-Module WebAdministration; Stop-Website -Name 'PropertyManagementApi'; Start-Website -Name 'PropertyManagementApi'"
+            powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'PropertyManagementApiAppPool'"
