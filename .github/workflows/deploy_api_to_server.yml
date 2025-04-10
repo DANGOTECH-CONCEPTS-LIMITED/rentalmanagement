@@ -16,8 +16,9 @@ jobs:
       # 2. List all files to verify the file structure
       - name: List Repository Files
         run: |
-          echo "Listing all files in the repository:"
-          dir /s
+          Write-Host "Listing all files in the repository:"
+          Get-ChildItem -Recurse -Force
+        shell: pwsh
 
       # 3. Set up .NET (adjust the version as needed)
       - name: Setup .NET
