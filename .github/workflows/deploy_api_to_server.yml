@@ -62,9 +62,10 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           source: "publish.zip"
-          # Use a Unix-style path for SCP. Here, /c/inetpub/... maps to C:\inetpub\...
           target: "/c/inetpub/wwwroot/PropertyManagementApi"
+          tar: "false"
           debug: true
+
 
       # 10. SSH into the Windows server and unzip the file using PowerShell
       - name: Unzip on Windows EC2
