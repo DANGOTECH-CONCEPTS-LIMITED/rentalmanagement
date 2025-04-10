@@ -29,7 +29,7 @@ namespace API.Controllers.UserControllers
             }            
         }
 
-        [HttpGet("/GetAllUsers1")]
+        [HttpGet("/GetAllUsers")]
         public async Task<IActionResult> GetAll()
         {
             try
