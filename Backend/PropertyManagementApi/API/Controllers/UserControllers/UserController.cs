@@ -15,7 +15,7 @@ namespace API.Controllers.UserControllers
             _userService = userService;
         }
 
-        [HttpPost("/RegisterUser")]
+        [HttpPost("/RegisterUser1")]
         public async Task<IActionResult> Register([FromBody] User user)
         {
             try
