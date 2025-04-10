@@ -57,7 +57,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           source: "./publish/"
-          target: "C:/inetpub/wwwroot/PropertyManagementApi"
+          target: "/c/inetpub/wwwroot/PropertyManagementApi"
           debug: true
 
       # 9. Restart the IIS website on the EC2 Windows instance via SSH
