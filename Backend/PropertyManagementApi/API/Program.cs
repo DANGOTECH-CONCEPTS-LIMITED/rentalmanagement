@@ -55,6 +55,8 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     //create database if it doesnt exist
     dbContext.Database.EnsureCreated();
+    //skip any existing table if it exists
+    dbContext.Database.EnsureDeleted();
     //apply migrations
     dbContext.Database.Migrate();
 }
