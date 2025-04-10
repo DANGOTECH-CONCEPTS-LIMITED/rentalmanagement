@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Import-Module WebAdministration; Stop-WebAppPool -Name 'PropertyManagementApiAppPool'"
+            powershell -Command "Import-Module WebAdministration; Stop-WebAppPool -Name 'PropertyManagementApi'"
 
       # 9. Delete the existing publish folder on EC2 (if it exists)
       - name: Delete Target Folder on EC2
@@ -116,4 +116,4 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'PropertyManagementApiAppPool'"
+            powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'PropertyManagementApi'"
