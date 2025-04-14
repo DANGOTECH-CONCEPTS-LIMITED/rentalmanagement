@@ -16,5 +16,6 @@ namespace Application.Interfaces.UserServices
         Task<IEnumerable<SystemRole>> GetAllRolesAsync();
         Task ChangeUserPassword(ChangePasswordDto changePassword);
         Task<User> AuthenticateUser(AuthenticateDto authenticateDto);
+        Task RegisterUserMinusFiles(User user);
     }
 }

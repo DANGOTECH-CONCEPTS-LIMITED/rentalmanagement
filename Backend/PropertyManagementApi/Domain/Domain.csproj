@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <Folder Include="Dtos\LandLord\" />
-    <Folder Include="Dtos\Tenant\" />
   </ItemGroup>
 
 </Project>

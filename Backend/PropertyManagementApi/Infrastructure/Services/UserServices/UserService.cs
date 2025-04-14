@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Application.Interfaces.UserServices;
 using Infrastructure.Services.Email;
@@ -16,6 +15,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
+using System.Text;
 
 namespace Infrastructure.Services.UserServices
 {
@@ -27,7 +27,8 @@ namespace Infrastructure.Services.UserServices
         private readonly AppDbContext _context;
         private readonly ISettings _settings;
 
-        public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher, EmailService emailService, ISettings settings, IConfiguration configuration)
+        public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher,
+            EmailService emailService, ISettings settings, IConfiguration configuration)
         {
             _context = context;
             _passwordHasher = passwordHasher;
@@ -36,36 +37,30 @@ namespace Infrastructure.Services.UserServices
             _configuration = configuration;
         }
 
-        public async Task RegisterUserAsync(IFormFile passportphoto,IFormFile idfront,IFormFile idback,UserDto userdto)
+        public async Task RegisterUserAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, UserDto userdto)
         {
-            // Check if the files have been uploaded
-            if (passportphoto == null)
-                throw new Exception("Passport photo is required.");
-            if (idfront == null)
-                throw new Exception("ID front is required.");
-            if (idback == null)
-                throw new Exception("ID back is required.");
+            // Validate file uploads
+            if (passportphoto == null) throw new Exception("Passport photo is required.");
+            if (idfront == null) throw new Exception("ID front is required.");
+            if (idback == null) throw new Exception("ID back is required.");
 
-            // save file
-            string passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
-            string idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
-            string idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
+            // Save files and retrieve paths
+            var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
+            var idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
+            var idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
 
-            // Check if the email already exists
-            var existingUser = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == userdto.Email);
+            // Check for duplicate email
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == userdto.Email);
             if (existingUser != null)
                 throw new Exception("User with this email already exists.");
 
-            // get the system role
-            var systemRole = await _context.SystemRoles
-                .FirstOrDefaultAsync(r => r.Id == userdto.SystemRoleId);
-
+            // Retrieve system role
+            var systemRole = await _context.SystemRoles.FirstOrDefaultAsync(r => r.Id == userdto.SystemRoleId);
             if (systemRole == null)
                 throw new Exception("System role not found.");
 
-            //generate a unique password
-            var password = Guid.NewGuid().ToString().Substring(0, 8);
+            // Generate a unique, temporary password
+            var password = Guid.NewGuid().ToString("N").Substring(0, 8);
 
             // Map UserDto to User entity
             var user = new User
@@ -77,20 +72,22 @@ namespace Infrastructure.Services.UserServices
                 IdFront = idFrontPath,
                 IdBack = idBackPath,
                 SystemRoleId = userdto.SystemRoleId,
+                NationalIdNumber = userdto.NationalIdNumber,
                 PasswordChanged = false,
                 Verified = false,
-                NationalIdNumber = userdto.NationalIdNumber
             };
 
-            // Hash the password
-            var hashedPassword = _passwordHasher.HashPassword(user, password);
-            user.Password = hashedPassword;
+            // Hash and set password
+            user.Password = _passwordHasher.HashPassword(user, password);
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Send email with the password
-            var emailContent = $"Hello {user.FullName}.\n\n Thank you for" +
-                $"registering to Nyumba Yo. You have been registered as {systemRole.Name} on the platform.\n\nYour Username : {user.Email}\n\n Your one time password is: {password}.\n\nPlease endevear to change your password on your first time login";
+            // Compose and send welcome email
+            var emailContent = $"Hello {user.FullName},\n\nThank you for registering with Nyumba Yo. " +
+                               $"You have been registered as {systemRole.Name} on our platform.\n\n" +
+                               $"Username: {user.Email}\nOne-time password: {password}\n\n" +
+                               "Please change your password on your first login.";
             await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
         }
 
@@ -104,67 +101,89 @@ namespace Infrastructure.Services.UserServices
             return await _context.SystemRoles.ToListAsync();
         }
 
-        public async Task ChangeUserPassword(ChangePasswordDto changePassword) 
+        public async Task ChangeUserPassword(ChangePasswordDto changePassword)
         {
-            // Check if the user exists
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == changePassword.UserName);
+            // Validate user existence and current password
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == changePassword.UserName);
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, changePassword.CurrentPassword) == PasswordVerificationResult.Failed)
-                throw new Exception("User not found.");
-            // Hash the new password
-            var hashedPassword = _passwordHasher.HashPassword(user, changePassword.NewPassword);
-            user.Password = hashedPassword;
+                throw new Exception("Invalid username or current password.");
+
+            // Update the password, mark as changed and verified
+            user.Password = _passwordHasher.HashPassword(user, changePassword.NewPassword);
             user.PasswordChanged = true;
             user.Verified = true;
-            // Save changes to the database
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
-            // Send email notifying them of successful change of password
-            var emailContent = $"Hello {user.FullName}. Your password has been changed successfully on Nyumba Yo. If you did not make this change, please contact support.";
+            // Notify user via email about the password change
+            var emailContent = $"Hello {user.FullName},\n\nYour password on Nyumba Yo has been changed successfully. " +
+                               "If you did not initiate this change, please contact our support immediately.";
             await _emailService.SendEmailAsync(user.Email, "Password Change Notification", emailContent);
         }
 
-        public async Task<User> AuthenticateUser(AuthenticateDto login) 
+        public async Task<User> AuthenticateUser(AuthenticateDto login)
         {
-            // Check if the user exists
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == login.UserName);
+            // Validate user existence and password
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == login.UserName);
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, login.Password) == PasswordVerificationResult.Failed)
-                throw new Exception("User not found.");
+                throw new Exception("User not found or incorrect password.");
 
-            // generate token for the user that he will use to access other endpoints
-            //generate JWT token
-            var jwtsettings = _configuration.GetSection("JwtSettings");
-            var secretKey = jwtsettings["SecretKey"];
-            var issuer = jwtsettings["Issuer"];
-            var audience = jwtsettings["Audience"];
-            var expirationminutes = int.Parse(jwtsettings["ExpiryMinutes"]);
+            // Retrieve JWT configuration settings
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var secretKey = jwtSettings["SecretKey"];
+            var issuer = jwtSettings["Issuer"];
+            var audience = jwtSettings["Audience"];
+            var expirationMinutes = int.Parse(jwtSettings["ExpiryMinutes"]);
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-            var signcredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes("2387jkasdasd8232knsodjas9d023j23oadasodPASD23O2LASDP2O3KLKASMDPO23E2MASDIOWSDFSDFSDSDLKFSDKLFSDNFNASDIO2");
+            var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
-            // Create claims – add any additional claims if required
+            // Create the claims to include in the token (expand as needed)
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            // Create the JWT security token
+            // Create the JWT token
             var token = new JwtSecurityToken(
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expirationminutes),
-                signingCredentials: signcredentials
+                expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
+                signingCredentials: signingCredentials
             );
 
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-            user.Token = tokenString;
+            user.Token = tokenString; // Optionally set the token on your user object
+
             return user;
+        }
+
+        public async Task RegisterUserMinusFiles(User user)
+        {
+            // Validate system role existence
+            var systemRole = await _context.SystemRoles.FirstOrDefaultAsync(r => r.Id == user.SystemRoleId);
+            if (systemRole == null)
+                throw new Exception("System role not found.");
+
+            // Check for duplicate user
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+            if (existingUser != null)
+                throw new Exception("User with this email already exists.");
+
+            // Hash the supplied password
+            user.Password = _passwordHasher.HashPassword(user, user.Password);
+            user.PasswordChanged = false;
+            user.Verified = false;
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // Compose welcome email (note: ensure 'user.Password' is not sent in plaintext if already hashed)
+            var emailContent = $"Hello {user.FullName},\n\nThank you for registering with Nyumba Yo. " +
+                               $"You have been registered as {systemRole.Name} on our platform.\n\n" +
+                               $"Username: {user.Email}\nPlease log in to change your password.";
+            await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
         }
     }
 }

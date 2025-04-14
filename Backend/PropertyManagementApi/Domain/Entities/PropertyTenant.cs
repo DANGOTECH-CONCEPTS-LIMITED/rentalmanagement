@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Domain.Entities
 {
-    public class Tenant
+    public class PropertyTenant
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -19,7 +20,10 @@ namespace Domain.Entities
         public string IdFront { get; set; } = string.Empty;
         public string IdBack { get; set; } = string.Empty;
         public string NationalIdNumber { get; set; } = string.Empty;
+        public DateTime? DateMovedIn { get; set; }
+        [ForeignKey("Property")]
         public int PropertyId { get; set; }
 
+        public LandLordProperty? Property { get; set; } = new LandLordProperty();
     }
 }

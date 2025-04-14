@@ -1,11 +1,13 @@
 using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
+using Application.Interfaces.Tenant;
 using Application.Interfaces.UserServices;
 using Domain.Entities;
 using Infrastructure.Data;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.Property;
 using Infrastructure.Services.Settings;
+using Infrastructure.Services.Tenant;
 using Infrastructure.Services.UserServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -28,6 +30,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISettings, Settings>();
 builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
+builder.Services.AddScoped<ITenantService, TenantService>();        
 
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();

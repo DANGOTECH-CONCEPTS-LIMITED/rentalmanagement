@@ -13,6 +13,7 @@ namespace Infrastructure.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         public DbSet<User> Users { get; set; }
         public DbSet<LandLordProperty> LandLordProperties { get; set; }
+        public DbSet<PropertyTenant> Tenants { get; set; }
 
         public DbSet<SystemRole> SystemRoles { get; set; }
 
