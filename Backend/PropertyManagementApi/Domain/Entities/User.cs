@@ -21,6 +21,7 @@ namespace Domain.Entities
         public string IdBack { get; set; } = string.Empty;
         public bool PasswordChanged { get; set; } = false;
         public bool Verified { get; set; } = false;
+        public string? Token { get; set; } = string.Empty;
         [ForeignKey("SystemRole")]
         public int SystemRoleId { get; set; }
 

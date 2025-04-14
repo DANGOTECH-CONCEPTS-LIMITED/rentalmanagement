@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Domain.Entities;
 using Application.Interfaces.UserServices;
 using Domain.Dtos.User;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API.Controllers.UserControllers
 {
@@ -31,6 +32,7 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpGet("/GetAllUsers")]
+        [Authorize]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -45,6 +47,7 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpGet("/GetAllRoles")]
+        [Authorize]
         public async Task<IActionResult> GetAllRoles()
         {
             try
@@ -59,6 +62,7 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/ChangePassword")]
+        [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePassword)
         {
             try
@@ -69,6 +73,20 @@ namespace API.Controllers.UserControllers
             catch (Exception ex)
             {
                 return BadRequest($"Error changing password: {ex.Message}");
+            }
+        }
+
+        [HttpPost("/AuthenticateUser")]
+        public async Task<IActionResult> Authenticate([FromBody] AuthenticateDto authenticateDto)
+        {
+            try
+            {
+                var user = await _userService.AuthenticateUser(authenticateDto);
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error authenticating user: {ex.Message}");
             }
         }
     }

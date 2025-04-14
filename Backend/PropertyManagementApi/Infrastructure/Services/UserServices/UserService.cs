@@ -12,22 +12,28 @@ using Application.Interfaces.UserServices;
 using Infrastructure.Services.Email;
 using Microsoft.AspNetCore.Http;
 using Application.Interfaces.Settings;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Configuration;
+using System.Security.Claims;
 
 namespace Infrastructure.Services.UserServices
 {
     public class UserService : IUserService
     {
+        private readonly IConfiguration _configuration;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly EmailService _emailService;
         private readonly AppDbContext _context;
         private readonly ISettings _settings;
 
-        public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher, EmailService emailService, ISettings settings)
+        public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher, EmailService emailService, ISettings settings, IConfiguration configuration)
         {
             _context = context;
             _passwordHasher = passwordHasher;
             _emailService = emailService;
             _settings = settings;
+            _configuration = configuration;
         }
 
         public async Task RegisterUserAsync(IFormFile passportphoto,IFormFile idfront,IFormFile idback,UserDto userdto)
@@ -118,6 +124,51 @@ namespace Infrastructure.Services.UserServices
             // Send email notifying them of successful change of password
             var emailContent = $"Hello {user.FullName}. Your password has been changed successfully on Nyumba Yo. If you did not make this change, please contact support.";
             await _emailService.SendEmailAsync(user.Email, "Password Change Notification", emailContent);
+        }
+
+        public async Task<User> AuthenticateUser(AuthenticateDto login) 
+        {
+            // Check if the user exists
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == login.UserName);
+            if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, login.Password) == PasswordVerificationResult.Failed)
+                throw new Exception("User not found.");
+            // Check if the password is correct
+            if (user.Password != login.Password)
+                throw new Exception("Invalid password.");
+
+            // generate token for the user that he will use to access other endpoints
+            //generate JWT token
+            var jwtsettings = _configuration.GetSection("JwtSettings");
+            var secretKey = jwtsettings["SecretKey"];
+            var issuer = jwtsettings["Issuer"];
+            var audience = jwtsettings["Audience"];
+            var expirationminutes = int.Parse(jwtsettings["ExpiryMinutes"]);
+
+            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var signcredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes("2387jkasdasd8232knsodjas9d023j23oadasodPASD23O2LASDP2O3KLKASMDPO23E2MASDIOWSDFSDFSDSDLKFSDKLFSDNFNASDIO2");
+
+            // Create claims – add any additional claims if required
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            // Create the JWT security token
+            var token = new JwtSecurityToken(
+                issuer: issuer,
+                audience: audience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(expirationminutes),
+                signingCredentials: signcredentials
+            );
+
+            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+            user.Token = tokenString;
+            return user;
         }
     }
 }

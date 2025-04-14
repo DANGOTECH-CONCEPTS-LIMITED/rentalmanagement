@@ -116,4 +116,12 @@ D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debu
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\API.pdb
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\API.genruntimeconfig.cache
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\ref\API.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.dll
+D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt

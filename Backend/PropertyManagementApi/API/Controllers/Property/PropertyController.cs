@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.Property;
 using Domain.Dtos.Property;
 using Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +19,7 @@ namespace API.Controllers.Property
         }
 
         [HttpGet("/GetAllProperties")]
+        [Authorize]
         public async Task<IActionResult> GetAllProperties()
         {
             try
@@ -32,6 +34,7 @@ namespace API.Controllers.Property
         }
 
         [HttpGet("/GetPropertyById/{id}")]
+        [Authorize]
         public async Task<IActionResult> GetPropertyById(int id)
         {
             try
@@ -46,6 +49,7 @@ namespace API.Controllers.Property
         }
 
         [HttpGet("/GetPropertiesByLandLordId/{landlordId}")]
+        [Authorize]
         public async Task<IActionResult> GetPropertiesByLandLordId(int landlordId)
         {
             try
@@ -60,6 +64,7 @@ namespace API.Controllers.Property
         }
 
         [HttpPost("/AddProperty")]
+        [Authorize]
         public async Task<IActionResult> AddProperty([FromForm]List<IFormFile> files, [FromForm] PropertyDto property)
         {
             try
@@ -74,6 +79,7 @@ namespace API.Controllers.Property
         }
 
         [HttpPut("/UpdateProperty")]
+        [Authorize]
         public async Task<IActionResult> UpdateProperty([FromForm] List<IFormFile> files, [FromForm] LandLordProperty property)
         {
             try
@@ -88,6 +94,7 @@ namespace API.Controllers.Property
         }
 
         [HttpDelete("/DeleteProperty/{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteProperty(int id)
         {
             try
@@ -102,6 +109,7 @@ namespace API.Controllers.Property
         }
 
         [HttpGet("/GetPropertyByLandLordId/{landlordId}")]
+        [Authorize]
         public async Task<IActionResult> GetPropertyByLandLordId(int landlordId)
         {
             try
