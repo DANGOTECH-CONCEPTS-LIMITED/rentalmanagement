@@ -1,22 +1,46 @@
-.fake
-.vs/
-PropertyManagementApi/.vs/
-PropertyManagementApi/.vs/
-PropertyManagementApi/.vs/PropertyManagementApi/
-# dependencies
-/node_modules
-node_modules
-/.pnp
-.pnp.js
-# testing
-/coverage
-# Add to .gitignore
+# Ignore build output
 bin/
 obj/
-*.suo
-*.pdb
 *.dll
+*.pdb
+*.exe
+
+# Ignore user-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Ignore Visual Studio files and folders
 .vs/
-# Visual Studio 2015/2017 cache/options directory
-.vs/
-PropertyManagementApi/.vs/
+.vscode/
+
+# Ignore Rider files
+.idea/
+
+# Node dependencies (for Frontend)
+node_modules/
+.pnp/
+.pnp.js
+
+# Testing output
+coverage/
+
+# Others
+*.log
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore all .vs folders recursively
+**/.vs/
+
+# Optional: ignore frontend build artifacts (if any)
+Frontend/dist/
+Frontend/build/
+
+# Optional: ignore config/environment-specific files
+.env
+.env.*
