@@ -18,11 +18,11 @@ namespace API.Controllers.Property
         }
 
         [HttpGet("/GetAllProperties")]
-        public IActionResult GetAllProperties()
+        public async Task<IActionResult> GetAllProperties()
         {
             try
             {
-                var properties = _landlordPropertyService.GetAllPropertiesAsync();
+                var properties = await _landlordPropertyService.GetAllPropertiesAsync();
                 return Ok(properties);
             }
             catch (Exception ex)
@@ -32,11 +32,11 @@ namespace API.Controllers.Property
         }
 
         [HttpGet("/GetPropertyById/{id}")]
-        public IActionResult GetPropertyById(int id)
+        public async Task<IActionResult> GetPropertyById(int id)
         {
             try
             {
-                var property = _landlordPropertyService.GetPropertyByIdAsync(id);
+                var property = await _landlordPropertyService.GetPropertyByIdAsync(id);
                 return Ok(property);
             }
             catch (Exception ex)
@@ -46,11 +46,11 @@ namespace API.Controllers.Property
         }
 
         [HttpGet("/GetPropertiesByLandLordId/{landlordId}")]
-        public IActionResult GetPropertiesByLandLordId(int landlordId)
+        public async Task<IActionResult> GetPropertiesByLandLordId(int landlordId)
         {
             try
             {
-                var properties = _landlordPropertyService.GetPropertiesByLandLordIdAsync(landlordId);
+                var properties = await _landlordPropertyService.GetPropertiesByLandLordIdAsync(landlordId);
                 return Ok(properties);
             }
             catch (Exception ex)
