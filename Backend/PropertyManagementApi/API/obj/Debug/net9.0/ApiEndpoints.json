@@ -225,16 +225,6 @@
         "IsRequired": false
       },
       {
-        "Name": "Password",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Active",
-        "Type": "System.Boolean",
-        "IsRequired": false
-      },
-      {
         "Name": "PassportPhoto",
         "Type": "System.String",
         "IsRequired": false
@@ -246,6 +236,11 @@
       },
       {
         "Name": "IdBack",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NationalIdNumber",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -377,6 +372,11 @@
       },
       {
         "Name": "Owner.IdBack",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Owner.NationalIdNumber",
         "Type": "System.String",
         "IsRequired": false
       },

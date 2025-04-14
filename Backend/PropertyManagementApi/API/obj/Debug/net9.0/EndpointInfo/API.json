@@ -257,6 +257,9 @@
                   "Owner.IdBack": {
                     "type": "string"
                   },
+                  "Owner.NationalIdNumber": {
+                    "type": "string"
+                  },
                   "Owner.PasswordChanged": {
                     "type": "boolean"
                   },
@@ -357,6 +360,9 @@
                   "style": "form"
                 },
                 "Owner.IdBack": {
+                  "style": "form"
+                },
+                "Owner.NationalIdNumber": {
                   "style": "form"
                 },
                 "Owner.PasswordChanged": {
@@ -470,12 +476,6 @@
                   "PhoneNumber": {
                     "type": "string"
                   },
-                  "Password": {
-                    "type": "string"
-                  },
-                  "Active": {
-                    "type": "boolean"
-                  },
                   "PassportPhoto": {
                     "type": "string"
                   },
@@ -483,6 +483,9 @@
                     "type": "string"
                   },
                   "IdBack": {
+                    "type": "string"
+                  },
+                  "NationalIdNumber": {
                     "type": "string"
                   },
                   "SystemRoleId": {
@@ -504,12 +507,6 @@
                 "PhoneNumber": {
                   "style": "form"
                 },
-                "Password": {
-                  "style": "form"
-                },
-                "Active": {
-                  "style": "form"
-                },
                 "PassportPhoto": {
                   "style": "form"
                 },
@@ -517,6 +514,9 @@
                   "style": "form"
                 },
                 "IdBack": {
+                  "style": "form"
+                },
+                "NationalIdNumber": {
                   "style": "form"
                 },
                 "SystemRoleId": {
