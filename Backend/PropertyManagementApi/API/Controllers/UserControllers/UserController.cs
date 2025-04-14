@@ -1,7 +1,8 @@
-﻿using Application.Interfaces;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Domain.Entities;
+using Application.Interfaces.UserServices;
+using Domain.Dtos.User;
 
 namespace API.Controllers.UserControllers
 {
@@ -16,7 +17,7 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/RegisterUser")]
-        public async Task<IActionResult> Register([FromBody] User user)
+        public async Task<IActionResult> Register([FromBody] UserDto user)
         {
             try
             {

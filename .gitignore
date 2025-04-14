@@ -1,1 +1,22 @@
+.fake
 .vs/
+PropertyManagementApi/.vs/
+PropertyManagementApi/.vs/
+PropertyManagementApi/.vs/PropertyManagementApi/
+# dependencies
+/node_modules
+node_modules
+/.pnp
+.pnp.js
+# testing
+/coverage
+# Add to .gitignore
+bin/
+obj/
+*.suo
+*.pdb
+*.dll
+.vs/
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+PropertyManagementApi/.vs/

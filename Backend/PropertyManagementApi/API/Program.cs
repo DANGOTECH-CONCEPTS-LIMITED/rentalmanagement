@@ -1,6 +1,8 @@
-using Application.Interfaces;
+using Application.Interfaces.UserServices;
+using Domain.Entities;
 using Infrastructure.Data;
-using Infrastructure.Services;
+using Infrastructure.Services.UserServices;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
@@ -16,6 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Register application services
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

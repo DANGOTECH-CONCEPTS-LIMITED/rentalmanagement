@@ -29,7 +29,7 @@
     "Parameters": [
       {
         "Name": "user",
-        "Type": "Domain.Entities.User",
+        "Type": "Domain.Dtos.User.UserDto",
         "IsRequired": true
       }
     ],
