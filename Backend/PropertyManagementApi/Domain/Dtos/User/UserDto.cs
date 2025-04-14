@@ -13,7 +13,6 @@ namespace Domain.Dtos.User
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public bool Active { get; set; } = false;
         public string PassportPhoto { get; set; } = string.Empty;
         public string IdFront { get; set; } = string.Empty;
         public string IdBack { get; set; } = string.Empty;
