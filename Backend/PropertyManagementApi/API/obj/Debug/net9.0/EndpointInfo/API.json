@@ -622,6 +622,13 @@
                   "NationalIdNumber": {
                     "type": "string"
                   },
+                  "PaymentStatus": {
+                    "type": "string"
+                  },
+                  "NextPaymentDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
                   "DateMovedIn": {
                     "type": "string",
                     "format": "date-time"
@@ -775,6 +782,12 @@
                   "style": "form"
                 },
                 "NationalIdNumber": {
+                  "style": "form"
+                },
+                "PaymentStatus": {
+                  "style": "form"
+                },
+                "NextPaymentDate": {
                   "style": "form"
                 },
                 "DateMovedIn": {

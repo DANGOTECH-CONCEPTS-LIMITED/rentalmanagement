@@ -262,6 +262,16 @@
         "IsRequired": false
       },
       {
+        "Name": "PaymentStatus",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NextPaymentDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      },
+      {
         "Name": "DateMovedIn",
         "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=9.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
