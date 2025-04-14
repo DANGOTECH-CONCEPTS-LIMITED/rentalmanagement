@@ -263,6 +263,9 @@
                   "Owner.Verified": {
                     "type": "boolean"
                   },
+                  "Owner.Token": {
+                    "type": "string"
+                  },
                   "Owner.SystemRoleId": {
                     "type": "integer",
                     "format": "int32"
@@ -360,6 +363,9 @@
                   "style": "form"
                 },
                 "Owner.Verified": {
+                  "style": "form"
+                },
+                "Owner.Token": {
                   "style": "form"
                 },
                 "Owner.SystemRoleId": {
@@ -581,10 +587,55 @@
           }
         }
       }
+    },
+    "/AuthenticateUser": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthenticateDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthenticateDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthenticateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AuthenticateDto": {
+        "type": "object",
+        "properties": {
+          "userName": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ChangePasswordDto": {
         "type": "object",
         "properties": {
@@ -603,6 +654,19 @@
         },
         "additionalProperties": false
       }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "apiKey",
+        "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        "name": "Authorization",
+        "in": "header"
+      }
     }
-  }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    }
+  ]
 }

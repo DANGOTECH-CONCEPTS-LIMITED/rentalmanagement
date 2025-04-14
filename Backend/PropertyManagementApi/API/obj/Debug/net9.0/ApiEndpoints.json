@@ -72,6 +72,22 @@
   },
   {
     "ContainingType": "API.Controllers.UserControllers.UserController",
+    "Method": "Authenticate",
+    "RelativePath": "AuthenticateUser",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "authenticateDto",
+        "Type": "Domain.Dtos.User.AuthenticateDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.UserControllers.UserController",
     "Method": "ChangePassword",
     "RelativePath": "ChangePassword",
     "HttpMethod": "POST",
@@ -124,7 +140,7 @@
   },
   {
     "ContainingType": "API.Controllers.UserControllers.UserController",
-    "Method": "GetAll",
+    "Method": "GetAllUsers",
     "RelativePath": "GetAllUsers",
     "HttpMethod": "GET",
     "IsController": true,
@@ -372,6 +388,11 @@
       {
         "Name": "Owner.Verified",
         "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "Owner.Token",
+        "Type": "System.String",
         "IsRequired": false
       },
       {

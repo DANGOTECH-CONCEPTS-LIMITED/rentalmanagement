@@ -22,6 +22,11 @@ namespace API.Controllers.UserControllers
         {
             try
             {
+                //check if files submited are three
+                if (files.Count != 3)
+                {
+                    return BadRequest("Please submit three files: passport photo, ID front, and ID back.");
+                }
                 await _userService.RegisterUserAsync(files[0], files[1], files[2],user);
                 return Ok("User registered successfully.");
             }
@@ -33,7 +38,7 @@ namespace API.Controllers.UserControllers
 
         [HttpGet("/GetAllUsers")]
         [Authorize]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllUsers()
         {
             try
             {
