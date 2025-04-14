@@ -17,11 +17,11 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/RegisterUser")]
-        public async Task<IActionResult> Register([FromForm] IFormFile passportphoto, [FromForm] IFormFile idfront, [FromForm] IFormFile idback,[FromForm] UserDto user)
+        public async Task<IActionResult> Register([FromForm] List<IFormFile> files,[FromForm] UserDto user)
         {
             try
             {
-                await _userService.RegisterUserAsync(passportphoto,idfront,idback,user);
+                await _userService.RegisterUserAsync(files[0], files[1], files[2],user);
                 return Ok("User registered successfully.");
             }
             catch (Exception ex)
@@ -55,6 +55,20 @@ namespace API.Controllers.UserControllers
             catch (Exception ex)
             {
                 return BadRequest($"Error retrieving roles: {ex.Message}");
+            }
+        }
+
+        [HttpPost("/ChangePassword")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePassword)
+        {
+            try
+            {
+                await _userService.ChangeUserPassword(changePassword);
+                return Ok("Password changed successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error changing password: {ex.Message}");
             }
         }
     }

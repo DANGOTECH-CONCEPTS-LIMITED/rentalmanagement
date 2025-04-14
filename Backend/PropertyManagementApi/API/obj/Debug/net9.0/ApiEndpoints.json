@@ -28,9 +28,54 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "user",
-        "Type": "Domain.Dtos.User.UserDto",
-        "IsRequired": true
+        "Name": "files",
+        "Type": "System.Collections.Generic.List\u00601[[Microsoft.AspNetCore.Http.IFormFile, Microsoft.AspNetCore.Http.Features, Version=9.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "FullName",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Email",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PhoneNumber",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Password",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Active",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "PassportPhoto",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IdFront",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IdBack",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "SystemRoleId",
+        "Type": "System.Int32",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []

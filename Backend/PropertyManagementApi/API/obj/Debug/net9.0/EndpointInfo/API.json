@@ -12,19 +12,78 @@
         ],
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/UserDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserDto"
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  },
+                  "FullName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "PhoneNumber": {
+                    "type": "string"
+                  },
+                  "Password": {
+                    "type": "string"
+                  },
+                  "Active": {
+                    "type": "boolean"
+                  },
+                  "PassportPhoto": {
+                    "type": "string"
+                  },
+                  "IdFront": {
+                    "type": "string"
+                  },
+                  "IdBack": {
+                    "type": "string"
+                  },
+                  "SystemRoleId": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
+                }
+              },
+              "encoding": {
+                "files": {
+                  "style": "form"
+                },
+                "FullName": {
+                  "style": "form"
+                },
+                "Email": {
+                  "style": "form"
+                },
+                "PhoneNumber": {
+                  "style": "form"
+                },
+                "Password": {
+                  "style": "form"
+                },
+                "Active": {
+                  "style": "form"
+                },
+                "PassportPhoto": {
+                  "style": "form"
+                },
+                "IdFront": {
+                  "style": "form"
+                },
+                "IdBack": {
+                  "style": "form"
+                },
+                "SystemRoleId": {
+                  "style": "form"
+                }
               }
             }
           }
@@ -61,49 +120,5 @@
       }
     }
   },
-  "components": {
-    "schemas": {
-      "UserDto": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "nullable": true
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "phoneNumber": {
-            "type": "string",
-            "nullable": true
-          },
-          "password": {
-            "type": "string",
-            "nullable": true
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "passportPhoto": {
-            "type": "string",
-            "nullable": true
-          },
-          "idFront": {
-            "type": "string",
-            "nullable": true
-          },
-          "idBack": {
-            "type": "string",
-            "nullable": true
-          },
-          "systemRoleId": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "additionalProperties": false
-      }
-    }
-  }
+  "components": { }
 }

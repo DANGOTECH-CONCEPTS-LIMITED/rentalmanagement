@@ -1,7 +1,9 @@
+using Application.Interfaces.Settings;
 using Application.Interfaces.UserServices;
 using Domain.Entities;
 using Infrastructure.Data;
 using Infrastructure.Services.Email;
+using Infrastructure.Services.Settings;
 using Infrastructure.Services.UserServices;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,8 +20,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 
 // Register application services
-
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISettings, Settings>();
 
 //singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -53,6 +55,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+app.UseStaticFiles(); // For accessing static files
 
 // Configure CORS
 app.UseCors("AllowAll");
