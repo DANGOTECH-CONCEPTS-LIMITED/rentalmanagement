@@ -73,8 +73,6 @@ namespace Infrastructure.Services.UserServices
                 FullName = userdto.FullName,
                 Email = userdto.Email,
                 PhoneNumber = userdto.PhoneNumber,
-                Password = userdto.Password, // Consider hashing the password before saving
-                Active = userdto.Active,
                 PassportPhoto = passportPhotoPath,
                 IdFront = idFrontPath,
                 IdBack = idBackPath,
