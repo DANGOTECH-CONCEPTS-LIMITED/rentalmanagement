@@ -30,25 +30,25 @@ interface UserDetailsProps {
 
 const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => {
   const formatCurrency = useCurrencyFormatter();
-  
-  const assignedProperty = user.role === 'tenant' && user.propertyId 
-    ? properties.find(p => p.id === user.propertyId) 
+
+  const assignedProperty = user.role === 'tenant' && user.propertyId
+    ? properties.find(p => p.id === user.propertyId)
     : null;
-  
-  const assignedLandlord = user.role === 'tenant' && user.landlordId 
-    ? users.find(u => u.id === user.landlordId) 
+
+  const assignedLandlord = user.role === 'tenant' && user.landlordId
+    ? users.find(u => u.id === user.landlordId)
     : null;
-  
-  const ownedProperties = user.role === 'landlord' 
-    ? properties.filter(p => p.landlord === user.id) 
+
+  const ownedProperties = user.role === 'landlord'
+    ? properties.filter(p => p.landlord === user.id)
     : [];
-  
-  const tenants = user.role === 'landlord' 
-    ? users.filter(u => u.role === 'tenant' && u.landlordId === user.id) 
+
+  const tenants = user.role === 'landlord'
+    ? users.filter(u => u.role === 'tenant' && u.landlordId === user.id)
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="md:space-y-6">
       <div className="flex items-center space-x-4">
         <div className="bg-primary/10 p-3 rounded-full">
           <User className="h-6 w-6 text-primary" />
@@ -58,7 +58,7 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-1 bg-secondary/20 p-3 rounded-md">
           <div className="text-xs font-medium text-muted-foreground mb-1">Role</div>
@@ -83,7 +83,7 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
           <div className="text-sm font-mono">{user.id}</div>
         </div>
       </div>
-      
+
       {user.role === 'tenant' && assignedProperty && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
@@ -111,7 +111,7 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
           </Card>
         </div>
       )}
-      
+
       {user.role === 'tenant' && assignedLandlord && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
@@ -131,7 +131,7 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
           </Card>
         </div>
       )}
-      
+
       {user.role === 'landlord' && ownedProperties.length > 0 && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
@@ -165,7 +165,7 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
           </Table>
         </div>
       )}
-      
+
       {user.role === 'landlord' && tenants.length > 0 && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
@@ -183,18 +183,18 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
             </TableHeader>
             <TableBody>
               {tenants.map((tenant) => {
-                const tenantProperty = tenant.propertyId 
-                  ? properties.find(p => p.id === tenant.propertyId) 
+                const tenantProperty = tenant.propertyId
+                  ? properties.find(p => p.id === tenant.propertyId)
                   : null;
-                
+
                 return (
                   <TableRow key={tenant.id}>
                     <TableCell className="font-medium">{tenant.name}</TableCell>
                     <TableCell>{tenant.email}</TableCell>
                     <TableCell>{tenantProperty ? tenantProperty.name : 'N/A'}</TableCell>
                     <TableCell>
-                      {tenant.rentAmount 
-                        ? formatCurrency(tenant.rentAmount) 
+                      {tenant.rentAmount
+                        ? formatCurrency(tenant.rentAmount)
                         : (tenantProperty ? formatCurrency(tenantProperty.rentAmount) : 'N/A')}
                     </TableCell>
                     <TableCell>
@@ -215,7 +215,7 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
           </Table>
         </div>
       )}
-      
+
       <div className="flex justify-end">
         <Button variant="outline" onClick={onClose}>Close</Button>
       </div>
@@ -226,7 +226,7 @@ const UserDetails = ({ user, properties, users, onClose }: UserDetailsProps) => 
 const ManageUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  
+
   const [users] = useState<User[]>([
     { id: "1", name: "John Doe", email: "john@example.com", role: "landlord", status: "active" },
     { id: "2", name: "Jane Smith", email: "jane@example.com", role: "tenant", status: "active", propertyId: "prop1", landlordId: "1", rentAmount: 1200 },
@@ -235,76 +235,76 @@ const ManageUsers = () => {
     { id: "5", name: "Charlie Wilson", email: "charlie@example.com", role: "admin", status: "active" },
     { id: "6", name: "Eva Martinez", email: "eva@example.com", role: "tenant", status: "active", propertyId: "prop3", landlordId: "4", rentAmount: 1500 },
   ]);
-  
+
   const [properties] = useState<Property[]>([
-    { 
-      id: "prop1", 
-      name: "Sunset Apartments - Unit 101", 
-      address: "123 Main St, Cityville", 
-      type: "Apartment", 
-      bedrooms: 2, 
-      bathrooms: 1, 
-      area: 850, 
-      rentAmount: 1200, 
-      images: [], 
-      amenities: ["Air Conditioning", "Dishwasher", "Parking"], 
-      status: "occupied", 
-      landlord: "1" 
+    {
+      id: "prop1",
+      name: "Sunset Apartments - Unit 101",
+      address: "123 Main St, Cityville",
+      type: "Apartment",
+      bedrooms: 2,
+      bathrooms: 1,
+      area: 850,
+      rentAmount: 1200,
+      images: [],
+      amenities: ["Air Conditioning", "Dishwasher", "Parking"],
+      status: "occupied",
+      landlord: "1"
     },
-    { 
-      id: "prop2", 
-      name: "Bayview Condos - Unit 305", 
-      address: "456 Ocean Ave, Seaside", 
-      type: "Condo", 
-      bedrooms: 3, 
-      bathrooms: 2, 
-      area: 1200, 
-      rentAmount: 1350, 
-      images: [], 
-      amenities: ["Pool", "Gym", "Security"], 
-      status: "occupied", 
-      landlord: "1" 
+    {
+      id: "prop2",
+      name: "Bayview Condos - Unit 305",
+      address: "456 Ocean Ave, Seaside",
+      type: "Condo",
+      bedrooms: 3,
+      bathrooms: 2,
+      area: 1200,
+      rentAmount: 1350,
+      images: [],
+      amenities: ["Pool", "Gym", "Security"],
+      status: "occupied",
+      landlord: "1"
     },
-    { 
-      id: "prop3", 
-      name: "Parkview Residences - Unit 405", 
-      address: "789 Park Blvd, Greenville", 
-      type: "Apartment", 
-      bedrooms: 1, 
-      bathrooms: 1, 
-      area: 700, 
-      rentAmount: 1500, 
-      images: [], 
-      amenities: ["Balcony", "Washer/Dryer", "Pet Friendly"], 
-      status: "occupied", 
-      landlord: "4" 
+    {
+      id: "prop3",
+      name: "Parkview Residences - Unit 405",
+      address: "789 Park Blvd, Greenville",
+      type: "Apartment",
+      bedrooms: 1,
+      bathrooms: 1,
+      area: 700,
+      rentAmount: 1500,
+      images: [],
+      amenities: ["Balcony", "Washer/Dryer", "Pet Friendly"],
+      status: "occupied",
+      landlord: "4"
     },
-    { 
-      id: "prop4", 
-      name: "Westside Heights - Unit 210", 
-      address: "321 West St, Downtown", 
-      type: "Studio", 
-      bedrooms: 0, 
-      bathrooms: 1, 
-      area: 500, 
-      rentAmount: 950, 
-      images: [], 
-      amenities: ["Furnished", "Utilities Included"], 
-      status: "available", 
-      landlord: "4" 
+    {
+      id: "prop4",
+      name: "Westside Heights - Unit 210",
+      address: "321 West St, Downtown",
+      type: "Studio",
+      bedrooms: 0,
+      bathrooms: 1,
+      area: 500,
+      rentAmount: 950,
+      images: [],
+      amenities: ["Furnished", "Utilities Included"],
+      status: "available",
+      landlord: "4"
     },
   ]);
 
   const getFilteredUsers = (role: string | null = null) => {
     return users.filter(user => {
-      const matchesSearch = 
+      const matchesSearch =
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       if (role) {
         return matchesSearch && user.role === role;
       }
-      
+
       return matchesSearch;
     });
   };
@@ -337,53 +337,55 @@ const ManageUsers = () => {
             <TabsTrigger value="landlord">Landlords ({getFilteredUsers("landlord").length})</TabsTrigger>
             <TabsTrigger value="tenant">Tenants ({getFilteredUsers("tenant").length})</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="all">
-            <UserTable 
-              users={getFilteredUsers()} 
+            <UserTable
+              users={getFilteredUsers()}
               onViewDetails={(user) => setSelectedUser(user)}
             />
           </TabsContent>
-          
+
           <TabsContent value="admin">
-            <UserTable 
+            <UserTable
               users={getFilteredUsers("admin")}
               onViewDetails={(user) => setSelectedUser(user)}
             />
           </TabsContent>
-          
+
           <TabsContent value="landlord">
-            <UserTable 
+            <UserTable
               users={getFilteredUsers("landlord")}
               onViewDetails={(user) => setSelectedUser(user)}
             />
           </TabsContent>
-          
+
           <TabsContent value="tenant">
-            <UserTable 
+            <UserTable
               users={getFilteredUsers("tenant")}
               onViewDetails={(user) => setSelectedUser(user)}
             />
           </TabsContent>
         </Tabs>
       </Card>
-      
+
       <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
             <DialogDescription>
-              Detailed information about the selected user.
+              Detailed information about the selected users.
             </DialogDescription>
           </DialogHeader>
+          <div className="overflow-x-auto scrollbar-hidden">
           {selectedUser && (
-            <UserDetails 
-              user={selectedUser} 
-              properties={properties} 
-              users={users}
-              onClose={() => setSelectedUser(null)}
-            />
-          )}
+              <UserDetails
+                user={selectedUser}
+                properties={properties}
+                users={users}
+                onClose={() => setSelectedUser(null)}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -392,7 +394,7 @@ const ManageUsers = () => {
 
 const UserTable = ({ users, onViewDetails }: { users: User[], onViewDetails: (user: User) => void }) => {
   const formatCurrency = useCurrencyFormatter();
-  
+
   return (
     <Table>
       <TableHeader>
@@ -417,7 +419,7 @@ const UserTable = ({ users, onViewDetails }: { users: User[], onViewDetails: (us
               <TableCell className="font-medium">{user.name}</TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
-                <Badge 
+                <Badge
                   variant={user.role === "admin" ? "destructive" : user.role === "landlord" ? "default" : "secondary"}
                 >
                   {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
@@ -436,8 +438,8 @@ const UserTable = ({ users, onViewDetails }: { users: User[], onViewDetails: (us
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="icon"
                     onClick={() => onViewDetails(user)}
                   >

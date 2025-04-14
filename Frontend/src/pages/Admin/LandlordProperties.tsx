@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -86,13 +86,13 @@ const LandlordProperties = () => {
           ]
         },
       ];
-      
+
       setProperties(mockProperties);
       setIsLoading(false);
     }, 1000);
   }, []);
 
-  const filteredProperties = properties.filter(property => 
+  const filteredProperties = properties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
     property.landlordName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -100,15 +100,17 @@ const LandlordProperties = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Landlord Properties</h1>
-          <p className="text-muted-foreground">View and manage all properties registered in the system</p>
+      <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
+        <div className="mb-4 sm:mb-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Landlord Properties</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">View and manage all properties registered in the system</p>
         </div>
-        <Button onClick={() => window.location.href = '/admin-dashboard/register-property'}>
+        <Button onClick={() => window.location.href = '/admin-dashboard/register-property'} className="w-full sm:w-auto">
           Add New Property
         </Button>
       </div>
+
+
 
       <Card>
         <CardContent className="pt-6">
@@ -157,8 +159,8 @@ const LandlordProperties = () => {
                       <TableCell>{property.landlordName}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
                             onClick={() => setSelectedProperty(property)}
                           >
@@ -183,53 +185,58 @@ const LandlordProperties = () => {
 
       {selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+          <div className="bg-white rounded-lg max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">{selectedProperty.name}</h2>
+                <h2 className="text-lg sm:text-xl font-semibold">{selectedProperty.name}</h2>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedProperty(null)}>
                   <XIcon className="h-4 w-4" />
                 </Button>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2">
                 <div>
                   <div className="mb-4">
-                    <h3 className="text-sm font-medium text-gray-500">Property Details</h3>
+                    <h3 className="text-sm sm:text-base font-medium text-gray-500">Property Details</h3>
                     <p className="mt-1"><span className="font-medium">Address:</span> {selectedProperty.address}</p>
                     <p className="mt-1"><span className="font-medium">Type:</span> {selectedProperty.type}</p>
                     <p className="mt-1"><span className="font-medium">Units:</span> {selectedProperty.units}</p>
                   </div>
-                  
+
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Landlord Information</h3>
+                    <h3 className="text-sm sm:text-base font-medium text-gray-500">Landlord Information</h3>
                     <p className="mt-1"><span className="font-medium">Name:</span> {selectedProperty.landlordName}</p>
                     <p className="mt-1"><span className="font-medium">ID:</span> {selectedProperty.landlordId}</p>
                   </div>
                 </div>
-                
+
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Property Images</h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">Property Images</h3>
+                  <div className="grid grid-cols sm:grid-cols-2 gap-2">
                     {selectedProperty.images.map((img, index) => (
-                      <img 
+                      <img
                         key={index}
-                        src={img} 
-                        alt={`${selectedProperty.name} ${index + 1}`} 
-                        className="rounded-md w-full h-32 object-cover"
+                        src={img}
+                        alt={`${selectedProperty.name} ${index + 1}`}
+                        className="rounded-md w-full h-32 sm:h-40 md:h-48 md:w-48 object-cover"
                       />
                     ))}
                   </div>
                 </div>
+
               </div>
-              
-              <div className="flex justify-end mt-6 space-x-2">
-                <Button variant="outline" onClick={() => setSelectedProperty(null)}>Close</Button>
-                <Button>Edit Property</Button>
+
+              <div className="flex flex-col sm:flex-row sm:justify-end mt-6 space-y-2 sm:space-x-2 sm:space-y-0">
+                <Button variant="outline" onClick={() => setSelectedProperty(null)} className="w-full sm:w-auto">
+                  Close
+                </Button>
+                <Button className="w-full sm:w-auto">Edit Property</Button>
               </div>
+
             </div>
           </div>
         </div>
+
       )}
     </div>
   );

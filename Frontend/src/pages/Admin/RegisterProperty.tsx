@@ -15,18 +15,21 @@ interface PropertyPhoto {
 
 const RegisterProperty = () => {
   const [formData, setFormData] = useState({
-    propertyName: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    propertyType: "",
-    numberOfUnits: "",
-    description: "",
-    landlordId: "",
+    Name: "",
+    Address: "",
+    Region: "",
+    District: "",
+    Zipcode: "",
+    Type: "",
+    NumberOfRooms: "0",
+    Description: "",
+    OwnerId: "0",
+    Price: "0",
+    Occupied: "true"
   });
 
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -60,7 +63,6 @@ const RegisterProperty = () => {
           preview: reader.result as string
         });
         
-        // Only update state once all files are processed
         if (newPhotos.length === files.length) {
           setPropertyPhotos(prev => [...prev, ...newPhotos]);
         }
@@ -73,7 +75,7 @@ const RegisterProperty = () => {
     setPropertyPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (propertyPhotos.length === 0) {
@@ -85,27 +87,64 @@ const RegisterProperty = () => {
       return;
     }
     
-    console.log("Property registration data:", formData);
-    console.log("Property photos:", propertyPhotos);
+    setIsSubmitting(true);
     
-    toast({
-      title: "Property Registered",
-      description: `Successfully registered property: ${formData.propertyName}`,
-    });
-    
-    // Reset form
-    setFormData({
-      propertyName: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      propertyType: "",
-      numberOfUnits: "",
-      description: "",
-      landlordId: "",
-    });
-    setPropertyPhotos([]);
+    try {
+      const formDataToSend = new FormData();
+      
+      // Append all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        formDataToSend.append(key, value);
+      });
+      
+      // Append each photo file
+      propertyPhotos.forEach(photo => {
+        formDataToSend.append('files', photo.file);
+      });
+      
+      const response = await fetch('http://3.216.182.63:8091/AddProperty', {
+        method: 'POST',
+        body: formDataToSend,
+        // Headers are not needed when using FormData, the browser will set them automatically
+      });
+      
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      
+      const result = await response.json();
+      
+      toast({
+        title: "Property Registered",
+        description: `Successfully registered property: ${formData.Name}`,
+      });
+      
+      // Reset form
+      setFormData({
+        Name: "",
+        Address: "",
+        Region: "",
+        District: "",
+        Zipcode: "",
+        Type: "",
+        NumberOfRooms: "0",
+        Description: "",
+        OwnerId: "0",
+        Price: "0",
+        Occupied: "true"
+      });
+      setPropertyPhotos([]);
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to register property. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -119,106 +158,137 @@ const RegisterProperty = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="propertyName">Property Name</Label>
+              <Label htmlFor="Name">Property Name</Label>
               <Input 
-                id="propertyName" 
-                name="propertyName" 
-                value={formData.propertyName}
+                id="Name" 
+                name="Name" 
+                value={formData.Name}
                 onChange={handleInputChange}
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="propertyType">Property Type</Label>
+              <Label htmlFor="Type">Property Type</Label>
               <Select
-                value={formData.propertyType}
-                onValueChange={(value) => handleSelectChange("propertyType", value)}
+                value={formData.Type}
+                onValueChange={(value) => handleSelectChange("Type", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select property type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="apartment">Apartment</SelectItem>
-                  <SelectItem value="house">House</SelectItem>
-                  <SelectItem value="condo">Condominium</SelectItem>
-                  <SelectItem value="commercial">Commercial</SelectItem>
+                  <SelectItem value="Apartment">Apartment</SelectItem>
+                  <SelectItem value="House">House</SelectItem>
+                  <SelectItem value="Condo">Condominium</SelectItem>
+                  <SelectItem value="Commercial">Commercial</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Street Address</Label>
+              <Label htmlFor="Address">Street Address</Label>
               <Input 
-                id="address" 
-                name="address" 
-                value={formData.address}
+                id="Address" 
+                name="Address" 
+                value={formData.Address}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
+              <Label htmlFor="District">District</Label>
               <Input 
-                id="city" 
-                name="city" 
-                value={formData.city}
+                id="District" 
+                name="District" 
+                value={formData.District}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
+              <Label htmlFor="Region">Region</Label>
               <Input 
-                id="state" 
-                name="state" 
-                value={formData.state}
+                id="Region" 
+                name="Region" 
+                value={formData.Region}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="zipCode">ZIP Code</Label>
+              <Label htmlFor="Zipcode">ZIP Code</Label>
               <Input 
-                id="zipCode" 
-                name="zipCode" 
-                value={formData.zipCode}
+                id="Zipcode" 
+                name="Zipcode" 
+                value={formData.Zipcode}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="numberOfUnits">Number of Units</Label>
+              <Label htmlFor="NumberOfRooms">Number of Rooms</Label>
               <Input 
-                id="numberOfUnits" 
-                name="numberOfUnits" 
+                id="NumberOfRooms" 
+                name="NumberOfRooms" 
                 type="number"
-                value={formData.numberOfUnits}
+                min="0"
+                value={formData.NumberOfRooms}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="landlordId">Landlord ID</Label>
+              <Label htmlFor="OwnerId">Owner ID</Label>
               <Input 
-                id="landlordId" 
-                name="landlordId" 
-                value={formData.landlordId}
+                id="OwnerId" 
+                name="OwnerId" 
+                type="number"
+                min="0"
+                value={formData.OwnerId}
                 onChange={handleInputChange}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="Price">Price</Label>
+              <Input 
+                id="Price" 
+                name="Price" 
+                type="number"
+                min="0"
+                value={formData.Price}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="Occupied">Occupied Status</Label>
+              <Select
+                value={formData.Occupied}
+                onValueChange={(value) => handleSelectChange("Occupied", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select occupancy status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Occupied</SelectItem>
+                  <SelectItem value="false">Vacant</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Property Photos (Maximum 3)</Label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Property Photos Upload Area */}
               {propertyPhotos.map((photo, index) => (
                 <div key={index} className="relative h-40 border rounded-md overflow-hidden">
                   <img src={photo.preview} alt={`Property ${index + 1}`} className="w-full h-full object-cover" />
@@ -232,7 +302,6 @@ const RegisterProperty = () => {
                 </div>
               ))}
 
-              {/* Upload Button - Only show if less than 3 photos */}
               {propertyPhotos.length < 3 && (
                 <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
                   <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
@@ -257,18 +326,20 @@ const RegisterProperty = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Property Description</Label>
+            <Label htmlFor="Description">Property Description</Label>
             <Textarea 
-              id="description" 
-              name="description" 
-              value={formData.description}
+              id="Description" 
+              name="Description" 
+              value={formData.Description}
               onChange={handleInputChange}
               rows={4}
             />
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit">Register Property</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Registering..." : "Register Property"}
+            </Button>
           </div>
         </form>
       </Card>
