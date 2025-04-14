@@ -1,6 +1,7 @@
 using Application.Interfaces.UserServices;
 using Domain.Entities;
 using Infrastructure.Data;
+using Infrastructure.Services.Email;
 using Infrastructure.Services.UserServices;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +18,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 
 // Register application services
+
 builder.Services.AddScoped<IUserService, UserService>();
+
+//singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddSingleton<EmailService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
