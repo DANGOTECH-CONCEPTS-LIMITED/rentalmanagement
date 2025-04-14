@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.Tenant;
 using Domain.Dtos.Tenant;
 using Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,11 +18,14 @@ namespace API.Controllers.Tenant
         }
 
         [HttpPost("CreateTenant")]
-        public async Task<IActionResult> CreateTenant([FromForm] IFormFile passportphoto, [FromForm] IFormFile idfront, [FromForm] IFormFile idback, [FromForm] TenantDto tenantDto)
+        [Authorize]
+        public async Task<IActionResult> CreateTenant(List<IFormFile> files, [FromForm] TenantDto tenantDto)
         {
             try
             {
-                await _tenantService.CreateTenantAsync(passportphoto, idfront, idback, tenantDto);
+                if (files.Count != 3)
+                    return BadRequest("Please upload exactly 3 files: passport photo, ID front, and ID back.");
+                await _tenantService.CreateTenantAsync(files[0], files[1], files[2], tenantDto);
                 return Ok("Tenant created successfully.");
             }
             catch (Exception ex)
@@ -31,11 +35,12 @@ namespace API.Controllers.Tenant
         }
 
         [HttpPut("UpdateTenant")]
-        public async Task<IActionResult> UpdateTenant([FromForm] IFormFile passportphoto, [FromForm] IFormFile idfront, [FromForm] IFormFile idback, [FromForm] PropertyTenant tenant)
+        [Authorize]
+        public async Task<IActionResult> UpdateTenant(List<IFormFile> files, [FromForm] PropertyTenant tenant)
         {
             try
             {
-                await _tenantService.UpdateTenantAsync(passportphoto, idfront, idback, tenant);
+                await _tenantService.UpdateTenantAsync(files[0], files[1], files[2], tenant);
                 return Ok("Tenant updated successfully.");
             }
             catch (Exception ex)
@@ -45,6 +50,7 @@ namespace API.Controllers.Tenant
         }
 
         [HttpDelete("DeleteTenant/{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteTenant(int id)
         {
             try
@@ -59,6 +65,7 @@ namespace API.Controllers.Tenant
         }
 
         [HttpGet("GetTenantById/{id}")]
+        [Authorize]
         public async Task<IActionResult> GetTenantById(int id)
         {
             try
@@ -75,6 +82,7 @@ namespace API.Controllers.Tenant
         }
 
         [HttpGet("GetAllTenants")]
+        [Authorize]
         public async Task<IActionResult> GetAllTenants()
         {
             try

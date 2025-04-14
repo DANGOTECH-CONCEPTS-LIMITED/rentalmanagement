@@ -116,6 +116,9 @@
                   "OwnerId": {
                     "type": "integer",
                     "format": "int32"
+                  },
+                  "Currency": {
+                    "type": "string"
                   }
                 }
               },
@@ -154,6 +157,9 @@
                   "style": "form"
                 },
                 "OwnerId": {
+                  "style": "form"
+                },
+                "Currency": {
                   "style": "form"
                 }
               }
@@ -220,6 +226,9 @@
                   "Price": {
                     "type": "number",
                     "format": "double"
+                  },
+                  "Currency": {
+                    "type": "string"
                   },
                   "CreatedAt": {
                     "type": "string",
@@ -327,6 +336,9 @@
                   "style": "form"
                 },
                 "Price": {
+                  "style": "form"
+                },
+                "Currency": {
                   "style": "form"
                 },
                 "CreatedAt": {
@@ -441,6 +453,496 @@
               "format": "int32"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Tenant/CreateTenant": {
+      "post": {
+        "tags": [
+          "Tenant"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  },
+                  "Name": {
+                    "type": "string"
+                  },
+                  "FullName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "PhoneNumber": {
+                    "type": "string"
+                  },
+                  "Password": {
+                    "type": "string"
+                  },
+                  "Active": {
+                    "type": "boolean"
+                  },
+                  "PassportPhoto": {
+                    "type": "string"
+                  },
+                  "IdFront": {
+                    "type": "string"
+                  },
+                  "IdBack": {
+                    "type": "string"
+                  },
+                  "NationalIdNumber": {
+                    "type": "string"
+                  },
+                  "PropertyId": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "DateMovedIn": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              "encoding": {
+                "files": {
+                  "style": "form"
+                },
+                "Name": {
+                  "style": "form"
+                },
+                "FullName": {
+                  "style": "form"
+                },
+                "Email": {
+                  "style": "form"
+                },
+                "PhoneNumber": {
+                  "style": "form"
+                },
+                "Password": {
+                  "style": "form"
+                },
+                "Active": {
+                  "style": "form"
+                },
+                "PassportPhoto": {
+                  "style": "form"
+                },
+                "IdFront": {
+                  "style": "form"
+                },
+                "IdBack": {
+                  "style": "form"
+                },
+                "NationalIdNumber": {
+                  "style": "form"
+                },
+                "PropertyId": {
+                  "style": "form"
+                },
+                "DateMovedIn": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Tenant/UpdateTenant": {
+      "put": {
+        "tags": [
+          "Tenant"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  },
+                  "Id": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Name": {
+                    "type": "string"
+                  },
+                  "FullName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "PhoneNumber": {
+                    "type": "string"
+                  },
+                  "Password": {
+                    "type": "string"
+                  },
+                  "Active": {
+                    "type": "boolean"
+                  },
+                  "PassportPhoto": {
+                    "type": "string"
+                  },
+                  "IdFront": {
+                    "type": "string"
+                  },
+                  "IdBack": {
+                    "type": "string"
+                  },
+                  "NationalIdNumber": {
+                    "type": "string"
+                  },
+                  "DateMovedIn": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "PropertyId": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Property.Id": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Property.Name": {
+                    "type": "string"
+                  },
+                  "Property.Type": {
+                    "type": "string"
+                  },
+                  "Property.Address": {
+                    "type": "string"
+                  },
+                  "Property.Region": {
+                    "type": "string"
+                  },
+                  "Property.District": {
+                    "type": "string"
+                  },
+                  "Property.Zipcode": {
+                    "type": "string"
+                  },
+                  "Property.NumberOfRooms": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Property.Description": {
+                    "type": "string"
+                  },
+                  "Property.ImageUrl": {
+                    "type": "string"
+                  },
+                  "Property.Price": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "Property.Currency": {
+                    "type": "string"
+                  },
+                  "Property.CreatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "Property.OwnerId": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Property.Owner.Id": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Property.Owner.FullName": {
+                    "type": "string"
+                  },
+                  "Property.Owner.Email": {
+                    "type": "string"
+                  },
+                  "Property.Owner.PhoneNumber": {
+                    "type": "string"
+                  },
+                  "Property.Owner.Password": {
+                    "type": "string"
+                  },
+                  "Property.Owner.Active": {
+                    "type": "boolean"
+                  },
+                  "Property.Owner.PassportPhoto": {
+                    "type": "string"
+                  },
+                  "Property.Owner.IdFront": {
+                    "type": "string"
+                  },
+                  "Property.Owner.IdBack": {
+                    "type": "string"
+                  },
+                  "Property.Owner.NationalIdNumber": {
+                    "type": "string"
+                  },
+                  "Property.Owner.PasswordChanged": {
+                    "type": "boolean"
+                  },
+                  "Property.Owner.Verified": {
+                    "type": "boolean"
+                  },
+                  "Property.Owner.Token": {
+                    "type": "string"
+                  },
+                  "Property.Owner.SystemRoleId": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Property.Owner.SystemRole.Id": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Property.Owner.SystemRole.Name": {
+                    "type": "string"
+                  },
+                  "Property.Owner.SystemRole.Description": {
+                    "type": "string"
+                  },
+                  "Property.Owner.SystemRole.Permissions": {
+                    "type": "string"
+                  },
+                  "Property.Owner.SystemRole.CreatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              "encoding": {
+                "files": {
+                  "style": "form"
+                },
+                "Id": {
+                  "style": "form"
+                },
+                "Name": {
+                  "style": "form"
+                },
+                "FullName": {
+                  "style": "form"
+                },
+                "Email": {
+                  "style": "form"
+                },
+                "PhoneNumber": {
+                  "style": "form"
+                },
+                "Password": {
+                  "style": "form"
+                },
+                "Active": {
+                  "style": "form"
+                },
+                "PassportPhoto": {
+                  "style": "form"
+                },
+                "IdFront": {
+                  "style": "form"
+                },
+                "IdBack": {
+                  "style": "form"
+                },
+                "NationalIdNumber": {
+                  "style": "form"
+                },
+                "DateMovedIn": {
+                  "style": "form"
+                },
+                "PropertyId": {
+                  "style": "form"
+                },
+                "Property.Id": {
+                  "style": "form"
+                },
+                "Property.Name": {
+                  "style": "form"
+                },
+                "Property.Type": {
+                  "style": "form"
+                },
+                "Property.Address": {
+                  "style": "form"
+                },
+                "Property.Region": {
+                  "style": "form"
+                },
+                "Property.District": {
+                  "style": "form"
+                },
+                "Property.Zipcode": {
+                  "style": "form"
+                },
+                "Property.NumberOfRooms": {
+                  "style": "form"
+                },
+                "Property.Description": {
+                  "style": "form"
+                },
+                "Property.ImageUrl": {
+                  "style": "form"
+                },
+                "Property.Price": {
+                  "style": "form"
+                },
+                "Property.Currency": {
+                  "style": "form"
+                },
+                "Property.CreatedAt": {
+                  "style": "form"
+                },
+                "Property.OwnerId": {
+                  "style": "form"
+                },
+                "Property.Owner.Id": {
+                  "style": "form"
+                },
+                "Property.Owner.FullName": {
+                  "style": "form"
+                },
+                "Property.Owner.Email": {
+                  "style": "form"
+                },
+                "Property.Owner.PhoneNumber": {
+                  "style": "form"
+                },
+                "Property.Owner.Password": {
+                  "style": "form"
+                },
+                "Property.Owner.Active": {
+                  "style": "form"
+                },
+                "Property.Owner.PassportPhoto": {
+                  "style": "form"
+                },
+                "Property.Owner.IdFront": {
+                  "style": "form"
+                },
+                "Property.Owner.IdBack": {
+                  "style": "form"
+                },
+                "Property.Owner.NationalIdNumber": {
+                  "style": "form"
+                },
+                "Property.Owner.PasswordChanged": {
+                  "style": "form"
+                },
+                "Property.Owner.Verified": {
+                  "style": "form"
+                },
+                "Property.Owner.Token": {
+                  "style": "form"
+                },
+                "Property.Owner.SystemRoleId": {
+                  "style": "form"
+                },
+                "Property.Owner.SystemRole.Id": {
+                  "style": "form"
+                },
+                "Property.Owner.SystemRole.Name": {
+                  "style": "form"
+                },
+                "Property.Owner.SystemRole.Description": {
+                  "style": "form"
+                },
+                "Property.Owner.SystemRole.Permissions": {
+                  "style": "form"
+                },
+                "Property.Owner.SystemRole.CreatedAt": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Tenant/DeleteTenant/{id}": {
+      "delete": {
+        "tags": [
+          "Tenant"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Tenant/GetTenantById/{id}": {
+      "get": {
+        "tags": [
+          "Tenant"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Tenant/GetAllTenants": {
+      "get": {
+        "tags": [
+          "Tenant"
         ],
         "responses": {
           "200": {
