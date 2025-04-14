@@ -17,5 +17,7 @@ namespace Application.Interfaces.UserServices
         Task ChangeUserPassword(ChangePasswordDto changePassword);
         Task<User> AuthenticateUser(AuthenticateDto authenticateDto);
         Task RegisterUserMinusFiles(User user);
+        Task<User> GetUserByIdAsync(int id);
+        Task UpdateUser(IFormFile passportphoto, IFormFile idfront, IFormFile idback, User user);
     }
 }

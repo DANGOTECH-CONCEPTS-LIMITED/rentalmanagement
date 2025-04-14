@@ -93,7 +93,9 @@ namespace Infrastructure.Services.UserServices
 
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
-            return await _context.Users.ToListAsync();
+            return await _context.Users
+                .Include(u => u.SystemRole)
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<SystemRole>> GetAllRolesAsync()
@@ -184,6 +186,46 @@ namespace Infrastructure.Services.UserServices
                                $"You have been registered as {systemRole.Name} on our platform.\n\n" +
                                $"Username: {user.Email}\nPlease log in to change your password.";
             await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
+        }
+
+        public async Task<User> GetUserByIdAsync(int id)
+        {
+            var user = await _context.Users
+                .Include(u => u.SystemRole)
+                .FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+                throw new Exception("User not found.");
+            return user;
+        }
+
+        public async Task UpdateUser(IFormFile passportphoto, IFormFile idfront, IFormFile idback, User user) 
+        {
+            //check if user exists
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+            if (existingUser != null)
+            {
+                throw new Exception("User not found.");
+            }
+
+            // Validate file uploads
+            if (passportphoto != null)
+            {
+                var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
+                user.PassportPhoto = passportPhotoPath;
+            }
+            if (idfront != null)
+            {
+                var idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
+                user.IdFront = idFrontPath;
+            }
+            if (idback != null)
+            {
+                var idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
+                user.IdBack = idBackPath;
+            }
+            // Update the user in the database
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
         }
     }
 }

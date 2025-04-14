@@ -94,5 +94,40 @@ namespace API.Controllers.UserControllers
                 return BadRequest($"Error authenticating user: {ex.Message}");
             }
         }
+
+        [HttpGet("/GetUserById/{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetUserById(int id)
+        {
+            try
+            {
+                var user = await _userService.GetUserByIdAsync(id);
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving user: {ex.Message}");
+            }
+        }
+
+        [HttpPut("/UpdateUser")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUser([FromForm] List<IFormFile> files, [FromForm] User user)
+        {
+            try
+            {
+                //check if files submited are three
+                if (files.Count != 3)
+                {
+                    return BadRequest("Please submit three files: passport photo, ID front, and ID back.");
+                }
+                await _userService.UpdateUser(files[0], files[1], files[2], user);
+                return Ok("User updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error updating user: {ex.Message}");
+            }
+        }
     }
 }
