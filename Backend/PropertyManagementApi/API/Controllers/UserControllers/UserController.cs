@@ -17,11 +17,11 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/RegisterUser")]
-        public async Task<IActionResult> Register([FromBody] UserDto user)
+        public async Task<IActionResult> Register([FromForm] IFormFile passportphoto, [FromForm] IFormFile idfront, [FromForm] IFormFile idback,[FromForm] UserDto user)
         {
             try
             {
-                await _userService.RegisterUserAsync(user);
+                await _userService.RegisterUserAsync(passportphoto,idfront,idback,user);
                 return Ok("User registered successfully.");
             }
             catch (Exception ex)

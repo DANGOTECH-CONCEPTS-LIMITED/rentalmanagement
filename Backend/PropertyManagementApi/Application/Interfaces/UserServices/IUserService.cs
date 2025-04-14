@@ -14,5 +14,6 @@ namespace Application.Interfaces.UserServices
         Task RegisterUserAsync(IFormFile passportphoto,IFormFile idfront,IFormFile idback, UserDto user);
         Task<IEnumerable<User>> GetAllUsersAsync();
         Task<IEnumerable<SystemRole>> GetAllRolesAsync();
+        Task ChangeUserPassword(ChangePasswordDto changePassword);
     }
 }

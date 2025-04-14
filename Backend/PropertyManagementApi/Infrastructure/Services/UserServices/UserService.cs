@@ -96,5 +96,24 @@ namespace Infrastructure.Services.UserServices
         {
             return await _context.SystemRoles.ToListAsync();
         }
+
+        public async Task ChangeUserPassword(ChangePasswordDto changePassword) 
+        {
+            // Check if the user exists
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == changePassword.UserName);
+            if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, changePassword.CurrentPassword) == PasswordVerificationResult.Failed)
+                throw new Exception("User not found.");
+            // Hash the new password
+            var hashedPassword = _passwordHasher.HashPassword(user, changePassword.NewPassword);
+            user.Password = hashedPassword;
+            // Save changes to the database
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            // Send email notifying them of successful change of password
+            var emailContent = $"Hello {user.FullName}. Your password has been changed successfully on Nyumba Yo. If you did not make this change, please contact support.";
+            await _emailService.SendEmailAsync(user.Email, "Password Change Notification", emailContent);
+        }
     }
 }
