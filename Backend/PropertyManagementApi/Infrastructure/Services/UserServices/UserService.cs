@@ -72,7 +72,9 @@ namespace Infrastructure.Services.UserServices
                 PassportPhoto = passportPhotoPath,
                 IdFront = idFrontPath,
                 IdBack = idBackPath,
-                SystemRoleId = userdto.SystemRoleId
+                SystemRoleId = userdto.SystemRoleId,
+                PasswordChanged = false,
+                Verified = false,
             };
 
             // Hash the password

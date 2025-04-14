@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "D/ujPc6nWO8=",
+  "dgSpecHash": "T62wrs20FrY=",
   "success": true,
-  "projectFilePath": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\API.csproj",
+  "projectFilePath": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Api\\API.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\DanielNgobi\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\DanielNgobi\\.nuget\\packages\\microsoft.aspnet.identity.core\\2.2.4\\microsoft.aspnet.identity.core.2.2.4.nupkg.sha512",

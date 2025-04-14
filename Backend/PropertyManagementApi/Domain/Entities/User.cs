@@ -19,6 +19,8 @@ namespace Domain.Entities
         public string PassportPhoto { get; set; } = string.Empty;
         public string IdFront { get; set; } = string.Empty;
         public string IdBack { get; set; } = string.Empty;
+        public bool PasswordChanged { get; set; } = false;
+        public bool Verified { get; set; } = false;
         [ForeignKey("SystemRole")]
         public int SystemRoleId { get; set; }
 

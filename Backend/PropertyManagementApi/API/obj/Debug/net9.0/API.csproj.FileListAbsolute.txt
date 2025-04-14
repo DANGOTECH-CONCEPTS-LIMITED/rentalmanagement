@@ -110,7 +110,6 @@ D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debu
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\staticwebassets\msbuild.buildMultiTargeting.API.props
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\staticwebassets\msbuild.buildTransitive.API.props
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\staticwebassets.pack.json
-D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\API.csproj.Up2Date
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\API.dll
 D:\working directory\rentalmanagement\Backend\PropertyManagementApi\API\obj\Debug\net9.0\refint\API.dll
