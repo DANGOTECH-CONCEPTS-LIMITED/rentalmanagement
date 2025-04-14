@@ -89,8 +89,8 @@ namespace Infrastructure.Services.UserServices
             await _context.SaveChangesAsync();
 
             // Send email with the password
-            var emailContent = $"Hello {user.FullName}. Thank you for" +
-                $"registering to Nyumba Yo. You have been registered as {systemRole.Name} on the platform Your one time password is: {password}. Please endevear to change it on your first time login";
+            var emailContent = $"Hello {user.FullName}.\n\n Thank you for" +
+                $"registering to Nyumba Yo. You have been registered as {systemRole.Name} on the platform.\n\nYour Username : {user.Email}\n\n Your one time password is: {password}.\n\nPlease endevear to change your password on your first time login";
             await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
         }
 
@@ -132,9 +132,6 @@ namespace Infrastructure.Services.UserServices
                 .FirstOrDefaultAsync(u => u.Email == login.UserName);
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, login.Password) == PasswordVerificationResult.Failed)
                 throw new Exception("User not found.");
-            // Check if the password is correct
-            if (user.Password != login.Password)
-                throw new Exception("Invalid password.");
 
             // generate token for the user that he will use to access other endpoints
             //generate JWT token

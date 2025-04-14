@@ -29,9 +29,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISettings, Settings>();
 builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
 
-
-
-//singleton services
+// Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<EmailService>();
 
@@ -51,35 +49,50 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Configure JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"];   // e.g., "ThisIsASecretKeyForJwt"
-var issuer = jwtSettings["Issuer"];           // e.g., "YourCompany"
-var audience = jwtSettings["Audience"];       // e.g., "YourAppClients"
+//// --- Option 1: Using Auth0 as the external identity provider ---
+//// Configure JWT Authentication using Auth0
+//builder.Services.AddAuthentication(options =>
+//{
+//    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+//    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+//})
+//.AddJwtBearer(options =>
+//{
+//    // These values should match your Auth0 settings.
+//    options.Authority = "https://dev-7z1v7v7z.us.auth0.com/";
+//    // Set this to your API Identifier configured in Auth0 (e.g., "https://your-api-identifier")
+//    options.Audience = "https://your-api-identifier";
+//});
+//// --- End Option 1 ---
 
-// Configure JWT authentication
+
+// --- Option 2: Using your own symmetric key ---
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"];
+var issuer = jwtSettings["Issuer"];
+var audience = jwtSettings["Audience"];
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-        .AddJwtBearer(options =>
-        {
-            options.Authority = "https://dev-7z1v7v7z.us.auth0.com/";
-            options.Audience = "https://localhost:5001";
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = issuer,
-                ValidAudience = audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
-            };
-        });
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = issuer,
+        ValidAudience = audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+    };
+});
+// --- End Option 2 ---
 
-// Set up Swagger for generating the API documentation
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -109,6 +122,7 @@ builder.Services.AddSwaggerGen(options =>
            new List<string>()
         }
     });
+
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Property Management API",
@@ -117,28 +131,30 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
-app.UseStaticFiles(); // For accessing static files
+
+app.UseStaticFiles(); // For accessing static files if any
 
 // Configure CORS
 app.UseCors("AllowAll");
 
-// Apply pending migrations (remove EnsureCreated and EnsureDeleted for production)
+// Apply pending migrations (note: remove EnsureCreated/EnsureDeleted for production)
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
 }
 
-// Always show Swagger (adjust the endpoint if your app runs in a subdirectory)
+// Always show Swagger (adjust RoutePrefix if needed)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    // If your site uses a base path, uncomment and set it accordingly:
-    // c.RoutePrefix = "PropertyManagementApi";
+    // If hosting in a subdirectory, adjust the SwaggerEndpoint path accordingly.
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Property Management API v1");
 });
 
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
