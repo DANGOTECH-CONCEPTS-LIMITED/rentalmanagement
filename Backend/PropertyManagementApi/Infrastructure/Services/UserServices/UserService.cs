@@ -109,6 +109,8 @@ namespace Infrastructure.Services.UserServices
             // Hash the new password
             var hashedPassword = _passwordHasher.HashPassword(user, changePassword.NewPassword);
             user.Password = hashedPassword;
+            user.PasswordChanged = true;
+            user.Verified = true;
             // Save changes to the database
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
