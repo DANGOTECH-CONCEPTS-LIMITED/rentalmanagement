@@ -476,15 +476,6 @@
                   "PhoneNumber": {
                     "type": "string"
                   },
-                  "PassportPhoto": {
-                    "type": "string"
-                  },
-                  "IdFront": {
-                    "type": "string"
-                  },
-                  "IdBack": {
-                    "type": "string"
-                  },
                   "NationalIdNumber": {
                     "type": "string"
                   },
@@ -505,15 +496,6 @@
                   "style": "form"
                 },
                 "PhoneNumber": {
-                  "style": "form"
-                },
-                "PassportPhoto": {
-                  "style": "form"
-                },
-                "IdFront": {
-                  "style": "form"
-                },
-                "IdBack": {
                   "style": "form"
                 },
                 "NationalIdNumber": {

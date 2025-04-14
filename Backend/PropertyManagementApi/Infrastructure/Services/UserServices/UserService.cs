@@ -54,7 +54,7 @@ namespace Infrastructure.Services.UserServices
             // Check if the email already exists
             var existingUser = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == userdto.Email);
-            if (existingUser == null)
+            if (existingUser != null)
                 throw new Exception("User with this email already exists.");
 
             // get the system role

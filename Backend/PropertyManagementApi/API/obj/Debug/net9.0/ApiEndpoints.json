@@ -225,21 +225,6 @@
         "IsRequired": false
       },
       {
-        "Name": "PassportPhoto",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "IdFront",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "IdBack",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
         "Name": "NationalIdNumber",
         "Type": "System.String",
         "IsRequired": false
