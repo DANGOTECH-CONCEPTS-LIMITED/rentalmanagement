@@ -81,6 +81,7 @@ namespace Infrastructure.Services.UserServices
                 SystemRoleId = userdto.SystemRoleId,
                 PasswordChanged = false,
                 Verified = false,
+                NationalIdNumber = userdto.NationalIdNumber
             };
 
             // Hash the password

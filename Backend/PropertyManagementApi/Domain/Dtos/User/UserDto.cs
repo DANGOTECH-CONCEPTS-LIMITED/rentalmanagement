@@ -17,6 +17,7 @@ namespace Domain.Dtos.User
         public string PassportPhoto { get; set; } = string.Empty;
         public string IdFront { get; set; } = string.Empty;
         public string IdBack { get; set; } = string.Empty;
+        public string NationalIdNumber { get; set; } = string.Empty;
         public int SystemRoleId { get; set; }
     }
 }
