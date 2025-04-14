@@ -5417,11 +5417,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Api\\API.csproj",
+      "projectUniqueName": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\API.csproj",
       "projectName": "API",
-      "projectPath": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Api\\API.csproj",
+      "projectPath": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\API.csproj",
       "packagesPath": "C:\\Users\\DanielNgobi\\.nuget\\packages\\",
-      "outputPath": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Api\\obj\\",
+      "outputPath": "D:\\working directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

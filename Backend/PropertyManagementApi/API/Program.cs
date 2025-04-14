@@ -1,10 +1,8 @@
-using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
 using Application.Interfaces.UserServices;
 using Domain.Entities;
 using Infrastructure.Data;
 using Infrastructure.Services.Email;
-using Infrastructure.Services.Property;
 using Infrastructure.Services.Settings;
 using Infrastructure.Services.UserServices;
 using Microsoft.AspNetCore.Identity;
@@ -24,7 +22,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Register application services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISettings, Settings>();
-builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
+
+
 
 //singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();

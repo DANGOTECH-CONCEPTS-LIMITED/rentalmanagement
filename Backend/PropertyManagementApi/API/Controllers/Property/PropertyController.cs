@@ -60,11 +60,11 @@ namespace API.Controllers.Property
         }
 
         [HttpPost("/AddProperty")]
-        public async Task<IActionResult> AddProperty([FromForm] IFormFile image, [FromForm] PropertyDto property)
+        public async Task<IActionResult> AddProperty([FromForm]List<IFormFile> files, [FromForm] PropertyDto property)
         {
             try
             {
-                await _landlordPropertyService.AddPropertyAsync(image, property);
+                await _landlordPropertyService.AddPropertyAsync(files[0], property);
                 return Ok("Property added successfully.");
             }
             catch (Exception ex)
@@ -74,11 +74,11 @@ namespace API.Controllers.Property
         }
 
         [HttpPut("/UpdateProperty")]
-        public async Task<IActionResult> UpdateProperty([FromForm] IFormFile image, [FromForm] LandLordProperty property)
+        public async Task<IActionResult> UpdateProperty([FromForm] List<IFormFile> files, [FromForm] LandLordProperty property)
         {
             try
             {
-                await _landlordPropertyService.UpdatePropertyAsync(image, property);
+                await _landlordPropertyService.UpdatePropertyAsync(files[0], property);
                 return Ok("Property updated successfully.");
             }
             catch (Exception ex)
