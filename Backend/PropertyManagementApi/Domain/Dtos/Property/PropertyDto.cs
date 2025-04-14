@@ -20,5 +20,6 @@ namespace Domain.Dtos.Property
         public bool Occupied { get; set; } = false;
         public double Price { get; set; }
         public int OwnerId { get; set; }
+        public string Currency { get; set; } = string.Empty;
     }
 }

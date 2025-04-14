@@ -63,7 +63,8 @@ namespace Infrastructure.Services.Property
                 Price = property.Price,
                 NumberOfRooms = property.NumberOfRooms,
                 ImageUrl = imageUrl,
-                OwnerId = property.OwnerId
+                OwnerId = property.OwnerId,
+                Currency = property.Currency
             };
             // Add the new property to the database context and save changes
             await _context.LandLordProperties.AddAsync(newProperty);

@@ -20,6 +20,7 @@ namespace Domain.Entities
         public string? Description { get; set; } = string.Empty;
         public string? ImageUrl { get; set; } = string.Empty;
         public double Price { get; set; }
+        public string Currency { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         [ForeignKey("Owner")]
         public int OwnerId { get; set; }
