@@ -137,8 +137,13 @@ const RegisterLandlord = () => {
       files.forEach((fileObj, index) => {
         formDataToSend.append(`files`, fileObj.file);
       });
+
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+      if (!apiUrl) {
+        throw new Error("API base URL is not configured");
+      }
       
-      const response = await fetch('http://3.216.182.63:8091/RegisterUser', {
+      const response = await fetch(`${apiUrl}/RegisterUser`, {
         method: 'POST',
         headers: {
           'accept': '*/*'
@@ -182,7 +187,7 @@ const RegisterLandlord = () => {
     } catch (error) {
       console.error('Error submitting form:', error);
       
-      if (error.message && error.message.includes("User regis")) {
+      if (error instanceof Error && error.message.includes("User regis")) {
         toast({
           title: "Landlord Registered",
           description: `${formData.FullName} has been successfully registered.`,
@@ -204,7 +209,7 @@ const RegisterLandlord = () => {
       } else {
         toast({
           title: "Error",
-          description: error.message || "An error occurred while registering the landlord.",
+          description: error instanceof Error ? error.message : "An error occurred while registering the landlord.",
           variant: "destructive",
         });
       }
@@ -407,7 +412,7 @@ const RegisterLandlord = () => {
               </div>
             </div>
 
-            {/* ID Document Back Upload - Only shown for National ID and Driving Permit */}
+            {/* ID Document Back Upload */}
             {isBackSideRequired() && (
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center">
