@@ -129,5 +129,35 @@ namespace API.Controllers.UserControllers
                 return BadRequest($"Error updating user: {ex.Message}");
             }
         }
+
+        [HttpDelete("/DeleteUser/{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            try
+            {
+                await _userService.DeleteUser(id);
+                return Ok("User deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error deleting user: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetLandlords")]
+        [Authorize]
+        public async Task<IActionResult> GetLandlords()
+        {
+            try
+            {
+                var landlords = await _userService.GetLandlordsAsync();
+                return Ok(landlords);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving landlords: {ex.Message}");
+            }
+        }
     }
 }

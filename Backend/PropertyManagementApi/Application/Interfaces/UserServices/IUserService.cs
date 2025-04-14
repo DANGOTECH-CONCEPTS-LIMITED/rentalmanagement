@@ -19,5 +19,8 @@ namespace Application.Interfaces.UserServices
         Task RegisterUserMinusFiles(User user);
         Task<User> GetUserByIdAsync(int id);
         Task UpdateUser(IFormFile passportphoto, IFormFile idfront, IFormFile idback, User user);
+
+        Task DeleteUser(int id);
+        Task<IEnumerable<User>> GetLandlordsAsync();
     }
 }

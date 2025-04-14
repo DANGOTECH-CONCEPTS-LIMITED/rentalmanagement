@@ -198,7 +198,7 @@ namespace Infrastructure.Services.UserServices
             return user;
         }
 
-        public async Task UpdateUser(IFormFile passportphoto, IFormFile idfront, IFormFile idback, User user) 
+        public async Task UpdateUser(IFormFile passportphoto, IFormFile idfront, IFormFile idback, User user)
         {
             //check if user exists
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
@@ -226,6 +226,23 @@ namespace Infrastructure.Services.UserServices
             // Update the user in the database
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteUser(int id)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+                throw new Exception("User not found.");
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<User>> GetLandlordsAsync()
+        {
+            return await _context.Users
+                .Include(u => u.SystemRole)
+                .Where(u => u.SystemRole.Name == "Landlord")
+                .ToListAsync();
         }
     }
 }

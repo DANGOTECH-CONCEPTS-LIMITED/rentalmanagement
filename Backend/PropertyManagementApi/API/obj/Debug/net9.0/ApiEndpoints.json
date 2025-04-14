@@ -482,6 +482,38 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "CreatePayment",
+    "RelativePath": "CreatePayment",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "paymentDto",
+        "Type": "Domain.Dtos.Payments.TenantPaymentDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "DeletePayment",
+    "RelativePath": "DeletePayment/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "API.Controllers.Property.PropertyController",
     "Method": "DeleteProperty",
     "RelativePath": "DeleteProperty/{id}",
@@ -495,6 +527,32 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.UserControllers.UserController",
+    "Method": "DeleteUser",
+    "RelativePath": "DeleteUser/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetAllPayments",
+    "RelativePath": "GetAllPayments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
@@ -525,6 +583,149 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.UserControllers.UserController",
+    "Method": "GetLandlords",
+    "RelativePath": "GetLandlords",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentById",
+    "RelativePath": "GetPaymentById/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentsByDateRange",
+    "RelativePath": "GetPaymentsByDateRange",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "startDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      },
+      {
+        "Name": "endDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentsByMethod",
+    "RelativePath": "GetPaymentsByMethod/{method}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "method",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentsByStatus",
+    "RelativePath": "GetPaymentsByStatus/{status}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentsByTenantId",
+    "RelativePath": "GetPaymentsByTenantId/{tenantId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "tenantId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentsByTransactionId",
+    "RelativePath": "GetPaymentsByTransactionId/{transactionId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "transactionId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentsByType",
+    "RelativePath": "GetPaymentsByType/{type}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "type",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetPaymentsByVendor",
+    "RelativePath": "GetPaymentsByVendor/{vendor}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "vendor",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {
@@ -576,6 +777,127 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetTenantPaymentsByPropertyId",
+    "RelativePath": "GetTenantPaymentsByPropertyId/{propertyId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "propertyId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetTenantPaymentsByPropertyIdAndDateRange",
+    "RelativePath": "GetTenantPaymentsByPropertyIdAndDateRange",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "propertyId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "startDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      },
+      {
+        "Name": "endDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetTenantPaymentsByPropertyIdAndMethod",
+    "RelativePath": "GetTenantPaymentsByPropertyIdAndMethod/{propertyId}/{method}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "propertyId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "method",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetTenantPaymentsByPropertyIdAndStatus",
+    "RelativePath": "GetTenantPaymentsByPropertyIdAndStatus/{propertyId}/{status}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "propertyId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "GetTenantPaymentsByPropertyIdAndVendor",
+    "RelativePath": "GetTenantPaymentsByPropertyIdAndVendor/{propertyId}/{vendor}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "propertyId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "vendor",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.UserControllers.UserController",
+    "Method": "GetUserById",
+    "RelativePath": "GetUserById/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "API.Controllers.UserControllers.UserController",
     "Method": "Register",
     "RelativePath": "RegisterUser",
@@ -612,6 +934,22 @@
         "Name": "SystemRoleId",
         "Type": "System.Int32",
         "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.Payments.PaymentController",
+    "Method": "UpdatePayment",
+    "RelativePath": "UpdatePayment",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "payment",
+        "Type": "Domain.Entities.TenantPayment",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -791,6 +1129,117 @@
       },
       {
         "Name": "Owner.SystemRole.CreatedAt",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "API.Controllers.UserControllers.UserController",
+    "Method": "UpdateUser",
+    "RelativePath": "UpdateUser",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "files",
+        "Type": "System.Collections.Generic.List\u00601[[Microsoft.AspNetCore.Http.IFormFile, Microsoft.AspNetCore.Http.Features, Version=9.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "Id",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "FullName",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Email",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PhoneNumber",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Password",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Active",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "PassportPhoto",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IdFront",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IdBack",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NationalIdNumber",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PasswordChanged",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "Verified",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "Token",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "SystemRoleId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "SystemRole.Id",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "SystemRole.Name",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "SystemRole.Description",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "SystemRole.Permissions",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "SystemRole.CreatedAt",
         "Type": "System.DateTime",
         "IsRequired": false
       }
