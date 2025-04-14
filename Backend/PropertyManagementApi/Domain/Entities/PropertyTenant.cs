@@ -20,6 +20,8 @@ namespace Domain.Entities
         public string IdFront { get; set; } = string.Empty;
         public string IdBack { get; set; } = string.Empty;
         public string NationalIdNumber { get; set; } = string.Empty;
+        public string PaymentStatus { get; set; } = string.Empty;
+        public DateTime NextPaymentDate { get; set; } = DateTime.UtcNow;
         public DateTime? DateMovedIn { get; set; }
         [ForeignKey("Property")]
         public int PropertyId { get; set; }
