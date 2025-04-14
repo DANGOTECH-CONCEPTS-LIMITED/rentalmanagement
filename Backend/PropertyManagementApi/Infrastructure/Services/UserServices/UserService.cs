@@ -9,28 +9,59 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Application.Interfaces.UserServices;
+using Infrastructure.Services.Email;
+using Microsoft.AspNetCore.Http;
+using Application.Interfaces.Settings;
 
 namespace Infrastructure.Services.UserServices
 {
     public class UserService : IUserService
     {
         private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly EmailService _emailService;
         private readonly AppDbContext _context;
+        private readonly ISettings _settings;
 
-        public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher)
+        public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher, EmailService emailService, ISettings settings)
         {
             _context = context;
             _passwordHasher = passwordHasher;
+            _emailService = emailService;
+            _settings = settings;
         }
 
-        public async Task RegisterUserAsync(UserDto userdto)
+        public async Task RegisterUserAsync(IFormFile passportphoto,IFormFile idfront,IFormFile idback,UserDto userdto)
         {
+            // Check if the files have been uploaded
+            if (passportphoto == null)
+                throw new Exception("Passport photo is required.");
+            if (idfront == null)
+                throw new Exception("ID front is required.");
+            if (idback == null)
+                throw new Exception("ID back is required.");
+
+            // save file
+            string passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
+            string idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
+            string idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
+
+            // Check if the email already exists
+            var existingUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == userdto.Email);
+            if (existingUser == null)
+                throw new Exception("User with this email already exists.");
+
+            // get the system role
+            var systemRole = await _context.SystemRoles
+                .FirstOrDefaultAsync(r => r.Id == userdto.SystemRoleId);
+
+            if (systemRole == null)
+                throw new Exception("System role not found.");
+
             //generate a unique password
             var password = Guid.NewGuid().ToString().Substring(0, 8);
 
-
             // Map UserDto to User entity
-
             var user = new User
             {
                 FullName = userdto.FullName,
@@ -38,9 +69,9 @@ namespace Infrastructure.Services.UserServices
                 PhoneNumber = userdto.PhoneNumber,
                 Password = userdto.Password, // Consider hashing the password before saving
                 Active = userdto.Active,
-                PassportPhoto = userdto.PassportPhoto,
-                IdFront = userdto.IdFront,
-                IdBack = userdto.IdBack,
+                PassportPhoto = passportPhotoPath,
+                IdFront = idFrontPath,
+                IdBack = idBackPath,
                 SystemRoleId = userdto.SystemRoleId
             };
 
@@ -49,6 +80,11 @@ namespace Infrastructure.Services.UserServices
             user.Password = hashedPassword;
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            // Send email with the password
+            var emailContent = $"Hello {user.FullName}. Thank you for" +
+                $"registering to Nyumba Yo. You have been registered as {systemRole.Name} on the platform Your one time password is: {password}. Please endevear to change it on your first time login";
+            await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
         }
 
         public async Task<IEnumerable<User>> GetAllUsersAsync()

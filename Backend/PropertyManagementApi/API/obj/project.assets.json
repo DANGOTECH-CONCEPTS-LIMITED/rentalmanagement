@@ -2181,7 +2181,8 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v9.0",
         "dependencies": {
-          "Domain": "1.0.0"
+          "Domain": "1.0.0",
+          "Microsoft.AspNetCore": "2.3.0"
         },
         "compile": {
           "bin/placeholder/Application.dll": {}
