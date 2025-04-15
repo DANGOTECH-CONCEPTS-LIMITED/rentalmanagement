@@ -72,7 +72,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                 <Lock size={16} className="text-gray-400" />
               </div>
               <input
-                type="password"
+                type="text"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="pl-10 input-field"
@@ -90,12 +90,12 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                 <Key size={16} className="text-gray-400" />
               </div>
               <input
-                type="password"
+                type="text"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="pl-10 input-field"
                 required
-                minLength={8}
+                minLength={4}
               />
             </div>
           </div>
@@ -109,7 +109,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                 <Key size={16} className="text-gray-400" />
               </div>
               <input
-                type="password"
+                type="text"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pl-10 input-field"
