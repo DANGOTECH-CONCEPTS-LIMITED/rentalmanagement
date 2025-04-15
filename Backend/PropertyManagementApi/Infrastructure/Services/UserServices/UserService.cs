@@ -244,5 +244,24 @@ namespace Infrastructure.Services.UserServices
                 .Where(u => u.SystemRole.Name == "Landlord")
                 .ToListAsync();
         }
+
+        public async Task ForgotPassword(string email)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                throw new Exception("User not found.");
+            // Generate a unique, temporary password
+            var newPassword = Guid.NewGuid().ToString("N").Substring(0, 8);
+            user.Password = _passwordHasher.HashPassword(user, newPassword);
+            user.PasswordChanged = false;
+            user.Verified = false;
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+            // Compose and send password reset email
+            var emailContent = $"Hello {user.FullName},\n\nYour password has been reset. " +
+                               $"Your new password is: {newPassword}\n\n" +
+                               "Please change your password on your first login.";
+            await _emailService.SendEmailAsync(user.Email, "Password Reset", emailContent);
+        }
     }
 }

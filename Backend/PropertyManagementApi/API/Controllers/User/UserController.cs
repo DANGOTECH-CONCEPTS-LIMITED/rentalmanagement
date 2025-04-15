@@ -159,5 +159,33 @@ namespace API.Controllers.UserControllers
                 return BadRequest($"Error retrieving landlords: {ex.Message}");
             }
         }
+
+        [HttpPost("/ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        {
+            try
+            {
+                await _userService.ForgotPassword(email);
+                return Ok("Password reset link sent successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error sending password reset link: {ex.Message}");
+            }
+        }
+
+        [HttpPost("/RegisterUserMinusFiles")]
+        public async Task<IActionResult> RegisterUserMinusFiles([FromBody] User user)
+        {
+            try
+            {
+                await _userService.RegisterUserMinusFiles(user);
+                return Ok("User registered successfully without files.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error registering user: {ex.Message}");
+            }
+        }
     }
 }
