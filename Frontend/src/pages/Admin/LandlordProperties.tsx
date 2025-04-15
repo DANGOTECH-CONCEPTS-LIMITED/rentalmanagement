@@ -43,19 +43,13 @@ const LandlordProperties = () => {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiI1MzFkNDI4Ny1lOWU3LTRiMTMtYjE2YS03ZGUzZDY3YmM1YzIiLCJleHAiOjE3NDQ2Njc3MTMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.I34A4KOCJQxeQx102Kw716TVuMGNh7bC3D4njbcfFWc";
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzZDY1ZThmYS03MWQ1LTQ0ODYtOTdkYi02NjY2YTdkNGM4YzUiLCJleHAiOjE3NDQ3Mjc1MzMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.sMKgJ54uPibdiJWsIbNwdyOD5Bggx1_jPZzen-orGMw";
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
 
   useEffect(() => {
-    
     const fetchProperties = async () => {
-         
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    if (!apiUrl) {
-      throw new Error("API base URL is not configured");
-    }
-
       try {
-        const response = await fetch(`{apiUrl}/GetAllProperties`, {
+        const response = await fetch(`${apiUrl}/GetAllProperties`, {
           method: 'GET',
           headers: {
             'accept': '*/*',
@@ -78,7 +72,7 @@ const LandlordProperties = () => {
     };
 
     fetchProperties();
-  }, [token]);
+  }, [token, apiUrl]);
 
   const filteredProperties = properties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -87,27 +81,20 @@ const LandlordProperties = () => {
   );
 
   const handleDeleteProperty = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this property?')) return;
-    
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    if (!apiUrl) {
-      throw new Error("API base URL is not configured");
-    }
-    
-    
     try {
-      const response = await fetch(`apiUrl/DeleteProperty/${id}`, {
+      const response = await fetch(`${apiUrl}/DeleteProperty/${id}`, {
         method: 'DELETE',
         headers: {
+          'accept': '*/*',
           'Authorization': `Bearer ${token}`
         }
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to delete property');
       }
-
-      setProperties(properties.filter(property => property.id !== id));
+  
+      setProperties(prev => prev.filter(property => property.id !== id));
       toast({
         title: 'Success',
         description: 'Property deleted successfully',
@@ -121,6 +108,7 @@ const LandlordProperties = () => {
       });
     }
   };
+  
 
   return (
     <div className="space-y-6">
@@ -192,16 +180,16 @@ const LandlordProperties = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
                             onClick={() => window.location.href = `/admin-dashboard/edit-property/${property.id}`}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
+                          <Button
+                            variant="outline"
+                            size="icon"
                             className="text-red-500"
                             onClick={() => handleDeleteProperty(property.id)}
                           >
@@ -251,12 +239,9 @@ const LandlordProperties = () => {
                 <div>
                   <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">Property Image</h3>
                   <img
-                    src={`http://3.216.182.63:8091/${selectedProperty.imageUrl}`}
+                    src={`${apiUrl}/${selectedProperty.imageUrl}`}
                     alt={selectedProperty.name}
                     className="rounded-md w-full h-64 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder-property.jpg';
-                    }}
                   />
                 </div>
               </div>
@@ -265,7 +250,7 @@ const LandlordProperties = () => {
                 <Button variant="outline" onClick={() => setSelectedProperty(null)} className="w-full sm:w-auto">
                   Close
                 </Button>
-                <Button 
+                <Button
                   className="w-full sm:w-auto"
                   onClick={() => window.location.href = `/admin-dashboard/edit-property/${selectedProperty.id}`}
                 >

@@ -57,7 +57,7 @@ const RegisterProperty = () => {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
    
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiI1MzFkNDI4Ny1lOWU3LTRiMTMtYjE2YS03ZGUzZDY3YmM1YzIiLCJleHAiOjE3NDQ2Njc3MTMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.I34A4KOCJQxeQx102Kw716TVuMGNh7bC3D4njbcfFWc";
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzZDY1ZThmYS03MWQ1LTQ0ODYtOTdkYi02NjY2YTdkNGM4YzUiLCJleHAiOjE3NDQ3Mjc1MzMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.sMKgJ54uPibdiJWsIbNwdyOD5Bggx1_jPZzen-orGMw";
 
   useEffect(() => {
     fetchLandlords();
