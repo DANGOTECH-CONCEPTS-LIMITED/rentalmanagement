@@ -1,16 +1,39 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Upload, X, ImageIcon } from "lucide-react";
 
 interface PropertyPhoto {
   file: File;
   preview: string;
+}
+
+interface Landlord {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  passportPhoto: string;
+  nationalIdNumber: string;
+  systemRoleId: number;
+  systemRole: {
+    id: number;
+    name: string;
+    description: string;
+  };
 }
 
 const RegisterProperty = () => {
@@ -25,19 +48,65 @@ const RegisterProperty = () => {
     Description: "",
     OwnerId: "0",
     Price: "0",
-    Occupied: "true"
+    Currency: "UGX",
+    Occupied: "true",
   });
 
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [landlords, setLandlords] = useState<Landlord[]>([]);
+  const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+   
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiI1MzFkNDI4Ny1lOWU3LTRiMTMtYjE2YS03ZGUzZDY3YmM1YzIiLCJleHAiOjE3NDQ2Njc3MTMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.I34A4KOCJQxeQx102Kw716TVuMGNh7bC3D4njbcfFWc";
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  useEffect(() => {
+    fetchLandlords();
+  }, []);
+
+  const fetchLandlords = async () => {
+    setIsLoadingLandlords(true);
+     
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/GetLandlords`, {
+        method: "GET",
+        headers: {
+          accept: "*/*",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch landlords");
+      }
+
+      const data: Landlord[] = await response.json();
+      setLandlords(data);
+    } catch (error) {
+      console.error("Error fetching landlords:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load landlord information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingLandlords(false);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,16 +124,16 @@ const RegisterProperty = () => {
 
     const newPhotos: PropertyPhoto[] = [];
 
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         newPhotos.push({
           file,
-          preview: reader.result as string
+          preview: reader.result as string,
         });
-        
+
         if (newPhotos.length === files.length) {
-          setPropertyPhotos(prev => [...prev, ...newPhotos]);
+          setPropertyPhotos((prev) => [...prev, ...newPhotos]);
         }
       };
       reader.readAsDataURL(file);
@@ -72,12 +141,12 @@ const RegisterProperty = () => {
   };
 
   const removePhoto = (index: number) => {
-    setPropertyPhotos(prev => prev.filter((_, i) => i !== index));
+    setPropertyPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+  
     if (propertyPhotos.length === 0) {
       toast({
         title: "Photos Required",
@@ -86,40 +155,70 @@ const RegisterProperty = () => {
       });
       return;
     }
-    
+  
     setIsSubmitting(true);
-    
+  
     try {
       const formDataToSend = new FormData();
-      
-      // Append all form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataToSend.append(key, value);
+  
+      formDataToSend.append("Price", formData.Price);
+      formDataToSend.append("Name", formData.Name);
+      formDataToSend.append("Zipcode", formData.Zipcode);
+      formDataToSend.append("OwnerId", formData.OwnerId);
+      formDataToSend.append("District", formData.District);
+      formDataToSend.append("Currency", formData.Currency);
+      formDataToSend.append("Region", formData.Region);
+      formDataToSend.append("Address", formData.Address);
+      formDataToSend.append("NumberOfRooms", formData.NumberOfRooms);
+      formDataToSend.append("Type", formData.Type);
+      formDataToSend.append("Description", formData.Description);
+      formDataToSend.append("Occupied", formData.Occupied);
+  
+      propertyPhotos.forEach((photo, index) => {
+        formDataToSend.append("files", photo.file);
       });
-      
-      // Append each photo file
-      propertyPhotos.forEach(photo => {
-        formDataToSend.append('files', photo.file);
-      });
-      
-      const response = await fetch('http://3.216.182.63:8091/AddProperty', {
-        method: 'POST',
-        body: formDataToSend,
-        // Headers are not needed when using FormData, the browser will set them automatically
-      });
-      
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
+  
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(`${key}:`, value);
       }
-      
-      const result = await response.json();
-      
+  
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+      if (!apiUrl) {
+        throw new Error("API base URL is not configured");
+      }
+  
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+  
+      const response = await fetch(`${apiUrl}/AddProperty`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataToSend,
+        signal: controller.signal,
+      });
+  
+      clearTimeout(timeoutId);
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to register property");
+      }
+  
+      const contentType = response.headers.get("content-type");
+      let result;
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+      } else {
+        result = await response.text();
+      }
+  
       toast({
         title: "Property Registered",
         description: `Successfully registered property: ${formData.Name}`,
       });
-      
-      // Reset form
+  
       setFormData({
         Name: "",
         Address: "",
@@ -131,22 +230,34 @@ const RegisterProperty = () => {
         Description: "",
         OwnerId: "0",
         Price: "0",
-        Occupied: "true"
+        Currency: "UGX",
+        Occupied: "true",
       });
       setPropertyPhotos([]);
-      
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error("Error submitting form:", error);
+  
+      let errorMessage = "Failed to register property. Please try again.";
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          errorMessage = "Request timed out. Please try again.";
+        } else if (error.message.includes("Failed to fetch")) {
+          errorMessage = "Could not connect to the server. Please check your connection.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+  
       toast({
         title: "Error",
-        description: "Failed to register property. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-
+  
   return (
     <div className="space-y-6">
       <div>
@@ -158,10 +269,10 @@ const RegisterProperty = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="Name">Property Name</Label>
-              <Input 
-                id="Name" 
-                name="Name" 
+              <Label htmlFor="Name">Property Name*</Label>
+              <Input
+                id="Name"
+                name="Name"
                 value={formData.Name}
                 onChange={handleInputChange}
                 required
@@ -169,10 +280,11 @@ const RegisterProperty = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="Type">Property Type</Label>
+              <Label htmlFor="Type">Property Type*</Label>
               <Select
                 value={formData.Type}
                 onValueChange={(value) => handleSelectChange("Type", value)}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select property type" />
@@ -187,10 +299,10 @@ const RegisterProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="Address">Street Address</Label>
-              <Input 
-                id="Address" 
-                name="Address" 
+              <Label htmlFor="Address">Street Address*</Label>
+              <Input
+                id="Address"
+                name="Address"
                 value={formData.Address}
                 onChange={handleInputChange}
                 required
@@ -198,10 +310,10 @@ const RegisterProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="District">District</Label>
-              <Input 
-                id="District" 
-                name="District" 
+              <Label htmlFor="District">District*</Label>
+              <Input
+                id="District"
+                name="District"
                 value={formData.District}
                 onChange={handleInputChange}
                 required
@@ -209,10 +321,10 @@ const RegisterProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="Region">Region</Label>
-              <Input 
-                id="Region" 
-                name="Region" 
+              <Label htmlFor="Region">Region*</Label>
+              <Input
+                id="Region"
+                name="Region"
                 value={formData.Region}
                 onChange={handleInputChange}
                 required
@@ -220,10 +332,10 @@ const RegisterProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="Zipcode">ZIP Code</Label>
-              <Input 
-                id="Zipcode" 
-                name="Zipcode" 
+              <Label htmlFor="Zipcode">ZIP Code*</Label>
+              <Input
+                id="Zipcode"
+                name="Zipcode"
                 value={formData.Zipcode}
                 onChange={handleInputChange}
                 required
@@ -231,10 +343,10 @@ const RegisterProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="NumberOfRooms">Number of Rooms</Label>
-              <Input 
-                id="NumberOfRooms" 
-                name="NumberOfRooms" 
+              <Label htmlFor="NumberOfRooms">Number of Rooms*</Label>
+              <Input
+                id="NumberOfRooms"
+                name="NumberOfRooms"
                 type="number"
                 min="0"
                 value={formData.NumberOfRooms}
@@ -244,25 +356,32 @@ const RegisterProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="OwnerId">Owner ID</Label>
-              <Input 
-                id="OwnerId" 
-                name="OwnerId" 
-                type="number"
-                min="0"
+              <Label htmlFor="OwnerId">Landlord*</Label>
+              <Select
                 value={formData.OwnerId}
-                onChange={handleInputChange}
+                onValueChange={(value) => handleSelectChange("OwnerId", value)}
+                disabled={isLoadingLandlords}
                 required
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingLandlords ? "Loading landlords..." : "Select a landlord"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {landlords.map((landlord) => (
+                    <SelectItem key={landlord.id} value={landlord.id.toString()}>
+                      {landlord.fullName} ({landlord.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="Price">Price</Label>
-              <Input 
-                id="Price" 
-                name="Price" 
-                type="number"
-                min="0"
+              <Label htmlFor="Price">Price*</Label>
+              <Input
+                id="Price"
+                name="Price"
+                type="text"
                 value={formData.Price}
                 onChange={handleInputChange}
                 required
@@ -270,10 +389,28 @@ const RegisterProperty = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="Occupied">Occupied Status</Label>
+              <Label htmlFor="Currency">Currency*</Label>
+              <Select
+                value={formData.Currency}
+                onValueChange={(value) => handleSelectChange("Currency", value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UGX">UGX</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="Occupied">Occupied Status*</Label>
               <Select
                 value={formData.Occupied}
                 onValueChange={(value) => handleSelectChange("Occupied", value)}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select occupancy status" />
@@ -287,11 +424,18 @@ const RegisterProperty = () => {
           </div>
 
           <div className="space-y-2">
-            <Label>Property Photos (Maximum 3)</Label>
+            <Label>Property Photos* (Maximum 3)</Label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {propertyPhotos.map((photo, index) => (
                 <div key={index} className="relative h-40 border rounded-md overflow-hidden">
-                  <img src={photo.preview} alt={`Property ${index + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={photo.preview}
+                    alt={`Property ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder-property.jpg';
+                    }}
+                  />
                   <button
                     type="button"
                     onClick={() => removePhoto(index)}
@@ -312,12 +456,12 @@ const RegisterProperty = () => {
                       </p>
                       <p className="text-xs text-gray-500">PNG, JPG, WEBP (MAX. 3)</p>
                     </div>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*" 
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
                       multiple
-                      onChange={handlePhotoUpload} 
+                      onChange={handlePhotoUpload}
                     />
                   </label>
                 </div>
@@ -326,19 +470,28 @@ const RegisterProperty = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="Description">Property Description</Label>
-            <Textarea 
-              id="Description" 
-              name="Description" 
+            <Label htmlFor="Description">Property Description*</Label>
+            <Textarea
+              id="Description"
+              name="Description"
               value={formData.Description}
               onChange={handleInputChange}
               rows={4}
+              required
             />
           </div>
 
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Registering..." : "Register Property"}
+              {isSubmitting ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : "Register Property"}
             </Button>
           </div>
         </form>

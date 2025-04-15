@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -11,16 +13,27 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { House, Search, Eye, Edit, Trash, XIcon } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface Property {
-  id: string;
+  id: number;
   name: string;
-  address: string;
   type: string;
-  units: number;
-  landlordName: string;
-  landlordId: string;
-  images: string[];
+  address: string;
+  region: string;
+  district: string;
+  zipcode: string;
+  numberOfRooms: number;
+  description: string;
+  imageUrl: string;
+  price: number;
+  currency: string;
+  owner: {
+    id: number;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+  };
 }
 
 const LandlordProperties = () => {
@@ -28,75 +41,86 @@ const LandlordProperties = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiI1MzFkNDI4Ny1lOWU3LTRiMTMtYjE2YS03ZGUzZDY3YmM1YzIiLCJleHAiOjE3NDQ2Njc3MTMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.I34A4KOCJQxeQx102Kw716TVuMGNh7bC3D4njbcfFWc";
 
   useEffect(() => {
-    // Simulate API call to fetch properties
-    setTimeout(() => {
-      const mockProperties: Property[] = [
-        {
-          id: 'prop1',
-          name: 'Sunset Apartments',
-          address: '123 Main St, Kampala, Uganda',
-          type: 'Apartment',
-          units: 8,
-          landlordName: 'John Doe',
-          landlordId: 'land1',
-          images: [
-            'https://images.unsplash.com/photo-1460317442991-0ec209397118',
-            'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267'
-          ]
-        },
-        {
-          id: 'prop2',
-          name: 'Bayview Condos',
-          address: '456 Park Ave, Entebbe, Uganda',
-          type: 'Condominium',
-          units: 12,
-          landlordName: 'Sarah Smith',
-          landlordId: 'land2',
-          images: [
-            'https://images.unsplash.com/photo-1493809842364-78817add7ffb',
-            'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688'
-          ]
-        },
-        {
-          id: 'prop3',
-          name: 'Green Gardens Villa',
-          address: '789 Garden Rd, Jinja, Uganda',
-          type: 'House',
-          units: 1,
-          landlordName: 'Michael Johnson',
-          landlordId: 'land3',
-          images: [
-            'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9',
-            'https://images.unsplash.com/photo-1512917774080-9991f1c4c750'
-          ]
-        },
-        {
-          id: 'prop4',
-          name: 'Downtown Office',
-          address: '101 Business Blvd, Kampala, Uganda',
-          type: 'Commercial',
-          units: 5,
-          landlordName: 'John Doe',
-          landlordId: 'land1',
-          images: [
-            'https://images.unsplash.com/photo-1497366754035-f200968a6e72',
-            'https://images.unsplash.com/photo-1497366811353-6870744d04b2'
-          ]
-        },
-      ];
+    
+    const fetchProperties = async () => {
+         
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
 
-      setProperties(mockProperties);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+      try {
+        const response = await fetch(`{apiUrl}/GetAllProperties`, {
+          method: 'GET',
+          headers: {
+            'accept': '*/*',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setProperties(data);
+      } catch (err) {
+        console.error('Error fetching properties:', err);
+        setError('Failed to load properties. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, [token]);
 
   const filteredProperties = properties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.landlordName.toLowerCase().includes(searchTerm.toLowerCase())
+    property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDeleteProperty = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this property?')) return;
+    
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+    
+    
+    try {
+      const response = await fetch(`apiUrl/DeleteProperty/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete property');
+      }
+
+      setProperties(properties.filter(property => property.id !== id));
+      toast({
+        title: 'Success',
+        description: 'Property deleted successfully',
+      });
+    } catch (err) {
+      console.error('Error deleting property:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete property',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -110,8 +134,6 @@ const LandlordProperties = () => {
         </Button>
       </div>
 
-
-
       <Card>
         <CardContent className="pt-6">
           <div className="mb-6 flex items-center relative">
@@ -124,7 +146,11 @@ const LandlordProperties = () => {
             />
           </div>
 
-          {isLoading ? (
+          {error ? (
+            <div className="py-8 text-center text-red-500">
+              {error}
+            </div>
+          ) : isLoading ? (
             <div className="py-8 text-center">
               <div className="animate-pulse">Loading properties...</div>
             </div>
@@ -144,7 +170,7 @@ const LandlordProperties = () => {
                     <TableHead>Property Name</TableHead>
                     <TableHead className="hidden md:table-cell">Address</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead className="hidden md:table-cell">Units</TableHead>
+                    <TableHead className="hidden md:table-cell">Rooms</TableHead>
                     <TableHead>Landlord</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -155,8 +181,8 @@ const LandlordProperties = () => {
                       <TableCell className="font-medium">{property.name}</TableCell>
                       <TableCell className="hidden md:table-cell">{property.address}</TableCell>
                       <TableCell>{property.type}</TableCell>
-                      <TableCell className="hidden md:table-cell">{property.units}</TableCell>
-                      <TableCell>{property.landlordName}</TableCell>
+                      <TableCell className="hidden md:table-cell">{property.numberOfRooms}</TableCell>
+                      <TableCell>{property.owner.fullName}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
                           <Button
@@ -166,10 +192,19 @@ const LandlordProperties = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon">
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => window.location.href = `/admin-dashboard/edit-property/${property.id}`}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon" className="text-red-500">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="text-red-500"
+                            onClick={() => handleDeleteProperty(property.id)}
+                          >
                             <Trash className="h-4 w-4" />
                           </Button>
                         </div>
@@ -194,49 +229,52 @@ const LandlordProperties = () => {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="mb-4">
                     <h3 className="text-sm sm:text-base font-medium text-gray-500">Property Details</h3>
                     <p className="mt-1"><span className="font-medium">Address:</span> {selectedProperty.address}</p>
                     <p className="mt-1"><span className="font-medium">Type:</span> {selectedProperty.type}</p>
-                    <p className="mt-1"><span className="font-medium">Units:</span> {selectedProperty.units}</p>
+                    <p className="mt-1"><span className="font-medium">Rooms:</span> {selectedProperty.numberOfRooms}</p>
+                    <p className="mt-1"><span className="font-medium">Price:</span> {selectedProperty.price} {selectedProperty.currency}</p>
+                    <p className="mt-1"><span className="font-medium">Description:</span> {selectedProperty.description}</p>
                   </div>
 
                   <div>
                     <h3 className="text-sm sm:text-base font-medium text-gray-500">Landlord Information</h3>
-                    <p className="mt-1"><span className="font-medium">Name:</span> {selectedProperty.landlordName}</p>
-                    <p className="mt-1"><span className="font-medium">ID:</span> {selectedProperty.landlordId}</p>
+                    <p className="mt-1"><span className="font-medium">Name:</span> {selectedProperty.owner.fullName}</p>
+                    <p className="mt-1"><span className="font-medium">Email:</span> {selectedProperty.owner.email}</p>
+                    <p className="mt-1"><span className="font-medium">Phone:</span> {selectedProperty.owner.phoneNumber}</p>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">Property Images</h3>
-                  <div className="grid grid-cols sm:grid-cols-2 gap-2">
-                    {selectedProperty.images.map((img, index) => (
-                      <img
-                        key={index}
-                        src={img}
-                        alt={`${selectedProperty.name} ${index + 1}`}
-                        className="rounded-md w-full h-32 sm:h-40 md:h-48 md:w-48 object-cover"
-                      />
-                    ))}
-                  </div>
+                  <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">Property Image</h3>
+                  <img
+                    src={`http://3.216.182.63:8091/${selectedProperty.imageUrl}`}
+                    alt={selectedProperty.name}
+                    className="rounded-md w-full h-64 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder-property.jpg';
+                    }}
+                  />
                 </div>
-
               </div>
 
               <div className="flex flex-col sm:flex-row sm:justify-end mt-6 space-y-2 sm:space-x-2 sm:space-y-0">
                 <Button variant="outline" onClick={() => setSelectedProperty(null)} className="w-full sm:w-auto">
                   Close
                 </Button>
-                <Button className="w-full sm:w-auto">Edit Property</Button>
+                <Button 
+                  className="w-full sm:w-auto"
+                  onClick={() => window.location.href = `/admin-dashboard/edit-property/${selectedProperty.id}`}
+                >
+                  Edit Property
+                </Button>
               </div>
-
             </div>
           </div>
         </div>
-
       )}
     </div>
   );
