@@ -37,6 +37,11 @@ interface AuthContextType {
     currentPassword: string,
     newPassword: string
   ) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -167,6 +172,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    try {
+      setLoading(true);
+      console.log("email", email);
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/ForgotPassword`,
+        JSON.stringify(email), // wraps the email in quotes, becomes a JSON string
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    } catch (error) {
+      throw new Error(
+        axios.isAxiosError(error)
+          ? error.response?.data?.message || "Failed to send reset email"
+          : "Failed to send reset email"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (
+    currentPassword: string,
+    newPassword: string
+  ) => {
+    try {
+      setLoading(true);
+
+      const response = await axios.post<User>(
+        `${import.meta.env.VITE_API_BASE_URL}/AuthenticateUser`,
+        {
+          userName: sessionStorage.getItem("resetEmail"),
+          password: currentPassword,
+        }
+      );
+
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${response.data.token}`;
+
+      if (!response.data.token) {
+        throw new Error("Authentication failed: No token received");
+      }
+
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/ChangePassword`, {
+        currentPassword,
+        newPassword,
+        userName: response.data.email,
+      });
+    } catch (error) {
+      throw new Error(
+        axios.isAxiosError(error)
+          ? error.response?.data?.message || "Password reset failed"
+          : "Password reset failed"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: AuthContextType = {
     isAuthenticated: !!user?.token,
     user,
@@ -177,6 +245,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     showPasswordModal,
     setShowPasswordModal,
     changePassword,
+    forgotPassword,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

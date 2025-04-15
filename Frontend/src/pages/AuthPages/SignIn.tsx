@@ -125,6 +125,12 @@ const SignIn = () => {
               </Button>
             </form>
 
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-primary hover:text-primary/80"
+            >
+              Forgot password?
+            </Link>
             <p className="mt-6 text-center text-sm text-gray-600">
               Don't have an account?{" "}
               <Link
