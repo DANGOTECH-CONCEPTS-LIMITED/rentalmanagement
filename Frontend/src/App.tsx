@@ -39,6 +39,8 @@ import RentalContracts from "./pages/Landlord/RentalContracts";
 import HandleComplaints from "./pages/Landlord/HandleComplaints";
 import TrackPayments from "./pages/Landlord/TrackPayments";
 import Index from "./pages/Index";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +111,8 @@ const App = () => (
 
             {/* Fallback Route */}
             <Route path="*" element={<NotFound />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </HashRouter>
       </TooltipProvider>
