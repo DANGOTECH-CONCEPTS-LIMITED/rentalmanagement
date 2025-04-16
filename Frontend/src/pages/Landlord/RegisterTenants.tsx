@@ -32,17 +32,26 @@ const RegisterTenants = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
 
-  // Document upload state
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
   const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
+  const user = localStorage.getItem('user') || null;
+
+  const token = JSON.parse(user).token;
+  if (!token) {
+    toast({
+      title: "Error",
+      description: "User token not found. Please log in again.",
+      variant: "destructive",
+    });
+    return;
+  }
+
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const token = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzNjMxMWE2My1lZTMwLTRjMmUtYjE5YS1mYmE0YThiNzZiNWQiLCJleHAiOjE3NDQ3Mzc0NDUsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.n5h_AyOTZfwZa0i2J2BkvmqbiZfB0ZNq8eGAyJWIXhQ';
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
-
+        const apiUrl = import.meta.env.VITE_API_BASE_URL;
         const response = await fetch(`${apiUrl}/GetAllProperties`, {
           method: 'GET',
           headers: {
@@ -108,8 +117,7 @@ const RegisterTenants = () => {
     setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzNjMxMWE2My1lZTMwLTRjMmUtYjE5YS1mYmE0YThiNzZiNWQiLCJleHAiOjE3NDQ3Mzc0NDUsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.n5h_AyOTZfwZa0i2J2BkvmqbiZfB0ZNq8eGAyJWIXhQ';
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
       const form = new FormData();
       

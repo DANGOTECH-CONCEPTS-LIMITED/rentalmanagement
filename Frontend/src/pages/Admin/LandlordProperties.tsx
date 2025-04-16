@@ -87,8 +87,21 @@ const LandlordProperties = () => {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiI1ZjdkMGVkNy04Y2UzLTQyODUtYmQ4Zi00MTg4MTY4MWUxM2MiLCJleHAiOjE3NDQ3MzE2MDcsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.tQy4V33Mu0YPBa5Y6g8_nzD9MUTUgmMwzf3lVybswvI";
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
+  const user = localStorage.getItem('user') || null;
+
+  console.log("Token:", user);
+
+  const token = JSON.parse(user).token;
+  if (!token) {
+    toast({
+      title: "Error",
+      description: "User token not found. Please log in again.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const navigate = useNavigate();
 
