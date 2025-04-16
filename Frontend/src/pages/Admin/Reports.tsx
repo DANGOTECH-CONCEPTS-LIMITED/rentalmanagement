@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-         LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell
+} from 'recharts';
 import { Download } from "lucide-react";
 
 const occupancyData = [
@@ -49,21 +51,18 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const Reports = () => {
   const [timeframe, setTimeframe] = useState("yearly");
-  
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row items-center justify-between sm:gap-4">
+        <div className="mb-4 sm:mb-0">
           <h1 className="text-2xl font-semibold tracking-tight">Reports & Analytics</h1>
           <p className="text-muted-foreground">View performance metrics and generate reports</p>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <Select
-            value={timeframe}
-            onValueChange={setTimeframe}
-          >
-            <SelectTrigger className="w-[180px]">
+
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Select value={timeframe} onValueChange={setTimeframe} className="w-full sm:w-[180px]">
+            <SelectTrigger>
               <SelectValue placeholder="Timeframe" />
             </SelectTrigger>
             <SelectContent>
@@ -72,13 +71,14 @@ const Reports = () => {
               <SelectItem value="yearly">Yearly</SelectItem>
             </SelectContent>
           </Select>
-          
-          <Button variant="outline" className="flex items-center gap-2">
+
+          <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto">
             <Download className="h-4 w-4" />
             Export Data
           </Button>
         </div>
       </div>
+
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-4">
@@ -87,7 +87,7 @@ const Reports = () => {
           <TabsTrigger value="occupancy">Occupancy</TabsTrigger>
           <TabsTrigger value="properties">Properties</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
@@ -110,7 +110,7 @@ const Reports = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Revenue</CardTitle>
@@ -132,7 +132,7 @@ const Reports = () => {
               </CardContent>
             </Card>
           </div>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Property Distribution</CardTitle>
@@ -164,21 +164,21 @@ const Reports = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="financials">
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-4">Financial Reports (Coming Soon)</h3>
             <p className="text-muted-foreground">Detailed financial analytics will be available in this section.</p>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="occupancy">
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-4">Occupancy Reports (Coming Soon)</h3>
             <p className="text-muted-foreground">Detailed occupancy analytics will be available in this section.</p>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="properties">
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-4">Property Reports (Coming Soon)</h3>
