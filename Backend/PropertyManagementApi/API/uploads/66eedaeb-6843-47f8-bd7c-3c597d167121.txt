@@ -1,0 +1,4 @@
+domain
+capability of wifi
+
+

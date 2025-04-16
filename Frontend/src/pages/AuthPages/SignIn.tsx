@@ -1,39 +1,45 @@
-
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { motion } from 'framer-motion';
-import { ArrowRight, User, Lock, Check } from 'lucide-react';
-import Button from '../../components/ui/button/Button';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { motion } from "framer-motion";
+import { ArrowRight, User, Lock } from "lucide-react";
+import Button from "../../components/ui/button/Button";
 
 const SignIn = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { login, loading: authLoading, error: authError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    
     try {
-      await login(email, password);
-      
-      // Redirect based on user role
-      if (email === 'admin@example.com') {
-        navigate('/admin-dashboard');
-      } else if (email === 'landlord@example.com') {
-        navigate('/landlord-dashboard');
-      } else if (email === 'tenant@example.com') {
-        navigate('/tenant-dashboard');
+      const { systemRoleId, requiresPasswordChange } = await login(
+        email,
+        password
+      );
+
+      if (requiresPasswordChange) {
+        // The AuthContext will show the modal via its state
+        return;
+      }
+
+      // Handle navigation based on role
+      switch (systemRoleId) {
+        case 1: // Admin
+          navigate("/admin-dashboard");
+          break;
+        case 2: // Landlord
+          navigate("/landlord-dashboard");
+          break;
+        case 3: // Tenant
+          navigate("/tenant-dashboard");
+          break;
+        default:
+          navigate("/");
       }
     } catch (error) {
-      setError('Invalid email or password');
-    } finally {
-      setIsLoading(false);
+      console.error("Login error:", error);
     }
   };
 
@@ -48,10 +54,14 @@ const SignIn = () => {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="p-8">
             <div className="mb-8 text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Rental Hub</h1>
-              <p className="text-gray-600">Your one stop property management solution</p>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Rental Hub
+              </h1>
+              <p className="text-gray-600">
+                Your one stop property management solution
+              </p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div>
@@ -69,10 +79,11 @@ const SignIn = () => {
                       className="input-field pl-10"
                       placeholder="Enter your email"
                       required
+                      autoComplete="username"
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Password
@@ -88,52 +99,40 @@ const SignIn = () => {
                       className="input-field pl-10"
                       placeholder="Enter your password"
                       required
+                      autoComplete="current-password"
                     />
                   </div>
                 </div>
               </div>
 
-              {error && (
+              {authError && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="text-sm text-red-600 mt-2"
                 >
-                  {error}
+                  {authError}
                 </motion.p>
               )}
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="h-4 w-4 text-primary border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
-                    Remember me
-                  </label>
-                </div>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium text-primary hover:text-primary/80"
-                >
-                  Forgot password?
-                </Link>
-              </div>
 
               <Button
                 type="submit"
                 className="w-full"
-                isLoading={isLoading}
+                isLoading={authLoading}
                 rightIcon={<ArrowRight size={18} />}
               >
                 Sign In
               </Button>
             </form>
 
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-primary hover:text-primary/80"
+            >
+              Forgot password?
+            </Link>
             <p className="mt-6 text-center text-sm text-gray-600">
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <Link
                 to="/signup"
                 className="font-medium text-primary hover:text-primary/80"
@@ -141,7 +140,6 @@ const SignIn = () => {
                 contact Admin
               </Link>
             </p>
-
           </div>
         </div>
       </motion.div>
