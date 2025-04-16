@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, User, Mail, Phone, Home, Calendar, Key, Check, Upload, X, Camera, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,109 +6,96 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+
+interface Property {
+  id: number;
+  name: string;
+  address: string;
+}
 
 const RegisterTenants = () => {
   const { toast } = useToast();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [idNumber, setIdNumber] = useState('');
-  const [moveInDate, setMoveInDate] = useState('');
-  const [property, setProperty] = useState('');
-  const [rentAmount, setRentAmount] = useState('');
+  const [formData, setFormData] = useState({
+    FullName: '',
+    Email: '',
+    PhoneNumber: '',
+    NationalIdNumber: '',
+    DateMovedIn: '',
+    PropertyId: '',
+    Password: '',
+    Active: 'true',
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
 
-  // New state for validation and document upload
-  const [isValidating, setIsValidating] = useState(false);
-  const [isValidated, setIsValidated] = useState(false);
+  // Document upload state
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
-  const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
   const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
-  const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(null);
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
-  const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(null);
 
-  const properties = [
-    { id: 'prop1', name: 'Sunset Apartments - Unit 101' },
-    { id: 'prop2', name: 'Sunset Apartments - Unit 102' },
-    { id: 'prop3', name: 'Bayview Condos - Unit 305' },
-    { id: 'prop4', name: 'Westside Heights - Unit 210' },
-  ];
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        const token = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzNjMxMWE2My1lZTMwLTRjMmUtYjE5YS1mYmE0YThiNzZiNWQiLCJleHAiOjE3NDQ3Mzc0NDUsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.n5h_AyOTZfwZa0i2J2BkvmqbiZfB0ZNq8eGAyJWIXhQ';
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'passport' | 'idFront' | 'idBack') => {
+        const response = await fetch(`${apiUrl}/GetAllProperties`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setProperties(data);
+      } catch (error) {
+        console.error('Error fetching properties:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch properties",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingProperties(false);
+      }
+    };
+
+    fetchProperties();
+  }, [toast]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      
-      if (type === 'passport') {
-        setPassportPhoto(file);
-        setPassportPhotoPreview(result);
-      } else if (type === 'idFront') {
-        setIdFrontPhoto(file);
-        setIdFrontPhotoPreview(result);
-      } else if (type === 'idBack') {
-        setIdBackPhoto(file);
-        setIdBackPhotoPreview(result);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removePhoto = (type: 'passport' | 'idFront' | 'idBack') => {
-    if (type === 'passport') {
-      setPassportPhoto(null);
-      setPassportPhotoPreview(null);
-    } else if (type === 'idFront') {
-      setIdFrontPhoto(null);
-      setIdFrontPhotoPreview(null);
-    } else if (type === 'idBack') {
-      setIdBackPhoto(null);
-      setIdBackPhotoPreview(null);
+    if (type === 'PassportPhoto') {
+      setPassportPhoto(file);
+    } else if (type === 'IdFront') {
+      setIdFrontPhoto(file);
+    } else if (type === 'IdBack') {
+      setIdBackPhoto(file);
     }
   };
 
-  const validateId = () => {
-    if (!idNumber) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter an ID number to validate",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsValidating(true);
-    
-    // Simulate API call for validation
-    setTimeout(() => {
-      setIsValidating(false);
-      setIsValidated(true);
-      
-      toast({
-        title: "ID Validated",
-        description: "National ID has been successfully validated.",
-        variant: "default",
-      });
-    }, 2000);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
-    if (!isValidated) {
-      toast({
-        title: "Validation Required",
-        description: "Please validate the National ID before proceeding.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!passportPhoto || !idFrontPhoto || !idBackPhoto) {
       toast({
         title: "Missing Documents",
@@ -121,36 +107,79 @@ const RegisterTenants = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzNjMxMWE2My1lZTMwLTRjMmUtYjE5YS1mYmE0YThiNzZiNWQiLCJleHAiOjE3NDQ3Mzc0NDUsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.n5h_AyOTZfwZa0i2J2BkvmqbiZfB0ZNq8eGAyJWIXhQ';
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
+
+      const form = new FormData();
+      
+      // Append all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        form.append(key, value);
+      });
+      
+      // Append files with exact field names from API
+      form.append('PassportPhoto', passportPhoto);
+      form.append('IdFront', idFrontPhoto);
+      form.append('IdBack', idBackPhoto);
+      
+      // Append files array (if needed by backend)
+      form.append('files', passportPhoto);
+      form.append('files', idFrontPhoto);
+      form.append('files', idBackPhoto);
+
+      const response = await fetch(`${apiUrl}/api/Tenant/CreateTenant`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': '*/*',
+        },
+        body: form,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
       setIsSubmitting(false);
       setIsSuccess(true);
       
       toast({
         title: "Tenant Registered Successfully",
-        description: `${name} has been registered as a tenant.`,
+        description: `${formData.FullName} has been registered as a tenant.`,
         variant: "default",
       });
       
-      // Reset form after some time
+      // Reset form after success
       setTimeout(() => {
-        setName('');
-        setEmail('');
-        setPhone('');
-        setIdNumber('');
-        setMoveInDate('');
-        setProperty('');
-        setRentAmount('');
-        setIsValidated(false);
+        setFormData({
+          FullName: '',
+          Email: '',
+          PhoneNumber: '',
+          NationalIdNumber: '',
+          DateMovedIn: '',
+          PropertyId: '',
+          Password: '',
+          Active: 'true',
+        });
         setPassportPhoto(null);
-        setPassportPhotoPreview(null);
         setIdFrontPhoto(null);
-        setIdFrontPhotoPreview(null);
         setIdBackPhoto(null);
-        setIdBackPhotoPreview(null);
         setIsSuccess(false);
       }, 3000);
-    }, 1500);
+
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setIsSubmitting(false);
+      
+      toast({
+        title: "Registration Failed",
+        description: "There was an error registering the tenant. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -193,7 +222,7 @@ const RegisterTenants = () => {
               </div>
               <h3 className="text-xl font-semibold mb-2">Tenant Registered Successfully!</h3>
               <p className="text-gray-600 max-w-md mb-4">
-                An email has been sent to {email} with login instructions for the tenant portal.
+                An email has been sent to {formData.Email} with login instructions.
               </p>
             </motion.div>
           ) : (
@@ -207,9 +236,9 @@ const RegisterTenants = () => {
                     </span>
                   </label>
                   <Input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    name="FullName"
+                    value={formData.FullName}
+                    onChange={handleInputChange}
                     placeholder="Enter tenant's full name"
                     required
                   />
@@ -223,9 +252,10 @@ const RegisterTenants = () => {
                     </span>
                   </label>
                   <Input
+                    name="Email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={formData.Email}
+                    onChange={handleInputChange}
                     placeholder="Enter tenant's email"
                     required
                   />
@@ -239,9 +269,10 @@ const RegisterTenants = () => {
                     </span>
                   </label>
                   <Input
+                    name="PhoneNumber"
                     type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    value={formData.PhoneNumber}
+                    onChange={handleInputChange}
                     placeholder="Enter tenant's phone number"
                     required
                   />
@@ -251,36 +282,16 @@ const RegisterTenants = () => {
                   <label className="text-sm font-medium">
                     <span className="flex items-center">
                       <Key className="mr-1 h-4 w-4" />
-                      ID Number
+                      National ID Number
                     </span>
                   </label>
-                  <div className="flex space-x-2">
-                    <Input
-                      type="text"
-                      value={idNumber}
-                      onChange={(e) => {
-                        setIdNumber(e.target.value);
-                        setIsValidated(false);
-                      }}
-                      placeholder="Enter tenant's ID number"
-                      required
-                      className="flex-1"
-                    />
-                    <Button 
-                      type="button" 
-                      onClick={validateId} 
-                      disabled={isValidating || isValidated || !idNumber}
-                      className="whitespace-nowrap"
-                    >
-                      {isValidating ? "Validating..." : isValidated ? "Validated ✓" : "Validate"}
-                    </Button>
-                  </div>
-                  {isValidated && (
-                    <div className="flex items-center text-green-500 text-sm mt-1">
-                      <Check size={14} className="mr-1" />
-                      ID Validated Successfully
-                    </div>
-                  )}
+                  <Input
+                    name="NationalIdNumber"
+                    value={formData.NationalIdNumber}
+                    onChange={handleInputChange}
+                    placeholder="Enter tenant's ID number"
+                    required
+                  />
                 </div>
                 
                 <div className="space-y-2">
@@ -291,9 +302,10 @@ const RegisterTenants = () => {
                     </span>
                   </label>
                   <Input
+                    name="DateMovedIn"
                     type="date"
-                    value={moveInDate}
-                    onChange={(e) => setMoveInDate(e.target.value)}
+                    value={formData.DateMovedIn}
+                    onChange={handleInputChange}
                     required
                   />
                 </div>
@@ -306,31 +318,35 @@ const RegisterTenants = () => {
                     </span>
                   </label>
                   <select 
+                    name="PropertyId"
                     className="w-full p-2 border border-gray-300 rounded-md"
-                    value={property}
-                    onChange={(e) => setProperty(e.target.value)}
+                    value={formData.PropertyId}
+                    onChange={handleInputChange}
                     required
+                    disabled={isLoadingProperties}
                   >
                     <option value="">Select a property</option>
                     {properties.map(prop => (
-                      <option key={prop.id} value={prop.id}>{prop.name}</option>
+                      <option key={prop.id} value={prop.id}>
+                        {prop.name} - {prop.address}
+                      </option>
                     ))}
                   </select>
+                  {isLoadingProperties && (
+                    <p className="text-sm text-gray-500">Loading properties...</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Rent Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2">USh</span>
-                    <Input
-                      type="number"
-                      className="pl-12"
-                      value={rentAmount}
-                      onChange={(e) => setRentAmount(e.target.value)}
-                      placeholder="Enter monthly rent amount"
-                      required
-                    />
-                  </div>
+                  <label className="text-sm font-medium">Temporary Password</label>
+                  <Input
+                    name="Password"
+                    type="password"
+                    value={formData.Password}
+                    onChange={handleInputChange}
+                    placeholder="Create temporary password"
+                    required
+                  />
                 </div>
               </div>
               
@@ -345,16 +361,14 @@ const RegisterTenants = () => {
                       Passport Photo
                     </label>
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
-                      {passportPhotoPreview ? (
+                      {passportPhoto ? (
                         <div className="relative w-full h-full">
-                          <img 
-                            src={passportPhotoPreview} 
-                            alt="Passport Preview" 
-                            className="w-full h-full object-cover rounded-md"
-                          />
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
+                            <span className="text-sm text-gray-500">Passport photo selected</span>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => removePhoto('passport')}
+                            onClick={() => setPassportPhoto(null)}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -370,7 +384,8 @@ const RegisterTenants = () => {
                                 type="file"
                                 className="sr-only"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, 'passport')}
+                                onChange={(e) => handleFileChange(e, 'PassportPhoto')}
+                                required
                               />
                             </label>
                           </p>
@@ -386,16 +401,14 @@ const RegisterTenants = () => {
                       ID Front Side
                     </label>
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
-                      {idFrontPhotoPreview ? (
+                      {idFrontPhoto ? (
                         <div className="relative w-full h-full">
-                          <img 
-                            src={idFrontPhotoPreview} 
-                            alt="ID Front Preview" 
-                            className="w-full h-full object-cover rounded-md"
-                          />
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
+                            <span className="text-sm text-gray-500">ID front selected</span>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => removePhoto('idFront')}
+                            onClick={() => setIdFrontPhoto(null)}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -411,7 +424,8 @@ const RegisterTenants = () => {
                                 type="file"
                                 className="sr-only"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, 'idFront')}
+                                onChange={(e) => handleFileChange(e, 'IdFront')}
+                                required
                               />
                             </label>
                           </p>
@@ -427,16 +441,14 @@ const RegisterTenants = () => {
                       ID Back Side
                     </label>
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
-                      {idBackPhotoPreview ? (
+                      {idBackPhoto ? (
                         <div className="relative w-full h-full">
-                          <img 
-                            src={idBackPhotoPreview} 
-                            alt="ID Back Preview" 
-                            className="w-full h-full object-cover rounded-md"
-                          />
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
+                            <span className="text-sm text-gray-500">ID back selected</span>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => removePhoto('idBack')}
+                            onClick={() => setIdBackPhoto(null)}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -452,7 +464,8 @@ const RegisterTenants = () => {
                                 type="file"
                                 className="sr-only"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, 'idBack')}
+                                onChange={(e) => handleFileChange(e, 'IdBack')}
+                                required
                               />
                             </label>
                           </p>

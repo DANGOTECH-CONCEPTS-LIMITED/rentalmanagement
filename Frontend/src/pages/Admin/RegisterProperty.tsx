@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Upload, X, ImageIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface PropertyPhoto {
   file: File;
@@ -58,6 +59,11 @@ const RegisterProperty = () => {
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
    
   const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzZDY1ZThmYS03MWQ1LTQ0ODYtOTdkYi02NjY2YTdkNGM4YzUiLCJleHAiOjE3NDQ3Mjc1MzMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.sMKgJ54uPibdiJWsIbNwdyOD5Bggx1_jPZzen-orGMw";
+
+  const navigate = useNavigate();
+  const handleNavigate = () => {
+    navigate("admin-dashboard/register-property");
+  }
 
   useEffect(() => {
     fetchLandlords();
@@ -262,7 +268,7 @@ const RegisterProperty = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Register New Property</h1>
-        <p className="text-muted-foreground">Add a new property to the management system</p>
+        <p className="text-muted-foreground" onClick={handleNavigate}>Add a new property to the management system</p>
       </div>
 
       <Card>
