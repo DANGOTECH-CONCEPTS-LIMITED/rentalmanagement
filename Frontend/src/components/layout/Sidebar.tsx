@@ -1,18 +1,17 @@
-
-import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { motion } from 'framer-motion';
-import { useIsMobile } from '../../hooks/use-mobile';
-import { 
-  Home, 
-  Users, 
-  FileText, 
-  Settings, 
-  BarChart3, 
-  Calendar, 
-  User, 
-  Menu, 
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { motion } from "framer-motion";
+import { useIsMobile } from "../../hooks/use-mobile";
+import {
+  Home,
+  Users,
+  FileText,
+  Settings,
+  BarChart3,
+  Calendar,
+  User,
+  Menu,
   LogOut,
   ChevronRight,
   House,
@@ -21,12 +20,12 @@ import {
   CreditCard,
   Clipboard,
   ClipboardCheck,
-  X
-} from 'lucide-react';
-import { cn } from '../../lib/utils';
+  X,
+} from "lucide-react";
+import { cn } from "../../lib/utils";
 
 interface SidebarProps {
-  role: string;
+  role: number;
 }
 
 interface NavItem {
@@ -47,12 +46,14 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   const navItems = getNavItems(role);
 
   const getActiveStyle = (path: string) => {
-    return location.pathname === path || 
-           (path !== `/${role}-dashboard` && location.pathname.startsWith(path));
+    return (
+      location.pathname === path ||
+      (path !== `/${role}-dashboard` && location.pathname.startsWith(path))
+    );
   };
-  
-  const sidebarWidth = isCollapsed && !isHovering ? 'w-20' : 'w-64';
-  
+
+  const sidebarWidth = isCollapsed && !isHovering ? "w-20" : "w-64";
+
   // For mobile: show a full-screen sidebar when menu is open
   if (isMobile) {
     return (
@@ -67,13 +68,16 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
 
         {/* Mobile sidebar overlay */}
         {isMobileOpen && (
-          <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setIsMobileOpen(false)}></div>
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setIsMobileOpen(false)}
+          ></div>
         )}
 
         {/* Mobile sidebar */}
         <motion.div
-          initial={{ x: '-100%' }}
-          animate={{ x: isMobileOpen ? 0 : '-100%' }}
+          initial={{ x: "-100%" }}
+          animate={{ x: isMobileOpen ? 0 : "-100%" }}
           transition={{ duration: 0.3 }}
           className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar border-r border-sidebar-border overflow-y-auto"
         >
@@ -103,17 +107,14 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
                 >
                   <NavLink
                     to={item.path}
-                    className={({ isActive }) => cn(
-                      "sidebar-link",
-                      isActive ? "active" : ""
-                    )}
+                    className={({ isActive }) =>
+                      cn("sidebar-link", isActive ? "active" : "")
+                    }
                     onClick={() => setIsMobileOpen(false)}
                   >
                     <span>{item.icon}</span>
                     <span className="flex-1">{item.label}</span>
-                    {item.hasSubItems && (
-                      <ChevronRight size={16} />
-                    )}
+                    {item.hasSubItems && <ChevronRight size={16} />}
                   </NavLink>
                 </motion.li>
               ))}
@@ -154,7 +155,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
             <House className="text-white" size={16} />
           </div>
           {(!isCollapsed || isHovering) && (
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="ml-3 font-semibold text-lg"
@@ -182,11 +183,13 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
             >
               <NavLink
                 to={item.path}
-                className={({ isActive }) => cn(
-                  "sidebar-link",
-                  isActive ? "active" : "",
-                  isCollapsed && !isHovering ? "justify-center px-2" : ""
-                )}
+                className={({ isActive }) =>
+                  cn(
+                    "sidebar-link",
+                    isActive ? "active" : "",
+                    isCollapsed && !isHovering ? "justify-center px-2" : ""
+                  )
+                }
               >
                 <span>{item.icon}</span>
                 {(!isCollapsed || isHovering) && (
@@ -210,130 +213,128 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           )}
         >
           <LogOut size={18} />
-          {(!isCollapsed || isHovering) && (
-            <span>Logout</span>
-          )}
+          {(!isCollapsed || isHovering) && <span>Logout</span>}
         </button>
       </div>
     </motion.div>
   );
 };
 
-function getNavItems(role: string): NavItem[] {
+function getNavItems(role: number): NavItem[] {
   // Admin navigation items
-  if (role === 'admin') {
+  if (role === 1) {
     return [
       {
-        label: 'Dashboard',
+        label: "Dashboard",
         icon: <Home size={18} />,
-        path: '/admin-dashboard',
+        path: "/admin-dashboard",
       },
       {
-        label: 'Landlords',
+        label: "Landlords",
         icon: <Users size={18} />,
-        path: '/admin-dashboard/register-landlord',
-        hasSubItems: false
+        path: "/admin-dashboard/register-landlord",
+        hasSubItems: false,
       },
       {
-        label: 'Properties',
+        label: "Properties",
         icon: <House size={18} />,
-        path: '/admin-dashboard/register-property',
-        hasSubItems: false
+        path: "/admin-dashboard/register-property",
+        hasSubItems: false,
       },
       {
-        label: 'Manage Users',
+        label: "Manage Users",
         icon: <User size={18} />,
-        path: '/admin-dashboard/manage-users',
-        hasSubItems: false
+        path: "/admin-dashboard/manage-users",
+        hasSubItems: false,
       },
       {
-        label: 'Available Properties',
+        label: "Available Properties",
         icon: <Clipboard size={18} />,
-        path: '/admin-dashboard/landlord-properties',
-        hasSubItems: false
+        path: "/admin-dashboard/landlord-properties",
+        hasSubItems: false,
       },
       {
-        label: 'Reports',
+        label: "Reports",
         icon: <BarChart3 size={18} />,
-        path: '/admin-dashboard/reports',
-        hasSubItems: false
+        path: "/admin-dashboard/reports",
+        hasSubItems: false,
       },
       {
-        label: 'Settings',
+        label: "Settings",
         icon: <Settings size={18} />,
-        path: '/admin-dashboard/system-settings',
-        hasSubItems: false
+        path: "/admin-dashboard/system-settings",
+        hasSubItems: false,
       },
     ];
   }
-  
+
   // Landlord navigation items
-  if (role === 'landlord') {
+  if (role === 2) {
     return [
       {
-        label: 'Dashboard',
+        label: "Dashboard",
         icon: <Home size={18} />,
-        path: '/landlord-dashboard',
+        path: "/landlord-dashboard",
       },
       {
-        label: 'Register Tenants',
+        label: "Register Tenants",
         icon: <PlusCircle size={18} />,
-        path: '/landlord-dashboard/register-tenants',
+        path: "/landlord-dashboard/register-tenants",
       },
       {
-        label: 'Manage Contracts',
+        label: "Manage Contracts",
         icon: <FileText size={18} />,
-        path: '/landlord-dashboard/rental-contracts',
+        path: "/landlord-dashboard/rental-contracts",
       },
       {
-        label: 'Handle Complaints',
+        label: "Handle Complaints",
         icon: <MessageSquare size={18} />,
-        path: '/landlord-dashboard/complaints',
+        path: "/landlord-dashboard/complaints",
       },
       {
-        label: 'Manage Tenants',
+        label: "Manage Tenants",
         icon: <Users size={18} />,
-        path: '/landlord-dashboard/manage-tenants',
+        path: "/landlord-dashboard/manage-tenants",
       },
       {
-        label: 'Track Payments',
+        label: "Track Payments",
         icon: <CreditCard size={18} />,
-        path: '/landlord-dashboard/payments',
+        path: "/landlord-dashboard/payments",
       },
     ];
   }
-  
+
   // Tenant navigation items
-  if (role === 'tenant') {
+  if (role === 3) {
     return [
       {
-        label: 'Dashboard',
+        label: "Dashboard",
         icon: <Home size={18} />,
-        path: '/tenant-dashboard',
+        path: "/tenant-dashboard",
       },
       {
-        label: 'Property Details',
+        label: "Property Details",
         icon: <House size={18} />,
-        path: '/tenant-dashboard/property-details',
+        path: "/tenant-dashboard/property-details",
       },
       {
-        label: 'Make Payment',
+        label: "Make Payment",
         icon: <CreditCard size={18} />,
-        path: '/tenant-dashboard/make-payment',
+        path: "/tenant-dashboard/make-payment",
       },
       {
-        label: 'Payment History',
+        label: "Payment History",
         icon: <FileText size={18} />,
-        path: '/tenant-dashboard/payment-history',
+        path: "/tenant-dashboard/payment-history",
       },
       {
-        label: 'Submit Complaint',
+        label: "Submit Complaint",
         icon: <MessageSquare size={18} />,
-        path: '/tenant-dashboard/submit-complaint',
+        path: "/tenant-dashboard/submit-complaint",
       },
     ];
   }
-  
+
   // Default navigation items
   return [];
 }
