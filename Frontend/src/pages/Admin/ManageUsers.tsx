@@ -30,6 +30,7 @@ import {
   User,
   Eye,
   Users,
+  Clock
 } from "lucide-react";
 import axios from "axios";
 
@@ -41,11 +42,37 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: "Administrator" | "landlord" | "tenant";
+  role: "Administrator" | "Landlord" | "Tenant";
   status: "active" | "inactive";
   propertyId?: string;
   landlordId?: string;
   rentAmount?: number;
+  verified?: boolean;
+}
+
+interface SystemRole {
+  id: number;
+  name: "Administrator" | "Landlord" | "Tenant";
+  description: string;
+  permissions: string[] | null;
+}
+
+interface ApiUser {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  active: boolean;
+  passportPhoto: string;
+  idFront: string;
+  idBack: string;
+  nationalIdNumber: string;
+  passwordChanged: boolean;
+  verified: boolean;
+  token: string | null;
+  systemRoleId: number;
+  systemRole: SystemRole;
 }
 
 interface Property {
@@ -79,25 +106,27 @@ const UserDetails = ({
   const formatCurrency = useCurrencyFormatter();
 
   const assignedProperty =
-    user.role === "tenant" && user.propertyId
+    user.role === "Tenant" && user.propertyId
       ? properties.find((p) => p.id === user.propertyId)
       : null;
 
   const assignedLandlord =
-    user.role === "tenant" && user.landlordId
+    user.role === "Tenant" && user.landlordId
       ? users.find((u) => u.id === user.landlordId)
       : null;
 
   const ownedProperties =
-    user.role === "landlord"
+    user.role === "Landlord"
       ? properties.filter((p) => p.landlord === user.id)
       : [];
 
+
   const tenants =
-    user.role === "landlord"
-      ? users.filter((u) => u.role === "tenant" && u.landlordId === user.id)
+    user.role === "Landlord"
+      ? users.filter((u) => u.role === "Tenant" && u.landlordId === user.id)
       : [];
 
+  console.log("ownedProperties", ownedProperties);
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
@@ -119,9 +148,9 @@ const UserDetails = ({
             variant={
               user.role === "Administrator"
                 ? "destructive"
-                : user.role === "landlord"
-                ? "default"
-                : "secondary"
+                : user.role === "Landlord"
+                  ? "default"
+                  : "secondary"
             }
           >
             {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
@@ -149,7 +178,7 @@ const UserDetails = ({
         </div>
       </div>
 
-      {user.role === "tenant" && assignedProperty && (
+      {user.role === "Tenant" && assignedProperty && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <Home className="mr-2 h-4 w-4" /> Property Details
@@ -189,7 +218,7 @@ const UserDetails = ({
         </div>
       )}
 
-      {user.role === "tenant" && assignedLandlord && (
+      {user.role === "Tenant" && assignedLandlord && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <User className="mr-2 h-4 w-4" /> Landlord Details
@@ -213,7 +242,7 @@ const UserDetails = ({
         </div>
       )}
 
-      {user.role === "landlord" && ownedProperties.length > 0 && (
+      {user.role === "Landlord" && ownedProperties.length > 0 && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <Home className="mr-2 h-4 w-4" /> Owned Properties (
@@ -254,7 +283,7 @@ const UserDetails = ({
         </div>
       )}
 
-      {user.role === "landlord" && tenants.length > 0 && (
+      {user.role === "Landlord" && tenants.length > 0 && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <Users className="mr-2 h-4 w-4" /> Tenants ({tenants.length})
@@ -286,8 +315,8 @@ const UserDetails = ({
                       {tenant.rentAmount
                         ? formatCurrency(tenant.rentAmount)
                         : tenantProperty
-                        ? formatCurrency(tenantProperty.rentAmount)
-                        : "N/A"}
+                          ? formatCurrency(tenantProperty.rentAmount)
+                          : "N/A"}
                     </TableCell>
                     <TableCell>
                       {tenant.status === "active" ? (
@@ -352,24 +381,28 @@ const ManageUsers = () => {
   };
   const fetchUsers = async () => {
     try {
-      const { data } = await axios.get(
+      const { data } = await axios.get<ApiUser[]>(
         `${import.meta.env.VITE_API_BASE_URL}/GetAllUsers`
       );
-      const formattedUsers = data.map((item: any) => ({
+
+      const formattedUsers: User[] = data.map((item) => ({
         id: item.id,
         name: item.fullName,
         email: item.email,
-        role: roles?.find((role) => role?.id === item.systemRoleId)?.name,
+        role: item.systemRole.name,
+        status: item.verified ? "active" : "inactive",
+        verified: item.verified,
       }));
+
       setUsers(formattedUsers);
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching users:", error);
+      toast.error("Failed to fetch users");
     }
   };
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
     setIsModalOpen(false);
-    // Reset form data and errors when closing
     setFormData({ fullName: "", email: "", systemRoleId: "" });
     setErrors({ fullName: "", email: "", systemRoleId: "" });
   };
@@ -381,7 +414,6 @@ const ManageUsers = () => {
       [name]: value,
     });
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -511,7 +543,7 @@ const ManageUsers = () => {
         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
       if (role) {
-        return matchesSearch && user.role === role;
+        return matchesSearch && user.role === role; // Exact match
       }
 
       return matchesSearch;
@@ -548,10 +580,10 @@ const ManageUsers = () => {
               Admins ({getFilteredUsers("Administrator").length})
             </TabsTrigger>
             <TabsTrigger value="landlord">
-              Landlords ({getFilteredUsers("landlord").length})
+              Landlords ({getFilteredUsers("Landlord").length})
             </TabsTrigger>
             <TabsTrigger value="tenant">
-              Tenants ({getFilteredUsers("tenant").length})
+              Tenants ({getFilteredUsers("Tenant").length})
             </TabsTrigger>
           </TabsList>
 
@@ -571,14 +603,14 @@ const ManageUsers = () => {
 
           <TabsContent value="landlord">
             <UserTable
-              users={getFilteredUsers("landlord")}
+              users={getFilteredUsers("Landlord")}
               onViewDetails={(user) => setSelectedUser(user)}
             />
           </TabsContent>
 
           <TabsContent value="tenant">
             <UserTable
-              users={getFilteredUsers("tenant")}
+              users={getFilteredUsers("Tenant")}
               onViewDetails={(user) => setSelectedUser(user)}
             />
           </TabsContent>
@@ -645,11 +677,10 @@ const ManageUsers = () => {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
-                errors.fullName
-                  ? "border-red-500 focus:ring-red-300"
-                  : "border-gray-300 focus:ring-blue-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.fullName
+                ? "border-red-500 focus:ring-red-300"
+                : "border-gray-300 focus:ring-blue-300"
+                }`}
               placeholder="Enter your full name"
             />
             {errors.fullName && (
@@ -670,11 +701,10 @@ const ManageUsers = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
-                errors.email
-                  ? "border-red-500 focus:ring-red-300"
-                  : "border-gray-300 focus:ring-blue-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.email
+                ? "border-red-500 focus:ring-red-300"
+                : "border-gray-300 focus:ring-blue-300"
+                }`}
               placeholder="example@email.com"
             />
             {errors.email && (
@@ -694,11 +724,10 @@ const ManageUsers = () => {
               name="systemRoleId"
               value={formData.systemRoleId}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
-                errors.systemRoleId
-                  ? "border-red-500 focus:ring-red-300 "
-                  : "border-gray-300 focus:ring-blue-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.systemRoleId
+                ? "border-red-500 focus:ring-red-300 "
+                : "border-gray-300 focus:ring-blue-300"
+                }`}
             >
               <option value="">Select a role</option>
               {roles.map((role) => (
@@ -757,9 +786,9 @@ const UserTable = ({
                   variant={
                     user.role === "Administrator"
                       ? "destructive"
-                      : user.role === "landlord"
-                      ? "default"
-                      : "secondary"
+                      : user.role === "Landlord"
+                        ? "default"
+                        : "secondary"
                   }
                 >
                   {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
@@ -770,9 +799,13 @@ const UserTable = ({
                   <span className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="h-4 w-4" /> Active
                   </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-red-600">
+                ) : user.status === "inactive" ? (
+                  <span className="flex items-center gap-1 text-yellow-600">
                     <XCircle className="h-4 w-4" /> Inactive
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-gray-600">
+                    <Clock className="h-4 w-4" /> Pending Verification
                   </span>
                 )}
               </TableCell>

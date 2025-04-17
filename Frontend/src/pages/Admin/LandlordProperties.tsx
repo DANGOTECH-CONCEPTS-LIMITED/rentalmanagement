@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { House, Search, Eye, Edit, Trash, X, ImageIcon, Upload } from 'lucide-react';
+import { House, Search, Eye, Edit, Trash, X, ImageIcon, Upload, XIcon } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import {
