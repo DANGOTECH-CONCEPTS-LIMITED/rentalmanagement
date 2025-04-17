@@ -18,13 +18,13 @@ namespace API.Controllers.Payments
             _paymentService = paymentService;
         }
 
-        [HttpPost("/CreatePayment")]
+        [HttpPost("/MakeTenantPayment")]
         [Authorize]
-        public async Task<IActionResult> CreatePayment([FromBody] TenantPaymentDto paymentDto)
+        public async Task<IActionResult> MakeTenantPayment([FromBody] TenantPaymentDto paymentDto)
         {
             try
             {
-                await _paymentService.CreatePaymentAsync(paymentDto);
+                await _paymentService.MakeTenantPaymentAsync(paymentDto);
                 return Ok("Payment created successfully.");
             }
             catch (Exception ex)

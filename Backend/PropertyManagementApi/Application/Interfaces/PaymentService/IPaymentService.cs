@@ -10,7 +10,7 @@ namespace Application.Interfaces.PaymentService
 {
     public interface IPaymentService
     {
-        Task CreatePaymentAsync(TenantPaymentDto paymentDto);
+        Task MakeTenantPaymentAsync(TenantPaymentDto paymentDto);
         Task<IEnumerable<TenantPayment>> GetAllPaymentsAsync();
         Task<TenantPayment> GetPaymentByIdAsync(int id);
         Task UpdatePaymentAsync(TenantPayment pymt);

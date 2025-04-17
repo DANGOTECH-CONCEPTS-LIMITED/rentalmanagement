@@ -19,7 +19,7 @@ namespace Infrastructure.Services.PaymentServices
             _context = context;
         }
 
-        public async Task CreatePaymentAsync(TenantPaymentDto tenantPaymentDto)
+        public async Task MakeTenantPaymentAsync(TenantPaymentDto tenantPaymentDto)
         {
             if (tenantPaymentDto == null)
                 throw new Exception("Tenant payment data is required.");
