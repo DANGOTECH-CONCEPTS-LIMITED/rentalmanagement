@@ -21,6 +21,7 @@ namespace Domain.Entities
         public string IdBack { get; set; } = string.Empty;
         public string NationalIdNumber { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
+        public double BalanceDue { get; set; } = 0.0;
         public DateTime NextPaymentDate { get; set; } = DateTime.UtcNow;
         public DateTime? DateMovedIn { get; set; }
         [ForeignKey("Property")]
