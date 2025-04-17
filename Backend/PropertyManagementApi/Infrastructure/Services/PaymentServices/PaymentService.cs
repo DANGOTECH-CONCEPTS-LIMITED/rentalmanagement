@@ -22,83 +22,108 @@ namespace Infrastructure.Services.PaymentServices
         public async Task MakeTenantPaymentAsync(TenantPaymentDto tenantPaymentDto)
         {
             if (tenantPaymentDto == null)
-                throw new Exception("Tenant payment data is required.");
+                throw new ArgumentNullException(nameof(tenantPaymentDto));
 
-            //check if tenant exists
+            // 1) Load tenant (including its Property)
             var tenant = await _context.Tenants
                 .Include(pt => pt.Property)
-                    .ThenInclude(p => p.Owner)
                 .FirstOrDefaultAsync(pt => pt.Id == tenantPaymentDto.PropertyTenantId);
 
             if (tenant == null)
                 throw new Exception("Tenant not found.");
 
-            //check if property exists
-            var property = await _context.LandLordProperties
-                .Include(p => p.Owner)
-                .FirstOrDefaultAsync(p => p.Id == tenant.PropertyId);
-
-            if (property == null)
-                throw new Exception("Property not found.");
-
-            //check if payment exists
-            var existingPayment = await _context.TenantPayments
-                .FirstOrDefaultAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId);
-
-            if (existingPayment != null)
+            // 2) Prevent duplicate transaction IDs
+            if (await _context.TenantPayments
+                    .AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
                 throw new Exception("Payment with this transaction ID already exists.");
 
-            //Create the payment record
-            var tenantPayment = new TenantPayment
+            // 3) Accrue missed months into Arrears
+            AccrueArrearsIfNeeded(tenant);
+
+            // 4) Record the payment
+            var payment = new TenantPayment
             {
                 Amount = tenantPaymentDto.Amount,
                 PaymentDate = tenantPaymentDto.PaymentDate,
                 PaymentMethod = tenantPaymentDto.PaymentMethod,
                 Vendor = tenantPaymentDto.Vendor,
                 PaymentType = tenantPaymentDto.PaymentType,
-                PaymentStatus = "SUCCESSFULL",
+                PaymentStatus = "SUCCESSFUL",
                 TransactionId = tenantPaymentDto.TransactionId,
                 PropertyTenantId = tenantPaymentDto.PropertyTenantId
             };
+            await _context.TenantPayments.AddAsync(payment);
 
-            //save to database
-            await _context.TenantPayments.AddAsync(tenantPayment);
+            // 5) Apply funds: first to Arrears, then to this period
+            double rent = tenant.Property!.Price;
+            double remaining = tenantPaymentDto.Amount;
 
-            //get rent amount for the property being paid for
-            double rentAmount = property.Price;
+            // 5a) Arrears
+            if (tenant.Arrears > 0 && remaining > 0)
+            {
+                if (remaining >= tenant.Arrears)
+                {
+                    remaining -= tenant.Arrears;
+                    tenant.Arrears = 0;
+                }
+                else
+                {
+                    tenant.Arrears -= remaining;
+                    remaining = 0;
+                }
+            }
 
-            // Recalculate how many full months this payment covers
-            //    First, see how much was still owed for the coming month:
+            // 5b) If nothing remains, save & exit
+            if (remaining == 0)
+            {
+                await _context.SaveChangesAsync();
+                return;
+            }
+
+            // 5c) Current period balance
             double owedThisPeriod = tenant.BalanceDue > 0
                                    ? tenant.BalanceDue
-                                   : rentAmount;
-            //    Then, see how much was paid:
-            if (tenantPaymentDto.Amount < owedThisPeriod)
+                                   : rent;
+
+            if (remaining < owedThisPeriod)
             {
-                // Partial payment: reduce the balance due, date stays the same
-                tenant.BalanceDue = owedThisPeriod - tenantPaymentDto.Amount;
+                // Partial pay this month
+                tenant.BalanceDue = owedThisPeriod - remaining;
             }
             else
             {
-                // Full coverage (and maybe extra)
-                double extra = tenantPaymentDto.Amount - owedThisPeriod;
+                // Full coverage + maybe extras
+                double extra = remaining - owedThisPeriod;
+                int fullMonths = 1 + (int)(extra / rent);
 
-                // Number of additional full months covered:
-                int fullMonths = 1 + (int)(extra / rentAmount);
-
-                // Advance the due date by that many months
+                // Advance the due date
                 tenant.NextPaymentDate = tenant.NextPaymentDate.AddMonths(fullMonths);
 
-                // Leftover beyond those full months
-                double leftover = extra % rentAmount;
-
-                // Next period’s balance due is rent minus leftover
-                tenant.BalanceDue = rentAmount - leftover;
+                // Leftover for next period
+                double leftover = extra % rent;
+                tenant.BalanceDue = rent - leftover;
             }
 
-
-            
+            // 6) Persist
             await _context.SaveChangesAsync();
+        }
+
+        private void AccrueArrearsIfNeeded(PropertyTenant tenant)
+        {
+            var today = DateTime.UtcNow.Date;
+            if (tenant.NextPaymentDate.Date >= today)
+                return;
+
+            int monthsMissed = ((today.Year - tenant.NextPaymentDate.Year) * 12
+                                + today.Month - tenant.NextPaymentDate.Month);
+            if (monthsMissed <= 0)
+                return;
+
+            double rent = tenant.Property!.Price;
+
+            tenant.Arrears += monthsMissed * rent;
+            tenant.NextPaymentDate = tenant.NextPaymentDate.AddMonths(monthsMissed);
+            tenant.BalanceDue = rent;
         }
 
         public async Task DeletePaymentAsync(int id)
