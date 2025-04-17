@@ -23,7 +23,32 @@ namespace Infrastructure.Services.PaymentServices
         {
             if (tenantPaymentDto == null)
                 throw new Exception("Tenant payment data is required.");
-            //map dto to entity
+
+            //check if tenant exists
+            var tenant = await _context.Tenants
+                .Include(pt => pt.Property)
+                    .ThenInclude(p => p.Owner)
+                .FirstOrDefaultAsync(pt => pt.Id == tenantPaymentDto.PropertyTenantId);
+
+            if (tenant == null)
+                throw new Exception("Tenant not found.");
+
+            //check if property exists
+            var property = await _context.LandLordProperties
+                .Include(p => p.Owner)
+                .FirstOrDefaultAsync(p => p.Id == tenant.PropertyId);
+
+            if (property == null)
+                throw new Exception("Property not found.");
+
+            //check if payment exists
+            var existingPayment = await _context.TenantPayments
+                .FirstOrDefaultAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId);
+
+            if (existingPayment != null)
+                throw new Exception("Payment with this transaction ID already exists.");
+
+            //Create the payment record
             var tenantPayment = new TenantPayment
             {
                 Amount = tenantPaymentDto.Amount,
@@ -35,8 +60,44 @@ namespace Infrastructure.Services.PaymentServices
                 TransactionId = tenantPaymentDto.TransactionId,
                 PropertyTenantId = tenantPaymentDto.PropertyTenantId
             };
+
             //save to database
             await _context.TenantPayments.AddAsync(tenantPayment);
+
+            //get rent amount for the property being paid for
+            double rentAmount = property.Price;
+
+            // Recalculate how many full months this payment covers
+            //    First, see how much was still owed for the coming month:
+            double owedThisPeriod = tenant.BalanceDue > 0
+                                   ? tenant.BalanceDue
+                                   : rentAmount;
+            //    Then, see how much was paid:
+            if (tenantPaymentDto.Amount < owedThisPeriod)
+            {
+                // Partial payment: reduce the balance due, date stays the same
+                tenant.BalanceDue = owedThisPeriod - tenantPaymentDto.Amount;
+            }
+            else
+            {
+                // Full coverage (and maybe extra)
+                double extra = tenantPaymentDto.Amount - owedThisPeriod;
+
+                // Number of additional full months covered:
+                int fullMonths = 1 + (int)(extra / rentAmount);
+
+                // Advance the due date by that many months
+                tenant.NextPaymentDate = tenant.NextPaymentDate.AddMonths(fullMonths);
+
+                // Leftover beyond those full months
+                double leftover = extra % rentAmount;
+
+                // Next period’s balance due is rent minus leftover
+                tenant.BalanceDue = rentAmount - leftover;
+            }
+
+
+            
             await _context.SaveChangesAsync();
         }
 
