@@ -17,7 +17,7 @@ namespace API.Controllers.Tenant
             _tenantService = tenantService;
         }
 
-        [HttpPost("CreateTenant")]
+        [HttpPost("/CreateTenant")]
         [Authorize]
         public async Task<IActionResult> CreateTenant(List<IFormFile> files, [FromForm] TenantDto tenantDto)
         {
@@ -34,7 +34,7 @@ namespace API.Controllers.Tenant
             }
         }
 
-        [HttpPut("UpdateTenant")]
+        [HttpPut("/UpdateTenant")]
         [Authorize]
         public async Task<IActionResult> UpdateTenant(List<IFormFile> files, [FromForm] PropertyTenant tenant)
         {
@@ -49,7 +49,7 @@ namespace API.Controllers.Tenant
             }
         }
 
-        [HttpDelete("DeleteTenant/{id}")]
+        [HttpDelete("/DeleteTenant/{id}")]
         [Authorize]
         public async Task<IActionResult> DeleteTenant(int id)
         {
@@ -64,7 +64,7 @@ namespace API.Controllers.Tenant
             }
         }
 
-        [HttpGet("GetTenantById/{id}")]
+        [HttpGet("/GetTenantById/{id}")]
         [Authorize]
         public async Task<IActionResult> GetTenantById(int id)
         {
@@ -81,7 +81,7 @@ namespace API.Controllers.Tenant
             }
         }
 
-        [HttpGet("GetAllTenants")]
+        [HttpGet("/GetAllTenants")]
         [Authorize]
         public async Task<IActionResult> GetAllTenants()
         {
