@@ -131,8 +131,9 @@ const LandlordProperties = () => {
       const data = await response.json();
       setProperties(data);
     } catch (err) {
-      console.error('Error fetching properties:', err);
-      setError('Failed to load properties. Please try again later.');
+      console.error(err.message);
+      console.log("Error fetching properties:", err);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -385,7 +386,7 @@ const LandlordProperties = () => {
 
           {error ? (
             <div className="py-8 text-center text-red-500">
-              {error}
+              {error && <p>No properties found</p>}
             </div>
           ) : isLoading ? (
             <div className="py-8 text-center">
