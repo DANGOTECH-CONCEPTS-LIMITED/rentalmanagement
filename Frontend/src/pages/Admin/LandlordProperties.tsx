@@ -1,111 +1,359 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { House, Search, Eye, Edit, Trash, XIcon } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { House, Search, Eye, Edit, Trash, X, ImageIcon, Upload } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Property {
-  id: string;
+  id: number;
   name: string;
-  address: string;
   type: string;
-  units: number;
-  landlordName: string;
-  landlordId: string;
-  images: string[];
+  address: string;
+  region: string;
+  district: string;
+  zipcode: string;
+  numberOfRooms: number;
+  description: string;
+  imageUrl: string;
+  price: number;
+  currency: string;
+  occupied: boolean;
+  owner: {
+    id: number;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+  };
 }
+
+interface PropertyPhoto {
+  file: File;
+  preview: string;
+}
+
+interface Landlord {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  passportPhoto: string;
+  nationalIdNumber: string;
+  systemRoleId: number;
+  systemRole: {
+    id: number;
+    name: string;
+    description: string;
+  };
+}
+
+const propertyTypes = ['Apartment', 'House', 'Villa', 'Condo', 'Townhouse', 'Commercial'];
 
 const LandlordProperties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
+  const [landlords, setLandlords] = useState<Landlord[]>([]);
+  const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiI1ZjdkMGVkNy04Y2UzLTQyODUtYmQ4Zi00MTg4MTY4MWUxM2MiLCJleHAiOjE3NDQ3MzE2MDcsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.tQy4V33Mu0YPBa5Y6g8_nzD9MUTUgmMwzf3lVybswvI";
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
+
+  const navigate = useNavigate();
+
+  const handleNavigate = () => {
+    navigate('/admin-dashboard/register-property');
+  }
 
   useEffect(() => {
-    // Simulate API call to fetch properties
-    setTimeout(() => {
-      const mockProperties: Property[] = [
-        {
-          id: 'prop1',
-          name: 'Sunset Apartments',
-          address: '123 Main St, Kampala, Uganda',
-          type: 'Apartment',
-          units: 8,
-          landlordName: 'John Doe',
-          landlordId: 'land1',
-          images: [
-            'https://images.unsplash.com/photo-1460317442991-0ec209397118',
-            'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267'
-          ]
-        },
-        {
-          id: 'prop2',
-          name: 'Bayview Condos',
-          address: '456 Park Ave, Entebbe, Uganda',
-          type: 'Condominium',
-          units: 12,
-          landlordName: 'Sarah Smith',
-          landlordId: 'land2',
-          images: [
-            'https://images.unsplash.com/photo-1493809842364-78817add7ffb',
-            'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688'
-          ]
-        },
-        {
-          id: 'prop3',
-          name: 'Green Gardens Villa',
-          address: '789 Garden Rd, Jinja, Uganda',
-          type: 'House',
-          units: 1,
-          landlordName: 'Michael Johnson',
-          landlordId: 'land3',
-          images: [
-            'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9',
-            'https://images.unsplash.com/photo-1512917774080-9991f1c4c750'
-          ]
-        },
-        {
-          id: 'prop4',
-          name: 'Downtown Office',
-          address: '101 Business Blvd, Kampala, Uganda',
-          type: 'Commercial',
-          units: 5,
-          landlordName: 'John Doe',
-          landlordId: 'land1',
-          images: [
-            'https://images.unsplash.com/photo-1497366754035-f200968a6e72',
-            'https://images.unsplash.com/photo-1497366811353-6870744d04b2'
-          ]
-        },
-      ];
-      
-      setProperties(mockProperties);
-      setIsLoading(false);
-    }, 1000);
+    fetchProperties();
+    fetchLandlords();
   }, []);
 
-  const filteredProperties = properties.filter(property => 
+  const fetchProperties = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/GetAllProperties`, {
+        method: 'GET',
+        headers: {
+          'accept': '*/*',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setProperties(data);
+    } catch (err) {
+      console.error('Error fetching properties:', err);
+      setError('Failed to load properties. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchLandlords = async () => {
+    setIsLoadingLandlords(true);
+    try {
+      const response = await fetch(`${apiUrl}/GetLandlords`, {
+        method: "GET",
+        headers: {
+          accept: "*/*",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch landlords");
+      }
+
+      const data: Landlord[] = await response.json();
+      setLandlords(data);
+    } catch (error) {
+      console.error("Error fetching landlords:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load landlord information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingLandlords(false);
+    }
+  };
+
+  const filteredProperties = properties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.landlordName.toLowerCase().includes(searchTerm.toLowerCase())
+    property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDeleteProperty = async (id: number) => {
+    try {
+      const response = await fetch(`${apiUrl}/DeleteProperty/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'accept': '*/*',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to delete property');
+      }
+  
+      setProperties(prev => prev.filter(property => property.id !== id));
+      toast({
+        title: 'Success',
+        description: 'Property deleted successfully',
+      });
+    } catch (err) {
+      console.error('Error deleting property:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete property',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    // Reset property photos when starting to edit
+    setPropertyPhotos([]);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    if (propertyPhotos.length + files.length > 3) {
+      toast({
+        title: "Upload limit exceeded",
+        description: "You can only upload a maximum of 3 photos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newPhotos: PropertyPhoto[] = [];
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPhotos.push({
+          file,
+          preview: reader.result as string,
+        });
+
+        if (newPhotos.length === files.length) {
+          setPropertyPhotos((prev) => [...prev, ...newPhotos]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (index: number) => {
+    setPropertyPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+
+    setIsSubmitting(true);
+    try {
+      const formDataToSend = new FormData();
+      
+      formDataToSend.append("Id", editingProperty.id.toString());
+      formDataToSend.append("Price", editingProperty.price.toString());
+      formDataToSend.append("Name", editingProperty.name);
+      formDataToSend.append("Zipcode", editingProperty.zipcode);
+      formDataToSend.append("OwnerId", editingProperty.owner.id.toString());
+      formDataToSend.append("District", editingProperty.district);
+      formDataToSend.append("Currency", editingProperty.currency);
+      formDataToSend.append("Region", editingProperty.region);
+      formDataToSend.append("Address", editingProperty.address);
+      formDataToSend.append("NumberOfRooms", editingProperty.numberOfRooms.toString());
+      formDataToSend.append("Type", editingProperty.type);
+      formDataToSend.append("Description", editingProperty.description);
+      formDataToSend.append("Occupied", editingProperty.occupied ? "true" : "false");
+      
+      // If there are new photos, append them
+      if (propertyPhotos.length > 0) {
+        propertyPhotos.forEach((photo) => {
+          formDataToSend.append("files", photo.file);
+        });
+      }
+
+      const response = await fetch(`${apiUrl}/UpdateProperty/${editingProperty.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formDataToSend
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update property');
+      }
+
+      // Update the properties list with the edited property
+      setProperties(prev => 
+        prev.map(prop => prop.id === editingProperty.id ? editingProperty : prop)
+      );
+      
+      setEditingProperty(null);
+      setPropertyPhotos([]);
+      
+      toast({
+        title: 'Success',
+        description: 'Property updated successfully',
+      });
+      
+      // Refresh the properties list to get the updated data
+      fetchProperties();
+    } catch (err) {
+      console.error('Error updating property:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update property',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    if (!editingProperty) return;
+    
+    setEditingProperty(prev => {
+      if (!prev) return null;
+      
+      // Handle nested properties correctly
+      if (name === 'price' || name === 'numberOfRooms') {
+        return { ...prev, [name]: Number(value) };
+      }
+      
+      return { ...prev, [name]: value };
+    });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    if (!editingProperty) return;
+    
+    setEditingProperty(prev => {
+      if (!prev) return null;
+      
+      if (name === 'OwnerId') {
+        const selectedLandlord = landlords.find(landlord => landlord.id.toString() === value);
+        if (selectedLandlord) {
+          return {
+            ...prev,
+            owner: {
+              id: selectedLandlord.id,
+              fullName: selectedLandlord.fullName,
+              email: selectedLandlord.email,
+              phoneNumber: selectedLandlord.phoneNumber
+            }
+          };
+        }
+        return prev;
+      }
+      
+      if (name === 'occupied') {
+        return { ...prev, occupied: value === 'true' };
+      }
+      
+      return { ...prev, [name]: value };
+    });
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Landlord Properties</h1>
-          <p className="text-muted-foreground">View and manage all properties registered in the system</p>
+      <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
+        <div className="mb-4 sm:mb-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Landlord Properties</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">View and manage all properties registered in the system</p>
         </div>
-        <Button onClick={() => window.location.href = '/admin-dashboard/register-property'}>
+        <Button onClick={handleNavigate} className="w-full sm:w-auto">
           Add New Property
         </Button>
       </div>
@@ -122,7 +370,11 @@ const LandlordProperties = () => {
             />
           </div>
 
-          {isLoading ? (
+          {error ? (
+            <div className="py-8 text-center text-red-500">
+              {error}
+            </div>
+          ) : isLoading ? (
             <div className="py-8 text-center">
               <div className="animate-pulse">Loading properties...</div>
             </div>
@@ -142,7 +394,7 @@ const LandlordProperties = () => {
                     <TableHead>Property Name</TableHead>
                     <TableHead className="hidden md:table-cell">Address</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead className="hidden md:table-cell">Units</TableHead>
+                    <TableHead className="hidden md:table-cell">Rooms</TableHead>
                     <TableHead>Landlord</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -153,21 +405,30 @@ const LandlordProperties = () => {
                       <TableCell className="font-medium">{property.name}</TableCell>
                       <TableCell className="hidden md:table-cell">{property.address}</TableCell>
                       <TableCell>{property.type}</TableCell>
-                      <TableCell className="hidden md:table-cell">{property.units}</TableCell>
-                      <TableCell>{property.landlordName}</TableCell>
+                      <TableCell className="hidden md:table-cell">{property.numberOfRooms}</TableCell>
+                      <TableCell>{property.owner.fullName}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
                             onClick={() => setSelectedProperty(property)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEditProperty(property)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon" className="text-red-500">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="text-red-500"
+                            onClick={() => handleDeleteProperty(property.id)}
+                          >
                             <Trash className="h-4 w-4" />
                           </Button>
                         </div>
@@ -181,55 +442,321 @@ const LandlordProperties = () => {
         </CardContent>
       </Card>
 
+      {/* View Property Dialog */}
       {selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+          <div className="bg-white rounded-lg max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">{selectedProperty.name}</h2>
+                <h2 className="text-lg sm:text-xl font-semibold">{selectedProperty.name}</h2>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedProperty(null)}>
                   <XIcon className="h-4 w-4" />
                 </Button>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="mb-4">
-                    <h3 className="text-sm font-medium text-gray-500">Property Details</h3>
+                    <h3 className="text-sm sm:text-base font-medium text-gray-500">Property Details</h3>
                     <p className="mt-1"><span className="font-medium">Address:</span> {selectedProperty.address}</p>
                     <p className="mt-1"><span className="font-medium">Type:</span> {selectedProperty.type}</p>
-                    <p className="mt-1"><span className="font-medium">Units:</span> {selectedProperty.units}</p>
+                    <p className="mt-1"><span className="font-medium">Rooms:</span> {selectedProperty.numberOfRooms}</p>
+                    <p className="mt-1"><span className="font-medium">Price:</span> {selectedProperty.price} {selectedProperty.currency}</p>
+                    <p className="mt-1"><span className="font-medium">Status:</span> {selectedProperty.occupied ? 'Occupied' : 'Vacant'}</p>
+                    <p className="mt-1"><span className="font-medium">Description:</span> {selectedProperty.description}</p>
                   </div>
-                  
+
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Landlord Information</h3>
-                    <p className="mt-1"><span className="font-medium">Name:</span> {selectedProperty.landlordName}</p>
-                    <p className="mt-1"><span className="font-medium">ID:</span> {selectedProperty.landlordId}</p>
+                    <h3 className="text-sm sm:text-base font-medium text-gray-500">Landlord Information</h3>
+                    <p className="mt-1"><span className="font-medium">Name:</span> {selectedProperty.owner.fullName}</p>
+                    <p className="mt-1"><span className="font-medium">Email:</span> {selectedProperty.owner.email}</p>
+                    <p className="mt-1"><span className="font-medium">Phone:</span> {selectedProperty.owner.phoneNumber}</p>
                   </div>
                 </div>
-                
+
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Property Images</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {selectedProperty.images.map((img, index) => (
-                      <img 
-                        key={index}
-                        src={img} 
-                        alt={`${selectedProperty.name} ${index + 1}`} 
-                        className="rounded-md w-full h-32 object-cover"
-                      />
-                    ))}
-                  </div>
+                  <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">Property Image</h3>
+                  <img
+                    src={`${apiUrl}/${selectedProperty.imageUrl}`}
+                    alt={selectedProperty.name}
+                    className="rounded-md w-full h-64 object-cover"
+                  />
                 </div>
               </div>
-              
-              <div className="flex justify-end mt-6 space-x-2">
-                <Button variant="outline" onClick={() => setSelectedProperty(null)}>Close</Button>
-                <Button>Edit Property</Button>
+
+              <div className="flex flex-col sm:flex-row sm:justify-end mt-6 space-y-2 sm:space-x-2 sm:space-y-0">
+                <Button variant="outline" onClick={() => setSelectedProperty(null)} className="w-full sm:w-auto">
+                  Close
+                </Button>
+                <Button
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setSelectedProperty(null);
+                    handleEditProperty(selectedProperty);
+                  }}
+                >
+                  Edit Property
+                </Button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Property Dialog - Using the same form as RegisterProperty */}
+      {editingProperty && (
+        <Dialog open={!!editingProperty} onOpenChange={() => setEditingProperty(null)}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Property</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmitEdit} className="grid gap-4 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Property Name*</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={editingProperty.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Property Type*</Label>
+                  <Select
+                    value={editingProperty.type}
+                    onValueChange={(value) => handleSelectChange("type", value)}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select property type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {propertyTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address">Address*</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  value={editingProperty.address}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="region">Region*</Label>
+                  <Input
+                    id="region"
+                    name="region"
+                    value={editingProperty.region}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="district">District*</Label>
+                  <Input
+                    id="district"
+                    name="district"
+                    value={editingProperty.district}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zipcode">Zip Code*</Label>
+                  <Input
+                    id="zipcode"
+                    name="zipcode"
+                    value={editingProperty.zipcode}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="numberOfRooms">Number of Rooms*</Label>
+                  <Input
+                    id="numberOfRooms"
+                    name="numberOfRooms"
+                    type="number"
+                    min="0"
+                    value={editingProperty.numberOfRooms}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="OwnerId">Landlord*</Label>
+                  <Select
+                    value={editingProperty.owner.id.toString()}
+                    onValueChange={(value) => handleSelectChange("OwnerId", value)}
+                    disabled={isLoadingLandlords}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingLandlords ? "Loading landlords..." : "Select a landlord"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {landlords.map((landlord) => (
+                        <SelectItem key={landlord.id} value={landlord.id.toString()}>
+                          {landlord.fullName} ({landlord.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price*</Label>
+                  <Input
+                    id="price"
+                    name="price"
+                    type="number"
+                    min="0"
+                    value={editingProperty.price}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency*</Label>
+                  <Select
+                    value={editingProperty.currency}
+                    onValueChange={(value) => handleSelectChange("currency", value)}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UGX">UGX</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="occupied">Occupied Status*</Label>
+                <Select
+                  value={editingProperty.occupied ? "true" : "false"}
+                  onValueChange={(value) => handleSelectChange("occupied", value)}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select occupancy status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Occupied</SelectItem>
+                    <SelectItem value="false">Vacant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Property Photos (Maximum 3)</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {propertyPhotos.map((photo, index) => (
+                    <div key={index} className="relative h-40 border rounded-md overflow-hidden">
+                      <img
+                        src={photo.preview}
+                        alt={`Property ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder-property.jpg';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {propertyPhotos.length < 3 && (
+                    <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
+                      <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG, WEBP (MAX. 3)</p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          multiple
+                          onChange={handlePhotoUpload}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  {propertyPhotos.length === 0 ? 
+                    "Upload new photos only if you want to change the existing ones. Leave empty to keep current images." :
+                    "New photos will replace existing ones."}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Property Description*</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={editingProperty.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingProperty(null)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,18 +53,18 @@ const SystemSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 md:px-0">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">System Settings</h1>
         <p className="text-muted-foreground">Configure system-wide settings and preferences</p>
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+        <TabsList className="mb-4 flex overflow-x-auto space-x-4">
+          <TabsTrigger value="general" className="text-base md:text-lg">General</TabsTrigger>
+          <TabsTrigger value="notifications" className="text-base md:text-lg">Notifications</TabsTrigger>
+          <TabsTrigger value="security" className="text-base md:text-lg">Security</TabsTrigger>
+          <TabsTrigger value="integrations" className="text-base md:text-lg">Integrations</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general">
@@ -162,7 +161,7 @@ const SystemSettings = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={() => saveSettings("General")}>Save Changes</Button>
+              <Button onClick={() => saveSettings("General")} className="w-full md:w-auto">Save Changes</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -175,91 +174,23 @@ const SystemSettings = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="emailNotifications" className="text-base">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive system notifications via email</p>
+                {Object.keys(notificationSettings).map((setting) => (
+                  <div className="flex items-center justify-between" key={setting}>
+                    <div>
+                      <Label htmlFor={setting} className="text-base">{setting.replace(/([A-Z])/g, ' $1')}</Label>
+                      <p className="text-sm text-muted-foreground">Enable {setting.replace(/([A-Z])/g, ' $1').toLowerCase()}</p>
+                    </div>
+                    <Switch 
+                      id={setting} 
+                      checked={notificationSettings[setting as keyof typeof notificationSettings]}
+                      onCheckedChange={() => handleNotificationToggle(setting)}
+                    />
                   </div>
-                  <Switch 
-                    id="emailNotifications" 
-                    checked={notificationSettings.emailNotifications}
-                    onCheckedChange={() => handleNotificationToggle("emailNotifications")}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="smsNotifications" className="text-base">SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive system notifications via SMS</p>
-                  </div>
-                  <Switch 
-                    id="smsNotifications" 
-                    checked={notificationSettings.smsNotifications}
-                    onCheckedChange={() => handleNotificationToggle("smsNotifications")}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="paymentReminders" className="text-base">Payment Reminders</Label>
-                    <p className="text-sm text-muted-foreground">Send reminders about upcoming payments</p>
-                  </div>
-                  <Switch 
-                    id="paymentReminders" 
-                    checked={notificationSettings.paymentReminders}
-                    onCheckedChange={() => handleNotificationToggle("paymentReminders")}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="maintenanceAlerts" className="text-base">Maintenance Alerts</Label>
-                    <p className="text-sm text-muted-foreground">Notifications about maintenance requests</p>
-                  </div>
-                  <Switch 
-                    id="maintenanceAlerts" 
-                    checked={notificationSettings.maintenanceAlerts}
-                    onCheckedChange={() => handleNotificationToggle("maintenanceAlerts")}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="leaseEndReminders" className="text-base">Lease End Reminders</Label>
-                    <p className="text-sm text-muted-foreground">Reminders when leases are ending soon</p>
-                  </div>
-                  <Switch 
-                    id="leaseEndReminders" 
-                    checked={notificationSettings.leaseEndReminders}
-                    onCheckedChange={() => handleNotificationToggle("leaseEndReminders")}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="marketingEmails" className="text-base">Marketing Emails</Label>
-                    <p className="text-sm text-muted-foreground">Receive promotional and marketing content</p>
-                  </div>
-                  <Switch 
-                    id="marketingEmails" 
-                    checked={notificationSettings.marketingEmails}
-                    onCheckedChange={() => handleNotificationToggle("marketingEmails")}
-                  />
-                </div>
+                ))}
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={() => saveSettings("Notification")}>Save Changes</Button>
+              <Button onClick={() => saveSettings("Notification")} className="w-full md:w-auto">Save Changes</Button>
             </CardFooter>
           </Card>
         </TabsContent>

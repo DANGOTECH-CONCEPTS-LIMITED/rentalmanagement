@@ -39,6 +39,8 @@ import RentalContracts from "./pages/Landlord/RentalContracts";
 import HandleComplaints from "./pages/Landlord/HandleComplaints";
 import TrackPayments from "./pages/Landlord/TrackPayments";
 import Index from "./pages/Index";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -56,12 +58,21 @@ const App = () => (
             <Route path="/index" element={<Index />} />
 
             {/* Admin Routes */}
-            <Route element={<ProtectedRoute role="admin" />}>
-              <Route path="/admin-dashboard" element={<AppLayout role="admin" />}>
+            <Route element={<ProtectedRoute role={1} />}>
+              <Route path="/admin-dashboard" element={<AppLayout role={1} />}>
                 <Route index element={<AdminDashboard />} />
-                <Route path="register-landlord" element={<RegisterLandlord />} />
-                <Route path="register-property" element={<RegisterProperty />} />
-                <Route path="landlord-properties" element={<LandlordProperties />} />
+                <Route
+                  path="register-landlord"
+                  element={<RegisterLandlord />}
+                />
+                <Route
+                  path="register-property"
+                  element={<RegisterProperty />}
+                />
+                <Route
+                  path="landlord-properties"
+                  element={<LandlordProperties />}
+                />
                 <Route path="manage-users" element={<ManageUsers />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="system-settings" element={<SystemSettings />} />
@@ -69,8 +80,11 @@ const App = () => (
             </Route>
 
             {/* Landlord Routes */}
-            <Route element={<ProtectedRoute role="landlord" />}>
-              <Route path="/landlord-dashboard" element={<AppLayout role="landlord" />}>
+            <Route element={<ProtectedRoute role={2} />}>
+              <Route
+                path="/landlord-dashboard"
+                element={<AppLayout role={2} />}
+              >
                 <Route index element={<LandlordDashboard />} />
                 <Route path="register-tenants" element={<RegisterTenants />} />
                 <Route path="manage-tenants" element={<ManageTenants />} />
@@ -81,11 +95,14 @@ const App = () => (
             </Route>
 
             {/* Tenant Routes */}
-            <Route element={<ProtectedRoute role="tenant" />}>
-              <Route path="/tenant-dashboard" element={<AppLayout role="tenant" />}>
+            <Route element={<ProtectedRoute role={3} />}>
+              <Route path="/tenant-dashboard" element={<AppLayout role={3} />}>
                 <Route index element={<TenantDashboard />} />
                 <Route path="property-details" element={<PropertyDetails />} />
-                <Route path="available-properties" element={<AvailableProperties />} />
+                <Route
+                  path="available-properties"
+                  element={<AvailableProperties />}
+                />
                 <Route path="make-payment" element={<MakePayment />} />
                 <Route path="payment-history" element={<PaymentHistory />} />
                 <Route path="submit-complaint" element={<SubmitComplaint />} />
@@ -94,6 +111,8 @@ const App = () => (
 
             {/* Fallback Route */}
             <Route path="*" element={<NotFound />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </HashRouter>
       </TooltipProvider>

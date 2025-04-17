@@ -1,40 +1,118 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Upload, X, ImageIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface PropertyPhoto {
   file: File;
   preview: string;
 }
 
+interface Landlord {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  passportPhoto: string;
+  nationalIdNumber: string;
+  systemRoleId: number;
+  systemRole: {
+    id: number;
+    name: string;
+    description: string;
+  };
+}
+
 const RegisterProperty = () => {
   const [formData, setFormData] = useState({
-    propertyName: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    propertyType: "",
-    numberOfUnits: "",
-    description: "",
-    landlordId: "",
+    Name: "",
+    Address: "",
+    Region: "",
+    District: "",
+    Zipcode: "",
+    Type: "",
+    NumberOfRooms: "0",
+    Description: "",
+    OwnerId: "0",
+    Price: "0",
+    Currency: "UGX",
+    Occupied: "true",
   });
 
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [landlords, setLandlords] = useState<Landlord[]>([]);
+  const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+   
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzZDY1ZThmYS03MWQ1LTQ0ODYtOTdkYi02NjY2YTdkNGM4YzUiLCJleHAiOjE3NDQ3Mjc1MzMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.sMKgJ54uPibdiJWsIbNwdyOD5Bggx1_jPZzen-orGMw";
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const navigate = useNavigate();
+  const handleNavigate = () => {
+    navigate("admin-dashboard/register-property");
+  }
+
+  useEffect(() => {
+    fetchLandlords();
+  }, []);
+
+  const fetchLandlords = async () => {
+    setIsLoadingLandlords(true);
+     
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/GetLandlords`, {
+        method: "GET",
+        headers: {
+          accept: "*/*",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch landlords");
+      }
+
+      const data: Landlord[] = await response.json();
+      setLandlords(data);
+    } catch (error) {
+      console.error("Error fetching landlords:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load landlord information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingLandlords(false);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,17 +130,16 @@ const RegisterProperty = () => {
 
     const newPhotos: PropertyPhoto[] = [];
 
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         newPhotos.push({
           file,
-          preview: reader.result as string
+          preview: reader.result as string,
         });
-        
-        // Only update state once all files are processed
+
         if (newPhotos.length === files.length) {
-          setPropertyPhotos(prev => [...prev, ...newPhotos]);
+          setPropertyPhotos((prev) => [...prev, ...newPhotos]);
         }
       };
       reader.readAsDataURL(file);
@@ -70,12 +147,12 @@ const RegisterProperty = () => {
   };
 
   const removePhoto = (index: number) => {
-    setPropertyPhotos(prev => prev.filter((_, i) => i !== index));
+    setPropertyPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+  
     if (propertyPhotos.length === 0) {
       toast({
         title: "Photos Required",
@@ -84,144 +161,287 @@ const RegisterProperty = () => {
       });
       return;
     }
-    
-    console.log("Property registration data:", formData);
-    console.log("Property photos:", propertyPhotos);
-    
-    toast({
-      title: "Property Registered",
-      description: `Successfully registered property: ${formData.propertyName}`,
-    });
-    
-    // Reset form
-    setFormData({
-      propertyName: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      propertyType: "",
-      numberOfUnits: "",
-      description: "",
-      landlordId: "",
-    });
-    setPropertyPhotos([]);
+  
+    setIsSubmitting(true);
+  
+    try {
+      const formDataToSend = new FormData();
+  
+      formDataToSend.append("Price", formData.Price);
+      formDataToSend.append("Name", formData.Name);
+      formDataToSend.append("Zipcode", formData.Zipcode);
+      formDataToSend.append("OwnerId", formData.OwnerId);
+      formDataToSend.append("District", formData.District);
+      formDataToSend.append("Currency", formData.Currency);
+      formDataToSend.append("Region", formData.Region);
+      formDataToSend.append("Address", formData.Address);
+      formDataToSend.append("NumberOfRooms", formData.NumberOfRooms);
+      formDataToSend.append("Type", formData.Type);
+      formDataToSend.append("Description", formData.Description);
+      formDataToSend.append("Occupied", formData.Occupied);
+  
+      propertyPhotos.forEach((photo, index) => {
+        formDataToSend.append("files", photo.file);
+      });
+  
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(`${key}:`, value);
+      }
+  
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+      if (!apiUrl) {
+        throw new Error("API base URL is not configured");
+      }
+  
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+  
+      const response = await fetch(`${apiUrl}/AddProperty`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataToSend,
+        signal: controller.signal,
+      });
+  
+      clearTimeout(timeoutId);
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to register property");
+      }
+  
+      const contentType = response.headers.get("content-type");
+      let result;
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+      } else {
+        result = await response.text();
+      }
+  
+      toast({
+        title: "Property Registered",
+        description: `Successfully registered property: ${formData.Name}`,
+      });
+  
+      setFormData({
+        Name: "",
+        Address: "",
+        Region: "",
+        District: "",
+        Zipcode: "",
+        Type: "",
+        NumberOfRooms: "0",
+        Description: "",
+        OwnerId: "0",
+        Price: "0",
+        Currency: "UGX",
+        Occupied: "true",
+      });
+      setPropertyPhotos([]);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+  
+      let errorMessage = "Failed to register property. Please try again.";
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          errorMessage = "Request timed out. Please try again.";
+        } else if (error.message.includes("Failed to fetch")) {
+          errorMessage = "Could not connect to the server. Please check your connection.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+  
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
+  
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Register New Property</h1>
-        <p className="text-muted-foreground">Add a new property to the management system</p>
+        <p className="text-muted-foreground" onClick={handleNavigate}>Add a new property to the management system</p>
       </div>
 
       <Card>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="propertyName">Property Name</Label>
-              <Input 
-                id="propertyName" 
-                name="propertyName" 
-                value={formData.propertyName}
+              <Label htmlFor="Name">Property Name*</Label>
+              <Input
+                id="Name"
+                name="Name"
+                value={formData.Name}
                 onChange={handleInputChange}
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="propertyType">Property Type</Label>
+              <Label htmlFor="Type">Property Type*</Label>
               <Select
-                value={formData.propertyType}
-                onValueChange={(value) => handleSelectChange("propertyType", value)}
+                value={formData.Type}
+                onValueChange={(value) => handleSelectChange("Type", value)}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select property type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="apartment">Apartment</SelectItem>
-                  <SelectItem value="house">House</SelectItem>
-                  <SelectItem value="condo">Condominium</SelectItem>
-                  <SelectItem value="commercial">Commercial</SelectItem>
+                  <SelectItem value="Apartment">Apartment</SelectItem>
+                  <SelectItem value="House">House</SelectItem>
+                  <SelectItem value="Condo">Condominium</SelectItem>
+                  <SelectItem value="Commercial">Commercial</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Street Address</Label>
-              <Input 
-                id="address" 
-                name="address" 
-                value={formData.address}
+              <Label htmlFor="Address">Street Address*</Label>
+              <Input
+                id="Address"
+                name="Address"
+                value={formData.Address}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input 
-                id="city" 
-                name="city" 
-                value={formData.city}
+              <Label htmlFor="District">District*</Label>
+              <Input
+                id="District"
+                name="District"
+                value={formData.District}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Input 
-                id="state" 
-                name="state" 
-                value={formData.state}
+              <Label htmlFor="Region">Region*</Label>
+              <Input
+                id="Region"
+                name="Region"
+                value={formData.Region}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="zipCode">ZIP Code</Label>
-              <Input 
-                id="zipCode" 
-                name="zipCode" 
-                value={formData.zipCode}
+              <Label htmlFor="Zipcode">ZIP Code*</Label>
+              <Input
+                id="Zipcode"
+                name="Zipcode"
+                value={formData.Zipcode}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="numberOfUnits">Number of Units</Label>
-              <Input 
-                id="numberOfUnits" 
-                name="numberOfUnits" 
+              <Label htmlFor="NumberOfRooms">Number of Rooms*</Label>
+              <Input
+                id="NumberOfRooms"
+                name="NumberOfRooms"
                 type="number"
-                value={formData.numberOfUnits}
+                min="0"
+                value={formData.NumberOfRooms}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="landlordId">Landlord ID</Label>
-              <Input 
-                id="landlordId" 
-                name="landlordId" 
-                value={formData.landlordId}
+              <Label htmlFor="OwnerId">Landlord*</Label>
+              <Select
+                value={formData.OwnerId}
+                onValueChange={(value) => handleSelectChange("OwnerId", value)}
+                disabled={isLoadingLandlords}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingLandlords ? "Loading landlords..." : "Select a landlord"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {landlords.map((landlord) => (
+                    <SelectItem key={landlord.id} value={landlord.id.toString()}>
+                      {landlord.fullName} ({landlord.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="Price">Price*</Label>
+              <Input
+                id="Price"
+                name="Price"
+                type="text"
+                value={formData.Price}
                 onChange={handleInputChange}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="Currency">Currency*</Label>
+              <Select
+                value={formData.Currency}
+                onValueChange={(value) => handleSelectChange("Currency", value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UGX">UGX</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="Occupied">Occupied Status*</Label>
+              <Select
+                value={formData.Occupied}
+                onValueChange={(value) => handleSelectChange("Occupied", value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select occupancy status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Occupied</SelectItem>
+                  <SelectItem value="false">Vacant</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Property Photos (Maximum 3)</Label>
+            <Label>Property Photos* (Maximum 3)</Label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Property Photos Upload Area */}
               {propertyPhotos.map((photo, index) => (
                 <div key={index} className="relative h-40 border rounded-md overflow-hidden">
-                  <img src={photo.preview} alt={`Property ${index + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={photo.preview}
+                    alt={`Property ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder-property.jpg';
+                    }}
+                  />
                   <button
                     type="button"
                     onClick={() => removePhoto(index)}
@@ -232,7 +452,6 @@ const RegisterProperty = () => {
                 </div>
               ))}
 
-              {/* Upload Button - Only show if less than 3 photos */}
               {propertyPhotos.length < 3 && (
                 <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
                   <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
@@ -243,12 +462,12 @@ const RegisterProperty = () => {
                       </p>
                       <p className="text-xs text-gray-500">PNG, JPG, WEBP (MAX. 3)</p>
                     </div>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*" 
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
                       multiple
-                      onChange={handlePhotoUpload} 
+                      onChange={handlePhotoUpload}
                     />
                   </label>
                 </div>
@@ -257,18 +476,29 @@ const RegisterProperty = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Property Description</Label>
-            <Textarea 
-              id="description" 
-              name="description" 
-              value={formData.description}
+            <Label htmlFor="Description">Property Description*</Label>
+            <Textarea
+              id="Description"
+              name="Description"
+              value={formData.Description}
               onChange={handleInputChange}
               rows={4}
+              required
             />
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit">Register Property</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : "Register Property"}
+            </Button>
           </div>
         </form>
       </Card>

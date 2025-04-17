@@ -1,43 +1,81 @@
-
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import PasswordChangeModal from "./PasswordChangeModal";
 
 interface ProtectedRouteProps {
-  role?: 'admin' | 'landlord' | 'tenant';
+  role?: 1 | 2 | 3;
+  fallback?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ role }) => {
-  const { isAuthenticated, user, loading } = useAuth();
+const roleRedirects = {
+  1: "/admin-dashboard",
+  2: "/landlord-dashboard",
+  3: "/tenant-dashboard",
+};
+
+const LoadingSpinner = () => (
+  <div className="flex h-screen w-full items-center justify-center">
+    <div className="h-16 w-16 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+  </div>
+);
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ role, fallback }) => {
+  const { isAuthenticated, user, loading, showPasswordModal } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="h-16 w-16 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  // If not authenticated, redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  // If role is specified and doesn't match, redirect to appropriate dashboard
-  if (role && user?.role !== role) {
-    switch (user?.role) {
-      case 'admin':
-        return <Navigate to="/admin-dashboard" replace />;
-      case 'landlord':
-        return <Navigate to="/landlord-dashboard" replace />;
-      case 'tenant':
-        return <Navigate to="/tenant-dashboard" replace />;
-      default:
-        return <Navigate to="/" replace />;
-    }
+  // Show password change modal if needed
+  if (showPasswordModal && !user?.verified) {
+    return <PasswordChangeModalWrapper />;
+  }
+
+  if (role && user?.systemRoleId !== role) {
+    const redirectPath =
+      fallback ||
+      roleRedirects[user?.systemRoleId as keyof typeof roleRedirects] ||
+      "/";
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <Outlet />;
+};
+
+// Helper component to render modal in route context
+const PasswordChangeModalWrapper = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleSuccess = () => {
+    // Navigate based on user role after successful password change
+    switch (user?.systemRoleId) {
+      case 1:
+        navigate("/admin-dashboard");
+        break;
+      case 2:
+        navigate("/landlord-dashboard");
+        break;
+      case 3:
+        navigate("/tenant-dashboard");
+        break;
+      default:
+        navigate("/");
+    }
+  };
+
+  return (
+    <>
+      <PasswordChangeModal onSuccess={handleSuccess} />
+      {/* Blank screen behind modal */}
+      <div className="fixed inset-0 bg-white/80 z-40" />
+    </>
+  );
 };
 
 export default ProtectedRoute;
