@@ -110,6 +110,10 @@ namespace Infrastructure.Services.UserServices
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, changePassword.CurrentPassword) == PasswordVerificationResult.Failed)
                 throw new Exception("Invalid username or current password.");
 
+            //enforce new password policy to be minimum 8 characters
+            if (changePassword.NewPassword.Length < 8)
+                throw new Exception("New password must be at least 8 characters long.");
+
             // Update the password, mark as changed and verified
             user.Password = _passwordHasher.HashPassword(user, changePassword.NewPassword);
             user.PasswordChanged = true;
