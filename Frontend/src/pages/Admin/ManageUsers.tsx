@@ -97,6 +97,13 @@ interface UserDetailsProps {
   onClose: () => void;
 }
 
+interface UserTableProps {
+  users: User[];
+  onViewDetails: (user: User) => void;
+  onDeleteSuccess?: () => void;  // Add this prop
+}
+
+
 const UserDetails = ({
   user,
   properties,
@@ -591,6 +598,7 @@ const ManageUsers = () => {
             <UserTable
               users={getFilteredUsers()}
               onViewDetails={(user) => setSelectedUser(user)}
+              onDeleteSuccess={fetchUsers}
             />
           </TabsContent>
 
@@ -749,12 +757,38 @@ const ManageUsers = () => {
 const UserTable = ({
   users,
   onViewDetails,
+  onDeleteSuccess,
 }: {
   users: User[];
+  onDeleteSuccess?: () => void;
   onViewDetails: (user: User) => void;
 }) => {
   const formatCurrency = useCurrencyFormatter();
   console.log("users", users);
+  const user = localStorage.getItem('user') || null;
+  
+  console.log("Token:", user);
+
+  const token = JSON.parse(user).token;
+  const deletUser = async (userId: string) => {
+    try {
+      const { data, status } = await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/DeleteUser/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (status >= 200 && status < 300) {
+        toast.success("User deleted successfully!");
+        onDeleteSuccess && onDeleteSuccess();
+      }
+    } catch (error) {
+      console.log("error", error);
+    }
+  }
+
   return (
     <Table>
       <TableHeader>
@@ -821,7 +855,7 @@ const UserTable = ({
                   <Button variant="outline" size="icon">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon" onClick={() => deletUser(user.id)}>
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>
