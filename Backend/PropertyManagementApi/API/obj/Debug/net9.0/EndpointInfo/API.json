@@ -5,7 +5,7 @@
     "version": "v1"
   },
   "paths": {
-    "/CreatePayment": {
+    "/MakeTenantPayment": {
       "post": {
         "tags": [
           "Payment"
@@ -898,7 +898,7 @@
         }
       }
     },
-    "/api/Tenant/CreateTenant": {
+    "/CreateTenant": {
       "post": {
         "tags": [
           "Tenant"
@@ -1007,7 +1007,7 @@
         }
       }
     },
-    "/api/Tenant/UpdateTenant": {
+    "/UpdateTenant": {
       "put": {
         "tags": [
           "Tenant"
@@ -1061,6 +1061,14 @@
                   },
                   "PaymentStatus": {
                     "type": "string"
+                  },
+                  "BalanceDue": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "Arrears": {
+                    "type": "number",
+                    "format": "double"
                   },
                   "NextPaymentDate": {
                     "type": "string",
@@ -1224,6 +1232,12 @@
                 "PaymentStatus": {
                   "style": "form"
                 },
+                "BalanceDue": {
+                  "style": "form"
+                },
+                "Arrears": {
+                  "style": "form"
+                },
                 "NextPaymentDate": {
                   "style": "form"
                 },
@@ -1343,7 +1357,7 @@
         }
       }
     },
-    "/api/Tenant/DeleteTenant/{id}": {
+    "/DeleteTenant/{id}": {
       "delete": {
         "tags": [
           "Tenant"
@@ -1366,7 +1380,7 @@
         }
       }
     },
-    "/api/Tenant/GetTenantById/{id}": {
+    "/GetTenantById/{id}": {
       "get": {
         "tags": [
           "Tenant"
@@ -1389,7 +1403,7 @@
         }
       }
     },
-    "/api/Tenant/GetAllTenants": {
+    "/GetAllTenants": {
       "get": {
         "tags": [
           "Tenant"
@@ -1763,6 +1777,68 @@
           }
         }
       }
+    },
+    "/ForgotPassword": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/RegisterUserMinusFiles": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1913,6 +1989,14 @@
           "paymentStatus": {
             "type": "string",
             "nullable": true
+          },
+          "balanceDue": {
+            "type": "number",
+            "format": "double"
+          },
+          "arrears": {
+            "type": "number",
+            "format": "double"
           },
           "nextPaymentDate": {
             "type": "string",

@@ -48,12 +48,10 @@ namespace Infrastructure.Services.Tenant
             //map dto to entity
             var tenant = new PropertyTenant
             {
-                Name = tenantDto.Name,
                 FullName = tenantDto.FullName,
                 Email = tenantDto.Email,
                 PhoneNumber = tenantDto.PhoneNumber,
-                Password = tenantDto.Password,
-                Active = tenantDto.Active,
+                Active = true,
                 PassportPhoto = passportPhotoPath,
                 IdFront = idFrontPath,
                 IdBack = idBackPath,
@@ -61,7 +59,6 @@ namespace Infrastructure.Services.Tenant
                 PropertyId = tenantDto.PropertyId,
                 DateMovedIn = tenantDto.DateMovedIn
             };
-
             //get tenant system role
             var systemRole = await _context.SystemRoles
                 .FirstOrDefaultAsync(r => r.Name == "Tenant");
