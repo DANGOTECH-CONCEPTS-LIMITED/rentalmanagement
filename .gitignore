@@ -1,11 +1,24 @@
-# Ignore build output
-bin/
-obj/
-Backend/PropertyManagementApi/API/obj/
-Backend/PropertyManagementApi/Infrastructure/obj/
-*.dll
-*.pdb
-*.exe
+# Ignore all bin and obj folders recursively
+**/bin/
+**/obj/
+# Ignore all files in Debug/net9.0 folders recursively
+**/Debug/net9.0/
+# Optional: Ignore all .dll, .pdb, .exe files recursively
+**/*.dll
+**/*.pdb
+**/*.exe
+
+# Optional: Ignore .sourcelink.json, .cache files, and AssemblyInfo-related files
+**/*.sourcelink.json
+**/*.cache
+**/AssemblyInfo.cs
+**/AssemblyInfoInputs.cache
+**/*.AssemblyReference.cache
+
+
+# Optional: Ignore ref and refint folders
+**/ref/
+**/refint/
 
 # Ignore user-specific files
 *.user
