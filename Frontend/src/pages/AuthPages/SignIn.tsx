@@ -14,15 +14,8 @@ const SignIn = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { systemRoleId, requiresPasswordChange } = await login(
-        email,
-        password
-      );
-
-      if (requiresPasswordChange) {
-        // The AuthContext will show the modal via its state
-        return;
-      }
+      // const { systemRoleId, requiresPasswordChange } = await login(
+      const { systemRoleId } = await login(email, password);
 
       // Handle navigation based on role
       switch (systemRoleId) {
