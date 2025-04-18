@@ -118,6 +118,7 @@ namespace Infrastructure.Services.UserServices
             user.Password = _passwordHasher.HashPassword(user, changePassword.NewPassword);
             user.PasswordChanged = true;
             user.Verified = true;
+            user.Active = true;
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
 
