@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { House, Search, Eye, Edit, Trash, X, ImageIcon, Upload } from 'lucide-react';
+import { House, Search, Eye, Edit, Trash, X, ImageIcon, Upload, XIcon } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -87,8 +87,21 @@ const LandlordProperties = () => {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiI1ZjdkMGVkNy04Y2UzLTQyODUtYmQ4Zi00MTg4MTY4MWUxM2MiLCJleHAiOjE3NDQ3MzE2MDcsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.tQy4V33Mu0YPBa5Y6g8_nzD9MUTUgmMwzf3lVybswvI";
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
+  const user = localStorage.getItem('user') || null;
+
+  console.log("Token:", user);
+
+  const token = JSON.parse(user).token;
+  if (!token) {
+    toast({
+      title: "Error",
+      description: "User token not found. Please log in again.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const navigate = useNavigate();
 
@@ -118,8 +131,9 @@ const LandlordProperties = () => {
       const data = await response.json();
       setProperties(data);
     } catch (err) {
-      console.error('Error fetching properties:', err);
-      setError('Failed to load properties. Please try again later.');
+      console.error(err.message);
+      console.log("Error fetching properties:", err);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -372,7 +386,7 @@ const LandlordProperties = () => {
 
           {error ? (
             <div className="py-8 text-center text-red-500">
-              {error}
+              {error && <p>No properties found</p>}
             </div>
           ) : isLoading ? (
             <div className="py-8 text-center">

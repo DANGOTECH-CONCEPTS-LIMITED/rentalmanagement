@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";import {
   Table,
   TableBody,
   TableCell,
@@ -30,6 +38,7 @@ import {
   User,
   Eye,
   Users,
+  Clock
 } from "lucide-react";
 import axios from "axios";
 
@@ -41,11 +50,41 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: "Administrator" | "landlord" | "tenant";
+  role: "Administrator" | "Landlord" | "Tenant";
   status: "active" | "inactive";
   propertyId?: string;
   landlordId?: string;
   rentAmount?: number;
+  verified?: boolean;
+  passportPhoto?: string;
+  idFront?: string;
+  idBack?: string;
+  nationalIdNumber?: string;
+}
+
+interface SystemRole {
+  id: number;
+  name: "Administrator" | "Landlord" | "Tenant";
+  description: string;
+  permissions: string[] | null;
+}
+
+interface ApiUser {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  active: boolean;
+  passportPhoto: string;
+  idFront: string;
+  idBack: string;
+  nationalIdNumber: string;
+  passwordChanged: boolean;
+  verified: boolean;
+  token: string | null;
+  systemRoleId: number;
+  systemRole: SystemRole;
 }
 
 interface Property {
@@ -70,6 +109,13 @@ interface UserDetailsProps {
   onClose: () => void;
 }
 
+interface UserTableProps {
+  users: User[];
+  onViewDetails: (user: User) => void;
+  onEditUser: (user: User) => void;
+  onDeleteSuccess?: () => void;
+}
+
 const UserDetails = ({
   user,
   properties,
@@ -79,23 +125,23 @@ const UserDetails = ({
   const formatCurrency = useCurrencyFormatter();
 
   const assignedProperty =
-    user.role === "tenant" && user.propertyId
+    user.role === "Tenant" && user.propertyId
       ? properties.find((p) => p.id === user.propertyId)
       : null;
 
   const assignedLandlord =
-    user.role === "tenant" && user.landlordId
+    user.role === "Tenant" && user.landlordId
       ? users.find((u) => u.id === user.landlordId)
       : null;
 
   const ownedProperties =
-    user.role === "landlord"
+    user.role === "Landlord"
       ? properties.filter((p) => p.landlord === user.id)
       : [];
 
   const tenants =
-    user.role === "landlord"
-      ? users.filter((u) => u.role === "tenant" && u.landlordId === user.id)
+    user.role === "Landlord"
+      ? users.filter((u) => u.role === "Tenant" && u.landlordId === user.id)
       : [];
 
   return (
@@ -119,9 +165,9 @@ const UserDetails = ({
             variant={
               user.role === "Administrator"
                 ? "destructive"
-                : user.role === "landlord"
-                ? "default"
-                : "secondary"
+                : user.role === "Landlord"
+                  ? "default"
+                  : "secondary"
             }
           >
             {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
@@ -149,7 +195,7 @@ const UserDetails = ({
         </div>
       </div>
 
-      {user.role === "tenant" && assignedProperty && (
+      {user.role === "Tenant" && assignedProperty && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <Home className="mr-2 h-4 w-4" /> Property Details
@@ -189,7 +235,7 @@ const UserDetails = ({
         </div>
       )}
 
-      {user.role === "tenant" && assignedLandlord && (
+      {user.role === "Tenant" && assignedLandlord && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <User className="mr-2 h-4 w-4" /> Landlord Details
@@ -213,7 +259,7 @@ const UserDetails = ({
         </div>
       )}
 
-      {user.role === "landlord" && ownedProperties.length > 0 && (
+      {user.role === "Landlord" && ownedProperties.length > 0 && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <Home className="mr-2 h-4 w-4" /> Owned Properties (
@@ -254,7 +300,7 @@ const UserDetails = ({
         </div>
       )}
 
-      {user.role === "landlord" && tenants.length > 0 && (
+      {user.role === "Landlord" && tenants.length > 0 && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <Users className="mr-2 h-4 w-4" /> Tenants ({tenants.length})
@@ -286,8 +332,8 @@ const UserDetails = ({
                       {tenant.rentAmount
                         ? formatCurrency(tenant.rentAmount)
                         : tenantProperty
-                        ? formatCurrency(tenantProperty.rentAmount)
-                        : "N/A"}
+                          ? formatCurrency(tenantProperty.rentAmount)
+                          : "N/A"}
                     </TableCell>
                     <TableCell>
                       {tenant.status === "active" ? (
@@ -321,6 +367,7 @@ const ManageUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
@@ -328,10 +375,32 @@ const ManageUsers = () => {
     email: "",
     systemRoleId: "",
   });
+  const [editFormData, setEditFormData] = useState({
+    id: "",
+    fullName: "",
+    email: "",
+    systemRoleId: "",
+    phoneNumber: "",
+    nationalIdNumber: "",
+    active: true,
+    verified: false,
+    passportPhoto: null as File | null,
+    idFront: null as File | null,
+    idBack: null as File | null,
+    currentPassportPhoto: "",
+    currentIdFront: "",
+    currentIdBack: "",
+  });
   const [errors, setErrors] = useState({
     fullName: "",
     email: "",
     systemRoleId: "",
+  });
+  const [editErrors, setEditErrors] = useState({
+    fullName: "",
+    email: "",
+    systemRoleId: "",
+    phoneNumber: "",
   });
 
   useEffect(() => {
@@ -352,26 +421,68 @@ const ManageUsers = () => {
   };
   const fetchUsers = async () => {
     try {
-      const { data } = await axios.get(
+      const { data } = await axios.get<ApiUser[]>(
         `${import.meta.env.VITE_API_BASE_URL}/GetAllUsers`
       );
-      const formattedUsers = data.map((item: any) => ({
+
+      const formattedUsers: User[] = data.map((item) => ({
         id: item.id,
         name: item.fullName,
         email: item.email,
-        role: roles?.find((role) => role?.id === item.systemRoleId)?.name,
+        role: item.systemRole.name,
+        status: item.verified ? "active" : "inactive",
+        verified: item.verified,
       }));
+
       setUsers(formattedUsers);
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching users:", error);
+      toast.error("Failed to fetch users");
     }
   };
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
     setIsModalOpen(false);
-    // Reset form data and errors when closing
     setFormData({ fullName: "", email: "", systemRoleId: "" });
     setErrors({ fullName: "", email: "", systemRoleId: "" });
+  };
+
+  const openEditModal = (user: User) => {
+    axios.get<ApiUser>(`${import.meta.env.VITE_API_BASE_URL}/GetUserById/${user.id}`)
+      .then(response => {
+        const userData = response.data;
+        setEditFormData({
+          id: userData.id,
+          fullName: userData.fullName,
+          email: userData.email,
+          systemRoleId: userData.systemRoleId.toString(),
+          phoneNumber: userData.phoneNumber || "",
+          nationalIdNumber: userData.nationalIdNumber || "",
+          active: userData.active,
+          verified: userData.verified,
+          passportPhoto: null,
+          idFront: null,
+          idBack: null,
+          currentPassportPhoto: userData.passportPhoto,
+          currentIdFront: userData.idFront,
+          currentIdBack: userData.idBack,
+        });
+        setIsEditModalOpen(true);
+      })
+      .catch(error => {
+        console.error("Error fetching user details:", error);
+        toast.error("Failed to fetch user details for editing");
+      });
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditErrors({
+      fullName: "",
+      email: "",
+      systemRoleId: "",
+      phoneNumber: "",
+    });
   };
 
   const handleChange = (e: any) => {
@@ -381,10 +492,26 @@ const ManageUsers = () => {
       [name]: value,
     });
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors({
         ...errors,
+        [name]: "",
+      });
+    }
+  };
+
+  const handleEditChange = (e: any) => {
+    const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    setEditFormData({
+      ...editFormData,
+      [name]: newValue,
+    });
+
+    if (editErrors[name]) {
+      setEditErrors({
+        ...editErrors,
         [name]: "",
       });
     }
@@ -419,6 +546,46 @@ const ManageUsers = () => {
     return isValid;
   };
 
+  const validateEditForm = () => {
+    let isValid = true;
+    const newErrors = { 
+      fullName: "", 
+      email: "", 
+      systemRoleId: "",
+      phoneNumber: "" 
+    };
+
+    // Validate fullName
+    if (!editFormData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+      isValid = false;
+    }
+
+    // Validate email
+    if (!editFormData.email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(editFormData.email)) {
+      newErrors.email = "Email address is invalid";
+      isValid = false;
+    }
+
+    // Validate systemRoleId
+    if (!editFormData.systemRoleId) {
+      newErrors.systemRoleId = "Role selection is required";
+      isValid = false;
+    }
+
+    // Validate phoneNumber if provided
+    if (editFormData.phoneNumber && !/^\+?\d{10,15}$/.test(editFormData.phoneNumber)) {
+      newErrors.phoneNumber = "Please enter a valid phone number";
+      isValid = false;
+    }
+
+    setEditErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -441,7 +608,82 @@ const ManageUsers = () => {
         }
       } catch (error) {
         console.log("error", error);
+        toast.error("Failed to create user");
       }
+    }
+  };
+
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+
+    if (validateEditForm()) {
+      // Get token for authorization
+      const user = localStorage.getItem('user') || null;
+      const token = user ? JSON.parse(user).token : null;
+
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      try {
+        // Create FormData to handle multipart/form-data
+        const formData = new FormData();
+        formData.append('Id', editFormData.id);
+        formData.append('FullName', editFormData.fullName);
+        formData.append('Email', editFormData.email);
+        formData.append('SystemRoleId', editFormData.systemRoleId);
+        formData.append('PhoneNumber', editFormData.phoneNumber || '');
+        formData.append('Active', editFormData.active.toString());
+        formData.append('Verified', editFormData.verified.toString());
+        formData.append('NationalIdNumber', editFormData.nationalIdNumber || '');
+        
+        // Required fields with default values for the API
+        formData.append('PassportPhoto', 'string');
+        formData.append('IdFront', 'string');
+        formData.append('IdBack', 'string');
+        formData.append('Password', 'string');
+        formData.append('Token', 'string');
+        formData.append('PasswordChanged', 'true');
+        formData.append('SystemRole.Id', '0');
+        formData.append('SystemRole.Name', 'string');
+        formData.append('SystemRole.Description', 'string');
+        formData.append('SystemRole.Permissions', 'string');
+        formData.append('SystemRole.CreatedAt', new Date().toISOString());
+        formData.append('files', 'string');
+
+        const { status } = await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/UpdateUser`,
+          formData,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+
+        if (status >= 200 && status < 300) {
+          closeEditModal();
+          toast.success("User updated successfully!");
+          fetchUsers();
+        }
+      } catch (error) {
+        console.error("Error updating user:", error);
+        toast.error("Failed to update user");
+      }
+    }
+  };
+
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>, 
+    field: 'passportPhoto' | 'idFront' | 'idBack'
+  ) => {
+    if (e.target.files && e.target.files[0]) {
+      setEditFormData({
+        ...editFormData,
+        [field]: e.target.files[0],
+      });
     }
   };
 
@@ -511,7 +753,7 @@ const ManageUsers = () => {
         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
       if (role) {
-        return matchesSearch && user.role === role;
+        return matchesSearch && user.role === role; // Exact match
       }
 
       return matchesSearch;
@@ -548,10 +790,10 @@ const ManageUsers = () => {
               Admins ({getFilteredUsers("Administrator").length})
             </TabsTrigger>
             <TabsTrigger value="landlord">
-              Landlords ({getFilteredUsers("landlord").length})
+              Landlords ({getFilteredUsers("Landlord").length})
             </TabsTrigger>
             <TabsTrigger value="tenant">
-              Tenants ({getFilteredUsers("tenant").length})
+              Tenants ({getFilteredUsers("Tenant").length})
             </TabsTrigger>
           </TabsList>
 
@@ -559,6 +801,8 @@ const ManageUsers = () => {
             <UserTable
               users={getFilteredUsers()}
               onViewDetails={(user) => setSelectedUser(user)}
+              onEditUser={openEditModal}
+              onDeleteSuccess={fetchUsers}
             />
           </TabsContent>
 
@@ -566,20 +810,26 @@ const ManageUsers = () => {
             <UserTable
               users={getFilteredUsers("Administrator")}
               onViewDetails={(user) => setSelectedUser(user)}
+              onEditUser={openEditModal}
+              onDeleteSuccess={fetchUsers}
             />
           </TabsContent>
 
           <TabsContent value="landlord">
             <UserTable
-              users={getFilteredUsers("landlord")}
+              users={getFilteredUsers("Landlord")}
               onViewDetails={(user) => setSelectedUser(user)}
+              onEditUser={openEditModal}
+              onDeleteSuccess={fetchUsers}
             />
           </TabsContent>
 
           <TabsContent value="tenant">
             <UserTable
-              users={getFilteredUsers("tenant")}
+              users={getFilteredUsers("Tenant")}
               onViewDetails={(user) => setSelectedUser(user)}
+              onEditUser={openEditModal}
+              onDeleteSuccess={fetchUsers}
             />
           </TabsContent>
         </Tabs>
@@ -607,6 +857,7 @@ const ManageUsers = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Add User Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -645,11 +896,10 @@ const ManageUsers = () => {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
-                errors.fullName
-                  ? "border-red-500 focus:ring-red-300"
-                  : "border-gray-300 focus:ring-blue-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.fullName
+                ? "border-red-500 focus:ring-red-300"
+                : "border-gray-300 focus:ring-blue-300"
+                }`}
               placeholder="Enter your full name"
             />
             {errors.fullName && (
@@ -670,11 +920,10 @@ const ManageUsers = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
-                errors.email
-                  ? "border-red-500 focus:ring-red-300"
-                  : "border-gray-300 focus:ring-blue-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.email
+                ? "border-red-500 focus:ring-red-300"
+                : "border-gray-300 focus:ring-blue-300"
+                }`}
               placeholder="example@email.com"
             />
             {errors.email && (
@@ -694,11 +943,10 @@ const ManageUsers = () => {
               name="systemRoleId"
               value={formData.systemRoleId}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
-                errors.systemRoleId
-                  ? "border-red-500 focus:ring-red-300 "
-                  : "border-gray-300 focus:ring-blue-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.systemRoleId
+                ? "border-red-500 focus:ring-red-300 "
+                : "border-gray-300 focus:ring-blue-300"
+                }`}
             >
               <option value="">Select a role</option>
               {roles.map((role) => (
@@ -710,8 +958,195 @@ const ManageUsers = () => {
             {errors.systemRoleId && (
               <p className="mt-1 text-sm text-red-600">{errors.systemRoleId}</p>
             )}
-          </div>
+            </div>
         </form>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        title="Edit user"
+        size="md"
+        footer={
+          <div className="flex justify-end space-x-6">
+            <button
+              type="button"
+              className="px-6 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition"
+              onClick={closeEditModal}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="editUserForm"
+              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
+            >
+              Update user
+            </button>
+          </div>
+        }
+      >
+         <form id="editUserForm" onSubmit={handleUpdateSubmit} className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Basic Information */}
+      <div className="space-y-4">
+        <h3 className="font-medium">Basic Information</h3>
+        <div>
+          <Label htmlFor="edit-fullName">Full Name</Label>
+          <Input
+            id="edit-fullName"
+            name="fullName"
+            value={editFormData.fullName}
+            onChange={handleEditChange}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="edit-email">Email</Label>
+          <Input
+            id="edit-email"
+            type="email"
+            name="email"
+            value={editFormData.email}
+            onChange={handleEditChange}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="edit-phoneNumber">Phone Number</Label>
+          <Input
+            id="edit-phoneNumber"
+            name="phoneNumber"
+            value={editFormData.phoneNumber}
+            onChange={handleEditChange}
+          />
+        </div>
+        <div>
+          <Label htmlFor="edit-nationalIdNumber">National ID Number</Label>
+          <Input
+            id="edit-nationalIdNumber"
+            name="nationalIdNumber"
+            value={editFormData.nationalIdNumber}
+            onChange={handleEditChange}
+          />
+        </div>
+      </div>
+
+      {/* Role and Status */}
+      <div className="space-y-4">
+        <h3 className="font-medium">Role & Status</h3>
+        <div>
+          <Label htmlFor="edit-systemRoleId">System Role</Label>
+          <Select
+            value={editFormData.systemRoleId}
+            onValueChange={(value) => 
+              setEditFormData({...editFormData, systemRoleId: value})
+            }
+            required
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a role" />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id.toString()}>
+                  {role.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="edit-active"
+              checked={editFormData.active}
+              onCheckedChange={(checked) => 
+                setEditFormData({...editFormData, active: Boolean(checked)})
+              }
+            />
+            <Label htmlFor="edit-active">Active</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="edit-verified"
+              checked={editFormData.verified}
+              onCheckedChange={(checked) => 
+                setEditFormData({...editFormData, verified: Boolean(checked)})
+              }
+            />
+            <Label htmlFor="edit-verified">Verified</Label>
+          </div>
+        </div>
+      </div>
+
+      {/* Document Uploads */}
+      <div className="space-y-4">
+        <h3 className="font-medium">Documents</h3>
+        <div>
+          <Label>Passport Photo</Label>
+          {editFormData.currentPassportPhoto && (
+            <div className="mb-2">
+              <a 
+                href={`${import.meta.env.VITE_API_BASE_URL}/${editFormData.currentPassportPhoto}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 text-sm"
+              >
+                View Current Photo
+              </a>
+            </div>
+          )}
+          <Input 
+            type="file" 
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, 'passportPhoto')}
+          />
+        </div>
+        <div>
+          <Label>ID Front</Label>
+          {editFormData.currentIdFront && (
+            <div className="mb-2">
+              <a 
+                href={`${import.meta.env.VITE_API_BASE_URL}/${editFormData.currentIdFront}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 text-sm"
+              >
+                View Current ID Front
+              </a>
+            </div>
+          )}
+          <Input 
+            type="file" 
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, 'idFront')}
+          />
+        </div>
+        <div>
+          <Label>ID Back</Label>
+          {editFormData.currentIdBack && (
+            <div className="mb-2">
+              <a 
+                href={`${import.meta.env.VITE_API_BASE_URL}/${editFormData.currentIdBack}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 text-sm"
+              >
+                View Current ID Back
+              </a>
+            </div>
+          )}
+          <Input 
+            type="file" 
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, 'idBack')}
+          />
+        </div>
+      </div>
+    </div>
+  </form>
       </Modal>
     </div>
   );
@@ -720,12 +1155,39 @@ const ManageUsers = () => {
 const UserTable = ({
   users,
   onViewDetails,
-}: {
-  users: User[];
-  onViewDetails: (user: User) => void;
-}) => {
+  onEditUser,
+  onDeleteSuccess,
+}: UserTableProps) => {
   const formatCurrency = useCurrencyFormatter();
-  console.log("users", users);
+  
+  const user = localStorage.getItem('user') || null;
+  const token = user ? JSON.parse(user).token : null;
+
+  const deleteUser = async (userId: string) => {
+    if (!token) {
+      toast.error("Authentication required");
+      return;
+    }
+
+    try {
+      const { status } = await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/DeleteUser/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (status >= 200 && status < 300) {
+        toast.success("User deleted successfully!");
+        onDeleteSuccess && onDeleteSuccess();
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -757,9 +1219,9 @@ const UserTable = ({
                   variant={
                     user.role === "Administrator"
                       ? "destructive"
-                      : user.role === "landlord"
-                      ? "default"
-                      : "secondary"
+                      : user.role === "Landlord"
+                        ? "default"
+                        : "secondary"
                   }
                 >
                   {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
@@ -770,9 +1232,13 @@ const UserTable = ({
                   <span className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="h-4 w-4" /> Active
                   </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-red-600">
+                ) : user.status === "inactive" ? (
+                  <span className="flex items-center gap-1 text-yellow-600">
                     <XCircle className="h-4 w-4" /> Inactive
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-gray-600">
+                    <Clock className="h-4 w-4" /> Pending Verification
                   </span>
                 )}
               </TableCell>
@@ -785,10 +1251,18 @@ const UserTable = ({
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon">
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => onEditUser(user)}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon">
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => deleteUser(user.id)}
+                  >
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>
