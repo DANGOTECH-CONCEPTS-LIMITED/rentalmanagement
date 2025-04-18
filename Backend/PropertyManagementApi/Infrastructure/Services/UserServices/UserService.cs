@@ -178,8 +178,11 @@ namespace Infrastructure.Services.UserServices
             if (existingUser != null)
                 throw new Exception("User with this email already exists.");
 
+            //generate a unique, temporary password
+            var password = Guid.NewGuid().ToString("N").Substring(0, 8);
+
             // Hash the supplied password
-            user.Password = _passwordHasher.HashPassword(user, user.Password);
+            user.Password = _passwordHasher.HashPassword(user, password);
             user.PasswordChanged = false;
             user.Verified = false;
             _context.Users.Add(user);
@@ -188,7 +191,7 @@ namespace Infrastructure.Services.UserServices
             // Compose welcome email (note: ensure 'user.Password' is not sent in plaintext if already hashed)
             var emailContent = $"Hello {user.FullName},\n\nThank you for registering with Nyumba Yo. " +
                                $"You have been registered as {systemRole.Name} on our platform.\n\n" +
-                               $"Username: {user.Email}\nPlease log in to change your password.";
+                               $"Username: {user.Email}\n Your password is {password}Please log in to change your password.";
             await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
         }
 

@@ -1002,9 +1002,6 @@
                   "PhoneNumber": {
                     "type": "string"
                   },
-                  "Password": {
-                    "type": "string"
-                  },
                   "Active": {
                     "type": "boolean"
                   },
@@ -1167,9 +1164,6 @@
                   "style": "form"
                 },
                 "PhoneNumber": {
-                  "style": "form"
-                },
-                "Password": {
                   "style": "form"
                 },
                 "Active": {
@@ -1914,10 +1908,6 @@
             "nullable": true
           },
           "phoneNumber": {
-            "type": "string",
-            "nullable": true
-          },
-          "password": {
             "type": "string",
             "nullable": true
           },

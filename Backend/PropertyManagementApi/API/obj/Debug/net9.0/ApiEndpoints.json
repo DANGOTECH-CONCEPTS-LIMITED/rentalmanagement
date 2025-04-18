@@ -915,11 +915,6 @@
         "IsRequired": false
       },
       {
-        "Name": "Password",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
         "Name": "Active",
         "Type": "System.Boolean",
         "IsRequired": false
