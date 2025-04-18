@@ -18,40 +18,46 @@ interface Property {
 const RegisterTenants = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    FullName: '',
-    Email: '',
-    PhoneNumber: '',
-    NationalIdNumber: '',
-    DateMovedIn: '',
-    PropertyId: '',
-    Password: '',
-    Active: 'true',
+    FullName: '',        // Matches API's 'FullName' field
+    Name: '',            // Added to match API's 'Name' field
+    Email: '',           // Matches API's 'Email' field
+    PhoneNumber: '',     // Matches API's 'PhoneNumber' field
+    NationalIdNumber: '', // Matches API's 'NationalIdNumber' field
+    DateMovedIn: '',     // Matches API's 'DateMovedIn' field
+    PropertyId: '',      // Matches API's 'PropertyId' field
+    Password: '',        // Matches API's 'Password' field
+    Active: 'true',      // Matches API's 'Active' field
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
 
+  // Document upload state
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
   const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
-  const user = localStorage.getItem('user') || null;
-
-  const token = JSON.parse(user).token;
-  if (!token) {
-    toast({
-      title: "Error",
-      description: "User token not found. Please log in again.",
-      variant: "destructive",
-    });
-    return;
+  
+  // Get user from localStorage
+  const user = localStorage.getItem('user');
+  let token = '';
+  
+  try {
+    if (user) {
+      const userData = JSON.parse(user);
+      token = userData.token;
+    } else {
+      console.error('No user found in localStorage');
+    }
+  } catch (error) {
+    console.error('Error parsing user data:', error);
   }
-
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
         const response = await fetch(`${apiUrl}/GetAllProperties`, {
           method: 'GET',
           headers: {
@@ -78,8 +84,10 @@ const RegisterTenants = () => {
       }
     };
 
-    fetchProperties();
-  }, [toast]);
+    if (token) {
+      fetchProperties();
+    }
+  }, [toast, token]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
     const file = e.target.files?.[0];
@@ -98,7 +106,9 @@ const RegisterTenants = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      // If the field is FullName, also update Name to keep them in sync
+      ...(name === 'FullName' ? { Name: value } : {})
     }));
   };
 
@@ -113,30 +123,40 @@ const RegisterTenants = () => {
       });
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
+  
       const form = new FormData();
       
-      // Append all form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        form.append(key, value);
-      });
+      // Format date to match expected API format
+      const moveDateObj = new Date(formData.DateMovedIn);
+      const formattedDate = moveDateObj.toISOString();
       
-      // Append files with exact field names from API
+      // Append all form fields with exact field names from API
+      form.append('FullName', formData.FullName);
+      form.append('Name', formData.Name || formData.FullName); // Use Name or fallback to FullName
+      form.append('Email', formData.Email);
+      form.append('PhoneNumber', formData.PhoneNumber);
+      form.append('NationalIdNumber', formData.NationalIdNumber);
+      form.append('DateMovedIn', formattedDate);
+      form.append('PropertyId', formData.PropertyId);
+      form.append('Password', formData.Password);
+      form.append('Active', formData.Active);
+      
+      // Append document files with exact field names from API
       form.append('PassportPhoto', passportPhoto);
       form.append('IdFront', idFrontPhoto);
       form.append('IdBack', idBackPhoto);
       
-      // Append files array (if needed by backend)
+      // Append to files array as required by API
       form.append('files', passportPhoto);
       form.append('files', idFrontPhoto);
       form.append('files', idBackPhoto);
-
-      const response = await fetch(`${apiUrl}/api/Tenant/CreateTenant`, {
+  
+      const response = await fetch(`${apiUrl}/CreateTenant`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -144,12 +164,27 @@ const RegisterTenants = () => {
         },
         body: form,
       });
-
+  
+      // First check if the response status is OK
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', response.status, errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const data = await response.json();
+  
+      // Check the content type of the response
+      const contentType = response.headers.get('content-type');
+      let responseData;
+  
+      if (contentType && contentType.includes('application/json')) {
+        // If it's JSON, parse it as JSON
+        responseData = await response.json();
+        console.log('Success response (JSON):', responseData);
+      } else {
+        // If it's not JSON, get it as text
+        responseData = await response.text();
+        console.log('Success response (text):', responseData);
+      }
       
       setIsSubmitting(false);
       setIsSuccess(true);
@@ -164,6 +199,7 @@ const RegisterTenants = () => {
       setTimeout(() => {
         setFormData({
           FullName: '',
+          Name: '',
           Email: '',
           PhoneNumber: '',
           NationalIdNumber: '',
@@ -177,7 +213,7 @@ const RegisterTenants = () => {
         setIdBackPhoto(null);
         setIsSuccess(false);
       }, 3000);
-
+  
     } catch (error) {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);
