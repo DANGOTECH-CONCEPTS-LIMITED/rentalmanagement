@@ -1,6 +1,8 @@
 # Ignore build output
 bin/
 obj/
+Backend/PropertyManagementApi/API/obj/
+Backend/PropertyManagementApi/Infrastructure/obj/
 *.dll
 *.pdb
 *.exe
