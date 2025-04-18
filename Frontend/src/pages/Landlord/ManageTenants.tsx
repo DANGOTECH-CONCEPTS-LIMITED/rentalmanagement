@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Users, Search, Eye, Edit, Trash, Calendar, Home, CreditCard, XIcon, PhoneIcon } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { set } from 'date-fns';
 
 interface Tenant {
   id: number;
@@ -139,6 +140,7 @@ const ManageTenants = () => {
 
       if (response.ok) {
         setTenants(tenants.filter(tenant => tenant.id !== tenantId));
+        setSelectedTenant(null);
         toast({
           title: 'Success',
           description: 'Tenant deleted successfully',
