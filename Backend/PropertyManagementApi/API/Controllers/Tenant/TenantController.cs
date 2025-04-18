@@ -36,11 +36,11 @@ namespace API.Controllers.Tenant
 
         [HttpPut("/UpdateTenant")]
         [Authorize]
-        public async Task<IActionResult> UpdateTenant(List<IFormFile> files, [FromForm] PropertyTenant tenant)
+        public async Task<IActionResult> UpdateTenant(List<IFormFile> files, [FromForm] TenantDto tenant, [FromForm] int tenantid)
         {
             try
             {
-                await _tenantService.UpdateTenantAsync(files[0], files[1], files[2], tenant);
+                await _tenantService.UpdateTenantAsync(files[0], files[1], files[2], tenant, tenantid);
                 return Ok("Tenant updated successfully.");
             }
             catch (Exception ex)

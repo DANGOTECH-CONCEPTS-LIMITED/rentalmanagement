@@ -15,5 +15,6 @@ namespace Domain.Dtos.Tenant
         public string NationalIdNumber { get; set; } = string.Empty;
         public int PropertyId { get; set; }
         public DateTime? DateMovedIn { get; set; }
+        public bool? Active { get; set; } = false;
     }
 }

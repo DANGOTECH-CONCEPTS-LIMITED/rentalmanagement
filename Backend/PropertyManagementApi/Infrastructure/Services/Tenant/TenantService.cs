@@ -107,14 +107,14 @@ namespace Infrastructure.Services.Tenant
             return tenant;
         }
 
-        public async Task UpdateTenantAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, PropertyTenant tenant)
+        public async Task UpdateTenantAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, TenantDto tenant,int tenantid)
         {
             if (tenant == null)
                 throw new Exception("Tenant data is required.");
 
             //check if tenant exists
             var existingTenant = await _context.Tenants
-                .FirstOrDefaultAsync(t => t.Id == tenant.Id);
+                .FirstOrDefaultAsync(t => t.Id == tenantid);
 
             if (existingTenant == null)
                 throw new Exception("Tenant not found.");
@@ -122,19 +122,31 @@ namespace Infrastructure.Services.Tenant
             if (passportphoto != null)
             {
                 var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
-                tenant.PassportPhoto = passportPhotoPath;
+                existingTenant.PassportPhoto = passportPhotoPath;
             }
             if (idfront != null)
             {
                 var idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
-                tenant.IdFront = idFrontPath;
+                existingTenant.IdFront = idFrontPath;
             }
             if (idback != null)
             {
                 var idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
-                tenant.IdBack = idBackPath;
+                existingTenant.IdBack = idBackPath;
             }
-            _context.Tenants.Update(tenant);
+
+            //update tenant properties
+            existingTenant.FullName = tenant.FullName;
+            existingTenant.Email = tenant.Email;
+            existingTenant.PhoneNumber = tenant.PhoneNumber;
+            existingTenant.Active = tenant.Active ?? false;
+            existingTenant.NationalIdNumber = tenant.NationalIdNumber;
+            existingTenant.PropertyId = tenant.PropertyId;
+            existingTenant.Property = await _context.LandLordProperties
+                .Include(p => p.Owner)
+                .FirstOrDefaultAsync(p => p.Id == tenant.PropertyId);
+
+            _context.Tenants.Update(existingTenant);
             await _context.SaveChangesAsync();
         }
 
@@ -160,5 +172,6 @@ namespace Infrastructure.Services.Tenant
                 throw new Exception("No tenants found for this property.");
             return tenants;
         }
+
     } 
 }

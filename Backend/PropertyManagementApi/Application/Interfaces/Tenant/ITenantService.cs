@@ -12,7 +12,7 @@ namespace Application.Interfaces.Tenant
     public interface ITenantService
     {
         Task CreateTenantAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, TenantDto tenantDto);
-        Task UpdateTenantAsync(IFormFile passportphoto,IFormFile idfront,IFormFile idback, PropertyTenant tenant);
+        Task UpdateTenantAsync(IFormFile passportphoto,IFormFile idfront,IFormFile idback, TenantDto tenant,int tenantid);
         Task DeleteTenantAsync(int id);
         Task<PropertyTenant> GetTenantByIdAsync(int id);
         Task<IEnumerable<PropertyTenant>> GetAllTenantsAsync();
