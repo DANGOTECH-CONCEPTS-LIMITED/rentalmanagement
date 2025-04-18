@@ -1,0 +1,27 @@
+﻿using Domain.Dtos.User;
+using Domain.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+
+namespace Application.Interfaces.UserServices
+{
+    public interface IUserService
+    {
+        Task RegisterUserAsync(IFormFile passportphoto,IFormFile idfront,IFormFile idback, UserDto user);
+        Task<IEnumerable<User>> GetAllUsersAsync();
+        Task<IEnumerable<SystemRole>> GetAllRolesAsync();
+        Task ChangeUserPassword(ChangePasswordDto changePassword);
+        Task<User> AuthenticateUser(AuthenticateDto authenticateDto);
+        Task RegisterUserMinusFiles(User user);
+        Task<User> GetUserByIdAsync(int id);
+        Task UpdateUser(IFormFile passportphoto, IFormFile idfront, IFormFile idback, User user);
+        Task ForgotPassword(string email);
+
+        Task DeleteUser(int id);
+        Task<IEnumerable<User>> GetLandlordsAsync();
+    }
+}

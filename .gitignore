@@ -59,3 +59,7 @@ Frontend/build/
 # Optional: ignore config/environment-specific files
 .env
 .env.*
+
+# Include .sln files explicitly
+!.sln
+
