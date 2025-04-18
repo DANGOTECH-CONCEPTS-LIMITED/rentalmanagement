@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 
 interface Property {
   id: number;
@@ -18,27 +16,31 @@ interface Property {
 const RegisterTenants = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    FullName: '',        // Matches API's 'FullName' field
-    Name: '',            // Added to match API's 'Name' field
-    Email: '',           // Matches API's 'Email' field
-    PhoneNumber: '',     // Matches API's 'PhoneNumber' field
-    NationalIdNumber: '', // Matches API's 'NationalIdNumber' field
-    DateMovedIn: '',     // Matches API's 'DateMovedIn' field
-    PropertyId: '',      // Matches API's 'PropertyId' field
-    Password: '',        // Matches API's 'Password' field
-    Active: 'true',      // Matches API's 'Active' field
+    FullName: '',
+    Name: '',
+    Email: '',
+    PhoneNumber: '',
+    NationalIdNumber: '',
+    DateMovedIn: '',
+    PropertyId: '',
+    Password: '',
+    Active: 'true',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
 
-  // Document upload state
+  // Files and their preview URLs
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
-  const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
-  const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
+  const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
   
-  // Get user from localStorage
+  const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
+  const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(null);
+  
+  const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
+  const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(null);
+  
   const user = localStorage.getItem('user');
   let token = '';
   
@@ -89,16 +91,52 @@ const RegisterTenants = () => {
     }
   }, [toast, token]);
 
+  // Clean up preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Revoke object URLs to avoid memory leaks
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
+    };
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Create a preview URL
+    const previewUrl = URL.createObjectURL(file);
+
     if (type === 'PassportPhoto') {
+      // Clean up previous preview URL if exists
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
       setPassportPhoto(file);
+      setPassportPhotoPreview(previewUrl);
     } else if (type === 'IdFront') {
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
       setIdFrontPhoto(file);
+      setIdFrontPhotoPreview(previewUrl);
     } else if (type === 'IdBack') {
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
       setIdBackPhoto(file);
+      setIdBackPhotoPreview(previewUrl);
+    }
+  };
+
+  const clearFile = (type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
+    if (type === 'PassportPhoto') {
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
+      setPassportPhoto(null);
+      setPassportPhotoPreview(null);
+    } else if (type === 'IdFront') {
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
+      setIdFrontPhoto(null);
+      setIdFrontPhotoPreview(null);
+    } else if (type === 'IdBack') {
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
+      setIdBackPhoto(null);
+      setIdBackPhotoPreview(null);
     }
   };
 
@@ -107,7 +145,6 @@ const RegisterTenants = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
-      // If the field is FullName, also update Name to keep them in sync
       ...(name === 'FullName' ? { Name: value } : {})
     }));
   };
@@ -208,9 +245,9 @@ const RegisterTenants = () => {
           Password: '',
           Active: 'true',
         });
-        setPassportPhoto(null);
-        setIdFrontPhoto(null);
-        setIdBackPhoto(null);
+        clearFile('PassportPhoto');
+        clearFile('IdFront');
+        clearFile('IdBack');
         setIsSuccess(false);
       }, 3000);
   
@@ -407,12 +444,18 @@ const RegisterTenants = () => {
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
                       {passportPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
-                            <span className="text-sm text-gray-500">Passport photo selected</span>
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                            {passportPhotoPreview && (
+                              <img 
+                                src={passportPhotoPreview} 
+                                alt="Passport preview" 
+                                className="object-cover w-full h-full"
+                              />
+                            )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => setPassportPhoto(null)}
+                            onClick={() => clearFile('PassportPhoto')}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -447,12 +490,18 @@ const RegisterTenants = () => {
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
                       {idFrontPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
-                            <span className="text-sm text-gray-500">ID front selected</span>
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                            {idFrontPhotoPreview && (
+                              <img 
+                                src={idFrontPhotoPreview} 
+                                alt="ID front preview" 
+                                className="object-cover w-full h-full"
+                              />
+                            )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => setIdFrontPhoto(null)}
+                            onClick={() => clearFile('IdFront')}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -487,12 +536,18 @@ const RegisterTenants = () => {
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
                       {idBackPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
-                            <span className="text-sm text-gray-500">ID back selected</span>
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                            {idBackPhotoPreview && (
+                              <img 
+                                src={idBackPhotoPreview} 
+                                alt="ID back preview" 
+                                className="object-cover w-full h-full"
+                              />
+                            )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => setIdBackPhoto(null)}
+                            onClick={() => clearFile('IdBack')}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
