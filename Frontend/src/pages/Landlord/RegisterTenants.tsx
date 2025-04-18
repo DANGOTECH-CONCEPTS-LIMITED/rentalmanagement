@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 
 interface Property {
   id: number;
@@ -19,6 +17,7 @@ const RegisterTenants = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     FullName: '',
+    Name: '',
     Email: '',
     PhoneNumber: '',
     NationalIdNumber: '',
@@ -32,16 +31,33 @@ const RegisterTenants = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
 
-  // Document upload state
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
+  const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
+  
   const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
+  const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(null);
+  
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
+  const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(null);
+  
+  const user = localStorage.getItem('user');
+  let token = '';
+  
+  try {
+    if (user) {
+      const userData = JSON.parse(user);
+      token = userData.token;
+    } else {
+      console.error('No user found in localStorage');
+    }
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+  }
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const token = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzNjMxMWE2My1lZTMwLTRjMmUtYjE5YS1mYmE0YThiNzZiNWQiLCJleHAiOjE3NDQ3Mzc0NDUsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.n5h_AyOTZfwZa0i2J2BkvmqbiZfB0ZNq8eGAyJWIXhQ';
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
+        const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
         const response = await fetch(`${apiUrl}/GetAllProperties`, {
           method: 'GET',
@@ -69,19 +85,54 @@ const RegisterTenants = () => {
       }
     };
 
-    fetchProperties();
-  }, [toast]);
+    if (token) {
+      fetchProperties();
+    }
+  }, [toast, token]);
+
+  useEffect(() => {
+    return () => {
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const previewUrl = URL.createObjectURL(file);
+
     if (type === 'PassportPhoto') {
+      // Clean up previous preview URL if exists
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
       setPassportPhoto(file);
+      setPassportPhotoPreview(previewUrl);
     } else if (type === 'IdFront') {
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
       setIdFrontPhoto(file);
+      setIdFrontPhotoPreview(previewUrl);
     } else if (type === 'IdBack') {
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
       setIdBackPhoto(file);
+      setIdBackPhotoPreview(previewUrl);
+    }
+  };
+
+  const clearFile = (type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
+    if (type === 'PassportPhoto') {
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
+      setPassportPhoto(null);
+      setPassportPhotoPreview(null);
+    } else if (type === 'IdFront') {
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
+      setIdFrontPhoto(null);
+      setIdFrontPhotoPreview(null);
+    } else if (type === 'IdBack') {
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
+      setIdBackPhoto(null);
+      setIdBackPhotoPreview(null);
     }
   };
 
@@ -89,7 +140,8 @@ const RegisterTenants = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
+      ...(name === 'FullName' ? { Name: value } : {})
     }));
   };
 
@@ -104,31 +156,37 @@ const RegisterTenants = () => {
       });
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     try {
-      const token = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzNjMxMWE2My1lZTMwLTRjMmUtYjE5YS1mYmE0YThiNzZiNWQiLCJleHAiOjE3NDQ3Mzc0NDUsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.n5h_AyOTZfwZa0i2J2BkvmqbiZfB0ZNq8eGAyJWIXhQ';
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://3.216.182.63:8091';
-
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  
       const form = new FormData();
       
-      // Append all form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        form.append(key, value);
-      });
+      // Format date to match expected API format
+      const moveDateObj = new Date(formData.DateMovedIn);
+      const formattedDate = moveDateObj.toISOString();
       
-      // Append files with exact field names from API
+      form.append('FullName', formData.FullName);
+      form.append('Name', formData.Name || formData.FullName);
+      form.append('Email', formData.Email);
+      form.append('PhoneNumber', formData.PhoneNumber);
+      form.append('NationalIdNumber', formData.NationalIdNumber);
+      form.append('DateMovedIn', formattedDate);
+      form.append('PropertyId', formData.PropertyId);
+      form.append('Password', formData.Password);
+      form.append('Active', formData.Active);
+      
       form.append('PassportPhoto', passportPhoto);
       form.append('IdFront', idFrontPhoto);
       form.append('IdBack', idBackPhoto);
       
-      // Append files array (if needed by backend)
       form.append('files', passportPhoto);
       form.append('files', idFrontPhoto);
       form.append('files', idBackPhoto);
-
-      const response = await fetch(`${apiUrl}/api/Tenant/CreateTenant`, {
+  
+      const response = await fetch(`${apiUrl}/CreateTenant`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -136,12 +194,27 @@ const RegisterTenants = () => {
         },
         body: form,
       });
-
+  
+      // First check if the response status is OK
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', response.status, errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const data = await response.json();
+  
+      // Check the content type of the response
+      const contentType = response.headers.get('content-type');
+      let responseData;
+  
+      if (contentType && contentType.includes('application/json')) {
+        // If it's JSON, parse it as JSON
+        responseData = await response.json();
+        console.log('Success response (JSON):', responseData);
+      } else {
+        // If it's not JSON, get it as text
+        responseData = await response.text();
+        console.log('Success response (text):', responseData);
+      }
       
       setIsSubmitting(false);
       setIsSuccess(true);
@@ -156,6 +229,7 @@ const RegisterTenants = () => {
       setTimeout(() => {
         setFormData({
           FullName: '',
+          Name: '',
           Email: '',
           PhoneNumber: '',
           NationalIdNumber: '',
@@ -164,12 +238,12 @@ const RegisterTenants = () => {
           Password: '',
           Active: 'true',
         });
-        setPassportPhoto(null);
-        setIdFrontPhoto(null);
-        setIdBackPhoto(null);
+        clearFile('PassportPhoto');
+        clearFile('IdFront');
+        clearFile('IdBack');
         setIsSuccess(false);
       }, 3000);
-
+  
     } catch (error) {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);
@@ -363,12 +437,18 @@ const RegisterTenants = () => {
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
                       {passportPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
-                            <span className="text-sm text-gray-500">Passport photo selected</span>
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                            {passportPhotoPreview && (
+                              <img 
+                                src={passportPhotoPreview} 
+                                alt="Passport preview" 
+                                className="object-cover w-full h-full"
+                              />
+                            )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => setPassportPhoto(null)}
+                            onClick={() => clearFile('PassportPhoto')}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -403,12 +483,18 @@ const RegisterTenants = () => {
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
                       {idFrontPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
-                            <span className="text-sm text-gray-500">ID front selected</span>
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                            {idFrontPhotoPreview && (
+                              <img 
+                                src={idFrontPhotoPreview} 
+                                alt="ID front preview" 
+                                className="object-cover w-full h-full"
+                              />
+                            )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => setIdFrontPhoto(null)}
+                            onClick={() => clearFile('IdFront')}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -443,12 +529,18 @@ const RegisterTenants = () => {
                     <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
                       {idBackPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md">
-                            <span className="text-sm text-gray-500">ID back selected</span>
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                            {idBackPhotoPreview && (
+                              <img 
+                                src={idBackPhotoPreview} 
+                                alt="ID back preview" 
+                                className="object-cover w-full h-full"
+                              />
+                            )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => setIdBackPhoto(null)}
+                            onClick={() => clearFile('IdBack')}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />

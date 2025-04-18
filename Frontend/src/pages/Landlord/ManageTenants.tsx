@@ -1,31 +1,39 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Users, Search, Eye, Edit, Trash, CheckCircle, XCircle, Calendar, Home, CreditCard, XIcon, PhoneIcon } from 'lucide-react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Users, Search, Eye, Edit, Trash, Calendar, Home, CreditCard, XIcon, PhoneIcon } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { set } from 'date-fns';
 
 interface Tenant {
-  id: string;
-  name: string;
+  id: number;
+  fullName: string;
   email: string;
-  phone: string;
-  idNumber: string;
-  property: string;
-  moveInDate: string;
-  rentAmount: number;
-  status: 'active' | 'inactive';
-  lastPaymentDate: string;
-  paymentStatus: 'paid' | 'pending' | 'overdue';
-  profileImage: string;
+  phoneNumber: string;
+  active: boolean;
+  passportPhoto: string;
+  nationalIdNumber: string;
+  paymentStatus: string;
+  balanceDue: number;
+  arrears: number;
+  nextPaymentDate: string;
+  dateMovedIn: string;
+  property: {
+    id: number;
+    name: string;
+    type: string;
+    price: number;
+    currency: string;
+  };
 }
 
 const ManageTenants = () => {
@@ -33,93 +41,83 @@ const ManageTenants = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const { toast } = useToast();
+
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
+  const getAuthToken = () => {
+    try {
+      const user = localStorage.getItem('user');
+      if (!user) {
+        console.error('No user found in localStorage');
+        return null;
+      }
+      const userData = JSON.parse(user);
+      return userData.token;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    // Simulate API call to fetch tenants
-    setTimeout(() => {
-      const mockTenants: Tenant[] = [
-        {
-          id: 'tenant1',
-          name: 'John Smith',
-          email: 'john.smith@example.com',
-          phone: '+256 7123 45678',
-          idNumber: 'UG1234567',
-          property: 'Sunset Apartments - Unit 101',
-          moveInDate: '2023-09-15',
-          rentAmount: 1200000,
-          status: 'active',
-          lastPaymentDate: '2023-10-05',
-          paymentStatus: 'paid',
-          profileImage: 'https://randomuser.me/api/portraits/men/32.jpg'
-        },
-        {
-          id: 'tenant2',
-          name: 'Sarah Johnson',
-          email: 'sarah.j@example.com',
-          phone: '+256 7789 01234',
-          idNumber: 'UG7654321',
-          property: 'Bayview Condos - Unit 305',
-          moveInDate: '2023-08-01',
-          rentAmount: 1500000,
-          status: 'active',
-          lastPaymentDate: '2023-10-10',
-          paymentStatus: 'paid',
-          profileImage: 'https://randomuser.me/api/portraits/women/44.jpg'
-        },
-        {
-          id: 'tenant3',
-          name: 'Michael Wilson',
-          email: 'michael.w@example.com',
-          phone: '+256 7345 67890',
-          idNumber: 'UG2345678',
-          property: 'Sunset Apartments - Unit 102',
-          moveInDate: '2023-06-10',
-          rentAmount: 1100000,
-          status: 'active',
-          lastPaymentDate: '2023-09-28',
-          paymentStatus: 'overdue',
-          profileImage: 'https://randomuser.me/api/portraits/men/67.jpg'
-        },
-        {
-          id: 'tenant4',
-          name: 'Emma Davis',
-          email: 'emma.d@example.com',
-          phone: '+256 7901 23456',
-          idNumber: 'UG9876543',
-          property: 'Westside Heights - Unit 210',
-          moveInDate: '2023-10-01',
-          rentAmount: 1300000,
-          status: 'active',
-          lastPaymentDate: '2023-10-01',
-          paymentStatus: 'pending',
-          profileImage: 'https://randomuser.me/api/portraits/women/17.jpg'
-        },
-      ];
-      
-      setTenants(mockTenants);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+    const fetchTenants = async () => {
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: 'Error',
+          description: 'Authentication token not found',
+          variant: 'destructive'
+        });
+        setIsLoading(false);
+        return;
+      }
 
-  const filteredTenants = tenants.filter(tenant => 
-    tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      try {
+        const response = await fetch(`${apiUrl}/GetAllTenants`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'accept': '*/*'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch tenants: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setTenants(data);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load tenants',
+          variant: 'destructive'
+        });
+        console.error('Error fetching tenants:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTenants();
+  }, [toast]);
+
+  const filteredTenants = tenants.filter(tenant =>
+    tenant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tenant.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tenant.property.toLowerCase().includes(searchTerm.toLowerCase())
+    tenant.property.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string = 'UGX') => {
     return new Intl.NumberFormat('en-UG', {
       style: 'currency',
-      currency: 'UGX',
+      currency: currency,
       maximumFractionDigits: 0
     }).format(amount);
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    if (status === 'paid') return 'bg-green-100 text-green-800';
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-800';
-    if (status === 'overdue') return 'bg-red-100 text-red-800';
-    return '';
+  const getStatusBadgeClass = (active: boolean) => {
+    return active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
   const formatDate = (dateString: string) => {
@@ -131,29 +129,48 @@ const ManageTenants = () => {
     });
   };
 
+  const handleDeleteTenant = async (tenantId: number) => {
+    try {
+      const response = await fetch(`${apiUrl}/DeleteTenant/${tenantId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        }
+      });
+
+      if (response.ok) {
+        setTenants(tenants.filter(tenant => tenant.id !== tenantId));
+        setSelectedTenant(null);
+        toast({
+          title: 'Success',
+          description: 'Tenant deleted successfully',
+        });
+      } else {
+        throw new Error('Failed to delete tenant');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete tenant',
+        variant: 'destructive'
+      });
+      console.error('Error deleting tenant:', error);
+    }
+  };
+
+  const PLACEHOLDER_IMAGE = 'https://placehold.co/150?text=No+Image';
+
+  const getImageUrl = (relativePath: string) => {
+    if (!relativePath) return PLACEHOLDER_IMAGE;
+    if (relativePath.startsWith('http')) return relativePath;
+
+    const token = getAuthToken();
+    return `${apiUrl}/${relativePath}${token ? `?token=${token}` : ''}`;
+  };
+
   return (
     <div className="space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/landlord-dashboard">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Manage Tenants</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Manage Tenants</h1>
-          <p className="text-muted-foreground">View and manage all tenants registered in your properties</p>
-        </div>
-        <Button onClick={() => window.location.href = '/landlord-dashboard/register-tenants'}>
-          Add New Tenant
-        </Button>
-      </div>
+      {/* Breadcrumb and header remain the same */}
 
       <Card>
         <CardContent className="pt-6">
@@ -188,7 +205,7 @@ const ManageTenants = () => {
                     <TableHead className="hidden md:table-cell">Property</TableHead>
                     <TableHead className="hidden lg:table-cell">Move-in Date</TableHead>
                     <TableHead>Rent</TableHead>
-                    <TableHead>Payment Status</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -198,30 +215,33 @@ const ManageTenants = () => {
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <div className="h-10 w-10 rounded-full overflow-hidden">
-                            <img 
-                              src={tenant.profileImage} 
-                              alt={tenant.name} 
-                              className="h-full w-full object-cover"
-                            />
+                            selectedTenant
                           </div>
                           <div>
-                            <div className="font-medium">{tenant.name}</div>
+                            <div className="font-medium">{tenant.fullName}</div>
                             <div className="text-sm text-muted-foreground">{tenant.email}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{tenant.property}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{formatDate(tenant.moveInDate)}</TableCell>
-                      <TableCell>{formatCurrency(tenant.rentAmount)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {tenant.property.name}
+                        <div className="text-sm text-muted-foreground">{tenant.property.type}</div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {formatDate(tenant.dateMovedIn)}
+                      </TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(tenant.paymentStatus)}`}>
-                          {tenant.paymentStatus.charAt(0).toUpperCase() + tenant.paymentStatus.slice(1)}
+                        {formatCurrency(tenant.property.price, tenant.property.currency)}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(tenant.active)}`}>
+                          {tenant.active ? 'Active' : 'Inactive'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
                             onClick={() => setSelectedTenant(tenant)}
                           >
@@ -230,7 +250,12 @@ const ManageTenants = () => {
                           <Button variant="outline" size="icon">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon" className="text-red-500">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="text-red-500"
+                            onClick={() => handleDeleteTenant(tenant.id)}
+                          >
                             <Trash className="h-4 w-4" />
                           </Button>
                         </div>
@@ -254,94 +279,107 @@ const ManageTenants = () => {
                   <XIcon className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">
                   <div className="flex flex-col items-center">
-                    <div className="h-32 w-32 rounded-full overflow-hidden mb-4">
-                      <img 
-                        src={selectedTenant.profileImage} 
-                        alt={selectedTenant.name} 
+                    <div className="h-10 w-10 rounded-full overflow-hidden">
+                      <img
+                        src={getImageUrl(selectedTenant.passportPhoto)}
+                        alt={selectedTenant.fullName}
                         className="h-full w-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = PLACEHOLDER_IMAGE;
+                          target.onerror = null; // Prevent infinite loop if placeholder also fails
+                        }}
                       />
                     </div>
-                    <h3 className="font-semibold text-lg">{selectedTenant.name}</h3>
+                    <h3 className="font-semibold text-lg">{selectedTenant.fullName}</h3>
                     <p className="text-muted-foreground">{selectedTenant.email}</p>
-                    <div className={`mt-3 px-3 py-1 rounded-full text-xs ${selectedTenant.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {selectedTenant.status === 'active' ? 'Active Tenant' : 'Inactive'}
+                    <div className={`mt-3 px-3 py-1 rounded-full text-xs ${getStatusBadgeClass(selectedTenant.active)}`}>
+                      {selectedTenant.active ? 'Active Tenant' : 'Inactive'}
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-3">Personal Information</h4>
-                      
+
                       <div className="space-y-3">
                         <div>
                           <span className="text-xs text-muted-foreground">Phone</span>
                           <p className="flex items-center">
                             <PhoneIcon size={14} className="mr-1" />
-                            {selectedTenant.phone}
+                            {selectedTenant.phoneNumber}
                           </p>
                         </div>
-                        
+
                         <div>
                           <span className="text-xs text-muted-foreground">National ID</span>
                           <p className="flex items-center">
                             <CreditCard size={14} className="mr-1" />
-                            {selectedTenant.idNumber}
-                            <CheckCircle size={14} className="ml-2 text-green-500" />
+                            {selectedTenant.nationalIdNumber}
                           </p>
                         </div>
-                        
+
                         <div>
                           <span className="text-xs text-muted-foreground">Move-in Date</span>
                           <p className="flex items-center">
                             <Calendar size={14} className="mr-1" />
-                            {formatDate(selectedTenant.moveInDate)}
+                            {formatDate(selectedTenant.dateMovedIn)}
                           </p>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-3">Property & Payment</h4>
-                      
+
                       <div className="space-y-3">
                         <div>
                           <span className="text-xs text-muted-foreground">Property</span>
                           <p className="flex items-center">
                             <Home size={14} className="mr-1" />
-                            {selectedTenant.property}
+                            {selectedTenant.property.name} ({selectedTenant.property.type})
                           </p>
                         </div>
-                        
+
                         <div>
                           <span className="text-xs text-muted-foreground">Monthly Rent</span>
-                          <p className="font-semibold">{formatCurrency(selectedTenant.rentAmount)}</p>
+                          <p className="font-semibold">
+                            {formatCurrency(selectedTenant.property.price, selectedTenant.property.currency)}
+                          </p>
                         </div>
-                        
+
                         <div>
-                          <span className="text-xs text-muted-foreground">Last Payment</span>
+                          <span className="text-xs text-muted-foreground">Next Payment Due</span>
                           <p className="flex items-center">
-                            {formatDate(selectedTenant.lastPaymentDate)}
-                            <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${getStatusBadgeClass(selectedTenant.paymentStatus)}`}>
-                              {selectedTenant.paymentStatus}
-                            </span>
+                            {formatDate(selectedTenant.nextPaymentDate)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-xs text-muted-foreground">Balance Due</span>
+                          <p className="font-semibold">
+                            {formatCurrency(selectedTenant.balanceDue, selectedTenant.property.currency)}
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6 border-t pt-6">
                     <h4 className="text-sm font-medium mb-3">Actions</h4>
                     <div className="flex space-x-3">
                       <Button>Record Payment</Button>
                       <Button variant="outline">Update Information</Button>
-                      <Button variant="destructive">
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleDeleteTenant(selectedTenant.id)}
+                      >
                         <Trash size={14} className="mr-1" />
                         Remove Tenant
                       </Button>

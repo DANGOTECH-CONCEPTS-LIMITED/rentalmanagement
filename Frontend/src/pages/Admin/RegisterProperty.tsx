@@ -57,9 +57,20 @@ const RegisterProperty = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+    const user = localStorage.getItem('user') || null;
+  
+  
+    const token = JSON.parse(user).token;
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "User token not found. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+  
    
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmlvbmF0bGluZUBnbWFpbC5jb20iLCJqdGkiOiIzZDY1ZThmYS03MWQ1LTQ0ODYtOTdkYi02NjY2YTdkNGM4YzUiLCJleHAiOjE3NDQ3Mjc1MzMsImlzcyI6IkRBTkdPVEVDSCBDT05DRVBUUyBMSU1JVEVEIiwiYXVkIjoiTllVTUJBWU8gQ0xJRU5UUyJ9.sMKgJ54uPibdiJWsIbNwdyOD5Bggx1_jPZzen-orGMw";
-
   const navigate = useNavigate();
   const handleNavigate = () => {
     navigate("admin-dashboard/register-property");
