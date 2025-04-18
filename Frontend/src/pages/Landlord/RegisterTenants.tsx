@@ -31,7 +31,6 @@ const RegisterTenants = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
 
-  // Files and their preview URLs
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
   
@@ -91,10 +90,8 @@ const RegisterTenants = () => {
     }
   }, [toast, token]);
 
-  // Clean up preview URLs when component unmounts
   useEffect(() => {
     return () => {
-      // Revoke object URLs to avoid memory leaks
       if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
       if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
       if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
@@ -105,7 +102,6 @@ const RegisterTenants = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Create a preview URL
     const previewUrl = URL.createObjectURL(file);
 
     if (type === 'PassportPhoto') {
@@ -172,9 +168,8 @@ const RegisterTenants = () => {
       const moveDateObj = new Date(formData.DateMovedIn);
       const formattedDate = moveDateObj.toISOString();
       
-      // Append all form fields with exact field names from API
       form.append('FullName', formData.FullName);
-      form.append('Name', formData.Name || formData.FullName); // Use Name or fallback to FullName
+      form.append('Name', formData.Name || formData.FullName);
       form.append('Email', formData.Email);
       form.append('PhoneNumber', formData.PhoneNumber);
       form.append('NationalIdNumber', formData.NationalIdNumber);
@@ -183,12 +178,10 @@ const RegisterTenants = () => {
       form.append('Password', formData.Password);
       form.append('Active', formData.Active);
       
-      // Append document files with exact field names from API
       form.append('PassportPhoto', passportPhoto);
       form.append('IdFront', idFrontPhoto);
       form.append('IdBack', idBackPhoto);
       
-      // Append to files array as required by API
       form.append('files', passportPhoto);
       form.append('files', idFrontPhoto);
       form.append('files', idBackPhoto);
