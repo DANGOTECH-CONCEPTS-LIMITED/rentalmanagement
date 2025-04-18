@@ -1,7 +1,0 @@
-
-
-1. Delete Folder/
-2. Activate Login on the computer
-3. Readonly
-4. Exporting in xls
-Ask Gud the other computer that
