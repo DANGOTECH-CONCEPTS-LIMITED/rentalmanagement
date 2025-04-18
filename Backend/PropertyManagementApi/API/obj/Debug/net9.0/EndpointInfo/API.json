@@ -916,9 +916,6 @@
                       "format": "binary"
                     }
                   },
-                  "Name": {
-                    "type": "string"
-                  },
                   "FullName": {
                     "type": "string"
                   },
@@ -926,21 +923,6 @@
                     "type": "string"
                   },
                   "PhoneNumber": {
-                    "type": "string"
-                  },
-                  "Password": {
-                    "type": "string"
-                  },
-                  "Active": {
-                    "type": "boolean"
-                  },
-                  "PassportPhoto": {
-                    "type": "string"
-                  },
-                  "IdFront": {
-                    "type": "string"
-                  },
-                  "IdBack": {
                     "type": "string"
                   },
                   "NationalIdNumber": {
@@ -960,9 +942,6 @@
                 "files": {
                   "style": "form"
                 },
-                "Name": {
-                  "style": "form"
-                },
                 "FullName": {
                   "style": "form"
                 },
@@ -970,21 +949,6 @@
                   "style": "form"
                 },
                 "PhoneNumber": {
-                  "style": "form"
-                },
-                "Password": {
-                  "style": "form"
-                },
-                "Active": {
-                  "style": "form"
-                },
-                "PassportPhoto": {
-                  "style": "form"
-                },
-                "IdFront": {
-                  "style": "form"
-                },
-                "IdBack": {
                   "style": "form"
                 },
                 "NationalIdNumber": {
@@ -1028,9 +992,6 @@
                   "Id": {
                     "type": "integer",
                     "format": "int32"
-                  },
-                  "Name": {
-                    "type": "string"
                   },
                   "FullName": {
                     "type": "string"
@@ -1197,9 +1158,6 @@
                   "style": "form"
                 },
                 "Id": {
-                  "style": "form"
-                },
-                "Name": {
                   "style": "form"
                 },
                 "FullName": {
@@ -1946,10 +1904,6 @@
           "id": {
             "type": "integer",
             "format": "int32"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
           },
           "fullName": {
             "type": "string",

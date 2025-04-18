@@ -121,11 +121,6 @@
         "IsRequired": false
       },
       {
-        "Name": "Name",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
         "Name": "FullName",
         "Type": "System.String",
         "IsRequired": false
@@ -137,31 +132,6 @@
       },
       {
         "Name": "PhoneNumber",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Password",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Active",
-        "Type": "System.Boolean",
-        "IsRequired": false
-      },
-      {
-        "Name": "PassportPhoto",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "IdFront",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "IdBack",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -927,11 +897,6 @@
       {
         "Name": "Id",
         "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "Name",
-        "Type": "System.String",
         "IsRequired": false
       },
       {

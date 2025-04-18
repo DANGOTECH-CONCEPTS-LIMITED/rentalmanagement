@@ -45,6 +45,10 @@ namespace Infrastructure.Services.Tenant
             var idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
             var idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
 
+            //check if property exists
+            var property = await _context.LandLordProperties
+                .Include(p => p.Owner)
+                .FirstOrDefaultAsync(p => p.Id == tenantDto.PropertyId);
             //map dto to entity
             var tenant = new PropertyTenant
             {
@@ -57,7 +61,8 @@ namespace Infrastructure.Services.Tenant
                 IdBack = idBackPath,
                 NationalIdNumber = tenantDto.NationalIdNumber,
                 PropertyId = tenantDto.PropertyId,
-                DateMovedIn = tenantDto.DateMovedIn
+                DateMovedIn = tenantDto.DateMovedIn,
+                Property = property,
             };
             //get tenant system role
             var systemRole = await _context.SystemRoles

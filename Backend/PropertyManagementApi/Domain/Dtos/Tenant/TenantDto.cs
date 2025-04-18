@@ -12,9 +12,6 @@ namespace Domain.Dtos.Tenant
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
-        public string PassportPhoto { get; set; } = string.Empty;
-        public string IdFront { get; set; } = string.Empty;
-        public string IdBack { get; set; } = string.Empty;
         public string NationalIdNumber { get; set; } = string.Empty;
         public int PropertyId { get; set; }
         public DateTime? DateMovedIn { get; set; }
