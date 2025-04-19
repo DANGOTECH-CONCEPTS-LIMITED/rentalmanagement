@@ -31,6 +31,7 @@ import AvailableProperties from "./pages/Tenant/AvailableProperties";
 import MakePayment from "./pages/Tenant/MakePayment";
 import PaymentHistory from "./pages/Tenant/PaymentHistory";
 import SubmitComplaint from "./pages/Tenant/SubmitComplaint";
+import CashTransactions from "./pages/Tenant/CashTransaction";
 
 // Landlord Pages
 import RegisterTenants from "./pages/Landlord/RegisterTenants";
@@ -106,6 +107,10 @@ const App = () => (
                 <Route path="make-payment" element={<MakePayment />} />
                 <Route path="payment-history" element={<PaymentHistory />} />
                 <Route path="submit-complaint" element={<SubmitComplaint />} />
+                <Route
+                  path="cash-transactions"
+                  element={<CashTransactions />}
+                />
               </Route>
             </Route>
 
