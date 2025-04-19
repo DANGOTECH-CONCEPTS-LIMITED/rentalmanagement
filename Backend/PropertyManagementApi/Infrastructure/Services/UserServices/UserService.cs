@@ -131,14 +131,21 @@ namespace Infrastructure.Services.UserServices
         public async Task<User> AuthenticateUser(AuthenticateDto login)
         {
             // Validate user existence and password
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == login.UserName);
+            var user = await _context.Users
+                .Include(u => u.SystemRole) // Include SystemRole if needed
+                .FirstOrDefaultAsync(u => u.Email == login.UserName);
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, login.Password) == PasswordVerificationResult.Failed)
                 throw new Exception("User not found or incorrect password.");
 
-            //check if user is a tenant
-            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == user.Id);
-            if (tenant != null)
+            //check user role is a tenant
+            if (user.SystemRole.Name == "Tenant") 
             {
+                //get tenant with this user id
+                var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == user.Id);
+                if (tenant == null)
+                    throw new Exception("User has a role of tenant but not registered in tenants");
+
+                //assign userid as a tenant
                 user.Id = tenant.Id;
             }
 
