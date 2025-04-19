@@ -4,10 +4,11 @@ import { Upload, X, Camera, CreditCard, FileText } from "lucide-react";
 import Button from "../../components/ui/button/Button";
 import { toast } from "@/components/ui/use-toast";
 
-interface LandlordFormData {
+export interface LandlordFormData {
   FullName: string;
   PhoneNumber: string;
   Email: string;
+  systemRoleId: string | null;
   Password: string;
   IdType: "nationalId" | "drivingPermit" | "passport";
   IdNumber: string;
@@ -19,7 +20,7 @@ interface LandlordFormData {
 const idTypes = [
   { value: "nationalId", label: "National ID", requiresBack: true },
   { value: "drivingPermit", label: "Driving Permit", requiresBack: true },
-  { value: "passport", label: "Passport", requiresBack: true }
+  { value: "passport", label: "Passport", requiresBack: true },
 ];
 
 const RegisterLandlord = () => {
@@ -30,6 +31,7 @@ const RegisterLandlord = () => {
     Password: "defaultPassword",
     IdType: "nationalId",
     IdNumber: "",
+    systemRoleId: "2",
   });
 
   const [previewUrls, setPreviewUrls] = useState({
@@ -46,52 +48,69 @@ const RegisterLandlord = () => {
   };
 
   const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      IdType: e.target.value as "nationalId" | "drivingPermit" | "passport"
+    setFormData((prev) => ({
+      ...prev,
+      IdType: e.target.value as "nationalId" | "drivingPermit" | "passport",
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       setFormData((prev) => ({ ...prev, [fileType]: file }));
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrls(prev => ({ ...prev, [fileType]: reader.result as string }));
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [fileType]: reader.result as string,
+        }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, fileType: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+  ) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file) {
       setFormData((prev) => ({ ...prev, [fileType]: file }));
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrls(prev => ({ ...prev, [fileType]: reader.result as string }));
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [fileType]: reader.result as string,
+        }));
       };
       reader.readAsDataURL(file);
     }
   };
 
   const getIdTypeLabel = (idType: string) => {
-    const foundType = idTypes.find(type => type.value === idType);
+    const foundType = idTypes.find((type) => type.value === idType);
     return foundType ? foundType.label : "ID";
   };
 
   const isBackSideRequired = () => {
-    const selectedIdType = idTypes.find(type => type.value === formData.IdType);
+    const selectedIdType = idTypes.find(
+      (type) => type.value === formData.IdType
+    );
     return selectedIdType ? selectedIdType.requiresBack : false;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.PassportPhoto || !formData.IdFront || 
-        (isBackSideRequired() && !formData.IdBack)) {
+
+    if (
+      !formData.PassportPhoto ||
+      !formData.IdFront ||
+      (isBackSideRequired() && !formData.IdBack)
+    ) {
       toast({
         title: "Missing Documents",
         description: "Please upload all required identification documents.",
@@ -99,41 +118,41 @@ const RegisterLandlord = () => {
       });
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const formDataToSend = new FormData();
-      
-      formDataToSend.append('FullName', formData.FullName);
-      formDataToSend.append('PhoneNumber', formData.PhoneNumber);
-      formDataToSend.append('Email', formData.Email);
-      formDataToSend.append('NationalIdNumber', formData.IdNumber);
-      formDataToSend.append('SystemRoleId', '2');
-      
+
+      formDataToSend.append("FullName", formData.FullName);
+      formDataToSend.append("PhoneNumber", formData.PhoneNumber);
+      formDataToSend.append("Email", formData.Email);
+      formDataToSend.append("NationalIdNumber", formData.IdNumber);
+      formDataToSend.append("SystemRoleId", "2");
+
       const files = [];
-      
+
       if (formData.PassportPhoto) {
         files.push({
           file: formData.PassportPhoto,
-          type: 'PassportPhoto'
+          type: "PassportPhoto",
         });
       }
-      
+
       if (formData.IdFront) {
         files.push({
           file: formData.IdFront,
-          type: `${formData.IdType}Front`
+          type: `${formData.IdType}Front`,
         });
       }
-      
+
       if (isBackSideRequired() && formData.IdBack) {
         files.push({
           file: formData.IdBack,
-          type: `${formData.IdType}Back`
+          type: `${formData.IdType}Back`,
         });
       }
-      
+
       files.forEach((fileObj, index) => {
         formDataToSend.append(`files`, fileObj.file);
       });
@@ -142,64 +161,65 @@ const RegisterLandlord = () => {
       if (!apiUrl) {
         throw new Error("API base URL is not configured");
       }
-      
+
       const response = await fetch(`${apiUrl}/RegisterUser`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'accept': '*/*'
+          accept: "*/*",
         },
         body: formDataToSend,
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(errorText || 'Failed to register landlord');
+        throw new Error(errorText || "Failed to register landlord");
       }
-      
+
       const responseText = await response.text();
-      
+
       let result;
       try {
         result = JSON.parse(responseText);
       } catch (e) {
         result = { message: responseText };
       }
-      
+
       toast({
         title: "Landlord Registered",
         description: `${formData.FullName} has been successfully registered.`,
       });
-      
+
       setFormData({
         FullName: "",
         PhoneNumber: "",
         Email: "",
         Password: "defaultPassword",
         IdType: "nationalId",
-        IdNumber: ""
+        IdNumber: "",
+        systemRoleId: "2",
       });
       setPreviewUrls({
         PassportPhoto: null,
         IdFront: null,
         IdBack: null,
       });
-      
     } catch (error) {
-      console.error('Error submitting form:', error);
-      
+      console.error("Error submitting form:", error);
+
       if (error instanceof Error && error.message.includes("User regis")) {
         toast({
           title: "Landlord Registered",
           description: `${formData.FullName} has been successfully registered.`,
         });
-        
+
         setFormData({
           FullName: "",
           PhoneNumber: "",
           Email: "",
           Password: "defaultPassword",
           IdType: "nationalId",
-          IdNumber: ""
+          IdNumber: "",
+          systemRoleId: "2",
         });
         setPreviewUrls({
           PassportPhoto: null,
@@ -209,7 +229,10 @@ const RegisterLandlord = () => {
       } else {
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "An error occurred while registering the landlord.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "An error occurred while registering the landlord.",
           variant: "destructive",
         });
       }
@@ -218,9 +241,9 @@ const RegisterLandlord = () => {
     }
   };
 
-  const removeFile = (fileType: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
+  const removeFile = (fileType: "PassportPhoto" | "IdFront" | "IdBack") => {
     setFormData((prev) => ({ ...prev, [fileType]: null }));
-    setPreviewUrls(prev => ({ ...prev, [fileType]: null }));
+    setPreviewUrls((prev) => ({ ...prev, [fileType]: null }));
   };
 
   return (
@@ -232,7 +255,9 @@ const RegisterLandlord = () => {
     >
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Register Landlord</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Register Landlord
+          </h1>
           <p className="text-muted-foreground mt-1">
             Add a new landlord to the property management system
           </p>
@@ -284,12 +309,15 @@ const RegisterLandlord = () => {
               <label className="text-sm font-medium">Identification Type</label>
               <div className="flex flex-wrap gap-4">
                 {idTypes.map((type) => (
-                  <label key={type.value} className="flex items-center space-x-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="IdType" 
-                      value={type.value} 
-                      checked={formData.IdType === type.value} 
+                  <label
+                    key={type.value}
+                    className="flex items-center space-x-2 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="IdType"
+                      value={type.value}
+                      checked={formData.IdType === type.value}
                       onChange={handleRadioChange}
                       className="radio-input"
                     />
@@ -300,14 +328,18 @@ const RegisterLandlord = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">{getIdTypeLabel(formData.IdType)} Number</label>
+              <label className="text-sm font-medium">
+                {getIdTypeLabel(formData.IdType)} Number
+              </label>
               <input
                 type="text"
                 name="IdNumber"
                 value={formData.IdNumber}
                 onChange={handleInputChange}
                 className="input-field w-full"
-                placeholder={`Enter ${getIdTypeLabel(formData.IdType).toLowerCase()} number`}
+                placeholder={`Enter ${getIdTypeLabel(
+                  formData.IdType
+                ).toLowerCase()} number`}
                 required
               />
             </div>
@@ -324,7 +356,7 @@ const RegisterLandlord = () => {
                 className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
                 onDragOver={(e) => e.preventDefault()}
                 onDragLeave={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, 'PassportPhoto')}
+                onDrop={(e) => handleDrop(e, "PassportPhoto")}
               >
                 {previewUrls.PassportPhoto ? (
                   <div className="relative w-full h-full">
@@ -335,7 +367,7 @@ const RegisterLandlord = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => removeFile('PassportPhoto')}
+                      onClick={() => removeFile("PassportPhoto")}
                       className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                     >
                       <X size={14} />
@@ -351,7 +383,7 @@ const RegisterLandlord = () => {
                           type="file"
                           className="sr-only"
                           accept="image/*"
-                          onChange={(e) => handleFileChange(e, 'PassportPhoto')}
+                          onChange={(e) => handleFileChange(e, "PassportPhoto")}
                         />
                       </label>
                       <p>or drag and drop</p>
@@ -369,13 +401,15 @@ const RegisterLandlord = () => {
                 ) : (
                   <CreditCard size={16} className="mr-1" />
                 )}
-                {formData.IdType === "passport" ? "Passport Data Page" : `${getIdTypeLabel(formData.IdType)} Front`}
+                {formData.IdType === "passport"
+                  ? "Passport Data Page"
+                  : `${getIdTypeLabel(formData.IdType)} Front`}
               </label>
               <div
                 className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
                 onDragOver={(e) => e.preventDefault()}
                 onDragLeave={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, 'IdFront')}
+                onDrop={(e) => handleDrop(e, "IdFront")}
               >
                 {previewUrls.IdFront ? (
                   <div className="relative w-full h-full">
@@ -386,7 +420,7 @@ const RegisterLandlord = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => removeFile('IdFront')}
+                      onClick={() => removeFile("IdFront")}
                       className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                     >
                       <X size={14} />
@@ -397,12 +431,13 @@ const RegisterLandlord = () => {
                     <Upload className="mx-auto h-8 w-8 text-gray-400" />
                     <div className="mt-2 text-xs">
                       <label className="cursor-pointer text-primary hover:text-primary/80">
-                        Upload {formData.IdType === "passport" ? "page" : "front"}
+                        Upload{" "}
+                        {formData.IdType === "passport" ? "page" : "front"}
                         <input
                           type="file"
                           className="sr-only"
                           accept="image/*"
-                          onChange={(e) => handleFileChange(e, 'IdFront')}
+                          onChange={(e) => handleFileChange(e, "IdFront")}
                         />
                       </label>
                       <p>or drag and drop</p>
@@ -423,7 +458,7 @@ const RegisterLandlord = () => {
                   className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
                   onDragOver={(e) => e.preventDefault()}
                   onDragLeave={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, 'IdBack')}
+                  onDrop={(e) => handleDrop(e, "IdBack")}
                 >
                   {previewUrls.IdBack ? (
                     <div className="relative w-full h-full">
@@ -434,7 +469,7 @@ const RegisterLandlord = () => {
                       />
                       <button
                         type="button"
-                        onClick={() => removeFile('IdBack')}
+                        onClick={() => removeFile("IdBack")}
                         className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                       >
                         <X size={14} />
@@ -450,7 +485,7 @@ const RegisterLandlord = () => {
                             type="file"
                             className="sr-only"
                             accept="image/*"
-                            onChange={(e) => handleFileChange(e, 'IdBack')}
+                            onChange={(e) => handleFileChange(e, "IdBack")}
                           />
                         </label>
                         <p>or drag and drop</p>
