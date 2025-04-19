@@ -55,11 +55,11 @@ const CashTransactions = () => {
       vendor: "",
       paymentType: "",
       transactionId: "",
-      propertyTenantId: tenant.property.id,
+      propertyTenantId: 0,
     },
   });
 
-  console.log(tenant.property.id, 'Tenant Data');
+  console.log(tenant, 'Tenant Data');
 
   const getUserToken = () => {
     try {
@@ -150,7 +150,7 @@ const CashTransactions = () => {
       form.reset();
       // Reset the propertyTenantId after form reset
       if (tenant) {
-        form.setValue('propertyTenantId', tenant.property.id);
+        form.setValue('propertyTenantId', tenant.id);
       }
     } catch (error: any) {
       toast({
