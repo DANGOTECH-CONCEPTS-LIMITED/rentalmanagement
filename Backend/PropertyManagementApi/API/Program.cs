@@ -1,3 +1,4 @@
+using Application.Interfaces.Complaints;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
@@ -5,6 +6,7 @@ using Application.Interfaces.Tenant;
 using Application.Interfaces.UserServices;
 using Domain.Entities;
 using Infrastructure.Data;
+using Infrastructure.Services.Complaints;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.PaymentServices;
 using Infrastructure.Services.Property;
@@ -34,6 +36,7 @@ builder.Services.AddScoped<ISettings, Settings>();
 builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IComplaintService, ComplaintService>();
 
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
