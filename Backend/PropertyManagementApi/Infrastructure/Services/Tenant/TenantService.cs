@@ -68,12 +68,8 @@ namespace Infrastructure.Services.Tenant
             var systemRole = await _context.SystemRoles
                 .FirstOrDefaultAsync(r => r.Name == "Tenant");
 
-            //add to db
-            await _context.Tenants.AddAsync(tenant);
-            await _context.SaveChangesAsync();
-
             //register tenant as the user
-            var user = new User 
+            var user = new User
             {
                 FullName = tenantDto.FullName,
                 Email = tenantDto.Email,
@@ -84,7 +80,14 @@ namespace Infrastructure.Services.Tenant
                 NationalIdNumber = tenantDto.NationalIdNumber,
                 SystemRoleId = systemRole.Id,
             };
-            await _userService.RegisterUserMinusFiles(user);
+            var createduser = await _userService.RegisterUserMinusFiles(user);
+
+            tenant.UserId = createduser.Id;
+            //add to db
+            await _context.Tenants.AddAsync(tenant);
+            await _context.SaveChangesAsync();
+
+            
         }
 
         public async Task<IEnumerable<PropertyTenant>> GetAllTenantsAsync()

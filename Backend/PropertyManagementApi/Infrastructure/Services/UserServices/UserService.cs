@@ -135,6 +135,13 @@ namespace Infrastructure.Services.UserServices
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, login.Password) == PasswordVerificationResult.Failed)
                 throw new Exception("User not found or incorrect password.");
 
+            //check if user is a tenant
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == user.Id);
+            if (tenant != null)
+            {
+                user.Id = tenant.Id;
+            }
+
             // Retrieve JWT configuration settings
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
@@ -167,7 +174,7 @@ namespace Infrastructure.Services.UserServices
             return user;
         }
 
-        public async Task RegisterUserMinusFiles(User user)
+        public async Task<User> RegisterUserMinusFiles(User user)
         {
             // Validate system role existence
             var systemRole = await _context.SystemRoles.FirstOrDefaultAsync(r => r.Id == user.SystemRoleId);
@@ -194,6 +201,8 @@ namespace Infrastructure.Services.UserServices
                                $"You have been registered as {systemRole.Name} on our platform.\n\n" +
                                $"Username: {user.Email}\n Your password is {password}Please log in to change your password.";
             await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
+
+            return user;
         }
 
         public async Task<User> GetUserByIdAsync(int id)
