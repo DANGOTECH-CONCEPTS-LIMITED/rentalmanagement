@@ -50,7 +50,8 @@ namespace Infrastructure.Services.PaymentServices
                 PaymentType = tenantPaymentDto.PaymentType,
                 PaymentStatus = "SUCCESSFUL",
                 TransactionId = tenantPaymentDto.TransactionId,
-                PropertyTenantId = tenantPaymentDto.PropertyTenantId
+                PropertyTenantId = tenantPaymentDto.PropertyTenantId,
+                PropertyTenant = tenant,
             };
             await _context.TenantPayments.AddAsync(payment);
 

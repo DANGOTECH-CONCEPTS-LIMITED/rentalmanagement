@@ -19,7 +19,7 @@ namespace Infrastructure.Services.Settings
 
         public async Task<string> SaveFileAndReturnPathAsync(IFormFile file)
         {
-            string uploadsDirectory = "uploads/";//Path.Combine("uploads", file.FileName);//Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            string uploadsDirectory = @"C:\propertymanagementfiles\uploads"; //"uploads/";//Path.Combine("uploads", file.FileName);//Path.Combine(Directory.GetCurrentDirectory(), "uploads");
 
             // Check whether directory exists and create if it doesn't
             if (!Directory.Exists(uploadsDirectory))
