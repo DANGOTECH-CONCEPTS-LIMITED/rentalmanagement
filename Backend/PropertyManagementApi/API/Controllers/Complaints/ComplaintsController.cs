@@ -21,11 +21,11 @@ namespace API.Controllers.Complaints
         [HttpPost("/LogTenantComplaint")]
         [Description("Log a tenant complaint")]
         [Authorize]
-        public async Task<IActionResult> LogTenantComplaint([FromForm] IFormFile file, [FromForm] ComplaintDto complaint)
+        public async Task<IActionResult> LogTenantComplaint([FromForm] List<IFormFile> file, [FromForm] ComplaintDto complaint)
         {
             try
             {
-                await _complaintService.LogTenantComplaint(file, complaint);
+                await _complaintService.LogTenantComplaint(file[0], complaint);
                 return Ok("Complaint logged successfully.");
             }
             catch (Exception ex)
