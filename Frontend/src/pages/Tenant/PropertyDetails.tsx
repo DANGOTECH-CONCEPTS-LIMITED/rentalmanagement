@@ -1,31 +1,60 @@
-
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Home, MapPin, Phone, Mail, User, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 const PropertyDetails = () => {
-  const [property, setProperty] = useState({
-    id: 'PR001',
-    name: 'Sunset Apartments',
-    address: '123 Main Street, Apt 4B, Cityville, 12345',
-    type: 'Apartment',
-    bedrooms: 2,
-    bathrooms: 1,
-    area: '850 sq ft',
-    rentAmount: '$1,200',
-    leaseStart: '2023-01-01',
-    leaseEnd: '2024-01-01',
-    landlord: {
-      name: 'John Doe',
-      phone: '(555) 123-4567',
-      email: 'john.doe@example.com'
-    },
-    amenities: ['Air Conditioning', 'Dishwasher', 'Laundry', 'Parking', 'Gym Access'],
-    imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=60'
-  });
+  const [tenant, setTenant] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  useEffect(() => {
+    const fetchTenantData = async () => {
+      setLoading(true);
+      try {
+        const user = localStorage.getItem('user');
+        if (!user) {
+          throw new Error('No user found in localStorage');
+        }
+        
+        const userData = JSON.parse(user);
+        const { id, token } = userData;
+        console.log('User:', userData);
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+        
+        const response = await fetch(`http://3.216.182.63:8091/GetTenantById/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'accept': '*/*'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setTenant(data);
+      } catch (err) {
+        console.error('Failed to fetch tenant data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTenantData();
+  }, []);
+
+  if (loading) return <div className="flex justify-center items-center h-64">Loading property details...</div>;
+  if (error) return <div className="text-red-500">Error: {error}</div>;
+  if (!tenant || !tenant.property) return <div>No property information available</div>;
+
+  const { property } = tenant;
+  const { owner } = property;
+  
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -55,11 +84,16 @@ const PropertyDetails = () => {
           </CardHeader>
           <CardContent>
             <div className="aspect-video relative overflow-hidden rounded-lg mb-6">
-              <img 
-                src={property.imageUrl} 
-                alt={property.name} 
-                className="object-cover w-full h-full" 
-              />
+            <img 
+  src={`http://3.216.182.63:8091/${property.imageUrl}`} 
+  alt={property.name} 
+  className="object-cover w-full h-full"
+  onError={(e) => {
+    const img = e.target as HTMLImageElement;
+    img.src = "/api/placeholder/800/600";
+    img.alt = "Property image unavailable";
+  }}
+/>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -72,7 +106,7 @@ const PropertyDetails = () => {
                   <h3 className="font-medium text-sm text-gray-500 mb-1">Address</h3>
                   <p className="flex items-start">
                     <MapPin className="mr-1 h-4 w-4 mt-1 flex-shrink-0" />
-                    <span>{property.address}</span>
+                    <span>{property.address}, {property.district}, {property.region}, {property.zipcode}</span>
                   </p>
                 </div>
                 <div>
@@ -80,42 +114,38 @@ const PropertyDetails = () => {
                   <p>{property.type}</p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-sm text-gray-500 mb-1">Size</h3>
-                  <p>{property.area}</p>
+                  <h3 className="font-medium text-sm text-gray-500 mb-1">Description</h3>
+                  <p>{property.description}</p>
                 </div>
               </div>
               
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-medium text-sm text-gray-500 mb-1">Bedrooms</h3>
-                  <p>{property.bedrooms}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm text-gray-500 mb-1">Bathrooms</h3>
-                  <p>{property.bathrooms}</p>
+                  <h3 className="font-medium text-sm text-gray-500 mb-1">Number of Rooms</h3>
+                  <p>{property.numberOfRooms}</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-sm text-gray-500 mb-1">Monthly Rent</h3>
-                  <p className="font-semibold">{property.rentAmount}</p>
+                  <p className="font-semibold">{property.price} {property.currency}</p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-sm text-gray-500 mb-1">Lease Period</h3>
+                  <h3 className="font-medium text-sm text-gray-500 mb-1">Balance Due</h3>
+                  <p>{tenant.balanceDue} {property.currency}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-sm text-gray-500 mb-1">Date Moved In</h3>
                   <p className="flex items-center">
                     <Calendar className="mr-1 h-4 w-4" />
-                    <span>{property.leaseStart} to {property.leaseEnd}</span>
+                    <span>{new Date(tenant.dateMovedIn).toLocaleDateString()}</span>
                   </p>
                 </div>
-              </div>
-            </div>
-            
-            <div className="mt-6">
-              <h3 className="font-medium text-sm text-gray-500 mb-2">Amenities</h3>
-              <div className="flex flex-wrap gap-2">
-                {property.amenities.map((amenity) => (
-                  <span key={amenity} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
-                    {amenity}
-                  </span>
-                ))}
+                <div>
+                  <h3 className="font-medium text-sm text-gray-500 mb-1">Next Payment Date</h3>
+                  <p className="flex items-center">
+                    <Calendar className="mr-1 h-4 w-4" />
+                    <span>{new Date(tenant.nextPaymentDate).toLocaleDateString()}</span>
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -133,20 +163,20 @@ const PropertyDetails = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="font-medium text-sm text-gray-500 mb-1">Name</h3>
-                <p>{property.landlord.name}</p>
+                <p>{owner.fullName}</p>
               </div>
               <div>
                 <h3 className="font-medium text-sm text-gray-500 mb-1">Phone</h3>
                 <p className="flex items-center">
                   <Phone className="mr-1 h-4 w-4" />
-                  <span>{property.landlord.phone}</span>
+                  <span>{owner.phoneNumber}</span>
                 </p>
               </div>
               <div>
                 <h3 className="font-medium text-sm text-gray-500 mb-1">Email</h3>
                 <p className="flex items-center">
                   <Mail className="mr-1 h-4 w-4" />
-                  <span>{property.landlord.email}</span>
+                  <span>{owner.email}</span>
                 </p>
               </div>
             </div>
