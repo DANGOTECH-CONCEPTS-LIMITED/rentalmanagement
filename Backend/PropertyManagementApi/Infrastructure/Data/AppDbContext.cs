@@ -15,6 +15,7 @@ namespace Infrastructure.Data
         public DbSet<LandLordProperty> LandLordProperties { get; set; }
         public DbSet<PropertyTenant> Tenants { get; set; }
         public DbSet<TenantPayment> TenantPayments { get; set; }
+        public DbSet<Complaint> TenantComplaints { get; set; }
 
         public DbSet<SystemRole> SystemRoles { get; set; }
 
