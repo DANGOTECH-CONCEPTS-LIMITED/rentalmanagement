@@ -40,15 +40,15 @@ const HandleComplaints = () => {
 
   // Mock data for complaints
   const [complaints, setComplaints] = useState<Complaint[]>([
-    {
-      id: "COMP-001",
-      tenant: "John Smith",
-      property: "Sunset Apartments - Unit 101",
-      subject: "Broken water heater",
-      date: "2023-04-15",
-      priority: "high",
-      status: "new",
-    },
+    // {
+    //   id: "COMP-001",
+    //   tenant: "John Smith",
+    //   property: "Sunset Apartments - Unit 101",
+    //   subject: "Broken water heater",
+    //   date: "2023-04-15",
+    //   priority: "high",
+    //   status: "new",
+    // },
     // {
     //   id: "COMP-002",
     //   tenant: "Sarah Johnson",
