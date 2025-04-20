@@ -145,6 +145,7 @@ const StyledReceipt = ({ payment, setShowReceiptModal }) => {
         </Button>
       </div>
 
+
       {/* Content */}
       <div className="p-6 space-y-4">
         <div className="flex justify-between items-start border-b border-gray-200 pb-4">

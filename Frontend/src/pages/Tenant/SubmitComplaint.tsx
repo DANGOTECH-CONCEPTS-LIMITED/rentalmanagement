@@ -1,11 +1,17 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageSquare, Send, Plus, X, Check } from 'lucide-react';
+import { Send, Plus, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
 
 const SubmitComplaint = () => {
@@ -17,24 +23,24 @@ const SubmitComplaint = () => {
   const [priority, setPriority] = useState('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      
-      // Limit to 3 files
+
       if (images.length + filesArray.length > 3) {
         toast({
-          title: "Maximum 3 images allowed",
-          description: "Please remove some images before adding more.",
-          variant: "destructive",
+          title: 'Maximum 3 images allowed',
+          description: 'Please remove some images before adding more.',
+          variant: 'destructive',
         });
         return;
       }
-      
-      // Create preview URLs
-      const newImageUrls = filesArray.map(file => URL.createObjectURL(file));
-      
+
+      const newImageUrls = filesArray.map((file) => URL.createObjectURL(file));
+
       setImages([...images, ...filesArray]);
       setImagesPreviews([...imagesPreviews, ...newImageUrls]);
     }
@@ -43,41 +49,108 @@ const SubmitComplaint = () => {
   const removeImage = (index: number) => {
     const newImages = [...images];
     const newPreviews = [...imagesPreviews];
-    
-    // Revoke object URL to avoid memory leaks
+
     URL.revokeObjectURL(newPreviews[index]);
-    
+
     newImages.splice(index, 1);
     newPreviews.splice(index, 1);
-    
+
     setImages(newImages);
     setImagesPreviews(newPreviews);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      
-      toast({
-        title: "Complaint Submitted",
-        description: "Your complaint has been successfully submitted. We'll respond to you soon.",
-        variant: "default",
+  
+    try {
+      const user = localStorage.getItem('user');
+      if (!user) throw new Error('No user found in localStorage');
+  
+      const userData = JSON.parse(user);
+      const token = userData.token;
+  
+      const tenantRes = await fetch(`${apiUrl}/GetTenantById/${userData.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: '*/*',
+        },
       });
+  
+      if (!tenantRes.ok) throw new Error('Failed to fetch tenant details');
+  
+      const tenantData = await tenantRes.json();
+      const propertyId = tenantData.propertyId || tenantData.PropertyId || 0;
+  
+      const formData = new FormData();
+      formData.append('Subject', subject);
+      formData.append('Description', description);
+      formData.append('Priority', priority);
+      formData.append('Status', 'Pending');
+      formData.append('ResolutionDetails', '');
+      formData.append('PropertyId', propertyId.toString());
       
-      // Reset form after submission
+      if (images.length === 0) {
+        formData.append('file', new Blob([]), '');
+      } else {
+        images.forEach((image) => {
+          formData.append('file', image, image.name);
+        });
+      } 
+
+      const complaintRes = await fetch(`${apiUrl}/LogTenantComplaint`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+  
+      if (!complaintRes.ok) {
+        const contentType = complaintRes.headers.get('content-type');
+        let errorMessage = 'Failed to submit complaint';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await complaintRes.json();
+          console.error('Error data:', errorData);
+          if (errorData.errors && errorData.errors.Attachement) {
+            errorMessage = errorData.errors.Attachement[0];
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } else {
+          const errorText = await complaintRes.text();
+          console.error('Error text:', errorText);
+          errorMessage = errorText || 'Failed to submit complaint';
+        }
+        throw new Error(errorMessage);
+      }
+  
+      setSubmitted(true);
+      toast({
+        title: 'Complaint Submitted',
+        description: "Your complaint has been successfully submitted. We'll respond to you soon.",
+      });
+  
+      // Reset form
       setSubject('');
       setDescription('');
       setPriority('medium');
       setImages([]);
       setImagesPreviews([]);
-    }, 1500);
+  
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      toast({
+        title: 'Submission Failed',
+        description: error.message || 'Something went wrong while submitting your complaint.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
+  
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -98,7 +171,7 @@ const SubmitComplaint = () => {
 
       <div className="bg-white rounded-lg shadow p-6">
         {submitted ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center text-center py-10"
@@ -108,7 +181,8 @@ const SubmitComplaint = () => {
             </div>
             <h3 className="text-xl font-semibold mb-2">Complaint Submitted Successfully!</h3>
             <p className="text-gray-600 max-w-md mb-6">
-              Thank you for submitting your complaint. Your complaint has been recorded with a reference number and will be addressed as soon as possible.
+              Thank you for submitting your complaint. Your complaint has been recorded with a
+              reference number and will be addressed as soon as possible.
             </p>
             <Button onClick={() => setSubmitted(false)}>Submit Another Complaint</Button>
           </motion.div>
@@ -124,7 +198,7 @@ const SubmitComplaint = () => {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Description</label>
               <Textarea
@@ -136,46 +210,26 @@ const SubmitComplaint = () => {
                 className="resize-none"
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Priority</label>
               <div className="flex gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="priority"
-                    value="low"
-                    checked={priority === 'low'}
-                    onChange={() => setPriority('low')}
-                    className="mr-2"
-                  />
-                  <span>Low</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="priority"
-                    value="medium"
-                    checked={priority === 'medium'}
-                    onChange={() => setPriority('medium')}
-                    className="mr-2"
-                  />
-                  <span>Medium</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="priority"
-                    value="high"
-                    checked={priority === 'high'}
-                    onChange={() => setPriority('high')}
-                    className="mr-2"
-                  />
-                  <span>High</span>
-                </label>
+                {['low', 'medium', 'high'].map((level) => (
+                  <label key={level} className="flex items-center">
+                    <input
+                      type="radio"
+                      name="priority"
+                      value={level}
+                      checked={priority === level}
+                      onChange={() => setPriority(level)}
+                      className="mr-2"
+                    />
+                    <span>{level.charAt(0).toUpperCase() + level.slice(1)}</span>
+                  </label>
+                ))}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Attach Images (Optional)</label>
               <div className="border-2 border-dashed rounded-lg p-4 text-center">
@@ -196,7 +250,7 @@ const SubmitComplaint = () => {
                   <span className="text-gray-400 text-sm mt-1">Maximum 3 images</span>
                 </label>
               </div>
-              
+
               {imagesPreviews.length > 0 && (
                 <div className="flex flex-wrap gap-4 mt-4">
                   {imagesPreviews.map((url, index) => (
@@ -218,12 +272,8 @@ const SubmitComplaint = () => {
                 </div>
               )}
             </div>
-            
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting}
-            >
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <span>Submitting...</span>
               ) : (
