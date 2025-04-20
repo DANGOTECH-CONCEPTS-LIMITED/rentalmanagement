@@ -11,7 +11,6 @@ namespace Domain.Dtos.TenantComplaints
         public string Subject { get; set; }
         public string Description { get; set; }
         public string Priority { get; set; }
-        public string Attachement { get; set; }
         public string? Status { get; set; }
         public string? ResolutionDetails { get; set; }
         public int PropertyId { get; set; }
