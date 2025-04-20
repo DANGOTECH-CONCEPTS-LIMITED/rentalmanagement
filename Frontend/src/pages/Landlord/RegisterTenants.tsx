@@ -1,13 +1,40 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { UserPlus, User, Mail, Phone, Home, Calendar, Key, Check, Upload, X, Camera, CreditCard } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  UserPlus,
+  User,
+  Mail,
+  Phone,
+  Home,
+  Calendar,
+  Key,
+  Check,
+  Upload,
+  X,
+  Camera,
+  CreditCard,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
-interface Property {
+export interface Property {
   id: number;
   name: string;
   address: string;
@@ -16,15 +43,15 @@ interface Property {
 const RegisterTenants = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    FullName: '',
-    Name: '',
-    Email: '',
-    PhoneNumber: '',
-    NationalIdNumber: '',
-    DateMovedIn: '',
-    PropertyId: '',
-    Password: '',
-    Active: 'true',
+    FullName: "",
+    Name: "",
+    Email: "",
+    PhoneNumber: "",
+    NationalIdNumber: "",
+    DateMovedIn: "",
+    PropertyId: "",
+    Password: "",
+    Active: "true",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -32,26 +59,33 @@ const RegisterTenants = () => {
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
 
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
-  const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
-  
+  const [passportPhotoPreview, setPassportPhotoPreview] = useState<
+    string | null
+  >(null);
+
   const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
-  const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(null);
-  
+  const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(
+    null
+  );
+
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
-  const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(null);
-  
-  const user = localStorage.getItem('user');
-  let token = '';
-  
+  const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(
+    null
+  );
+
+  const user = localStorage.getItem("user");
+  let token = "";
+
+  const navigate = useNavigate();
   try {
     if (user) {
       const userData = JSON.parse(user);
       token = userData.token;
     } else {
-      console.error('No user found in localStorage');
+      console.error("No user found in localStorage");
     }
   } catch (error) {
-    console.error('Error parsing user data:', error);
+    console.error("Error parsing user data:", error);
   }
 
   useEffect(() => {
@@ -60,10 +94,10 @@ const RegisterTenants = () => {
         const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
         const response = await fetch(`${apiUrl}/GetAllProperties`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
           },
         });
 
@@ -74,10 +108,10 @@ const RegisterTenants = () => {
         const data = await response.json();
         setProperties(data);
       } catch (error) {
-        console.error('Error fetching properties:', error);
+        console.error("Error fetching properties:", error);
         toast({
           title: "Error",
-          description: "Failed to fetch properties",
+          description: error.message,
           variant: "destructive",
         });
       } finally {
@@ -98,56 +132,61 @@ const RegisterTenants = () => {
     };
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "PassportPhoto" | "IdFront" | "IdBack"
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const previewUrl = URL.createObjectURL(file);
 
-    if (type === 'PassportPhoto') {
+    if (type === "PassportPhoto") {
       // Clean up previous preview URL if exists
       if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
       setPassportPhoto(file);
       setPassportPhotoPreview(previewUrl);
-    } else if (type === 'IdFront') {
+    } else if (type === "IdFront") {
       if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
       setIdFrontPhoto(file);
       setIdFrontPhotoPreview(previewUrl);
-    } else if (type === 'IdBack') {
+    } else if (type === "IdBack") {
       if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
       setIdBackPhoto(file);
       setIdBackPhotoPreview(previewUrl);
     }
   };
 
-  const clearFile = (type: 'PassportPhoto' | 'IdFront' | 'IdBack') => {
-    if (type === 'PassportPhoto') {
+  const clearFile = (type: "PassportPhoto" | "IdFront" | "IdBack") => {
+    if (type === "PassportPhoto") {
       if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
       setPassportPhoto(null);
       setPassportPhotoPreview(null);
-    } else if (type === 'IdFront') {
+    } else if (type === "IdFront") {
       if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
       setIdFrontPhoto(null);
       setIdFrontPhotoPreview(null);
-    } else if (type === 'IdBack') {
+    } else if (type === "IdBack") {
       if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
       setIdBackPhoto(null);
       setIdBackPhotoPreview(null);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === 'FullName' ? { Name: value } : {})
+      ...(name === "FullName" ? { Name: value } : {}),
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!passportPhoto || !idFrontPhoto || !idBackPhoto) {
       toast({
         title: "Missing Documents",
@@ -156,101 +195,100 @@ const RegisterTenants = () => {
       });
       return;
     }
-  
+
     setIsSubmitting(true);
-  
+
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  
+
       const form = new FormData();
-      
+
       // Format date to match expected API format
       const moveDateObj = new Date(formData.DateMovedIn);
       const formattedDate = moveDateObj.toISOString();
-      
-      form.append('FullName', formData.FullName);
-      form.append('Name', formData.Name || formData.FullName);
-      form.append('Email', formData.Email);
-      form.append('PhoneNumber', formData.PhoneNumber);
-      form.append('NationalIdNumber', formData.NationalIdNumber);
-      form.append('DateMovedIn', formattedDate);
-      form.append('PropertyId', formData.PropertyId);
-      form.append('Password', formData.Password);
-      form.append('Active', formData.Active);
-      
-      form.append('PassportPhoto', passportPhoto);
-      form.append('IdFront', idFrontPhoto);
-      form.append('IdBack', idBackPhoto);
-      
-      form.append('files', passportPhoto);
-      form.append('files', idFrontPhoto);
-      form.append('files', idBackPhoto);
-  
+
+      form.append("FullName", formData.FullName);
+      form.append("Name", formData.Name || formData.FullName);
+      form.append("Email", formData.Email);
+      form.append("PhoneNumber", formData.PhoneNumber);
+      form.append("NationalIdNumber", formData.NationalIdNumber);
+      form.append("DateMovedIn", formattedDate);
+      form.append("PropertyId", formData.PropertyId);
+      form.append("Password", formData.Password);
+      form.append("Active", formData.Active);
+
+      form.append("PassportPhoto", passportPhoto);
+      form.append("IdFront", idFrontPhoto);
+      form.append("IdBack", idBackPhoto);
+
+      form.append("files", passportPhoto);
+      form.append("files", idFrontPhoto);
+      form.append("files", idBackPhoto);
+
       const response = await fetch(`${apiUrl}/CreateTenant`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': '*/*',
+          Authorization: `Bearer ${token}`,
+          Accept: "*/*",
         },
         body: form,
       });
-  
+
       // First check if the response status is OK
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Error response:', response.status, errorText);
+        console.error("Error response:", response.status, errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
+
       // Check the content type of the response
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers.get("content-type");
       let responseData;
-  
-      if (contentType && contentType.includes('application/json')) {
+
+      if (contentType && contentType.includes("application/json")) {
         // If it's JSON, parse it as JSON
         responseData = await response.json();
-        console.log('Success response (JSON):', responseData);
+        console.log("Success response (JSON):", responseData);
       } else {
         // If it's not JSON, get it as text
         responseData = await response.text();
-        console.log('Success response (text):', responseData);
+        console.log("Success response (text):", responseData);
       }
-      
+
       setIsSubmitting(false);
       setIsSuccess(true);
-      
+
       toast({
         title: "Tenant Registered Successfully",
         description: `${formData.FullName} has been registered as a tenant.`,
         variant: "default",
       });
-      
+
       // Reset form after success
       setTimeout(() => {
         setFormData({
-          FullName: '',
-          Name: '',
-          Email: '',
-          PhoneNumber: '',
-          NationalIdNumber: '',
-          DateMovedIn: '',
-          PropertyId: '',
-          Password: '',
-          Active: 'true',
+          FullName: "",
+          Name: "",
+          Email: "",
+          PhoneNumber: "",
+          NationalIdNumber: "",
+          DateMovedIn: "",
+          PropertyId: "",
+          Password: "",
+          Active: "true",
         });
-        clearFile('PassportPhoto');
-        clearFile('IdFront');
-        clearFile('IdBack');
+        clearFile("PassportPhoto");
+        clearFile("IdFront");
+        clearFile("IdBack");
         setIsSuccess(false);
       }, 3000);
-  
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error("Error submitting form:", error);
       setIsSubmitting(false);
-      
+
       toast({
         title: "Registration Failed",
-        description: "There was an error registering the tenant. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
     }
@@ -261,7 +299,9 @@ const RegisterTenants = () => {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/landlord-dashboard">Dashboard</BreadcrumbLink>
+            <BreadcrumbLink href="/#/landlord-dashboard/manage-tenants">
+              Tenants
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -271,7 +311,9 @@ const RegisterTenants = () => {
       </Breadcrumb>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Register New Tenant</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Register New Tenant
+        </h1>
       </div>
 
       <Card>
@@ -281,12 +323,13 @@ const RegisterTenants = () => {
             Tenant Registration Form
           </CardTitle>
           <CardDescription>
-            Enter the tenant's details below to register them to one of your properties
+            Enter the tenant's details below to register them to one of your
+            properties
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isSuccess ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center text-center py-10"
@@ -294,9 +337,12 @@ const RegisterTenants = () => {
               <div className="bg-green-100 rounded-full p-4 mb-4">
                 <Check className="h-10 w-10 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Tenant Registered Successfully!</h3>
+              <h3 className="text-xl font-semibold mb-2">
+                Tenant Registered Successfully!
+              </h3>
               <p className="text-gray-600 max-w-md mb-4">
-                An email has been sent to {formData.Email} with login instructions.
+                An email has been sent to {formData.Email} with login
+                instructions.
               </p>
             </motion.div>
           ) : (
@@ -317,7 +363,7 @@ const RegisterTenants = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
                     <span className="flex items-center">
@@ -334,7 +380,7 @@ const RegisterTenants = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
                     <span className="flex items-center">
@@ -351,7 +397,7 @@ const RegisterTenants = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
                     <span className="flex items-center">
@@ -367,7 +413,7 @@ const RegisterTenants = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
                     <span className="flex items-center">
@@ -383,7 +429,7 @@ const RegisterTenants = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
                     <span className="flex items-center">
@@ -391,7 +437,7 @@ const RegisterTenants = () => {
                       Property
                     </span>
                   </label>
-                  <select 
+                  <select
                     name="PropertyId"
                     className="w-full p-2 border border-gray-300 rounded-md"
                     value={formData.PropertyId}
@@ -400,19 +446,23 @@ const RegisterTenants = () => {
                     disabled={isLoadingProperties}
                   >
                     <option value="">Select a property</option>
-                    {properties.map(prop => (
+                    {properties.map((prop) => (
                       <option key={prop.id} value={prop.id}>
                         {prop.name} - {prop.address}
                       </option>
                     ))}
                   </select>
                   {isLoadingProperties && (
-                    <p className="text-sm text-gray-500">Loading properties...</p>
+                    <p className="text-sm text-gray-500">
+                      Loading properties...
+                    </p>
                   )}
                 </div>
-                
+                {/* 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Temporary Password</label>
+                  <label className="text-sm font-medium">
+                    Temporary Password
+                  </label>
                   <Input
                     name="Password"
                     type="password"
@@ -421,9 +471,9 @@ const RegisterTenants = () => {
                     placeholder="Create temporary password"
                     required
                   />
-                </div>
+                </div> */}
               </div>
-              
+
               {/* Document Upload Section */}
               <div className="pt-4">
                 <h3 className="font-medium mb-4">Identification Documents</h3>
@@ -439,16 +489,16 @@ const RegisterTenants = () => {
                         <div className="relative w-full h-full">
                           <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
                             {passportPhotoPreview && (
-                              <img 
-                                src={passportPhotoPreview} 
-                                alt="Passport preview" 
+                              <img
+                                src={passportPhotoPreview}
+                                alt="Passport preview"
                                 className="object-cover w-full h-full"
                               />
                             )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => clearFile('PassportPhoto')}
+                            onClick={() => clearFile("PassportPhoto")}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -464,7 +514,9 @@ const RegisterTenants = () => {
                                 type="file"
                                 className="sr-only"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, 'PassportPhoto')}
+                                onChange={(e) =>
+                                  handleFileChange(e, "PassportPhoto")
+                                }
                                 required
                               />
                             </label>
@@ -473,7 +525,7 @@ const RegisterTenants = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* ID Front */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center">
@@ -485,16 +537,16 @@ const RegisterTenants = () => {
                         <div className="relative w-full h-full">
                           <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
                             {idFrontPhotoPreview && (
-                              <img 
-                                src={idFrontPhotoPreview} 
-                                alt="ID front preview" 
+                              <img
+                                src={idFrontPhotoPreview}
+                                alt="ID front preview"
                                 className="object-cover w-full h-full"
                               />
                             )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => clearFile('IdFront')}
+                            onClick={() => clearFile("IdFront")}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -510,7 +562,7 @@ const RegisterTenants = () => {
                                 type="file"
                                 className="sr-only"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, 'IdFront')}
+                                onChange={(e) => handleFileChange(e, "IdFront")}
                                 required
                               />
                             </label>
@@ -519,7 +571,7 @@ const RegisterTenants = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* ID Back */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center">
@@ -531,16 +583,16 @@ const RegisterTenants = () => {
                         <div className="relative w-full h-full">
                           <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
                             {idBackPhotoPreview && (
-                              <img 
-                                src={idBackPhotoPreview} 
-                                alt="ID back preview" 
+                              <img
+                                src={idBackPhotoPreview}
+                                alt="ID back preview"
                                 className="object-cover w-full h-full"
                               />
                             )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => clearFile('IdBack')}
+                            onClick={() => clearFile("IdBack")}
                             className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           >
                             <X size={14} />
@@ -556,7 +608,7 @@ const RegisterTenants = () => {
                                 type="file"
                                 className="sr-only"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, 'IdBack')}
+                                onChange={(e) => handleFileChange(e, "IdBack")}
                                 required
                               />
                             </label>
@@ -567,7 +619,7 @@ const RegisterTenants = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="pt-4 flex justify-end space-x-4">
                 <Button variant="outline" type="button">
                   Cancel

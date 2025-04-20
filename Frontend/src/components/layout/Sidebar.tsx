@@ -276,11 +276,11 @@ function getNavItems(role: number): NavItem[] {
         icon: <Home size={18} />,
         path: "/landlord-dashboard",
       },
-      {
-        label: "Register Tenants",
-        icon: <PlusCircle size={18} />,
-        path: "/landlord-dashboard/register-tenants",
-      },
+      // {
+      //   label: "Register Tenants",
+      //   icon: <PlusCircle size={18} />,
+      //   path: "/landlord-dashboard/register-tenants",
+      // },
       {
         label: "Manage Contracts",
         icon: <FileText size={18} />,
