@@ -25,6 +25,12 @@ namespace API.Controllers.Complaints
         {
             try
             {
+                //check if file is null or empty
+                if (file == null || file.Count == 0)
+                {
+                    //pass an empty file
+                    file.Add(new FormFile(null, 0, 0, null, null));
+                }
                 await _complaintService.LogTenantComplaint(file[0], complaint);
                 return Ok("Complaint logged successfully.");
             }

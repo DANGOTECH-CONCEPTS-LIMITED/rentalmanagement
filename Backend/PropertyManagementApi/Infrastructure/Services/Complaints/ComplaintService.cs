@@ -96,7 +96,12 @@ namespace Infrastructure.Services.Complaints
                 Attachement = file != null ? await _settings.SaveFileAndReturnPathAsync(file) : "",
                 Status = "PENDING",
                 PropertyId = complaint.PropertyId,
+                Property = property
             };
+
+            //add the complaint to the database
+            _context.TenantComplaints.Add(newcomplaint);
+            await _context.SaveChangesAsync();
         }
 
         public async Task UpdateTenantComplaint(int complaintId, ComplaintDto complaint)
