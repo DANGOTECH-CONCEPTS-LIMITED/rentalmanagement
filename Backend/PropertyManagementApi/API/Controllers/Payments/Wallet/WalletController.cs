@@ -7,7 +7,7 @@ namespace API.Controllers.Payments.Wallet
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Landlord")]
+    [Authorize]
     public class WalletController : ControllerBase
     {
         private readonly IWalletService _svc;
