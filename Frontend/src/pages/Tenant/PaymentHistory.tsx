@@ -485,7 +485,19 @@ const PaymentHistory = () => {
                     >
                       Switch to {activeCalendar === 'start' ? 'End' : 'Start'} Date
                     </Button>
-
+                    {/* Dates Summary */}
+                    <div className="text-sm space-y-1">
+                      {startDate && (
+                        <div>
+                          <span className="font-medium">Start:</span> {format(startDate, 'MMM dd, yyyy')}
+                        </div>
+                      )}
+                      {endDate && (
+                        <div>
+                          <span className="font-medium">End:</span> {format(endDate, 'MMM dd, yyyy')}
+                        </div>
+                      )}
+                    </div>
                     <Button variant="outline" onClick={handleClearFilter}>
                       Clear
                     </Button>
@@ -494,20 +506,6 @@ const PaymentHistory = () => {
                       Apply Filter
                     </Button>
                   </div>
-                </div>
-
-                {/* Dates Summary */}
-                <div className="text-sm space-y-1">
-                  {startDate && (
-                    <div>
-                      <span className="font-medium">Start:</span> {format(startDate, 'MMM dd, yyyy')}
-                    </div>
-                  )}
-                  {endDate && (
-                    <div>
-                      <span className="font-medium">End:</span> {format(endDate, 'MMM dd, yyyy')}
-                    </div>
-                  )}
                 </div>
               </div>
             </PopoverContent>
