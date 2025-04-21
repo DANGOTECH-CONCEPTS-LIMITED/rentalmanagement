@@ -16,6 +16,8 @@ namespace Infrastructure.Data
         public DbSet<PropertyTenant> Tenants { get; set; }
         public DbSet<TenantPayment> TenantPayments { get; set; }
         public DbSet<Complaint> TenantComplaints { get; set; }
+        public DbSet<Wallet> Wallets { get; set; } = null!;
+        public DbSet<WalletTransaction> WalletTransactions { get; set; } = null!;
 
         public DbSet<SystemRole> SystemRoles { get; set; }
 
@@ -49,6 +51,16 @@ namespace Infrastructure.Data
                     Permissions = null,
                     CreatedAt = new DateTime(2025, 04, 10)
                 });
+
+            // one‐to‐one between User⇄Wallet
+            modelBuilder.Entity<Wallet>()
+                .HasIndex(w => w.LandlordId)
+                .IsUnique();
+
+            modelBuilder.Entity<WalletTransaction>()
+                .HasOne(t => t.Wallet)
+                .WithMany(w => w.Transactions)
+                .HasForeignKey(t => t.WalletId);
         }
     }
 }

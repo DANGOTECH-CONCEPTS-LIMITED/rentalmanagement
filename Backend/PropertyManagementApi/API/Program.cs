@@ -1,5 +1,6 @@
 using Application.Interfaces.Complaints;
 using Application.Interfaces.PaymentService;
+using Application.Interfaces.PaymentService.WalletSvc;
 using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
 using Application.Interfaces.Tenant;
@@ -9,6 +10,7 @@ using Infrastructure.Data;
 using Infrastructure.Services.Complaints;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.PaymentServices;
+using Infrastructure.Services.PaymentServices.WalletSvc;
 using Infrastructure.Services.Property;
 using Infrastructure.Services.Settings;
 using Infrastructure.Services.Tenant;
@@ -37,6 +39,8 @@ builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+
 
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();

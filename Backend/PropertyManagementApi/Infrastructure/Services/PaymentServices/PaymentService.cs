@@ -105,7 +105,36 @@ namespace Infrastructure.Services.PaymentServices
                 tenant.BalanceDue = rent - leftover;
             }
 
-            // 6) Persist
+            // 6) Credit the landlord’s wallet with the raw payment amount
+            var landlordId = tenant.Property.OwnerId;
+            var wallet = await _context.Wallets
+                .FirstOrDefaultAsync(w => w.LandlordId == landlordId);
+
+            if (wallet == null)
+            {
+                wallet = new Wallet
+                {
+                    LandlordId = landlordId,
+                    Balance = 0m
+                };
+                _context.Wallets.Add(wallet);
+                await _context.SaveChangesAsync(); // ensure wallet.Id is set
+            }
+
+            // add positive transaction
+            var walletTxn = new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                Amount = (decimal)tenantPaymentDto.Amount,
+                Description = $"Payment from tenant #{tenant.Id}",
+                TransactionDate = DateTime.UtcNow
+            };
+            _context.WalletTransactions.Add(walletTxn);
+
+            // bump balance
+            wallet.Balance += (decimal)tenantPaymentDto.Amount;
+
+            // 7) Persist everything in one go
             await _context.SaveChangesAsync();
         }
 
