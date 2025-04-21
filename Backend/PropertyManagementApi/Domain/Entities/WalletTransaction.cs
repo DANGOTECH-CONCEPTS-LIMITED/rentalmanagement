@@ -16,6 +16,7 @@ namespace Domain.Entities
         // e.g. "Rent payout", "Withdrawal"
         public string Description { get; set; } = string.Empty;
         public string TransactionId { get; set; } = string.Empty;
-        public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
+        public DateTime TransactionDate { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

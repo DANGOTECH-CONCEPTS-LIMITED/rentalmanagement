@@ -52,6 +52,7 @@ namespace Infrastructure.Services.PaymentServices
                 TransactionId = tenantPaymentDto.TransactionId,
                 PropertyTenantId = tenantPaymentDto.PropertyTenantId,
                 PropertyTenant = tenant,
+                Description = tenantPaymentDto.Description
             };
             await _context.TenantPayments.AddAsync(payment);
 
@@ -126,8 +127,9 @@ namespace Infrastructure.Services.PaymentServices
             {
                 WalletId = wallet.Id,
                 Amount = (decimal)tenantPaymentDto.Amount,
-                Description = $"Payment from tenant #{tenant.Id}",
-                TransactionDate = DateTime.UtcNow
+                Description = tenantPaymentDto.Description,
+                TransactionDate = tenantPaymentDto.PaymentDate,
+                TransactionId = tenantPaymentDto.TransactionId
             };
             _context.WalletTransactions.Add(walletTxn);
 
