@@ -4,6 +4,10 @@ import { FileText, Download, CheckCircle, Clock, X, Search, Calendar, ChevronLef
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -20,10 +24,16 @@ interface Payment {
     fullName: string;
     property: {
       name: string;
+      id: number;
       price: number;
       currency: string;
     };
   };
+}
+
+interface Property {
+  id: number;
+  name: string;
 }
 
 const StyledReceipt = ({ payment, setShowReceiptModal }) => {
@@ -121,7 +131,6 @@ const StyledReceipt = ({ payment, setShowReceiptModal }) => {
     <div className="mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
       {/* Header with receipt title, download and close button */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 flex justify-between items-center relative">
-        {/* Left-side close button */}
         <Button
           variant="ghost"
           size="icon"
@@ -144,7 +153,6 @@ const StyledReceipt = ({ payment, setShowReceiptModal }) => {
           <span>Download</span>
         </Button>
       </div>
-
 
       {/* Content */}
       <div className="p-6 space-y-4">
@@ -223,6 +231,13 @@ const PaymentHistory = () => {
   const tableRef = useRef<HTMLTableElement>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [activeCalendar, setActiveCalendar] = useState<'start' | 'end'>('start');
+
   const getUserToken = () => {
     try {
       const user = localStorage.getItem('user');
@@ -238,13 +253,12 @@ const PaymentHistory = () => {
   };
 
   const token = getUserToken();
-
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const fetchPayments = async () => {
+    const fetchProperties = async () => {
       try {
-        const response = await fetch(`${apiUrl}/GetAllPayments`, {
+        const response = await fetch(`${apiUrl}/GetAllProperties`, {
           headers: {
             'accept': '*/*',
             'Authorization': 'Bearer ' + token,
@@ -252,20 +266,79 @@ const PaymentHistory = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch payments');
+          throw new Error('Failed to fetch properties');
         }
 
         const data = await response.json();
-        setPayments(data);
+        setProperties(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      } finally {
-        setLoading(false);
+        console.error('Error fetching properties:', err);
       }
     };
 
+    fetchProperties();
     fetchPayments();
   }, []);
+
+  const fetchPayments = async (propertyId = '', start = '', end = '') => {
+    setLoading(true);
+    try {
+      let url = `${apiUrl}/GetAllPayments`;
+
+      if (propertyId && start && end) {
+        url = `${apiUrl}/GetTenantPaymentsByPropertyIdAndDateRange?propertyId=${propertyId}&startDate=${start}&endDate=${end}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'accept': '*/*',
+          'Authorization': 'Bearer ' + token,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payments');
+      }
+
+      const data = await response.json();
+      setPayments(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartDateSelect = (date: Date | undefined) => {
+    setStartDate(date);
+    if (date) {
+      setActiveCalendar('end');
+    }
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    setEndDate(date);
+  };
+
+  const handleApplyFilter = () => {
+    if (selectedPropertyId && startDate && endDate) {
+      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+      fetchPayments(selectedPropertyId, formattedStartDate, formattedEndDate);
+      setShowDateFilter(false);
+    } else {
+      setError('Please select a property, start date, and end date');
+    }
+  };
+
+  const handleClearFilter = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setSelectedPropertyId('');
+    setActiveCalendar('start');
+    fetchPayments();
+    setShowDateFilter(false);
+  };
 
   const filteredPayments = payments.filter(payment =>
     payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -310,8 +383,6 @@ const PaymentHistory = () => {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     });
   };
 
@@ -353,12 +424,111 @@ const PaymentHistory = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            <span>Filter by Date</span>
-          </Button>
+          <Popover open={showDateFilter} onOpenChange={setShowDateFilter}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Filter by Date & Property</span>
+              </Button>
+            </PopoverTrigger>
+
+            <PopoverContent className="min-w-[500px] p-4" align="end">
+              <div className="space-y-4">
+                <h4 className="font-medium">Filter Payments</h4>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Property</label>
+                  <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties.map((property) => (
+                        <SelectItem key={property.id} value={property.id.toString()}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Calendar and Buttons Side by Side */}
+                <div className="flex items-start gap-4">
+                  {/* Calendar Container */}
+                  <div className="flex-1 border rounded-md p-1">
+                    {activeCalendar === 'start' ? (
+                      <CalendarComponent
+                        mode="single"
+                        selected={startDate}
+                        onSelect={handleStartDateSelect}
+                        initialFocus
+                      />
+                    ) : (
+                      <CalendarComponent
+                        mode="single"
+                        selected={endDate}
+                        onSelect={handleEndDateSelect}
+                        initialFocus
+                        disabled={(date) => (startDate ? date < startDate : false)}
+                      />
+                    )}
+                  </div>
+
+                  {/* Buttons on the Side */}
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setActiveCalendar(activeCalendar === 'start' ? 'end' : 'start')
+                      }
+                    >
+                      Switch to {activeCalendar === 'start' ? 'End' : 'Start'} Date
+                    </Button>
+
+                    <Button variant="outline" onClick={handleClearFilter}>
+                      Clear
+                    </Button>
+
+                    <Button onClick={handleApplyFilter}>
+                      Apply Filter
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Dates Summary */}
+                <div className="text-sm space-y-1">
+                  {startDate && (
+                    <div>
+                      <span className="font-medium">Start:</span> {format(startDate, 'MMM dd, yyyy')}
+                    </div>
+                  )}
+                  {endDate && (
+                    <div>
+                      <span className="font-medium">End:</span> {format(endDate, 'MMM dd, yyyy')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
         </div>
 
+        {selectedPropertyId && startDate && endDate && (
+          <div className="bg-blue-50 p-3 rounded-md mb-4 flex items-center justify-between">
+            <div className="flex items-center text-sm">
+              <span className="font-medium text-blue-700 mr-2">Active Filter:</span>
+              <span className="text-blue-600">
+                {properties.find(p => p.id.toString() === selectedPropertyId)?.name} •
+                {format(startDate, 'MMM dd, yyyy')} to {format(endDate, 'MMM dd, yyyy')}
+              </span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleClearFilter} className="text-blue-700 hover:text-blue-800">
+              <X className="h-4 w-4 mr-1" /> Clear Filter
+            </Button>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full" ref={tableRef}>
             <thead className="text-xs text-gray-700 uppercase bg-gray-50">
@@ -467,7 +637,6 @@ const PaymentHistory = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
