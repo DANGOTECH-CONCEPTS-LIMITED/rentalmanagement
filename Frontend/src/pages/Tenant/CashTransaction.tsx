@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { format } from 'date-fns';
+import { CalendarIcon, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -8,7 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -16,15 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/components/ui/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ToastAction } from '@/components/ui/toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -37,6 +37,7 @@ const paymentFormSchema = z.object({
   paymentType: z.string().min(1, "Payment type is required"),
   transactionId: z.string().min(1, "Transaction ID is required"),
   propertyTenantId: z.number().min(1, "Tenant ID is required"),
+  description: z.string().optional(),
 });
 
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
@@ -44,8 +45,9 @@ type PaymentFormValues = z.infer<typeof paymentFormSchema>;
 const CashTransactions = () => {
   const { toast } = useToast();
   const [tenant, setTenant] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
@@ -56,10 +58,9 @@ const CashTransactions = () => {
       paymentType: "",
       transactionId: "",
       propertyTenantId: 0,
+      description: "",
     },
   });
-
-  console.log(tenant, 'Tenant Data');
 
   const getUserToken = () => {
     try {
@@ -80,7 +81,6 @@ const CashTransactions = () => {
 
   useEffect(() => {
     const fetchTenantData = async () => {
-      setLoading(true);
       try {
         if (!token) {
           throw new Error('No authentication token found');
@@ -111,8 +111,6 @@ const CashTransactions = () => {
       } catch (err: any) {
         console.error('Failed to fetch tenant data:', err);
         setError(err.message);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -120,6 +118,7 @@ const CashTransactions = () => {
   }, [token, apiUrl, form]);
 
   const onSubmit = async (data: PaymentFormValues) => {
+    setIsSubmitting(true);
     try {
       if (!token) {
         throw new Error('No authentication token found');
@@ -159,16 +158,10 @@ const CashTransactions = () => {
         description: error.message || "There was an error processing your payment.",
         action: <ToastAction altText="Try again">Try again</ToastAction>,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -345,6 +338,20 @@ const CashTransactions = () => {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Hidden propertyTenantId field */}
                 <FormField
                   control={form.control}
@@ -376,7 +383,16 @@ const CashTransactions = () => {
                 >
                   Clear Form
                 </Button>
-                <Button type="submit">Submit Payment</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Submit Payment"
+                  )}
+                </Button>
               </div>
             </form>
           </Form>
