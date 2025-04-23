@@ -42,6 +42,7 @@ const LandlordDashboard = () => {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const getUserToken = () => {
     try {
@@ -104,14 +105,14 @@ const LandlordDashboard = () => {
     fetchWalletData();
   }, [token, apiUrl, toast]);
 
-  const handleWithdraw = async () => {
+  const validateWithdrawal = () => {
     if (!withdrawAmount || isNaN(Number(withdrawAmount))) {
       toast({
         variant: 'destructive',
         title: 'Invalid Amount',
         description: 'Please enter a valid withdrawal amount',
       });
-      return;
+      return false;
     }
 
     const amount = Number(withdrawAmount);
@@ -121,7 +122,7 @@ const LandlordDashboard = () => {
         title: 'Invalid Amount',
         description: 'Withdrawal amount must be greater than 0',
       });
-      return;
+      return false;
     }
 
     if (balance !== null && amount > balance) {
@@ -130,10 +131,18 @@ const LandlordDashboard = () => {
         title: 'Insufficient Funds',
         description: "You don't have enough balance for this withdrawal",
       });
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const handleWithdraw = async () => {
+    if (!validateWithdrawal()) return;
+
+    const amount = Number(withdrawAmount);
     setIsWithdrawing(true);
+
     try {
       const user = localStorage.getItem('user');
       if (!user) throw new Error('No user found in localStorage');
@@ -168,6 +177,7 @@ const LandlordDashboard = () => {
       setTransactions(updatedStatement);
 
       setWithdrawAmount('');
+      setShowConfirmation(false);
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -185,124 +195,181 @@ const LandlordDashboard = () => {
         <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Landlord Dashboard</h1>
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Wallet Balance</h2>
-            <div className="flex items-center gap-2">
-              <Wallet className="h-6 w-6 text-primary" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[300px] p-0">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-start">
-                        View Transaction History
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Transaction History</DialogTitle>
-                      </DialogHeader>
-                      {isLoading ? (
-                        <div className="space-y-4">
-                          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-                        </div>
-                      ) : transactions.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">No transactions found</div>
-                      ) : (
-                        <div className="overflow-x-auto max-h-[60vh]">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Wallet Balance</h2>
+          <div className="flex items-center gap-2">
+            <Wallet className="h-6 w-6 text-primary" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[300px] p-0">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-start">
+                      View Transaction History
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Transaction History</DialogTitle>
+                    </DialogHeader>
+                    {isLoading ? (
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                      </div>
+                    ) : transactions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">No transactions found</div>
+                    ) : (
+                      <div className="overflow-x-auto max-h-[60vh]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {transactions.map((tx, i) => (
+                              <TableRow key={i}>
+                                <TableCell>{new Date(tx.transactionDate).toLocaleDateString()}</TableCell>
+                                <TableCell className="flex items-center gap-2">
+                                  {tx.amount > 0 ? (
+                                    <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <ArrowUpRight className="h-4 w-4 text-red-500" />
+                                  )}
+                                  {tx.description || 'Transaction'}
+                                </TableCell>
+                                <TableCell className={`text-right font-medium ${tx.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
+                                </TableCell>
                               </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {transactions.map((tx, i) => (
-                                <TableRow key={i}>
-                                  <TableCell>{new Date(tx.transactionDate).toLocaleDateString()}</TableCell>
-                                  <TableCell className="flex items-center gap-2">
-                                    {tx.amount > 0 ? (
-                                      <ArrowDownLeft className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                      <ArrowUpRight className="h-4 w-4 text-red-500" />
-                                    )}
-                                    {tx.description || 'Transaction'}
-                                  </TableCell>
-                                  <TableCell className={`text-right font-medium ${tx.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                    {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+        </div>
 
-          {isLoading ? (
-            <Skeleton className="h-8 w-full" />
-          ) : (
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-2xl font-bold">{balance !== null ? formatCurrency(balance) : '--'}</p>
-                <p className="text-sm text-muted-foreground">Available balance</p>
-              </div>
+        {isLoading ? (
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        ) : (
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-2xl font-bold">{balance !== null ? formatCurrency(balance) : '--'}</p>
+              <p className="text-sm text-muted-foreground">Available balance</p>
+            </div>
 
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm">Withdraw</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Withdraw Funds</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground mb-2">Available: {formatCurrency(balance || 0)}</p>
-                    <Input
-                      type="number"
-                      placeholder="Enter amount to withdraw"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                    />
-                    <Button onClick={handleWithdraw} disabled={isWithdrawing} className="w-full">
-                      {isWithdrawing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        'Withdraw'
-                      )}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm">Withdraw</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Withdraw Funds</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-2">Available: {formatCurrency(balance || 0)}</p>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount to withdraw"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setWithdrawAmount('');
+                        const dialogTrigger = document.querySelector('[data-state="open"]') as HTMLButtonElement;
+                        if (dialogTrigger) {
+                          dialogTrigger.click();
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (validateWithdrawal()) {
+                          setShowConfirmation(true);
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      Continue
                     </Button>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+      </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Quick Stats</h2>
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Withdrawal</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm">
+              Are you sure you want to withdraw {formatCurrency(Number(withdrawAmount))}?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This action cannot be undone. The funds will be transferred to your registered bank account.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmation(false)}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleWithdraw}
+                disabled={isWithdrawing}
+                className="w-full"
+              >
+                {isWithdrawing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Withdrawal'
+                )}
+              </Button>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <StatCard title="Total Properties" value="5" icon={<Home className="h-6 w-6" />} change={{ value: 1, type: 'increase' }} />
-            <StatCard title="Total Tenants" value="12" icon={<Users className="h-6 w-6" />} change={{ value: 2, type: 'increase' }} />
-            <StatCard title="Monthly Revenue" value={formatCurrency(15000)} icon={<DollarSign className="h-6 w-6" />} change={{ value: 8, type: 'increase' }} />
-            <StatCard title="Occupancy Rate" value="95%" icon={<TrendingUp className="h-6 w-6" />} change={{ value: 5, type: 'increase' }} />
-          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 lg:col-span-2">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Quick Stats</h2>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <StatCard title="Total Properties" value="5" icon={<Home className="h-6 w-6" />} change={{ value: 1, type: 'increase' }} />
+          <StatCard title="Total Tenants" value="12" icon={<Users className="h-6 w-6" />} change={{ value: 2, type: 'increase' }} />
+          <StatCard title="Monthly Revenue" value={formatCurrency(15000)} icon={<DollarSign className="h-6 w-6" />} change={{ value: 8, type: 'increase' }} />
+          <StatCard title="Occupancy Rate" value="95%" icon={<TrendingUp className="h-6 w-6" />} change={{ value: 5, type: 'increase' }} />
+        </div>
+      </div>
     </div>
   );
 };

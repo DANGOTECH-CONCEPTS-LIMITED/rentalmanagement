@@ -106,7 +106,6 @@ const CashTransactions = () => {
         const data = await response.json();
         setTenant(data);
         
-        // Set the propertyTenantId in the form
         form.setValue('propertyTenantId', data.id);
       } catch (err: any) {
         console.error('Failed to fetch tenant data:', err);
@@ -147,7 +146,6 @@ const CashTransactions = () => {
       });
       
       form.reset();
-      // Reset the propertyTenantId after form reset
       if (tenant) {
         form.setValue('propertyTenantId', tenant.id);
       }
