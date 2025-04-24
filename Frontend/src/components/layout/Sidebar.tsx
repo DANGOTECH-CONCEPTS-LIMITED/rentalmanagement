@@ -323,6 +323,11 @@ function getNavItems(role: number): NavItem[] {
         path: "/tenant-dashboard/make-payment",
       },
       {
+        label: "Cash Transactions",
+        icon: <CreditCard size={18} />,
+        path: "/tenant-dashboard/cash-transactions",
+      },
+      {
         label: "Payment History",
         icon: <FileText size={18} />,
         path: "/tenant-dashboard/payment-history",

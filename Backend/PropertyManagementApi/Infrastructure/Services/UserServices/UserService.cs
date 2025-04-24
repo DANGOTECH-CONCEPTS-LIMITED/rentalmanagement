@@ -131,9 +131,23 @@ namespace Infrastructure.Services.UserServices
         public async Task<User> AuthenticateUser(AuthenticateDto login)
         {
             // Validate user existence and password
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == login.UserName);
+            var user = await _context.Users
+                .Include(u => u.SystemRole) // Include SystemRole if needed
+                .FirstOrDefaultAsync(u => u.Email == login.UserName);
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, login.Password) == PasswordVerificationResult.Failed)
                 throw new Exception("User not found or incorrect password.");
+
+            //check user role is a tenant
+            if (user.SystemRole.Name == "Tenant") 
+            {
+                //get tenant with this user id
+                var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == user.Id);
+                if (tenant == null)
+                    throw new Exception("User has a role of tenant but not registered in tenants");
+
+                //assign userid as a tenant
+                user.Id = tenant.Id;
+            }
 
             // Retrieve JWT configuration settings
             var jwtSettings = _configuration.GetSection("JwtSettings");
@@ -167,7 +181,7 @@ namespace Infrastructure.Services.UserServices
             return user;
         }
 
-        public async Task RegisterUserMinusFiles(User user)
+        public async Task<User> RegisterUserMinusFiles(User user)
         {
             // Validate system role existence
             var systemRole = await _context.SystemRoles.FirstOrDefaultAsync(r => r.Id == user.SystemRoleId);
@@ -194,6 +208,8 @@ namespace Infrastructure.Services.UserServices
                                $"You have been registered as {systemRole.Name} on our platform.\n\n" +
                                $"Username: {user.Email}\n Your password is {password}Please log in to change your password.";
             await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
+
+            return user;
         }
 
         public async Task<User> GetUserByIdAsync(int id)

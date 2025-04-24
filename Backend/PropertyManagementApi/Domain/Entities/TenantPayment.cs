@@ -17,6 +17,7 @@ namespace Domain.Entities
         public string PaymentType { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
         public string TransactionId { get; set; } = string.Empty;
+        public string? Description { get; set; } = string.Empty;
         [ForeignKey("PropertyTenant")]
         public int PropertyTenantId { get; set; }
         public PropertyTenant PropertyTenant { get; set; } = new PropertyTenant();
