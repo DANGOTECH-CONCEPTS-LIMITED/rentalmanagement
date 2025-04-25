@@ -222,35 +222,50 @@ namespace Infrastructure.Services.UserServices
             return user;
         }
 
-        public async Task UpdateUser(IFormFile passportphoto, IFormFile idfront, IFormFile idback, User user)
+        public async Task UpdateUser(
+    IFormFile passportPhoto,
+    IFormFile idFront,
+    IFormFile idBack,
+    User userDto)         // renamed to clarify this is incoming data, not the tracked entity
         {
-            //check if user exists
-            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
-            if (existingUser != null)
-            {
+            // 1. Load the tracked entity
+            var existingUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userDto.Id);
+
+            if (existingUser == null)
                 throw new Exception("User not found.");
+
+            // 2. Map any simple properties you allow to be updated
+            existingUser.FullName = userDto.FullName;
+            existingUser.PhoneNumber = userDto.PhoneNumber;
+            existingUser.NationalIdNumber = userDto.NationalIdNumber;
+            existingUser.Active = userDto.Active;
+            existingUser.Verified = userDto.Verified;
+            existingUser.SystemRoleId = userDto.SystemRoleId; // Assuming this is allowed to be changed
+            //existingUser.Email = userDto.Email; // Assuming this is allowed to be changed
+            // (…and any other fields you want to let the caller change…)
+
+            // 3. Handle file uploads on the tracked entity
+            if (passportPhoto != null)
+            {
+                var path = await _settings.SaveFileAndReturnPathAsync(passportPhoto);
+                existingUser.PassportPhoto = path;
+            }
+            if (idFront != null)
+            {
+                var path = await _settings.SaveFileAndReturnPathAsync(idFront);
+                existingUser.IdFront = path;
+            }
+            if (idBack != null)
+            {
+                var path = await _settings.SaveFileAndReturnPathAsync(idBack);
+                existingUser.IdBack = path;
             }
 
-            // Validate file uploads
-            if (passportphoto != null)
-            {
-                var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
-                user.PassportPhoto = passportPhotoPath;
-            }
-            if (idfront != null)
-            {
-                var idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
-                user.IdFront = idFrontPath;
-            }
-            if (idback != null)
-            {
-                var idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
-                user.IdBack = idBackPath;
-            }
-            // Update the user in the database
-            _context.Users.Update(user);
+            // 4. Persist
             await _context.SaveChangesAsync();
         }
+
 
         public async Task DeleteUser(int id)
         {
