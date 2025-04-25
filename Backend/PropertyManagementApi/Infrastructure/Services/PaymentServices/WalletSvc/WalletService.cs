@@ -57,7 +57,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 .ToListAsync();
         }
 
-        public async Task WithdrawAsync(int landlordId, decimal amount)
+        public async Task WithdrawAsync(int landlordId, decimal amount,string description)
         {
             if (amount <= 0)
                 throw new Exception("Withdrawal amount must be positive.");
@@ -79,7 +79,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             {
                 WalletId = wallet.Id,
                 Amount = -amount,
-                Description = "Withdrawal",
+                Description = description,
                 TransactionDate = DateTime.UtcNow
             };
             _context.WalletTransactions.Add(txn);

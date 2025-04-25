@@ -47,12 +47,12 @@ namespace API.Controllers.Payments.Wallet
         }
 
         [HttpPost("/Withdraw/{landlordid}")]
-        public async Task<IActionResult> Withdraw(int landlordid, [FromBody] decimal amount)
+        public async Task<IActionResult> Withdraw(int landlordid, [FromBody] decimal amount, [FromBody] string description)
         {
             try
             {
                 //var landlordId = int.Parse(User.FindFirst("UserId")?.Value);
-                await _svc.WithdrawAsync(landlordid, amount);
+                await _svc.WithdrawAsync(landlordid, amount, description);
                 return Ok("Withdrawal successful.");
             }
             catch (Exception ex)
