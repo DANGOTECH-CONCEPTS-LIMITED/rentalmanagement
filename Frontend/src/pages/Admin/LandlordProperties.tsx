@@ -109,8 +109,6 @@ const LandlordProperties = () => {
 
   const user = localStorage.getItem("user") || null;
 
-  console.log("Token:", user);
-
   const token = JSON.parse(user).token;
   if (!token) {
     toast({
@@ -151,9 +149,7 @@ const LandlordProperties = () => {
       const data = await response.json();
       setProperties(data);
     } catch (err) {
-      console.error(err.message);
-      console.log("Error fetching properties:", err);
-      setError(err.message);
+      setError(err.response.data);
     } finally {
       setIsLoading(false);
     }
@@ -177,10 +173,9 @@ const LandlordProperties = () => {
       const data: Landlord[] = await response.json();
       setLandlords(data);
     } catch (error) {
-      console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
-        description: "Failed to load landlord information",
+        description: error.response.data,
         variant: "destructive",
       });
     } finally {
@@ -215,10 +210,9 @@ const LandlordProperties = () => {
         description: "Property deleted successfully",
       });
     } catch (err) {
-      console.error("Error deleting property:", err);
       toast({
         title: "Error",
-        description: "Failed to delete property",
+        description: err.response.data,
         variant: "destructive",
       });
     }
@@ -265,8 +259,6 @@ const LandlordProperties = () => {
     setPropertyPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  console.log("editingProperty", editingProperty);
-
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProperty) return;
@@ -276,12 +268,11 @@ const LandlordProperties = () => {
       const formDataToSend = new FormData();
 
       formDataToSend.append("Id", editingProperty.id.toString());
-      formDataToSend.append("OwnerId", editingProperty.ownerId);
-      formDataToSend.append("Owner", editingProperty.ownerId);
       formDataToSend.append("Price", editingProperty.price.toString());
       formDataToSend.append("Name", editingProperty.name);
       formDataToSend.append("Zipcode", editingProperty.zipcode);
-      formDataToSend.append("OwnerId", editingProperty.owner.id.toString());
+      formDataToSend.append("OwnerId", editingProperty.ownerId);
+      formDataToSend.append("Owner", editingProperty.ownerId);
       formDataToSend.append("District", editingProperty.district);
       formDataToSend.append("Currency", editingProperty.currency);
       formDataToSend.append("Region", editingProperty.region);
@@ -297,12 +288,39 @@ const LandlordProperties = () => {
         editingProperty.occupied ? "true" : "false"
       );
 
-      // If there are new photos, append them
-      if (propertyPhotos.length > 0) {
-        propertyPhotos.forEach((photo) => {
-          formDataToSend.append("files", photo.file);
-        });
-      }
+      propertyPhotos.forEach((photo, index) => {
+        formDataToSend.append("files", photo.file);
+      });
+
+      // end
+
+      // formDataToSend.append("OwnerId", editingProperty.ownerId);
+      // formDataToSend.append("Owner", editingProperty.ownerId);
+      // formDataToSend.append("Price", editingProperty.price.toString());
+      // formDataToSend.append("Name", editingProperty.name);
+      // formDataToSend.append("Zipcode", editingProperty.zipcode);
+      // formDataToSend.append("OwnerId", editingProperty.owner.id.toString());
+      // formDataToSend.append("District", editingProperty.district);
+      // formDataToSend.append("Currency", editingProperty.currency);
+      // formDataToSend.append("Region", editingProperty.region);
+      // formDataToSend.append("Address", editingProperty.address);
+      // formDataToSend.append(
+      //   "NumberOfRooms",
+      //   editingProperty.numberOfRooms.toString()
+      // );
+      // formDataToSend.append("Type", editingProperty.type);
+      // formDataToSend.append("Description", editingProperty.description);
+      // formDataToSend.append(
+      //   "Occupied",
+      //   editingProperty.occupied ? "true" : "false"
+      // );
+
+      // // If there are new photos, append them
+      // if (propertyPhotos.length > 0) {
+      //   propertyPhotos.forEach((photo) => {
+      //     formDataToSend.append("files", photo.file);
+      //   });
+      // }
 
       const response = await fetch(`${apiUrl}/UpdateProperty`, {
         method: "PUT",
@@ -311,7 +329,7 @@ const LandlordProperties = () => {
         },
         body: formDataToSend,
       });
-
+      console.log("response", response);
       if (!response.ok) {
         throw new Error("Failed to update property");
       }
@@ -343,6 +361,67 @@ const LandlordProperties = () => {
     } finally {
       setIsSubmitting(false);
     }
+
+    // try {
+    //   const formDataToSend = new FormData();
+
+    //   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    //   if (!apiUrl) {
+    //     throw new Error("API base URL is not configured");
+    //   }
+
+    //   const controller = new AbortController();
+    //   const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    //   const response = await fetch(`${apiUrl}/AddProperty`, {
+    //     method: "POST",
+    //     headers: {
+    //       Authorization: `Bearer ${token}`,
+    //     },
+    //     body: formDataToSend,
+    //     signal: controller.signal,
+    //   });
+
+    //   clearTimeout(timeoutId);
+
+    //   if (!response.ok) {
+    //     const errorText = await response.text();
+    //     throw new Error(errorText || "Failed to register property");
+    //   }
+
+    //   const contentType = response.headers.get("content-type");
+    //   let result;
+    //   if (contentType && contentType.includes("application/json")) {
+    //     result = await response.json();
+    //   } else {
+    //     result = await response.text();
+    //   }
+
+    //   toast({
+    //     title: "Property Registered",
+    //     description: `Successfully registered property: ${formData.Name}`,
+    //   });
+
+    //   navigate("/#/admin-dashboard/landlord-properties");
+
+    //   setFormData({
+    //     Name: "",
+    //     Address: "",
+    //     Region: "",
+    //     District: "",
+    //     Zipcode: "",
+    //     Type: "",
+    //     NumberOfRooms: "0",
+    //     Description: "",
+    //     OwnerId: "0",
+    //     Price: "0",
+    //     Currency: "UGX",
+    //     Occupied: "true",
+    //   });
+    //   setSelectedDistrict("");
+    //   setSelectedRegion("");
+    //   setPropertyPhotos([]);
+    // }
   };
 
   const handleInputChange = (

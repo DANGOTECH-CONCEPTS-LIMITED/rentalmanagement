@@ -377,6 +377,7 @@ const ManageUsers = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<LandlordFormData>({
     FullName: "",
     PhoneNumber: "",
@@ -414,28 +415,17 @@ const ManageUsers = () => {
     phoneNumber: "",
   });
   const [previewUrls, setPreviewUrls] = useState({
-    passportPhoto: null as string | null,
-    idFront: null as string | null,
-    idBack: null as string | null,
+    PassportPhoto: null as string | null,
+    IdFront: null as string | null,
+    IdBack: null as string | null,
   });
 
   const idTypes = [
-    { value: "nationalId", label: "National ID", requiresBack: false },
-    { value: "passport", label: "Passport", requiresBack: false },
+    { value: "nationalId", label: "National ID", requiresBack: true },
+    { value: "passport", label: "Passport", requiresBack: true },
     { value: "driverLicense", label: "Driver's License", requiresBack: true },
   ];
 
-  const getIdTypeLabel = (idType: string) => {
-    const foundType = idTypes.find((type) => type.value === idType);
-    return foundType ? foundType.label : "ID";
-  };
-
-  const isBackSideRequired = () => {
-    const selectedIdType = idTypes.find(
-      (type) => type.value === formData.IdType
-    );
-    return selectedIdType ? selectedIdType.requiresBack : false;
-  };
   const removeFile = (fileType: "PassportPhoto" | "IdFront" | "IdBack") => {
     setFormData((prev) => ({ ...prev, [fileType]: null }));
     setPreviewUrls((prev) => ({ ...prev, [fileType]: null }));
@@ -453,25 +443,6 @@ const ManageUsers = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    fileType: "PassportPhoto" | "IdFront" | "IdBack"
-  ) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, [fileType]: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrls((prev) => ({
-          ...prev,
-          [fileType]: reader.result as string,
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   useEffect(() => {
     fetchUsers();
     fetchRoles();
@@ -485,7 +456,11 @@ const ManageUsers = () => {
 
       setRoles(data);
     } catch (error) {
-      console.log(error);
+      toast({
+        title: "Error",
+        description: error.response.data,
+        variant: "destructive",
+      });
     }
   };
   const fetchUsers = async () => {
@@ -505,10 +480,9 @@ const ManageUsers = () => {
 
       setUsers(formattedUsers);
     } catch (error) {
-      console.error("Error fetching users:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.response.data,
         variant: "destructive",
       });
     }
@@ -526,9 +500,9 @@ const ManageUsers = () => {
       systemRoleId: "",
     });
     setPreviewUrls({
-      passportPhoto: null as string | null,
-      idFront: null as string | null,
-      idBack: null as string | null,
+      PassportPhoto: null as string | null,
+      IdFront: null as string | null,
+      IdBack: null as string | null,
     });
     setErrors({ fullName: "", email: "", systemRoleId: "" });
   };
@@ -540,6 +514,7 @@ const ManageUsers = () => {
       )
       .then((response) => {
         const userData = response.data;
+        console.log("user", userData);
         setEditFormData({
           id: userData.id,
           fullName: userData.fullName,
@@ -684,6 +659,7 @@ const ManageUsers = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("formData", formData);
 
     if (
       !formData.PassportPhoto ||
@@ -698,49 +674,41 @@ const ManageUsers = () => {
       return;
     }
 
-    // setIsSubmitting(true);
+    setIsSubmitting(true);
 
     try {
       const formDataToSend = new FormData();
-
       formDataToSend.append("FullName", formData.FullName);
       formDataToSend.append("PhoneNumber", formData.PhoneNumber);
       formDataToSend.append("Email", formData.Email);
       formDataToSend.append("NationalIdNumber", formData.IdNumber);
       formDataToSend.append("SystemRoleId", formData.systemRoleId);
-
       const files = [];
-
       if (formData.PassportPhoto) {
         files.push({
           file: formData.PassportPhoto,
           type: "PassportPhoto",
         });
       }
-
       if (formData.IdFront) {
         files.push({
           file: formData.IdFront,
           type: `${formData.IdType}Front`,
         });
       }
-
-      if (isBackSideRequired() && formData.IdBack) {
+      if (formData.IdBack) {
         files.push({
           file: formData.IdBack,
           type: `${formData.IdType}Back`,
         });
       }
-
       files.forEach((fileObj, index) => {
         formDataToSend.append(`files`, fileObj.file);
       });
-
       const apiUrl = import.meta.env.VITE_API_BASE_URL;
       if (!apiUrl) {
         throw new Error("API base URL is not configured");
       }
-
       const response = await fetch(`${apiUrl}/RegisterUser`, {
         method: "POST",
         headers: {
@@ -748,26 +716,21 @@ const ManageUsers = () => {
         },
         body: formDataToSend,
       });
-
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || "Failed to register landlord");
       }
-
       const responseText = await response.text();
-
       let result;
       try {
         result = JSON.parse(responseText);
       } catch (e) {
         result = { message: responseText };
       }
-
       toast({
         title: "Landlord Registered",
         description: `${formData.FullName} has been successfully registered.`,
       });
-
       setFormData({
         FullName: "",
         PhoneNumber: "",
@@ -778,9 +741,9 @@ const ManageUsers = () => {
         systemRoleId: "",
       });
       setPreviewUrls({
-        passportPhoto: null,
-        idFront: null,
-        idBack: null,
+        PassportPhoto: null,
+        IdFront: null,
+        IdBack: null,
       });
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -801,9 +764,9 @@ const ManageUsers = () => {
           systemRoleId: "",
         });
         setPreviewUrls({
-          passportPhoto: null,
-          idFront: null,
-          idBack: null,
+          PassportPhoto: null,
+          IdFront: null,
+          IdBack: null,
         });
       } else {
         toast({
@@ -820,7 +783,7 @@ const ManageUsers = () => {
     }
   };
 
-  const handleUpdateSubmit = async (e) => {
+  const handleUpdateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (validateEditForm()) {
@@ -854,18 +817,45 @@ const ManageUsers = () => {
         );
 
         // Required fields with default values for the API
-        formData.append("PassportPhoto", "string");
-        formData.append("IdFront", "string");
-        formData.append("IdBack", "string");
-        formData.append("Password", "string");
-        formData.append("Token", "string");
-        formData.append("PasswordChanged", "true");
-        formData.append("SystemRole.Id", "0");
-        formData.append("SystemRole.Name", "string");
-        formData.append("SystemRole.Description", "string");
-        formData.append("SystemRole.Permissions", "string");
+        // formData.append("PassportPhoto", "string");
+        // formData.append("IdFront", "string");
+        // formData.append("IdBack", "string");
+        // formData.append("Password", "string");
+        // formData.append("Token", "string");
+        // formData.append("PasswordChanged", "true");
+        // formData.append("SystemRole.Id", "0");
+        // formData.append("SystemRole.Name", "string");
+        // formData.append("SystemRole.Description", "string");
+        // formData.append("SystemRole.Permissions", "string");
         formData.append("SystemRole.CreatedAt", new Date().toISOString());
-        formData.append("files", "string");
+        // formData.append("files", "string");
+
+        const files = [];
+        console.log("editFormData", editFormData);
+        if (editFormData.passportPhoto) {
+          files.push({
+            file: editFormData.passportPhoto,
+            type: "PassportPhoto",
+          });
+        }
+
+        if (editFormData.idFront) {
+          files.push({
+            file: editFormData.idFront,
+            type: `IdFront`,
+          });
+        }
+
+        if (editFormData.idBack) {
+          files.push({
+            file: editFormData.idBack,
+            type: `IdBack`,
+          });
+        }
+
+        files.forEach((fileObj, index) => {
+          formData.append(`files`, fileObj.file);
+        });
 
         const { status } = await axios.put(
           `${import.meta.env.VITE_API_BASE_URL}/UpdateUser`,
@@ -888,23 +878,35 @@ const ManageUsers = () => {
           fetchUsers();
         }
       } catch (error) {
-        console.error("Error updating user:", error);
-
         toast({
           title: "Error",
-          description:
-            error instanceof Error
-              ? error.message
-              : "An error occurred while updating the user.",
+          description: error.response.data,
           variant: "destructive",
         });
       }
     }
   };
 
+  const handleEditFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditFormData((prev) => ({ ...prev, [fileType]: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [fileType]: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    fileType: "passportPhoto" | "idFront" | "idBack"
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
   ) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -918,6 +920,37 @@ const ManageUsers = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+  ) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      setFormData((prev) => ({ ...prev, [fileType]: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [fileType]: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getIdTypeLabel = (idType: string) => {
+    const foundType = idTypes.find((type) => type.value === idType);
+    return foundType ? foundType.label : "ID";
+  };
+
+  const isBackSideRequired = () => {
+    const selectedIdType = idTypes.find(
+      (type) => type.value === formData.IdType
+    );
+    return selectedIdType ? selectedIdType.requiresBack : false;
   };
 
   const [properties] = useState<Property[]>([
@@ -1106,6 +1139,7 @@ const ManageUsers = () => {
               Cancel
             </button>
             <button
+              onClick={handleSubmit}
               type="submit"
               form="userForm"
               className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
@@ -1116,9 +1150,8 @@ const ManageUsers = () => {
         }
       >
         <form
-          id="userForm"
           onSubmit={handleSubmit}
-          className="space-y-2 px-2 h-[60vh] overflow-y-auto"
+          className="space-y-4 h-[60vh] overflow-y-auto"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -1158,37 +1191,6 @@ const ManageUsers = () => {
                 placeholder="Enter email address"
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="systemRoleId"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                System Role
-              </Label>
-              <select
-                id="systemRoleId"
-                name="systemRoleId"
-                value={formData.systemRoleId}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
-                  errors.systemRoleId
-                    ? "border-red-500 focus:ring-red-300 "
-                    : "border-gray-300 focus:ring-blue-300"
-                }`}
-              >
-                <option value="">Select a role</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-              {errors.systemRoleId && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.systemRoleId}
-                </p>
-              )}
             </div>
             <div className="md:col-span-2 space-y-4">
               <label className="text-sm font-medium">Identification Type</label>
@@ -1243,10 +1245,10 @@ const ManageUsers = () => {
                 onDragLeave={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, "PassportPhoto")}
               >
-                {previewUrls.passportPhoto ? (
+                {previewUrls.PassportPhoto ? (
                   <div className="relative w-full h-full">
                     <img
-                      src={previewUrls.passportPhoto}
+                      src={previewUrls.PassportPhoto}
                       alt="Passport Preview"
                       className="w-full h-full object-cover rounded-lg"
                     />
@@ -1268,7 +1270,7 @@ const ManageUsers = () => {
                           type="file"
                           className="sr-only"
                           accept="image/*"
-                          onChange={(e) => handleFileChange(e, "passportPhoto")}
+                          onChange={(e) => handleFileChange(e, "PassportPhoto")}
                         />
                       </label>
                       <p>or drag and drop</p>
@@ -1296,10 +1298,10 @@ const ManageUsers = () => {
                 onDragLeave={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, "IdFront")}
               >
-                {previewUrls.idFront ? (
+                {previewUrls.IdFront ? (
                   <div className="relative w-full h-full">
                     <img
-                      src={previewUrls.idFront}
+                      src={previewUrls.IdFront}
                       alt="ID Front Preview"
                       className="w-full h-full object-cover rounded-lg"
                     />
@@ -1322,7 +1324,7 @@ const ManageUsers = () => {
                           type="file"
                           className="sr-only"
                           accept="image/*"
-                          onChange={(e) => handleFileChange(e, "idFront")}
+                          onChange={(e) => handleFileChange(e, "IdFront")}
                         />
                       </label>
                       <p>or drag and drop</p>
@@ -1345,10 +1347,10 @@ const ManageUsers = () => {
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "IdBack")}
                 >
-                  {previewUrls.idBack ? (
+                  {previewUrls.IdBack ? (
                     <div className="relative w-full h-full">
                       <img
-                        src={previewUrls.idBack}
+                        src={previewUrls.IdBack}
                         alt="ID Back Preview"
                         className="w-full h-full object-cover rounded-lg"
                       />
@@ -1370,7 +1372,7 @@ const ManageUsers = () => {
                             type="file"
                             className="sr-only"
                             accept="image/*"
-                            onChange={(e) => handleFileChange(e, "idBack")}
+                            onChange={(e) => handleFileChange(e, "IdBack")}
                           />
                         </label>
                         <p>or drag and drop</p>
@@ -1537,7 +1539,7 @@ const ManageUsers = () => {
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleFileChange(e, "passportPhoto")}
+                  onChange={(e) => handleEditFileChange(e, "PassportPhoto")}
                 />
               </div>
               <div>
@@ -1559,7 +1561,7 @@ const ManageUsers = () => {
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleFileChange(e, "idFront")}
+                  onChange={(e) => handleEditFileChange(e, "IdFront")}
                 />
               </div>
               <div>
@@ -1581,7 +1583,7 @@ const ManageUsers = () => {
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleFileChange(e, "idBack")}
+                  onChange={(e) => handleEditFileChange(e, "IdBack")}
                 />
               </div>
             </div>
@@ -1630,10 +1632,9 @@ const UserTable = ({
         onDeleteSuccess && onDeleteSuccess();
       }
     } catch (error) {
-      console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.response.data,
         variant: "destructive",
       });
     }

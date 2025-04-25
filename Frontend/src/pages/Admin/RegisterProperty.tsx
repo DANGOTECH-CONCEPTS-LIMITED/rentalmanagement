@@ -24,6 +24,7 @@ interface PropertyPhoto {
 }
 
 interface Landlord {
+  verified: boolean;
   id: number;
   fullName: string;
   email: string;
@@ -290,12 +291,16 @@ const RegisterProperty = () => {
       }
 
       const data: Landlord[] = await response.json();
-      setLandlords(data);
+      const filteredLandlords = data.filter(
+        (landlord) => landlord.verified === true
+      );
+
+      setLandlords(filteredLandlords);
     } catch (error) {
       console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
-        description: "Failed to load landlord information",
+        description: "Failed to load landlordda information",
         variant: "destructive",
       });
     } finally {
@@ -424,6 +429,8 @@ const RegisterProperty = () => {
         description: `Successfully registered property: ${formData.Name}`,
       });
 
+      navigate("/#/admin-dashboard/landlord-properties");
+
       setFormData({
         Name: "",
         Address: "",
@@ -458,7 +465,7 @@ const RegisterProperty = () => {
 
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.response.data,
         variant: "destructive",
       });
     } finally {

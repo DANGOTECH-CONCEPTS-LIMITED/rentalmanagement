@@ -229,12 +229,12 @@ function getNavItems(role: number): NavItem[] {
         icon: <Home size={18} />,
         path: "/admin-dashboard",
       },
-      // {
-      //   label: "Landlords",
-      //   icon: <Users size={18} />,
-      //   path: "/admin-dashboard/register-landlord",
-      //   hasSubItems: false,
-      // },
+      {
+        label: "Landlords",
+        icon: <Users size={18} />,
+        path: "/admin-dashboard/register-landlord",
+        hasSubItems: false,
+      },
       // {
       //   label: "Properties",
       //   icon: <House size={18} />,
