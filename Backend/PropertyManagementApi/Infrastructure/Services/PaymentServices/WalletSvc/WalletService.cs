@@ -57,29 +57,29 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 .ToListAsync();
         }
 
-        public async Task WithdrawAsync(int landlordId, decimal amount,string description)
+        public async Task WithdrawAsync(WithdrawDto withdrawDto)
         {
-            if (amount <= 0)
+            if (withdrawDto.amount <= 0)
                 throw new Exception("Withdrawal amount must be positive.");
 
             var wallet = await _context.Wallets
-                .FirstOrDefaultAsync(w => w.LandlordId == landlordId);
+                .FirstOrDefaultAsync(w => w.LandlordId == withdrawDto.landlordid);
 
             if (wallet == null)
                 throw new Exception("Wallet not found for this landlord.");
 
-            if (wallet.Balance < amount)
+            if (wallet.Balance < withdrawDto.amount)
                 throw new Exception("Insufficient funds in wallet.");
 
             // Deduct balance
-            wallet.Balance -= amount;
+            wallet.Balance -= withdrawDto.amount;
 
             // Record transaction
             var txn = new WalletTransaction
             {
                 WalletId = wallet.Id,
-                Amount = -amount,
-                Description = description,
+                Amount = -withdrawDto.amount,
+                Description = withdrawDto.description,
                 TransactionDate = DateTime.UtcNow
             };
             _context.WalletTransactions.Add(txn);
