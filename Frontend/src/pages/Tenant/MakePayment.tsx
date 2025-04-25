@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CreditCard, DollarSign, Calendar, AlertCircle, CheckCircle2, Smartphone, Wallet } from 'lucide-react';
@@ -10,6 +9,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'react-router-dom';
 import { useCurrencyFormatter } from '@/hooks/use-currency-formatter';
+import CashTransactions from './CashTransaction';
 
 const MakePayment = () => {
   const { toast } = useToast();
@@ -59,7 +59,6 @@ const MakePayment = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate payment processing
     setTimeout(() => {
       setIsLoading(false);
       setShowSuccess(true);
@@ -70,7 +69,6 @@ const MakePayment = () => {
         variant: "default",
       });
       
-      // Reset form after 2 seconds
       setTimeout(() => {
         setShowSuccess(false);
         resetFormFields();
@@ -112,6 +110,7 @@ const MakePayment = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               {paymentMethod === 'card' && <CreditCard className="mr-2 h-5 w-5" />}
+              {paymentMethod === 'cash' && <DollarSign className="mr-2 h-5 w-5" />}
               {paymentMethod === 'mobile_money' && <Smartphone className="mr-2 h-5 w-5" />}
               {paymentMethod === 'bank_transfer' && <Wallet className="mr-2 h-5 w-5" />}
               Payment Information
@@ -136,10 +135,14 @@ const MakePayment = () => {
             ) : (
               <>
                 <Tabs value={paymentMethod} onValueChange={setPaymentMethod} className="mb-6">
-                  <TabsList className="grid grid-cols-3 mb-6">
+                  <TabsList className="grid grid-cols-4 mb-6">
                     <TabsTrigger value="card" className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4" />
                       <span>Card</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="cash" className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      <span>Cash Transaction</span>
                     </TabsTrigger>
                     <TabsTrigger value="mobile_money" className="flex items-center gap-2">
                       <Smartphone className="h-4 w-4" />
@@ -233,6 +236,10 @@ const MakePayment = () => {
                         </Button>
                       </div>
                     </form>
+                  </TabsContent>
+                  
+                  <TabsContent value="cash">
+                    <CashTransactions />
                   </TabsContent>
                   
                   <TabsContent value="mobile_money">

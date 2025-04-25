@@ -8,6 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/components/ui/use-toast';
+import { Toast, ToastAction } from '@/components/ui/toast';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -237,6 +239,7 @@ const PaymentHistory = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [activeCalendar, setActiveCalendar] = useState<'start' | 'end'>('start');
+  const { toast } = useToast();
 
   const getUserToken = () => {
     try {
@@ -327,7 +330,15 @@ const PaymentHistory = () => {
       fetchPayments(selectedPropertyId, formattedStartDate, formattedEndDate);
       setShowDateFilter(false);
     } else {
-      setError('Please select a property, start date, and end date');
+      // Using toast instead of directly setting error state
+      toast({
+        variant: "destructive",
+        title: "Incomplete Filter",
+        description: "Please select a property, start date, and end date",
+        action: (
+          <ToastAction altText="Try again">Try again</ToastAction>
+        ),
+      });
     }
   };
 
@@ -510,7 +521,6 @@ const PaymentHistory = () => {
               </div>
             </PopoverContent>
           </Popover>
-
         </div>
 
         {selectedPropertyId && startDate && endDate && (

@@ -330,7 +330,7 @@ const LandlordDashboard = () => {
               Are you sure you want to withdraw {formatCurrency(Number(withdrawAmount))}?
             </p>
             <p className="text-xs text-muted-foreground">
-              This action cannot be undone. The funds will be transferred to your registered bank account.
+              This action cannot be undone. The funds will be transferred to your registered bank account or mobile money number.
             </p>
             <div className="flex gap-2 pt-2">
               <Button
