@@ -4,12 +4,41 @@ import { CreditCard, DollarSign, Calendar, AlertCircle, CheckCircle2, Smartphone
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import axios from 'axios';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'react-router-dom';
 import { useCurrencyFormatter } from '@/hooks/use-currency-formatter';
 import CashTransactions from './CashTransaction';
+
+interface PropertyTenant {
+  id: number;
+  fullName: string;
+  property: {
+    id: number;
+    name: string;
+    address: string;
+    price: number;
+    currency: string;
+  };
+  balanceDue: number;
+  arrears: number;
+  nextPaymentDate: string;
+  dateMovedIn: string;
+}
+
+interface Payment {
+  id: number;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  paymentType: string;
+  paymentStatus: string;
+  transactionId: string;
+  description: string | null;
+}
+
 
 const MakePayment = () => {
   const { toast } = useToast();
@@ -20,6 +49,12 @@ const MakePayment = () => {
   const [paymentMethod, setPaymentMethod] = useState(initialMethod);
   const [paymentAmount, setPaymentAmount] = useState('1200');
   const formatCurrency = useCurrencyFormatter();
+  const [tenantData, setTenantData] = useState<PropertyTenant | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+
+  console.log("tenantData",tenantData);
+
+
   
   // Credit Card Fields
   const [cardNumber, setCardNumber] = useState('');
@@ -48,12 +83,63 @@ const MakePayment = () => {
     totalDue: 1200,
   };
 
+  const user = localStorage.getItem('user');
+  if (!user) throw new Error('No user found in localStorage');
+
+  const userData = JSON.parse(user);
+  const token = userData.token;
+
   useEffect(() => {
     // Set the initial payment method based on URL params
     if (initialMethod) {
       setPaymentMethod(initialMethod);
     }
   }, [initialMethod]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+                const paymentResponse = await axios.get(`http://3.216.182.63:8091/GetPaymentsByTenantId/${userData.id}`, {
+          headers: {
+            'Authorization': 'Bearer ' + token,
+          }
+        });
+        
+        setPaymentHistory(paymentResponse.data);
+        
+        if (paymentResponse.data.length > 0) {
+          const tenant = paymentResponse.data[0].propertyTenant;
+          setTenantData({
+            id: tenant.id,
+            fullName: tenant.fullName,
+            property: {
+              id: tenant.property.id,
+              name: tenant.property.name,
+              address: tenant.property.address,
+              price: tenant.property.price,
+              currency: tenant.property.currency
+            },
+            balanceDue: tenant.balanceDue,
+            arrears: tenant.arrears,
+            nextPaymentDate: tenant.nextPaymentDate,
+            dateMovedIn: tenant.dateMovedIn
+          });
+          
+          setPaymentAmount(tenant.property.price.toString());
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch payment data",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    fetchData();
+  }, [toast]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -374,59 +460,77 @@ const MakePayment = () => {
         </Card>
         
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <DollarSign className="mr-2 h-5 w-5" />
-              Payment Summary
-            </CardTitle>
-            <CardDescription>Details of your current payment</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-sm text-gray-500 mb-1">Property</h3>
-                <p>{paymentDetails.propertyName}</p>
-                <p className="text-sm text-gray-500">{paymentDetails.propertyAddress}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-medium text-sm text-gray-500 mb-1">Due Date</h3>
-                <p className="flex items-center">
-                  <Calendar className="mr-1 h-4 w-4" />
-                  {paymentDetails.dueDate}
-                </p>
-              </div>
-              
-              <div className="border-t pt-4">
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-600">Rent Amount</span>
-                  <span>{formatCurrency(paymentDetails.rentAmount)}</span>
-                </div>
-                {paymentDetails.lateFee > 0 && (
-                  <div className="flex justify-between mb-2 text-red-600">
-                    <span className="flex items-center">
-                      <AlertCircle className="mr-1 h-4 w-4" />
-                      Late Fee
-                    </span>
-                    <span>{formatCurrency(paymentDetails.lateFee)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-semibold border-t pt-2 mt-2">
-                  <span>Total Due</span>
-                  <span>{formatCurrency(paymentDetails.totalDue)}</span>
-                </div>
-              </div>
+  <CardHeader>
+    <CardTitle className="flex items-center">
+      <DollarSign className="mr-2 h-5 w-5" />
+      Payment Summary
+    </CardTitle>
+    <CardDescription>Details of your current payment</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      {tenantData ? (
+        <>
+          <div>
+            <h3 className="font-medium text-sm text-gray-500 mb-1">Property</h3>
+            <p>{tenantData.property.name}</p>
+            <p className="text-sm text-gray-500">{tenantData.property.address}</p>
+          </div>
+          
+          <div>
+            <h3 className="font-medium text-sm text-gray-500 mb-1">Tenant</h3>
+            <p>{tenantData.fullName}</p>
+            <p className="text-sm text-gray-500">
+              Since {new Date(tenantData.dateMovedIn).toLocaleDateString()}
+            </p>
+          </div>
+          
+          <div>
+            <h3 className="font-medium text-sm text-gray-500 mb-1">Next Payment Due</h3>
+            <p className="flex items-center">
+              <Calendar className="mr-1 h-4 w-4" />
+              {new Date(tenantData.nextPaymentDate).toLocaleDateString()}
+            </p>
+          </div>
+          
+          <div className="border-t pt-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">Monthly Rent</span>
+              <span>{tenantData.property.currency} {tenantData.property.price}</span>
             </div>
-          </CardContent>
-          <CardFooter className="bg-gray-50 border-t rounded-b-lg">
-            <div className="text-sm text-gray-500 w-full">
-              <p className="flex items-center">
-                <AlertCircle className="mr-1 h-4 w-4 text-amber-500" />
-                Payments are due on the 1st of each month. Late fees apply after the 5th.
-              </p>
+            
+            {tenantData.arrears > 0 && (
+              <div className="flex justify-between mb-2 text-red-600">
+                <span className="flex items-center">
+                  <AlertCircle className="mr-1 h-4 w-4" />
+                  Arrears
+                </span>
+                <span>{tenantData.property.currency} {tenantData.arrears}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between font-semibold border-t pt-2 mt-2">
+              <span>Total Due</span>
+              <span>{tenantData.property.currency} {tenantData.balanceDue}</span>
             </div>
-          </CardFooter>
-        </Card>
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-4">
+          <p>Loading payment details...</p>
+        </div>
+      )}
+    </div>
+  </CardContent>
+  <CardFooter className="bg-gray-50 border-t rounded-b-lg">
+    <div className="text-sm text-gray-500 w-full">
+      <p className="flex items-center">
+        <AlertCircle className="mr-1 h-4 w-4 text-amber-500" />
+        Payments are due on the 1st of each month.
+      </p>
+    </div>
+  </CardFooter>
+</Card>
       </div>
     </div>
   );

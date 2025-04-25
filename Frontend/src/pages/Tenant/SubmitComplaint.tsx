@@ -434,10 +434,6 @@ const ComplaintsTable = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
                         {complaint.status === 'PENDING' && (
                           <>
                             <DropdownMenuItem onClick={() => openEditModal(complaint)}>
