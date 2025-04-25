@@ -152,6 +152,7 @@ namespace Infrastructure.Services.Property
             existingProperty.Description = property.Description;
             existingProperty.Price = property.Price;
             existingProperty.NumberOfRooms = property.NumberOfRooms;
+            existingProperty.OwnerId = property.OwnerId;
             await _context.SaveChangesAsync();
         } 
     }
