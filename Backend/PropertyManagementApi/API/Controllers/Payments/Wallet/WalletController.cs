@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces.PaymentService.WalletSvc;
+using Domain.Dtos.Payments.WalletDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -46,13 +47,13 @@ namespace API.Controllers.Payments.Wallet
             }
         }
 
-        [HttpPost("/Withdraw/{landlordid}")]
-        public async Task<IActionResult> Withdraw(int landlordid, [FromBody] decimal amount)
+        [HttpPost("/Withdraw")]
+        public async Task<IActionResult> Withdraw([FromForm] WithdrawDto withdrawDto )
         {
             try
             {
                 //var landlordId = int.Parse(User.FindFirst("UserId")?.Value);
-                await _svc.WithdrawAsync(landlordid, amount);
+                await _svc.WithdrawAsync(withdrawDto);
                 return Ok("Withdrawal successful.");
             }
             catch (Exception ex)

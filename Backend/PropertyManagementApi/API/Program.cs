@@ -163,6 +163,7 @@ app.UseSwaggerUI(c =>
 {
     // If hosting in a subdirectory, adjust the SwaggerEndpoint path accordingly.
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Property Management API v1");
+    c.RoutePrefix = string.Empty;
 });
 
 app.UseAuthentication();

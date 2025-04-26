@@ -40,6 +40,27 @@ namespace Infrastructure.Services.PaymentServices
             // 3) Accrue missed months into Arrears
             AccrueArrearsIfNeeded(tenant);
 
+            //check if transaction ID is supplied
+            if (string.IsNullOrEmpty(tenantPaymentDto.TransactionId))
+            {
+                //generate a random transaction ID
+                tenantPaymentDto.TransactionId = Guid.NewGuid().ToString();
+
+                //check if transaction ID is unique
+                while (await _context.TenantPayments
+                        .AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
+                {
+                    tenantPaymentDto.TransactionId = Guid.NewGuid().ToString();
+                }
+            }
+            else
+            {
+                //check if transaction ID is unique
+                if (await _context.TenantPayments
+                        .AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
+                    throw new Exception("Payment with this transaction ID already exists.");
+            }
+
             // 4) Record the payment
             var payment = new TenantPayment
             {

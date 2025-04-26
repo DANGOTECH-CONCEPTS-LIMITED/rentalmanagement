@@ -1,437 +1,324 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { DollarSign, Calendar, Filter, Search, Download, ArrowUp, ArrowDown, Receipt, DownloadIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import {
-  DollarSign,
-  Calendar,
-  Filter,
-  Search,
-  Download,
-  ArrowUp,
-  ArrowDown,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { toast } from "@/hooks/use-toast";
-import axios from "axios";
-
-// Import jsPDF correctly
-import { jsPDF } from "jspdf";
-// Add the autoTable plugin - make sure this is installed via npm
-import "jspdf-autotable";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 interface Payment {
-  balanceDue: any;
-  id: string;
-  tenant: string;
-  property: string;
+  id: number;
   amount: number;
-  date: string;
-  status: "paid" | "pending" | "late" | "SUCCESSFUL" | "FAILED";
-  method: "credit_card" | "bank_transfer" | "cash" | string;
+  paymentDate: string;
+  paymentMethod: string;
+  vendor: string;
+  paymentType: string;
+  paymentStatus: string;
+  transactionId: string;
+  description: string | null;
+  propertyTenantId: number;
+  propertyTenant: {
+    id: number;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    property: {
+      id: number;
+      name: string;
+      address: string;
+    };
+  };
 }
 
 const TrackPayments = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [sortField, setSortField] = useState("date");
-  const [sortDirection, setSortDirection] = useState("desc");
-
-  // Mock data for payments
+  const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterMethod, setFilterMethod] = useState('all');
+  const [sortField, setSortField] = useState('paymentDate');
+  const [sortDirection, setSortDirection] = useState('desc');
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const landlordId = user.id;
+  console.log('Payments:', payments);
 
-  useEffect(() => {
-    fetchPayments();
-  }, []);
-
-  const fetchPayments = async () => {
+  
+  const getAuthToken = () => {
     try {
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/GetAllPayments`
-      );
-
-      const formattedPayments = data.map((payment: any) => ({
-        id: payment.id,
-        tenant: payment.propertyTenant.fullName,
-        property: `${payment.propertyTenant.property?.name} ${payment.propertyTenant.property?.type}`,
-        amount: payment.amount,
-        date: new Date(payment.paymentDate).toISOString().split("T")[0],
-        status: payment.paymentStatus,
-        method: payment.paymentMethod,
-        balanceDue: payment.propertyTenant.balanceDue,
-      }));
-
-      setPayments(formattedPayments);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      const user = localStorage.getItem('user');
+      if (!user) {
+        console.error('No user found in localStorage');
+        return null;
+      }
+      const userData = JSON.parse(user);
+      return userData.token;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
     }
   };
 
-  // Filter payments based on search term and status filter
-  let filteredPayments = payments.filter(
-    (payment) =>
-      (payment.tenant?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-        payment.property?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-        payment.id?.toLowerCase().includes(searchTerm?.toLowerCase())) &&
-      (filterStatus === "all" || payment.status === filterStatus)
-  );
 
-  // Sort payments
-  filteredPayments.sort((a, b) => {
-    if (sortField === "date") {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
-      return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
-    } else if (sortField === "amount") {
-      return sortDirection === "asc"
-        ? a.amount - b.amount
-        : b.amount - a.amount;
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/GetAllPayments`, {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`,
+            'accept': '*/*'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch payments');
+        }
+
+        const data = await response.json();
+        setPayments(data);
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load payments",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, [apiUrl, toast]);
+
+  const generateReceipt = (payment: Payment) => {
+    const receiptHTML = `
+      <html>
+        <head>
+          <title>Receipt for Payment ${payment.transactionId}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .receipt-title { font-size: 24px; font-weight: bold; }
+            .receipt-details { margin-top: 30px; }
+            .detail-row { display: flex; margin-bottom: 10px; }
+            .detail-label { font-weight: bold; width: 150px; }
+            .footer { margin-top: 40px; text-align: center; font-size: 12px; }
+            .divider { border-top: 1px dashed #000; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="receipt-title">PAYMENT RECEIPT</div>
+            <div>Transaction ID: ${payment.transactionId}</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="receipt-details">
+            <div class="detail-row">
+              <div class="detail-label">Tenant:</div>
+              <div>${payment.propertyTenant.fullName}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Property:</div>
+              <div>${payment.propertyTenant.property.name}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Address:</div>
+              <div>${payment.propertyTenant.property.address}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Payment Date:</div>
+              <div>${new Date(payment.paymentDate).toLocaleDateString()}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Payment Method:</div>
+              <div>${payment.paymentMethod}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Payment Type:</div>
+              <div>${payment.paymentType}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Amount:</div>
+              <div>UGX ${payment.amount.toLocaleString()}</div>
+            </div>
+            ${payment.description ? `
+            <div class="detail-row">
+              <div class="detail-label">Description:</div>
+              <div>${payment.description}</div>
+            </div>
+            ` : ''}
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="footer">
+            <div>Thank you for your payment!</div>
+            <div>Generated on ${new Date().toLocaleDateString()}</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([receiptHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt_${payment.transactionId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Receipt Generated",
+      description: `Receipt for payment ${payment.transactionId} has been downloaded.`,
+    });
+  };
+
+  const handleExport = () => {
+    const headers = [
+      'Transaction ID',
+      'Tenant',
+      'Property',
+      'Amount (UGX)',
+      'Payment Date',
+      'Payment Method',
+      'Payment Type',
+      'Status',
+      'Description'
+    ];
+
+    const csvRows = [
+      headers.join(','),
+      ...payments.map(payment => [
+        `"${payment.transactionId}"`,
+        `"${payment.propertyTenant.fullName}"`,
+        `"${payment.propertyTenant.property.name}"`,
+        payment.amount,
+        new Date(payment.paymentDate).toLocaleDateString(),
+        payment.paymentMethod,
+        payment.paymentType,
+        payment.paymentStatus,
+        payment.description ? `"${payment.description}"` : ''
+      ].join(','))
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'payments_export.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: "Payment data has been exported to CSV",
+    });
+  };
+
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = 
+      payment.propertyTenant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      payment.propertyTenant.property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || payment.paymentStatus === filterStatus;
+    const matchesMethod = filterMethod === 'all' || payment.paymentMethod === filterMethod;
+    
+    return matchesSearch && matchesStatus && matchesMethod;
+  });
+
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    if (sortField === 'paymentDate') {
+      const dateA = new Date(a.paymentDate).getTime();
+      const dateB = new Date(b.paymentDate).getTime();
+      return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+    } else if (sortField === 'amount') {
+      return sortDirection === 'asc' ? a.amount - b.amount : b.amount - a.amount;
+    } else if (sortField === 'tenant') {
+      return sortDirection === 'asc' 
+        ? a.propertyTenant.fullName.localeCompare(b.propertyTenant.fullName) 
+        : b.propertyTenant.fullName.localeCompare(a.propertyTenant.fullName);
     }
     return 0;
   });
 
   const handleSort = (field: string) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection("asc");
+      setSortDirection('asc');
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "SUCCESSFUL":
-        return (
-          <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">
-            SUCCESSFUL
-          </span>
-        );
-      case "pending":
-        return (
-          <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs">
-            Pending
-          </span>
-        );
-      case "FAILED":
-        return (
-          <span className="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs">
-            FAILED
-          </span>
-        );
-      case "late":
-        return (
-          <span className="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs">
-            Late
-          </span>
-        );
+      case 'SUCCESSFUL':
+        return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
+      case 'PENDING':
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case 'FAILED':
+        return <Badge variant="destructive">Failed</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-  const getMethodText = (method: string) => {
+  
+  const getMethodBadge = (method: string) => {
     switch (method) {
-      case "credit_card":
-        return "Credit Card";
-      case "bank_transfer":
-        return "Bank Transfer";
-      case "cash":
-      case "CASH":
-        return "Cash";
+      case 'CASH':
+        return <Badge variant="secondary">Cash</Badge>;
+      case 'MOMO':
+        return <Badge variant="secondary">Mobile Money</Badge>;
+      case 'BANK':
+        return <Badge variant="secondary">Bank Transfer</Badge>;
+      case 'CARD':
+        return <Badge variant="secondary">Credit Card</Badge>;
       default:
-        return method;
+        return <Badge variant="outline">{method}</Badge>;
     }
   };
 
-  // Generate and download receipt PDF without using autoTable plugin
-  // Generate and download receipt PDF without using autoTable plugin
-  const downloadReceipt = (payment: Payment) => {
-    try {
-      // Create PDF document
-      const doc = new jsPDF();
-
-      // Set document properties
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-
-      // Add borders to the receipt
-      doc.setDrawColor(0, 102, 204);
-      doc.setLineWidth(0.5);
-      doc.rect(margin, margin, pageWidth - margin * 2, pageHeight - margin * 2);
-
-      // Add decorative header border
-      doc.setFillColor(0, 102, 204);
-      doc.rect(margin, margin, pageWidth - margin * 2, 12, "F");
-
-      // Add header text
-      doc.setFontSize(22);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
-      doc.text("OFFICIAL RENT RECEIPT", pageWidth / 2, margin + 8, {
-        align: "center",
-      });
-
-      // Add receipt number with watermark style
-      doc.setFontSize(40);
-      doc.setTextColor(240, 240, 240);
-      doc.setFont("helvetica", "bold");
-      doc.text(`#${payment.id}`, pageWidth / 2, 70, { align: "center" });
-
-      // Reset text color for main content
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-
-      // Add current date with increased padding
-      const today = new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      doc.text(`Date Issued: ${today}`, margin + 5, margin + 30);
-
-      // Add receipt details with increased padding
-      const leftColumn = margin + 5;
-      const rightColumn = pageWidth / 2 + 10;
-      let currentY = margin + 50; // Increased vertical padding
-
-      // Add two columns of details with better spacing
-      doc.setFont("helvetica", "bold");
-      doc.text("PAYMENT DETAILS", leftColumn, currentY);
-      doc.text("PROPERTY DETAILS", rightColumn, currentY);
-      doc.setFont("helvetica", "normal");
-
-      currentY += 12; // Increased spacing after section headers
-
-      // Left column - Payment details with better spacing
-      doc.text(`Receipt #: ${payment.id}`, leftColumn, currentY);
-      currentY += 10; // Increased line spacing
-      doc.text(`Payment Date: ${payment.date}`, leftColumn, currentY);
-      currentY += 10; // Increased line spacing
-      doc.text(
-        `Payment Method: ${getMethodText(payment.method)}`,
-        leftColumn,
-        currentY
-      );
-      currentY += 10; // Increased line spacing
-
-      // Add status with colored background and better padding
-      const statusText = payment.status.toUpperCase();
-      doc.setFillColor(payment.status === "SUCCESSFUL" ? "#e6ffe6" : "#ffe6e6");
-      doc.rect(leftColumn, currentY - 6, 70, 8, "F");
-      doc.text(`Status: ${statusText}`, leftColumn, currentY);
-      currentY += 15;
-
-      // Right column - Property and tenant info with better spacing
-      let rightY = margin + 62; // Adjusted to align with left column
-      doc.text(`Tenant: ${payment.tenant}`, rightColumn, rightY);
-      rightY += 10; // Increased line spacing
-      doc.text(`Property: ${payment.property}`, rightColumn, rightY);
-      rightY += 10; // Increased line spacing
-
-      // Add divider with more space
-      currentY += 10; // More space before divider
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.5);
-      doc.line(margin, currentY, pageWidth - margin, currentY);
-      currentY += 20; // More space after divider
-
-      // Payment breakdown section title
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.text("PAYMENT BREAKDOWN", pageWidth / 2, currentY, {
-        align: "center",
-      });
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-      currentY += 15;
-
-      // Create our own table since autoTable isn't working
-      const tableX = pageWidth / 4;
-      const tableWidth = pageWidth / 2;
-      const rowHeight = 12; // Slightly taller rows
-
-      // Table headers
-      doc.setFillColor(0, 102, 204);
-      doc.rect(tableX, currentY, tableWidth, rowHeight, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.text("Description", tableX + 8, currentY + 8); // More left padding
-      doc.text("Amount", tableX + tableWidth - 8, currentY + 8, {
-        align: "right",
-      });
-      currentY += rowHeight;
-
-      // Reset text color
-      doc.setTextColor(0, 0, 0);
-      doc.setFont("helvetica", "normal");
-
-      // Table rows
-      // Row 1
-      doc.setFillColor(240, 240, 240);
-      doc.rect(tableX, currentY, tableWidth, rowHeight, "F");
-      doc.setFont("helvetica", "bold");
-      doc.text("Rent Payment", tableX + 8, currentY + 8); // More left padding
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        `${payment.amount.toLocaleString()}`,
-        tableX + tableWidth - 8,
-        currentY + 8,
-        { align: "right" }
-      );
-      currentY += rowHeight;
-
-      // Row 2
-      doc.rect(tableX, currentY, tableWidth, rowHeight);
-      doc.setFont("helvetica", "bold");
-      doc.text("Balance Due", tableX + 8, currentY + 8); // More left padding
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        `${payment.balanceDue.toLocaleString()}`,
-        tableX + tableWidth - 8,
-        currentY + 8,
-        { align: "right" }
-      );
-      currentY += rowHeight;
-
-      const finalY = currentY + 10; // More space before total
-
-      // Total section with background
-      doc.setFillColor(240, 240, 240);
-      doc.rect(tableX, finalY, tableWidth, 14, "F"); // Slightly taller
-      doc.setFont("helvetica", "bold");
-      doc.text("Total Amount Paid:", tableX + 8, finalY + 9); // Better vertical alignment
-      doc.text(
-        `${payment.amount.toLocaleString()}`,
-        tableX + tableWidth - 8,
-        finalY + 9,
-        { align: "right" }
-      );
-
-      // Add footer
-      const footerY = finalY + 20; // More space before signatures
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.3);
-
-      // Signature lines
-      doc.line(margin + 20, footerY, margin + 100, footerY);
-      doc.line(
-        pageWidth - margin - 100,
-        footerY,
-        pageWidth - margin - 20,
-        footerY
-      );
-
-      doc.setFontSize(10);
-      doc.text("Tenant Signature", margin + 60, footerY + 5, {
-        align: "center",
-      });
-      doc.text("Landlord Signature", pageWidth - margin - 60, footerY + 5, {
-        align: "center",
-      });
-
-      // Add notes and thank you message
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "italic");
-      doc.text(
-        "This is an official receipt of your rental payment. Thank you for your prompt payment.",
-        pageWidth / 2,
-        pageHeight - margin - 15,
-        { align: "center" }
-      );
-
-      // Add contact information
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.text(
-        "For any questions regarding this receipt, please contact your property manager.",
-        pageWidth / 2,
-        pageHeight - margin - 8,
-        { align: "center" }
-      );
-
-      // Save the PDF with a more descriptive filename
-      doc.save(
-        `Rent_Receipt_${payment.tenant.replace(/\s+/g, "_")}_${
-          payment.date
-        }.pdf`
-      );
-
-      toast({
-        title: "Receipt downloaded",
-        description: "Rent receipt has been downloaded successfully",
-      });
-    } catch (error: any) {
-      console.error("Error generating PDF:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate receipt. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Calculate total amount received
   const totalReceived = payments
-    .filter((payment) => payment.status === "SUCCESSFUL")
+    .filter(payment => payment.paymentStatus === 'SUCCESSFUL')
     .reduce((sum, payment) => sum + payment.amount, 0);
-
-  // Calculate total pending amount
+  
   const totalPending = payments
-    .filter(
-      (payment) =>
-        payment.status === "pending" ||
-        payment.status === "late" ||
-        payment.status === "FAILED"
-    )
+    .filter(payment => payment.paymentStatus === 'PENDING')
     .reduce((sum, payment) => sum + payment.amount, 0);
 
-  // Export all receipts as a simpler version without requiring JSZip
-  const exportAllReceipts = () => {
-    try {
-      // Just download individual PDFs for each payment for now
-      filteredPayments.forEach((payment, index) => {
-        // Add a slight delay to prevent browser from blocking multiple downloads
-        setTimeout(() => downloadReceipt(payment), index * 300);
-      });
-
-      toast({
-        title: "Exporting receipts",
-        description: `Downloading ${filteredPayments.length} receipts...`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Export failed",
-        description: error.message || "Could not export receipts",
-        variant: "destructive",
-      });
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/landlord-dashboard">
-              Dashboard
-            </BreadcrumbLink>
+            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -440,198 +327,195 @@ const TrackPayments = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Payment Tracking
-        </h1>
-        <Button className="flex items-center gap-2" onClick={exportAllReceipts}>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Payment Tracking</h1>
+          <p className="text-muted-foreground">View and manage all payment transactions</p>
+        </div>
+        <Button 
+          onClick={handleExport} 
+          className="flex items-center gap-2"
+        >
           <Download className="h-4 w-4" />
-          <span>Export All Receipts</span>
+          <span>Export</span>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-green-100 mr-4">
-              <DollarSign className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-medium">Total Received</h3>
-              <p className="text-2xl font-bold">
-                {totalReceived.toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500">
-            <p>
-              From {payments.filter((p) => p.status === "SUCCESSFUL").length}{" "}
-              payments
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Received</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">UGX {totalReceived.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              From {payments.filter(p => p.paymentStatus === 'SUCCESSFUL').length} completed payments
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-yellow-100 mr-4">
-              <Calendar className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-medium">Pending / Late</h3>
-              <p className="text-2xl font-bold">
-                {totalPending.toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500">
-            <p>
-              From{" "}
-              {
-                payments.filter(
-                  (p) =>
-                    p.status === "pending" ||
-                    p.status === "late" ||
-                    p.status === "FAILED"
-                ).length
-              }{" "}
-              payments
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">UGX {totalPending.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              From {payments.filter(p => p.paymentStatus === 'PENDING').length} payments
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cash Payments</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              UGX {payments.filter(p => p.paymentMethod === 'CASH' && p.paymentStatus === 'SUCCESSFUL')
+                .reduce((sum, p) => sum + p.amount, 0)
+                .toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {payments.filter(p => p.paymentMethod === 'CASH').length} cash transactions
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search by tenant, property, or payment ID"
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              className="p-2 border border-gray-300 rounded-md text-sm"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="SUCCESSFUL">Paid</option>
-              <option value="pending">Pending</option>
-              <option value="FAILED">Failed</option>
-              <option value="late">Late</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left">Payment ID</th>
-                <th className="px-6 py-3 text-left">Tenant</th>
-                <th className="px-6 py-3 text-left">Property</th>
-
-                <th
-                  className="px-6 py-3 text-left cursor-pointer"
-                  onClick={() => handleSort("amount")}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search by tenant, property, or transaction ID"
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <select 
+                  className="p-2 border rounded-md text-sm"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
                 >
-                  <div className="flex items-center">
-                    <span>Amount</span>
-                    {sortField === "amount" &&
-                      (sortDirection === "asc" ? (
-                        <ArrowUp className="ml-1 h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="ml-1 h-3 w-3" />
-                      ))}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left">Balance Due</th>
-                <th
-                  className="px-6 py-3 text-left cursor-pointer"
-                  onClick={() => handleSort("date")}
+                  <option value="all">All Status</option>
+                  <option value="SUCCESSFUL">Successful</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="FAILED">Failed</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <select 
+                  className="p-2 border rounded-md text-sm"
+                  value={filterMethod}
+                  onChange={(e) => setFilterMethod(e.target.value)}
                 >
-                  <div className="flex items-center">
-                    <span>Date</span>
-                    {sortField === "date" &&
-                      (sortDirection === "asc" ? (
-                        <ArrowUp className="ml-1 h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="ml-1 h-3 w-3" />
-                      ))}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left">Method</th>
-                <th className="px-6 py-3 text-left">Status</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredPayments.length > 0 ? (
-                filteredPayments.map((payment) => (
-                  <motion.tr
-                    key={payment.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="hover:bg-gray-50"
+                  <option value="all">All Methods</option>
+                  <option value="CASH">Cash</option>
+                  <option value="MOMO">Mobile Money</option>
+                  <option value="BANK">Bank Transfer</option>
+                  <option value="CARD">Credit Card</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">Transaction ID</TableHead>
+                  <TableHead 
+                    className="cursor-pointer" 
+                    onClick={() => handleSort('tenant')}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {payment.id}
-                    </td>
-                    <td className="px-6 py-4">{payment.tenant}</td>
-                    <td className="px-6 py-4">{payment.property}</td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">
-                      {payment.amount.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">
-                      {payment.balanceDue.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {payment.date}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getMethodText(payment.method)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(payment.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-600"
-                        onClick={() => downloadReceipt(payment)}
-                        title="Download receipt as PDF"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span className="ml-1">Receipt</span>
-                      </Button>
-                    </td>
-                  </motion.tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-6 py-10 text-center text-gray-500"
+                    <div className="flex items-center">
+                      Tenant
+                      {sortField === 'tenant' && (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Property</TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer" 
+                    onClick={() => handleSort('amount')}
                   >
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No payments found</p>
-                    <p className="text-sm mt-1">
-                      Try adjusting your search criteria
-                    </p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    <div className="flex items-center justify-end">
+                      Amount
+                      {sortField === 'amount' && (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer" 
+                    onClick={() => handleSort('paymentDate')}
+                  >
+                    <div className="flex items-center">
+                      Date
+                      {sortField === 'paymentDate' && (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedPayments.length > 0 ? (
+                  sortedPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.transactionId}</TableCell>
+                      <TableCell>{payment.propertyTenant.fullName}</TableCell>
+                      <TableCell>{payment.propertyTenant.property.name}</TableCell>
+                      <TableCell className="text-right">UGX {payment.amount.toLocaleString()}</TableCell>
+                      <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
+                      <TableCell>{getMethodBadge(payment.paymentMethod)}</TableCell>
+                      <TableCell>{getStatusBadge(payment.paymentStatus)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-blue-600 hover:text-blue-800"
+                          onClick={() => generateReceipt(payment)}
+                        >
+                          <DownloadIcon className="h-4 w-4 mr-2" />
+                          Receipt
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">No payments found</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Try adjusting your search or filters
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

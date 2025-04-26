@@ -24,6 +24,6 @@ namespace Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         [ForeignKey("Owner")]
         public int OwnerId { get; set; }
-        public  User Owner { get; set; }
+        public  User? Owner { get; set; }
     }
 }

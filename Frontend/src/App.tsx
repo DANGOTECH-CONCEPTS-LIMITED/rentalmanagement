@@ -109,10 +109,6 @@ const App = () => (
                 <Route path="make-payment" element={<MakePayment />} />
                 <Route path="payment-history" element={<PaymentHistory />} />
                 <Route path="submit-complaint" element={<SubmitComplaint />} />
-                <Route
-                  path="cash-transactions"
-                  element={<CashTransactions />}
-                />
               </Route>
             </Route>
 

@@ -119,6 +119,14 @@ namespace Infrastructure.Services.Property
             if (property == null)
                 throw new Exception(nameof(property));
 
+            // Check if the image is not null
+            if (image != null) 
+            {
+                // Save the image to the server and get the URL
+                var imageUrl = await _fileService.SaveFileAndReturnPathAsync(image);
+                property.ImageUrl = imageUrl;
+            }
+
             // Get the role for "Landlord"
             var landlordRole = await _context.SystemRoles
                 .FirstOrDefaultAsync(r => r.Name == "Landlord");
@@ -152,6 +160,8 @@ namespace Infrastructure.Services.Property
             existingProperty.Description = property.Description;
             existingProperty.Price = property.Price;
             existingProperty.NumberOfRooms = property.NumberOfRooms;
+            existingProperty.OwnerId = property.OwnerId;
+            existingProperty.ImageUrl = property.ImageUrl;
             await _context.SaveChangesAsync();
         } 
     }
