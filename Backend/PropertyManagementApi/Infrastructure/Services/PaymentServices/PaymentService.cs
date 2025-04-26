@@ -53,6 +53,13 @@ namespace Infrastructure.Services.PaymentServices
                     tenantPaymentDto.TransactionId = Guid.NewGuid().ToString();
                 }
             }
+            else
+            {
+                //check if transaction ID is unique
+                if (await _context.TenantPayments
+                        .AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
+                    throw new Exception("Payment with this transaction ID already exists.");
+            }
 
             // 4) Record the payment
             var payment = new TenantPayment
