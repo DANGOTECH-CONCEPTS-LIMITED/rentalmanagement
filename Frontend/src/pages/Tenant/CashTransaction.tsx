@@ -290,7 +290,7 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
                   name="transactionId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Transaction ID</FormLabel>
+                      <FormLabel>Receipt No.</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
