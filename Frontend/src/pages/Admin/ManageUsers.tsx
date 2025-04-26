@@ -10,7 +10,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";import {
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -38,13 +39,20 @@ import {
   User,
   Eye,
   Users,
-  Clock
+  Clock,
+  Upload,
+  X,
+  Camera,
+  FileText,
+  CreditCard,
 } from "lucide-react";
 import axios from "axios";
 
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import Modal from "@/components/common/Model";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
+import { LandlordFormData } from "./RegisterLandlord";
+import ConfirmDeleteModal from "@/components/common/DeleteModal";
 
 interface User {
   id: string;
@@ -166,8 +174,8 @@ const UserDetails = ({
               user.role === "Administrator"
                 ? "destructive"
                 : user.role === "Landlord"
-                  ? "default"
-                  : "secondary"
+                ? "default"
+                : "secondary"
             }
           >
             {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
@@ -332,8 +340,8 @@ const UserDetails = ({
                       {tenant.rentAmount
                         ? formatCurrency(tenant.rentAmount)
                         : tenantProperty
-                          ? formatCurrency(tenantProperty.rentAmount)
-                          : "N/A"}
+                        ? formatCurrency(tenantProperty.rentAmount)
+                        : "N/A"}
                     </TableCell>
                     <TableCell>
                       {tenant.status === "active" ? (
@@ -370,9 +378,14 @@ const ManageUsers = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<LandlordFormData>({
+    FullName: "",
+    PhoneNumber: "",
+    Email: "",
+    Password: "defaultPassword",
+    IdType: "nationalId",
+    IdNumber: "",
     systemRoleId: "",
   });
   const [editFormData, setEditFormData] = useState({
@@ -384,9 +397,9 @@ const ManageUsers = () => {
     nationalIdNumber: "",
     active: true,
     verified: false,
-    passportPhoto: null as File | null,
-    idFront: null as File | null,
-    idBack: null as File | null,
+    PassportPhoto: null as File | null,
+    IdFront: null as File | null,
+    IdBack: null as File | null,
     currentPassportPhoto: "",
     currentIdFront: "",
     currentIdBack: "",
@@ -402,6 +415,34 @@ const ManageUsers = () => {
     systemRoleId: "",
     phoneNumber: "",
   });
+  const [previewUrls, setPreviewUrls] = useState({
+    PassportPhoto: null as string | null,
+    IdFront: null as string | null,
+    IdBack: null as string | null,
+  });
+
+  const idTypes = [
+    { value: "nationalId", label: "National ID", requiresBack: true },
+    { value: "passport", label: "Passport", requiresBack: true },
+    { value: "driverLicense", label: "Driver's License", requiresBack: true },
+  ];
+
+  const removeFile = (fileType: "PassportPhoto" | "IdFront" | "IdBack") => {
+    setFormData((prev) => ({ ...prev, [fileType]: null }));
+    setPreviewUrls((prev) => ({ ...prev, [fileType]: null }));
+  };
+
+  const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      IdType: e.target.value as "nationalId" | "drivingPermit" | "passport",
+    }));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -416,7 +457,11 @@ const ManageUsers = () => {
 
       setRoles(data);
     } catch (error) {
-      console.log(error);
+      toast({
+        title: "Error",
+        description: error.response.data,
+        variant: "destructive",
+      });
     }
   };
   const fetchUsers = async () => {
@@ -436,21 +481,41 @@ const ManageUsers = () => {
 
       setUsers(formattedUsers);
     } catch (error) {
-      console.error("Error fetching users:", error);
-      toast.error("Failed to fetch users");
+      toast({
+        title: "Error",
+        description: error.response.data,
+        variant: "destructive",
+      });
     }
   };
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
     setIsModalOpen(false);
-    setFormData({ fullName: "", email: "", systemRoleId: "" });
+    setFormData({
+      FullName: "",
+      PhoneNumber: "",
+      Email: "",
+      Password: "defaultPassword",
+      IdType: "nationalId",
+      IdNumber: "",
+      systemRoleId: "",
+    });
+    setPreviewUrls({
+      PassportPhoto: null as string | null,
+      IdFront: null as string | null,
+      IdBack: null as string | null,
+    });
     setErrors({ fullName: "", email: "", systemRoleId: "" });
   };
 
   const openEditModal = (user: User) => {
-    axios.get<ApiUser>(`${import.meta.env.VITE_API_BASE_URL}/GetUserById/${user.id}`)
-      .then(response => {
+    axios
+      .get<ApiUser>(
+        `${import.meta.env.VITE_API_BASE_URL}/GetUserById/${user.id}`
+      )
+      .then((response) => {
         const userData = response.data;
+        console.log("user", userData);
         setEditFormData({
           id: userData.id,
           fullName: userData.fullName,
@@ -460,18 +525,21 @@ const ManageUsers = () => {
           nationalIdNumber: userData.nationalIdNumber || "",
           active: userData.active,
           verified: userData.verified,
-          passportPhoto: null,
-          idFront: null,
-          idBack: null,
+          PassportPhoto: null,
+          IdFront: null,
+          IdBack: null,
           currentPassportPhoto: userData.passportPhoto,
           currentIdFront: userData.idFront,
           currentIdBack: userData.idBack,
         });
         setIsEditModalOpen(true);
       })
-      .catch(error => {
-        console.error("Error fetching user details:", error);
-        toast.error("Failed to fetch user details for editing");
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: error.response.data,
+          variant: "destructive",
+        });
       });
   };
 
@@ -502,8 +570,8 @@ const ManageUsers = () => {
 
   const handleEditChange = (e: any) => {
     const { name, value, type, checked } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
-    
+    const newValue = type === "checkbox" ? checked : value;
+
     setEditFormData({
       ...editFormData,
       [name]: newValue,
@@ -522,16 +590,16 @@ const ManageUsers = () => {
     const newErrors = { fullName: "", email: "", systemRoleId: "" };
 
     // Validate fullName
-    if (!formData.fullName.trim()) {
+    if (!formData.FullName.trim()) {
       newErrors.fullName = "Full name is required";
       isValid = false;
     }
 
     // Validate email
-    if (!formData.email.trim()) {
+    if (!formData.Email.trim()) {
       newErrors.email = "Email is required";
       isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(formData.Email)) {
       newErrors.email = "Email address is invalid";
       isValid = false;
     }
@@ -548,11 +616,11 @@ const ManageUsers = () => {
 
   const validateEditForm = () => {
     let isValid = true;
-    const newErrors = { 
-      fullName: "", 
-      email: "", 
+    const newErrors = {
+      fullName: "",
+      email: "",
       systemRoleId: "",
-      phoneNumber: "" 
+      phoneNumber: "",
     };
 
     // Validate fullName
@@ -577,7 +645,10 @@ const ManageUsers = () => {
     }
 
     // Validate phoneNumber if provided
-    if (editFormData.phoneNumber && !/^\+?\d{10,15}$/.test(editFormData.phoneNumber)) {
+    if (
+      editFormData.phoneNumber &&
+      !/^\+?\d{10,15}$/.test(editFormData.phoneNumber)
+    ) {
       newErrors.phoneNumber = "Please enter a valid phone number";
       isValid = false;
     }
@@ -586,105 +657,281 @@ const ManageUsers = () => {
     return isValid;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (validateForm()) {
-      // Convert systemRoleId to number
-      const submittedData = {
-        ...formData,
-        systemRoleId: Number(formData.systemRoleId),
-      };
+    if (
+      !formData.PassportPhoto ||
+      !formData.IdFront ||
+      (isBackSideRequired() && !formData.IdBack)
+    ) {
+      toast({
+        title: "Missing Documents",
+        description: "Please upload all required identification documents.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      try {
-        const { data, status } = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/RegisterUser`,
-          submittedData
-        );
-        if (status >= 200 && status < 300) {
-          closeModal();
-          toast.success("User created successfully!");
-          fetchUsers();
-        }
-      } catch (error) {
-        console.log("error", error);
-        toast.error("Failed to create user");
+    setIsSubmitting(true);
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("FullName", formData.FullName);
+      formDataToSend.append("PhoneNumber", formData.PhoneNumber);
+      formDataToSend.append("Email", formData.Email);
+      formDataToSend.append("NationalIdNumber", formData.IdNumber);
+      formDataToSend.append("SystemRoleId", formData.systemRoleId);
+      const files = [];
+      if (formData.PassportPhoto) {
+        files.push({
+          file: formData.PassportPhoto,
+          type: "PassportPhoto",
+        });
       }
+      if (formData.IdFront) {
+        files.push({
+          file: formData.IdFront,
+          type: `${formData.IdType}Front`,
+        });
+      }
+      if (formData.IdBack) {
+        files.push({
+          file: formData.IdBack,
+          type: `${formData.IdType}Back`,
+        });
+      }
+      files.forEach((fileObj, index) => {
+        formDataToSend.append(`files`, fileObj.file);
+      });
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+      if (!apiUrl) {
+        throw new Error("API base URL is not configured");
+      }
+      const response = await fetch(`${apiUrl}/RegisterUser`, {
+        method: "POST",
+        headers: {
+          accept: "*/*",
+        },
+        body: formDataToSend,
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to register landlord");
+      }
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        result = { message: responseText };
+      }
+      toast({
+        title: "Landlord Registered",
+        description: `${formData.FullName} has been successfully registered.`,
+      });
+      setFormData({
+        FullName: "",
+        PhoneNumber: "",
+        Email: "",
+        Password: "defaultPassword",
+        IdType: "nationalId",
+        IdNumber: "",
+        systemRoleId: "",
+      });
+      setPreviewUrls({
+        PassportPhoto: null,
+        IdFront: null,
+        IdBack: null,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("User regis")) {
+        toast({
+          title: "Landlord Registered",
+          description: `${formData.FullName} has been successfully registered.`,
+        });
+
+        setFormData({
+          FullName: "",
+          PhoneNumber: "",
+          Email: "",
+          Password: "defaultPassword",
+          IdType: "nationalId",
+          IdNumber: "",
+          systemRoleId: "",
+        });
+        setPreviewUrls({
+          PassportPhoto: null,
+          IdFront: null,
+          IdBack: null,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.response.data,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      // setIsSubmitting(false);
     }
   };
 
-  const handleUpdateSubmit = async (e) => {
+  const handleUpdateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (validateEditForm()) {
       // Get token for authorization
-      const user = localStorage.getItem('user') || null;
+      const user = localStorage.getItem("user") || null;
       const token = user ? JSON.parse(user).token : null;
 
       if (!token) {
-        toast.error("Authentication required");
+        toast({
+          title: "Authentication required",
+          description: "Please log in to perform this action.",
+          variant: "destructive",
+        });
+
         return;
       }
 
       try {
         // Create FormData to handle multipart/form-data
         const formData = new FormData();
-        formData.append('Id', editFormData.id);
-        formData.append('FullName', editFormData.fullName);
-        formData.append('Email', editFormData.email);
-        formData.append('SystemRoleId', editFormData.systemRoleId);
-        formData.append('PhoneNumber', editFormData.phoneNumber || '');
-        formData.append('Active', editFormData.active.toString());
-        formData.append('Verified', editFormData.verified.toString());
-        formData.append('NationalIdNumber', editFormData.nationalIdNumber || '');
-        
-        // Required fields with default values for the API
-        formData.append('PassportPhoto', 'string');
-        formData.append('IdFront', 'string');
-        formData.append('IdBack', 'string');
-        formData.append('Password', 'string');
-        formData.append('Token', 'string');
-        formData.append('PasswordChanged', 'true');
-        formData.append('SystemRole.Id', '0');
-        formData.append('SystemRole.Name', 'string');
-        formData.append('SystemRole.Description', 'string');
-        formData.append('SystemRole.Permissions', 'string');
-        formData.append('SystemRole.CreatedAt', new Date().toISOString());
-        formData.append('files', 'string');
+        formData.append("Id", editFormData.id);
+        formData.append("FullName", editFormData.fullName);
+        formData.append("Email", editFormData.email);
+        formData.append("SystemRoleId", editFormData.systemRoleId);
+        formData.append("PhoneNumber", editFormData.phoneNumber || "");
+        formData.append("Active", editFormData.active.toString());
+        formData.append("Verified", editFormData.verified.toString());
+        formData.append(
+          "NationalIdNumber",
+          editFormData.nationalIdNumber || ""
+        );
+
+        const files = [];
+        console.log("editFormData", editFormData);
+        console.log("previewUrls", previewUrls);
+        if (editFormData.PassportPhoto) {
+          files.push({
+            file: editFormData.PassportPhoto,
+            type: "PassportPhoto",
+          });
+        }
+
+        if (editFormData.IdFront) {
+          files.push({
+            file: editFormData.IdFront,
+            type: `IdFront`,
+          });
+        }
+
+        if (editFormData.IdBack) {
+          files.push({
+            file: editFormData.IdBack,
+            type: `IdBack`,
+          });
+        }
+
+        files.forEach((fileObj, index) => {
+          formData.append(`files`, fileObj.file);
+        });
 
         const { status } = await axios.put(
           `${import.meta.env.VITE_API_BASE_URL}/UpdateUser`,
           formData,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data'
-            }
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
           }
         );
 
         if (status >= 200 && status < 300) {
           closeEditModal();
-          toast.success("User updated successfully!");
+          // toast.success("User updated successfully!");
+          toast({
+            title: "Success",
+            description: "User updated successfully!",
+          });
           fetchUsers();
         }
       } catch (error) {
-        console.error("Error updating user:", error);
-        toast.error("Failed to update user");
+        toast({
+          title: "Error",
+          description: error.response.data,
+          variant: "destructive",
+        });
       }
     }
   };
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>, 
-    field: 'passportPhoto' | 'idFront' | 'idBack'
+  const handleEditFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
   ) => {
-    if (e.target.files && e.target.files[0]) {
-      setEditFormData({
-        ...editFormData,
-        [field]: e.target.files[0],
-      });
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditFormData((prev) => ({ ...prev, [fileType]: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [fileType]: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
     }
+  };
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData((prev) => ({ ...prev, [fileType]: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [fileType]: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+  ) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      setFormData((prev) => ({ ...prev, [fileType]: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrls((prev) => ({
+          ...prev,
+          [fileType]: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getIdTypeLabel = (idType: string) => {
+    const foundType = idTypes.find((type) => type.value === idType);
+    return foundType ? foundType.label : "ID";
+  };
+
+  const isBackSideRequired = () => {
+    const selectedIdType = idTypes.find(
+      (type) => type.value === formData.IdType
+    );
+    return selectedIdType ? selectedIdType.requiresBack : false;
   };
 
   const [properties] = useState<Property[]>([
@@ -862,7 +1109,7 @@ const ManageUsers = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         title="Add new user"
-        size="md"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-6">
             <button
@@ -873,6 +1120,7 @@ const ManageUsers = () => {
               Cancel
             </button>
             <button
+              onClick={handleSubmit}
               type="submit"
               form="userForm"
               className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
@@ -882,83 +1130,240 @@ const ManageUsers = () => {
           </div>
         }
       >
-        <form id="userForm" onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="fullName"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Full Name
-            </label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.fullName
-                ? "border-red-500 focus:ring-red-300"
-                : "border-gray-300 focus:ring-blue-300"
-                }`}
-              placeholder="Enter your full name"
-            />
-            {errors.fullName && (
-              <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.email
-                ? "border-red-500 focus:ring-red-300"
-                : "border-gray-300 focus:ring-blue-300"
-                }`}
-              placeholder="example@email.com"
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="systemRoleId"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              System Role
-            </label>
-            <select
-              id="systemRoleId"
-              name="systemRoleId"
-              value={formData.systemRoleId}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${errors.systemRoleId
-                ? "border-red-500 focus:ring-red-300 "
-                : "border-gray-300 focus:ring-blue-300"
-                }`}
-            >
-              <option value="">Select a role</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-            {errors.systemRoleId && (
-              <p className="mt-1 text-sm text-red-600">{errors.systemRoleId}</p>
-            )}
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 h-[60vh] overflow-y-auto"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Full Name</label>
+              <input
+                type="text"
+                name="FullName"
+                value={formData.FullName}
+                onChange={handleInputChange}
+                className="input-field"
+                placeholder="Enter landlord's full name"
+                required
+              />
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Phone Number</label>
+              <input
+                type="tel"
+                name="PhoneNumber"
+                value={formData.PhoneNumber}
+                onChange={handleInputChange}
+                className="input-field"
+                placeholder="Enter phone number"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <input
+                type="email"
+                name="Email"
+                value={formData.Email}
+                onChange={handleInputChange}
+                className="input-field"
+                placeholder="Enter email address"
+                required
+              />
+            </div>
+            <div className="md:col-span-2 space-y-4">
+              <label className="text-sm font-medium">Identification Type</label>
+              <div className="flex flex-wrap gap-4">
+                {idTypes.map((type) => (
+                  <label
+                    key={type.value}
+                    className="flex items-center space-x-2 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="IdType"
+                      value={type.value}
+                      checked={formData.IdType === type.value}
+                      onChange={handleRadioChange}
+                      className="radio-input"
+                    />
+                    <span>{type.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                {getIdTypeLabel(formData.IdType)} Number
+              </label>
+              <input
+                type="text"
+                name="IdNumber"
+                value={formData.IdNumber}
+                onChange={handleInputChange}
+                className="input-field w-full"
+                placeholder={`Enter ${getIdTypeLabel(
+                  formData.IdType
+                ).toLowerCase()} number`}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Passport Photo Upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Camera size={16} className="mr-1" />
+                Passport Photo
+              </label>
+              <div
+                className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                onDragOver={(e) => e.preventDefault()}
+                onDragLeave={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, "PassportPhoto")}
+              >
+                {previewUrls.PassportPhoto ? (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={previewUrls.PassportPhoto}
+                      alt="Passport Preview"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeFile("PassportPhoto")}
+                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                    <div className="mt-2 text-xs">
+                      <label className="cursor-pointer text-primary hover:text-primary/80">
+                        Upload photo
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e, "PassportPhoto")}
+                        />
+                      </label>
+                      <p>or drag and drop</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ID Document Front Upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                {formData.IdType === "passport" ? (
+                  <FileText size={16} className="mr-1" />
+                ) : (
+                  <CreditCard size={16} className="mr-1" />
+                )}
+                {formData.IdType === "passport"
+                  ? "Passport Data Page"
+                  : `${getIdTypeLabel(formData.IdType)} Front`}
+              </label>
+              <div
+                className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                onDragOver={(e) => e.preventDefault()}
+                onDragLeave={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, "IdFront")}
+              >
+                {previewUrls.IdFront ? (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={previewUrls.IdFront}
+                      alt="ID Front Preview"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeFile("IdFront")}
+                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                    <div className="mt-2 text-xs">
+                      <label className="cursor-pointer text-primary hover:text-primary/80">
+                        Upload{" "}
+                        {formData.IdType === "passport" ? "page" : "front"}
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e, "IdFront")}
+                        />
+                      </label>
+                      <p>or drag and drop</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ID Document Back Upload */}
+            {isBackSideRequired() && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  <CreditCard size={16} className="mr-1" />
+                  {getIdTypeLabel(formData.IdType)} Back
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, "IdBack")}
+                >
+                  {previewUrls.IdBack ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={previewUrls.IdBack}
+                        alt="ID Back Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile("IdBack")}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2 text-xs">
+                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                          Upload back
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, "IdBack")}
+                          />
+                        </label>
+                        <p>or drag and drop</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </form>
       </Modal>
 
@@ -967,7 +1372,7 @@ const ManageUsers = () => {
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
         title="Edit user"
-        size="md"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-6">
             <button
@@ -987,166 +1392,287 @@ const ManageUsers = () => {
           </div>
         }
       >
-         <form id="editUserForm" onSubmit={handleUpdateSubmit} className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Basic Information */}
-      <div className="space-y-4">
-        <h3 className="font-medium">Basic Information</h3>
-        <div>
-          <Label htmlFor="edit-fullName">Full Name</Label>
-          <Input
-            id="edit-fullName"
-            name="fullName"
-            value={editFormData.fullName}
-            onChange={handleEditChange}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="edit-email">Email</Label>
-          <Input
-            id="edit-email"
-            type="email"
-            name="email"
-            value={editFormData.email}
-            onChange={handleEditChange}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="edit-phoneNumber">Phone Number</Label>
-          <Input
-            id="edit-phoneNumber"
-            name="phoneNumber"
-            value={editFormData.phoneNumber}
-            onChange={handleEditChange}
-          />
-        </div>
-        <div>
-          <Label htmlFor="edit-nationalIdNumber">National ID Number</Label>
-          <Input
-            id="edit-nationalIdNumber"
-            name="nationalIdNumber"
-            value={editFormData.nationalIdNumber}
-            onChange={handleEditChange}
-          />
-        </div>
-      </div>
+        <form
+          id="editUserForm"
+          onSubmit={handleUpdateSubmit}
+          className="space-y-6 px-2 h-[60vh] overflow-y-auto"
+        >
+          <div className="grid grid-cols-1  gap-2">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Basic Information</h3>
+              <div>
+                <Label htmlFor="edit-fullName">Full Name</Label>
+                <Input
+                  id="edit-fullName"
+                  name="fullName"
+                  value={editFormData.fullName}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  name="email"
+                  value={editFormData.email}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-phoneNumber">Phone Number</Label>
+                <Input
+                  id="edit-phoneNumber"
+                  name="phoneNumber"
+                  value={editFormData.phoneNumber}
+                  onChange={handleEditChange}
+                />
+              </div>
+            </div>
 
-      {/* Role and Status */}
-      <div className="space-y-4">
-        <h3 className="font-medium">Role & Status</h3>
-        <div>
-          <Label htmlFor="edit-systemRoleId">System Role</Label>
-          <Select
-            value={editFormData.systemRoleId}
-            onValueChange={(value) => 
-              setEditFormData({...editFormData, systemRoleId: value})
-            }
-            required
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a role" />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id.toString()}>
-                  {role.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="edit-active"
-              checked={editFormData.active}
-              onCheckedChange={(checked) => 
-                setEditFormData({...editFormData, active: Boolean(checked)})
-              }
-            />
-            <Label htmlFor="edit-active">Active</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="edit-verified"
-              checked={editFormData.verified}
-              onCheckedChange={(checked) => 
-                setEditFormData({...editFormData, verified: Boolean(checked)})
-              }
-            />
-            <Label htmlFor="edit-verified">Verified</Label>
-          </div>
-        </div>
-      </div>
+            {/* Role and Status */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Role & Status</h3>
+              <div>
+                <Label htmlFor="edit-systemRoleId">System Role</Label>
+                <Select
+                  value={editFormData.systemRoleId}
+                  onValueChange={(value) =>
+                    setEditFormData({ ...editFormData, systemRoleId: value })
+                  }
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id.toString()}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-active"
+                    checked={editFormData.active}
+                    onCheckedChange={(checked) =>
+                      setEditFormData({
+                        ...editFormData,
+                        active: Boolean(checked),
+                      })
+                    }
+                  />
+                  <Label htmlFor="edit-active">Active</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-verified"
+                    checked={editFormData.verified}
+                    onCheckedChange={(checked) =>
+                      setEditFormData({
+                        ...editFormData,
+                        verified: Boolean(checked),
+                      })
+                    }
+                  />
+                  <Label htmlFor="edit-verified">Verified</Label>
+                </div>
+              </div>
 
-      {/* Document Uploads */}
-      <div className="space-y-4">
-        <h3 className="font-medium">Documents</h3>
-        <div>
-          <Label>Passport Photo</Label>
-          {editFormData.currentPassportPhoto && (
-            <div className="mb-2">
-              <a 
-                href={`${import.meta.env.VITE_API_BASE_URL}/${editFormData.currentPassportPhoto}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 text-sm"
-              >
-                View Current Photo
-              </a>
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-sm font-medium">
+                  Identification Type
+                </label>
+                <div className="flex flex-wrap gap-4">
+                  {idTypes.map((type) => (
+                    <label
+                      key={type.value}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="IdType"
+                        value={type.value}
+                        checked={formData.IdType === type.value}
+                        onChange={handleRadioChange}
+                        className="radio-input"
+                      />
+                      <span>{type.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {getIdTypeLabel(formData.IdType)} Number
+                </label>
+                <Input
+                  id="edit-nationalIdNumber"
+                  name="nationalIdNumber"
+                  value={editFormData.nationalIdNumber}
+                  onChange={handleEditChange}
+                />
+              </div>
             </div>
-          )}
-          <Input 
-            type="file" 
-            accept="image/*"
-            onChange={(e) => handleFileChange(e, 'passportPhoto')}
-          />
-        </div>
-        <div>
-          <Label>ID Front</Label>
-          {editFormData.currentIdFront && (
-            <div className="mb-2">
-              <a 
-                href={`${import.meta.env.VITE_API_BASE_URL}/${editFormData.currentIdFront}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 text-sm"
-              >
-                View Current ID Front
-              </a>
+
+            {/* Document Uploads */}
+            <h3 className="font-medium">Documents</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium flex items-center">
+                  <Camera size={16} className="mr-1" />
+                  Passport Photo
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, "PassportPhoto")}
+                >
+                  {previewUrls.PassportPhoto ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={previewUrls.PassportPhoto}
+                        alt="Passport Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile("PassportPhoto")}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2 text-xs">
+                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                          Upload photo
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleEditFileChange(e, "PassportPhoto")
+                            }
+                          />
+                        </label>
+                        <p>or drag and drop</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  {formData.IdType === "passport" ? (
+                    <FileText size={16} className="mr-1" />
+                  ) : (
+                    <CreditCard size={16} className="mr-1" />
+                  )}
+                  {formData.IdType === "passport"
+                    ? "Passport Data Page"
+                    : `${getIdTypeLabel(formData.IdType)} Front`}
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, "IdFront")}
+                >
+                  {previewUrls.IdFront ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={previewUrls.IdFront}
+                        alt="ID Front Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile("IdFront")}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2 text-xs">
+                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                          Upload{" "}
+                          {formData.IdType === "passport" ? "page" : "front"}
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) => handleEditFileChange(e, "IdFront")}
+                          />
+                        </label>
+                        <p>or drag and drop</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  <CreditCard size={16} className="mr-1" />
+                  {getIdTypeLabel(formData.IdType)} Back
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, "IdBack")}
+                >
+                  {previewUrls.IdBack ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={previewUrls.IdBack}
+                        alt="ID Back Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile("IdBack")}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2 text-xs">
+                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                          Upload back
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) => handleEditFileChange(e, "IdBack")}
+                          />
+                        </label>
+                        <p>or drag and drop</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
-          <Input 
-            type="file" 
-            accept="image/*"
-            onChange={(e) => handleFileChange(e, 'idFront')}
-          />
-        </div>
-        <div>
-          <Label>ID Back</Label>
-          {editFormData.currentIdBack && (
-            <div className="mb-2">
-              <a 
-                href={`${import.meta.env.VITE_API_BASE_URL}/${editFormData.currentIdBack}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 text-sm"
-              >
-                View Current ID Back
-              </a>
-            </div>
-          )}
-          <Input 
-            type="file" 
-            accept="image/*"
-            onChange={(e) => handleFileChange(e, 'idBack')}
-          />
-        </div>
-      </div>
-    </div>
-  </form>
+          </div>
+        </form>
       </Modal>
     </div>
   );
@@ -1159,13 +1685,19 @@ const UserTable = ({
   onDeleteSuccess,
 }: UserTableProps) => {
   const formatCurrency = useCurrencyFormatter();
-  
-  const user = localStorage.getItem('user') || null;
+
+  const user = localStorage.getItem("user") || null;
   const token = user ? JSON.parse(user).token : null;
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletedUser, setDeletedUser] = useState<User | null>(null);
 
   const deleteUser = async (userId: string) => {
     if (!token) {
-      toast.error("Authentication required");
+      toast({
+        title: "Error",
+        description: "Authentication required",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -1179,99 +1711,121 @@ const UserTable = ({
         }
       );
       if (status >= 200 && status < 300) {
-        toast.success("User deleted successfully!");
+        toast({
+          title: "Success",
+          description: "User deleted successfully!",
+        });
         onDeleteSuccess && onDeleteSuccess();
+        setIsDeleteModalOpen(false);
       }
     } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error("Failed to delete user");
+      toast({
+        title: "Error",
+        description: error.response.data,
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.length === 0 ? (
+    <div>
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={5}
-              className="text-center py-8 text-muted-foreground"
-            >
-              No users found
-            </TableCell>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ) : (
-          users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                <Badge
-                  variant={
-                    user.role === "Administrator"
-                      ? "destructive"
-                      : user.role === "Landlord"
-                        ? "default"
-                        : "secondary"
-                  }
-                >
-                  {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {user.status === "active" ? (
-                  <span className="flex items-center gap-1 text-green-600">
-                    <CheckCircle className="h-4 w-4" /> Active
-                  </span>
-                ) : user.status === "inactive" ? (
-                  <span className="flex items-center gap-1 text-yellow-600">
-                    <XCircle className="h-4 w-4" /> Inactive
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-gray-600">
-                    <Clock className="h-4 w-4" /> Pending Verification
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => onViewDetails(user)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={() => onEditUser(user)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={() => deleteUser(user.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
+        </TableHeader>
+        <TableBody>
+          {users.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="text-center py-8 text-muted-foreground"
+              >
+                No users found
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      user.role === "Administrator"
+                        ? "destructive"
+                        : user.role === "Landlord"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {user.status === "active" ? (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="h-4 w-4" /> Active
+                    </span>
+                  ) : user.status === "inactive" ? (
+                    <span className="flex items-center gap-1 text-yellow-600">
+                      <XCircle className="h-4 w-4" /> Inactive
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-gray-600">
+                      <Clock className="h-4 w-4" /> Pending Verification
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => onViewDetails(user)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => onEditUser(user)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setDeletedUser(user);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      // onClick={() => deleteUser(user.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      <ConfirmDeleteModal
+        title="Delete User"
+        isOpen={isDeleteModalOpen}
+        tenantName={deletedUser?.name || ""}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => {
+          deleteUser(deletedUser?.id);
+        }}
+      />
+    </div>
   );
 };
 

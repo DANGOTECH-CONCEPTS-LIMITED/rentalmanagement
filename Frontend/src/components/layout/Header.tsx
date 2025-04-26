@@ -27,7 +27,7 @@ const Header = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { changePassword, user } = useAuth();
+  const { changePassword, logout, user } = useAuth();
 
   useEffect(() => {
     fetchRoles();
@@ -84,6 +84,7 @@ const Header = () => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      logout();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Password change failed");
     } finally {

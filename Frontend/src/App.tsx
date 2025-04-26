@@ -42,6 +42,7 @@ import TrackPayments from "./pages/Landlord/TrackPayments";
 import Index from "./pages/Index";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
+import Transactions from "./pages/Admin/Transactions";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
                 />
                 <Route path="manage-users" element={<ManageUsers />} />
                 <Route path="reports" element={<Reports />} />
+                <Route path="transactions" element={<Transactions />} />
                 <Route path="system-settings" element={<SystemSettings />} />
               </Route>
             </Route>
