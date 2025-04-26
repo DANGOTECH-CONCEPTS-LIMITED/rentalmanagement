@@ -1,92 +1,261 @@
-
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { DollarSign, Calendar, Filter, Search, Download, ArrowUp, ArrowDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { DollarSign, Calendar, Filter, Search, Download, ArrowUp, ArrowDown, Receipt, DownloadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 interface Payment {
-  id: string;
-  tenant: string;
-  property: string;
+  id: number;
   amount: number;
-  date: string;
-  status: 'paid' | 'pending' | 'late';
-  method: 'credit_card' | 'bank_transfer' | 'cash';
+  paymentDate: string;
+  paymentMethod: string;
+  vendor: string;
+  paymentType: string;
+  paymentStatus: string;
+  transactionId: string;
+  description: string | null;
+  propertyTenantId: number;
+  propertyTenant: {
+    id: number;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    property: {
+      id: number;
+      name: string;
+      address: string;
+    };
+  };
 }
 
 const TrackPayments = () => {
+  const { toast } = useToast();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [sortField, setSortField] = useState('date');
+  const [filterMethod, setFilterMethod] = useState('all');
+  const [sortField, setSortField] = useState('paymentDate');
   const [sortDirection, setSortDirection] = useState('desc');
-  
-  // Mock data for payments
-  const [payments, setPayments] = useState<Payment[]>([
-    {
-      id: 'PMT-001',
-      tenant: 'John Smith',
-      property: 'Sunset Apartments - Unit 101',
-      amount: 1200,
-      date: '2023-04-01',
-      status: 'paid',
-      method: 'credit_card'
-    },
-    {
-      id: 'PMT-002',
-      tenant: 'Sarah Johnson',
-      property: 'Bayview Condos - Unit 305',
-      amount: 1500,
-      date: '2023-04-02',
-      status: 'paid',
-      method: 'bank_transfer'
-    },
-    {
-      id: 'PMT-003',
-      tenant: 'Michael Williams',
-      property: 'Westside Heights - Unit 210',
-      amount: 1350,
-      date: '2023-04-05',
-      status: 'pending',
-      method: 'credit_card'
-    },
-    {
-      id: 'PMT-004',
-      tenant: 'Emily Davis',
-      property: 'Sunset Apartments - Unit 102',
-      amount: 1250,
-      date: '2023-03-30',
-      status: 'late',
-      method: 'bank_transfer'
-    },
-    {
-      id: 'PMT-005',
-      tenant: 'Robert Miller',
-      property: 'Parkview Residences - Unit 405',
-      amount: 1100,
-      date: '2023-03-25',
-      status: 'paid',
-      method: 'cash'
-    }
-  ]);
 
-  // Filter payments based on search term and status filter
-  let filteredPayments = payments.filter(payment => 
-    (payment.tenant.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     payment.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     payment.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (filterStatus === 'all' || payment.status === filterStatus)
-  );
+  console.log('Payments:', payments);
+
   
-  // Sort payments
-  filteredPayments.sort((a, b) => {
-    if (sortField === 'date') {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+  const getAuthToken = () => {
+    try {
+      const user = localStorage.getItem('user');
+      if (!user) {
+        console.error('No user found in localStorage');
+        return null;
+      }
+      const userData = JSON.parse(user);
+      return userData.token;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
+    }
+  };
+
+
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/GetAllPayments`, {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`,
+            'accept': '*/*'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch payments');
+        }
+
+        const data = await response.json();
+        setPayments(data);
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load payments",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, [apiUrl, toast]);
+
+  const generateReceipt = (payment: Payment) => {
+    const receiptHTML = `
+      <html>
+        <head>
+          <title>Receipt for Payment ${payment.transactionId}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .receipt-title { font-size: 24px; font-weight: bold; }
+            .receipt-details { margin-top: 30px; }
+            .detail-row { display: flex; margin-bottom: 10px; }
+            .detail-label { font-weight: bold; width: 150px; }
+            .footer { margin-top: 40px; text-align: center; font-size: 12px; }
+            .divider { border-top: 1px dashed #000; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="receipt-title">PAYMENT RECEIPT</div>
+            <div>Transaction ID: ${payment.transactionId}</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="receipt-details">
+            <div class="detail-row">
+              <div class="detail-label">Tenant:</div>
+              <div>${payment.propertyTenant.fullName}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Property:</div>
+              <div>${payment.propertyTenant.property.name}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Address:</div>
+              <div>${payment.propertyTenant.property.address}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Payment Date:</div>
+              <div>${new Date(payment.paymentDate).toLocaleDateString()}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Payment Method:</div>
+              <div>${payment.paymentMethod}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Payment Type:</div>
+              <div>${payment.paymentType}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Amount:</div>
+              <div>UGX ${payment.amount.toLocaleString()}</div>
+            </div>
+            ${payment.description ? `
+            <div class="detail-row">
+              <div class="detail-label">Description:</div>
+              <div>${payment.description}</div>
+            </div>
+            ` : ''}
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="footer">
+            <div>Thank you for your payment!</div>
+            <div>Generated on ${new Date().toLocaleDateString()}</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([receiptHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt_${payment.transactionId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Receipt Generated",
+      description: `Receipt for payment ${payment.transactionId} has been downloaded.`,
+    });
+  };
+
+  const handleExport = () => {
+    const headers = [
+      'Transaction ID',
+      'Tenant',
+      'Property',
+      'Amount (UGX)',
+      'Payment Date',
+      'Payment Method',
+      'Payment Type',
+      'Status',
+      'Description'
+    ];
+
+    const csvRows = [
+      headers.join(','),
+      ...payments.map(payment => [
+        `"${payment.transactionId}"`,
+        `"${payment.propertyTenant.fullName}"`,
+        `"${payment.propertyTenant.property.name}"`,
+        payment.amount,
+        new Date(payment.paymentDate).toLocaleDateString(),
+        payment.paymentMethod,
+        payment.paymentType,
+        payment.paymentStatus,
+        payment.description ? `"${payment.description}"` : ''
+      ].join(','))
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'payments_export.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: "Payment data has been exported to CSV",
+    });
+  };
+
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = 
+      payment.propertyTenant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      payment.propertyTenant.property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || payment.paymentStatus === filterStatus;
+    const matchesMethod = filterMethod === 'all' || payment.paymentMethod === filterMethod;
+    
+    return matchesSearch && matchesStatus && matchesMethod;
+  });
+
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    if (sortField === 'paymentDate') {
+      const dateA = new Date(a.paymentDate).getTime();
+      const dateB = new Date(b.paymentDate).getTime();
       return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
     } else if (sortField === 'amount') {
       return sortDirection === 'asc' ? a.amount - b.amount : b.amount - a.amount;
+    } else if (sortField === 'tenant') {
+      return sortDirection === 'asc' 
+        ? a.propertyTenant.fullName.localeCompare(b.propertyTenant.fullName) 
+        : b.propertyTenant.fullName.localeCompare(a.propertyTenant.fullName);
     }
     return 0;
   });
@@ -102,46 +271,54 @@ const TrackPayments = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
-        return <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs">Paid</span>;
-      case 'pending':
-        return <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs">Pending</span>;
-      case 'late':
-        return <span className="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs">Late</span>;
+      case 'SUCCESSFUL':
+        return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
+      case 'PENDING':
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case 'FAILED':
+        return <Badge variant="destructive">Failed</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-  const getMethodText = (method: string) => {
+  
+  const getMethodBadge = (method: string) => {
     switch (method) {
-      case 'credit_card':
-        return 'Credit Card';
-      case 'bank_transfer':
-        return 'Bank Transfer';
-      case 'cash':
-        return 'Cash';
+      case 'CASH':
+        return <Badge variant="secondary">Cash</Badge>;
+      case 'MOMO':
+        return <Badge variant="secondary">Mobile Money</Badge>;
+      case 'BANK':
+        return <Badge variant="secondary">Bank Transfer</Badge>;
+      case 'CARD':
+        return <Badge variant="secondary">Credit Card</Badge>;
       default:
-        return method;
+        return <Badge variant="outline">{method}</Badge>;
     }
   };
 
-  // Calculate total amount received
   const totalReceived = payments
-    .filter(payment => payment.status === 'paid')
+    .filter(payment => payment.paymentStatus === 'SUCCESSFUL')
     .reduce((sum, payment) => sum + payment.amount, 0);
   
-  // Calculate total pending amount
   const totalPending = payments
-    .filter(payment => payment.status === 'pending' || payment.status === 'late')
+    .filter(payment => payment.paymentStatus === 'PENDING')
     .reduce((sum, payment) => sum + payment.amount, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/landlord-dashboard">Dashboard</BreadcrumbLink>
+            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -150,141 +327,195 @@ const TrackPayments = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Payment Tracking</h1>
-        <Button className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Payment Tracking</h1>
+          <p className="text-muted-foreground">View and manage all payment transactions</p>
+        </div>
+        <Button 
+          onClick={handleExport} 
+          className="flex items-center gap-2"
+        >
           <Download className="h-4 w-4" />
           <span>Export</span>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-green-100 mr-4">
-              <DollarSign className="h-6 w-6 text-green-600" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Received</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">UGX {totalReceived.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              From {payments.filter(p => p.paymentStatus === 'SUCCESSFUL').length} completed payments
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">UGX {totalPending.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              From {payments.filter(p => p.paymentStatus === 'PENDING').length} payments
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cash Payments</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              UGX {payments.filter(p => p.paymentMethod === 'CASH' && p.paymentStatus === 'SUCCESSFUL')
+                .reduce((sum, p) => sum + p.amount, 0)
+                .toLocaleString()}
             </div>
-            <div>
-              <h3 className="text-lg font-medium">Total Received</h3>
-              <p className="text-2xl font-bold">${totalReceived.toFixed(2)}</p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500">
-            <p>From {payments.length} payments</p>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-yellow-100 mr-4">
-              <Calendar className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-medium">Pending / Late</h3>
-              <p className="text-2xl font-bold">${totalPending.toFixed(2)}</p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500">
-            <p>From {payments.filter(p => p.status === 'pending' || p.status === 'late').length} payments</p>
-          </div>
-        </div>
+            <p className="text-xs text-muted-foreground">
+              {payments.filter(p => p.paymentMethod === 'CASH').length} cash transactions
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search by tenant, property, or payment ID"
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search by tenant, property, or transaction ID"
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <select 
+                  className="p-2 border rounded-md text-sm"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="all">All Status</option>
+                  <option value="SUCCESSFUL">Successful</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="FAILED">Failed</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <select 
+                  className="p-2 border rounded-md text-sm"
+                  value={filterMethod}
+                  onChange={(e) => setFilterMethod(e.target.value)}
+                >
+                  <option value="all">All Methods</option>
+                  <option value="CASH">Cash</option>
+                  <option value="MOMO">Mobile Money</option>
+                  <option value="BANK">Bank Transfer</option>
+                  <option value="CARD">Credit Card</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select 
-              className="p-2 border border-gray-300 rounded-md text-sm"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="paid">Paid</option>
-              <option value="pending">Pending</option>
-              <option value="late">Late</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left">Payment ID</th>
-                <th className="px-6 py-3 text-left">Tenant</th>
-                <th className="px-6 py-3 text-left">Property</th>
-                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('amount')}>
-                  <div className="flex items-center">
-                    <span>Amount</span>
-                    {sortField === 'amount' && (
-                      sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
-                    )}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left cursor-pointer" onClick={() => handleSort('date')}>
-                  <div className="flex items-center">
-                    <span>Date</span>
-                    {sortField === 'date' && (
-                      sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
-                    )}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left">Method</th>
-                <th className="px-6 py-3 text-left">Status</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredPayments.length > 0 ? (
-                filteredPayments.map((payment) => (
-                  <motion.tr 
-                    key={payment.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="hover:bg-gray-50"
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">Transaction ID</TableHead>
+                  <TableHead 
+                    className="cursor-pointer" 
+                    onClick={() => handleSort('tenant')}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">{payment.id}</td>
-                    <td className="px-6 py-4">{payment.tenant}</td>
-                    <td className="px-6 py-4">{payment.property}</td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">${payment.amount.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{payment.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{getMethodText(payment.method)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(payment.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <Button variant="ghost" size="sm" className="text-blue-600">
-                        <Download className="h-4 w-4" />
-                        <span className="ml-1">Receipt</span>
-                      </Button>
-                    </td>
-                  </motion.tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No payments found</p>
-                    <p className="text-sm mt-1">Try adjusting your search criteria</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    <div className="flex items-center">
+                      Tenant
+                      {sortField === 'tenant' && (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Property</TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer" 
+                    onClick={() => handleSort('amount')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Amount
+                      {sortField === 'amount' && (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer" 
+                    onClick={() => handleSort('paymentDate')}
+                  >
+                    <div className="flex items-center">
+                      Date
+                      {sortField === 'paymentDate' && (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedPayments.length > 0 ? (
+                  sortedPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.transactionId}</TableCell>
+                      <TableCell>{payment.propertyTenant.fullName}</TableCell>
+                      <TableCell>{payment.propertyTenant.property.name}</TableCell>
+                      <TableCell className="text-right">UGX {payment.amount.toLocaleString()}</TableCell>
+                      <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
+                      <TableCell>{getMethodBadge(payment.paymentMethod)}</TableCell>
+                      <TableCell>{getStatusBadge(payment.paymentStatus)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-blue-600 hover:text-blue-800"
+                          onClick={() => generateReceipt(payment)}
+                        >
+                          <DownloadIcon className="h-4 w-4 mr-2" />
+                          Receipt
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">No payments found</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Try adjusting your search or filters
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
