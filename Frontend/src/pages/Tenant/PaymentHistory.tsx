@@ -1,80 +1,95 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  FileText,
+  Download,
+  CheckCircle,
+  Clock,
+  X,
+  Search,
+  Calendar,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { FileText, Download, CheckCircle, Clock, X, Search, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-
-interface Payment {
+export interface Payment {
   id: string;
   date: string;
   amount: number;
   propertyName: string;
-  status: 'paid' | 'pending' | 'failed';
+  status: "paid" | "pending" | "failed";
   receiptAvailable: boolean;
 }
 
 const PaymentHistory = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  
+  const [searchTerm, setSearchTerm] = useState("");
+
   // Mock payment history data
   const [payments, setPayments] = useState<Payment[]>([
     {
-      id: 'PMT-001',
-      date: '2023-04-01',
+      id: "PMT-001",
+      date: "2023-04-01",
       amount: 1200,
-      propertyName: 'Sunset Apartments',
-      status: 'paid',
-      receiptAvailable: true
+      propertyName: "Sunset Apartments",
+      status: "paid",
+      receiptAvailable: true,
     },
     {
-      id: 'PMT-002',
-      date: '2023-03-01',
+      id: "PMT-002",
+      date: "2023-03-01",
       amount: 1200,
-      propertyName: 'Sunset Apartments',
-      status: 'paid',
-      receiptAvailable: true
+      propertyName: "Sunset Apartments",
+      status: "paid",
+      receiptAvailable: true,
     },
     {
-      id: 'PMT-003',
-      date: '2023-02-01',
+      id: "PMT-003",
+      date: "2023-02-01",
       amount: 1200,
-      propertyName: 'Sunset Apartments',
-      status: 'paid',
-      receiptAvailable: true
+      propertyName: "Sunset Apartments",
+      status: "paid",
+      receiptAvailable: true,
     },
     {
-      id: 'PMT-004',
-      date: '2023-01-01',
+      id: "PMT-004",
+      date: "2023-01-01",
       amount: 1150,
-      propertyName: 'Sunset Apartments',
-      status: 'paid',
-      receiptAvailable: true
+      propertyName: "Sunset Apartments",
+      status: "paid",
+      receiptAvailable: true,
     },
     {
-      id: 'PMT-005',
-      date: '2022-12-01',
+      id: "PMT-005",
+      date: "2022-12-01",
       amount: 1150,
-      propertyName: 'Sunset Apartments',
-      status: 'paid',
-      receiptAvailable: true
-    }
+      propertyName: "Sunset Apartments",
+      status: "paid",
+      receiptAvailable: true,
+    },
   ]);
 
   // Filter payments based on search term
-  const filteredPayments = payments.filter(payment => 
-    payment.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    payment.propertyName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPayments = payments.filter(
+    (payment) =>
+      payment.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.propertyName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'paid':
+      case "paid":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'pending':
+      case "pending":
         return <Clock className="h-5 w-5 text-yellow-500" />;
-      case 'failed':
+      case "failed":
         return <X className="h-5 w-5 text-red-500" />;
       default:
         return null;
@@ -83,11 +98,11 @@ const PaymentHistory = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'paid':
+      case "paid":
         return <span className="text-green-500">Paid</span>;
-      case 'pending':
+      case "pending":
         return <span className="text-yellow-500">Pending</span>;
-      case 'failed':
+      case "failed":
         return <span className="text-red-500">Failed</span>;
       default:
         return null;
@@ -109,7 +124,9 @@ const PaymentHistory = () => {
       </Breadcrumb>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Payment History</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Payment History
+        </h1>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
@@ -145,41 +162,60 @@ const PaymentHistory = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredPayments.length > 0 ? (
                 filteredPayments.map((payment) => (
-                  <motion.tr 
+                  <motion.tr
                     key={payment.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
                     className="hover:bg-gray-50"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">{payment.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{payment.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {payment.id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {payment.date}
+                    </td>
                     <td className="px-6 py-4">{payment.propertyName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">${payment.amount.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">
+                      ${payment.amount.toFixed(2)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {getStatusIcon(payment.status)}
-                        <span className="ml-2">{getStatusText(payment.status)}</span>
+                        <span className="ml-2">
+                          {getStatusText(payment.status)}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {payment.receiptAvailable ? (
-                        <Button variant="ghost" size="sm" className="flex items-center gap-2 text-blue-600">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center gap-2 text-blue-600"
+                        >
                           <Download className="h-4 w-4" />
                           <span>Download</span>
                         </Button>
                       ) : (
-                        <span className="text-gray-400 text-sm">Not available</span>
+                        <span className="text-gray-400 text-sm">
+                          Not available
+                        </span>
                       )}
                     </td>
                   </motion.tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                  <td
+                    colSpan={6}
+                    className="px-6 py-10 text-center text-gray-500"
+                  >
                     <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No payment records found</p>
-                    <p className="text-sm mt-1">Try adjusting your search criteria</p>
+                    <p className="text-sm mt-1">
+                      Try adjusting your search criteria
+                    </p>
                   </td>
                 </tr>
               )}

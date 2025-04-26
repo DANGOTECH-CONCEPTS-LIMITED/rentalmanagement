@@ -35,6 +35,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 export interface Property {
+  rentAmount: number;
+  images: any;
+  area: string;
+  bathrooms: number;
+  bedrooms: number;
   id: number;
   name: string;
   address: string;

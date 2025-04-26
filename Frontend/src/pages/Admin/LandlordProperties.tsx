@@ -147,6 +147,7 @@ const LandlordProperties = () => {
       }
 
       const data = await response.json();
+      console.log("Properties data:", data);
       setProperties(data);
     } catch (err) {
       setError(err.response.data);
@@ -292,36 +293,6 @@ const LandlordProperties = () => {
         formDataToSend.append("files", photo.file);
       });
 
-      // end
-
-      // formDataToSend.append("OwnerId", editingProperty.ownerId);
-      // formDataToSend.append("Owner", editingProperty.ownerId);
-      // formDataToSend.append("Price", editingProperty.price.toString());
-      // formDataToSend.append("Name", editingProperty.name);
-      // formDataToSend.append("Zipcode", editingProperty.zipcode);
-      // formDataToSend.append("OwnerId", editingProperty.owner.id.toString());
-      // formDataToSend.append("District", editingProperty.district);
-      // formDataToSend.append("Currency", editingProperty.currency);
-      // formDataToSend.append("Region", editingProperty.region);
-      // formDataToSend.append("Address", editingProperty.address);
-      // formDataToSend.append(
-      //   "NumberOfRooms",
-      //   editingProperty.numberOfRooms.toString()
-      // );
-      // formDataToSend.append("Type", editingProperty.type);
-      // formDataToSend.append("Description", editingProperty.description);
-      // formDataToSend.append(
-      //   "Occupied",
-      //   editingProperty.occupied ? "true" : "false"
-      // );
-
-      // // If there are new photos, append them
-      // if (propertyPhotos.length > 0) {
-      //   propertyPhotos.forEach((photo) => {
-      //     formDataToSend.append("files", photo.file);
-      //   });
-      // }
-
       const response = await fetch(`${apiUrl}/UpdateProperty`, {
         method: "PUT",
         headers: {
@@ -361,67 +332,6 @@ const LandlordProperties = () => {
     } finally {
       setIsSubmitting(false);
     }
-
-    // try {
-    //   const formDataToSend = new FormData();
-
-    //   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    //   if (!apiUrl) {
-    //     throw new Error("API base URL is not configured");
-    //   }
-
-    //   const controller = new AbortController();
-    //   const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    //   const response = await fetch(`${apiUrl}/AddProperty`, {
-    //     method: "POST",
-    //     headers: {
-    //       Authorization: `Bearer ${token}`,
-    //     },
-    //     body: formDataToSend,
-    //     signal: controller.signal,
-    //   });
-
-    //   clearTimeout(timeoutId);
-
-    //   if (!response.ok) {
-    //     const errorText = await response.text();
-    //     throw new Error(errorText || "Failed to register property");
-    //   }
-
-    //   const contentType = response.headers.get("content-type");
-    //   let result;
-    //   if (contentType && contentType.includes("application/json")) {
-    //     result = await response.json();
-    //   } else {
-    //     result = await response.text();
-    //   }
-
-    //   toast({
-    //     title: "Property Registered",
-    //     description: `Successfully registered property: ${formData.Name}`,
-    //   });
-
-    //   navigate("/#/admin-dashboard/landlord-properties");
-
-    //   setFormData({
-    //     Name: "",
-    //     Address: "",
-    //     Region: "",
-    //     District: "",
-    //     Zipcode: "",
-    //     Type: "",
-    //     NumberOfRooms: "0",
-    //     Description: "",
-    //     OwnerId: "0",
-    //     Price: "0",
-    //     Currency: "UGX",
-    //     Occupied: "true",
-    //   });
-    //   setSelectedDistrict("");
-    //   setSelectedRegion("");
-    //   setPropertyPhotos([]);
-    // }
   };
 
   const handleInputChange = (
@@ -433,7 +343,6 @@ const LandlordProperties = () => {
     setEditingProperty((prev) => {
       if (!prev) return null;
 
-      // Handle nested properties correctly
       if (name === "price" || name === "numberOfRooms") {
         return { ...prev, [name]: Number(value) };
       }
@@ -473,7 +382,7 @@ const LandlordProperties = () => {
       return { ...prev, [name]: value };
     });
   };
-
+  console.log("url", `${apiUrl}/${selectedProperty?.imageUrl}`);
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
@@ -667,13 +576,26 @@ const LandlordProperties = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:justify-end mt-6 space-y-2 sm:space-x-2 sm:space-y-0">
+              <div className="flex flex-col sm:flex-row sm:justify-end mt-6 space-y-2 sm:space-x-2 md:space-x-6 sm:space-y-0">
                 <Button
                   variant="outline"
                   onClick={() => setSelectedProperty(null)}
                   className="w-full sm:w-auto"
                 >
                   Close
+                </Button>
+                <Button
+                  className="w-full sm:w-auto bg-green-700 text-white hover:bg-green-600"
+                  onClick={() => {
+                    // setSelectedProperty(null);
+                    sessionStorage.setItem(
+                      "propertyId",
+                      selectedProperty.id.toString()
+                    );
+                    navigate("/admin-dashboard/transactions");
+                  }}
+                >
+                  Property Transactions
                 </Button>
                 <Button
                   className="w-full sm:w-auto"

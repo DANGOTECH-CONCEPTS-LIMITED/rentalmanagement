@@ -1022,6 +1022,7 @@ const ManageTenants = () => {
       </Modal>
 
       <ConfirmDeleteModal
+        title="Delete Tenant"
         isOpen={isDeleteModalOpen}
         tenantName={deleteTenant?.fullName || ""}
         onClose={() => setIsDeleteModalOpen(false)}

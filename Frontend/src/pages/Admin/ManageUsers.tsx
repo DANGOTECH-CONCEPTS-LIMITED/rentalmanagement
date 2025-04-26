@@ -52,6 +52,7 @@ import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import Modal from "@/components/common/Model";
 import { toast } from "@/components/ui/use-toast";
 import { LandlordFormData } from "./RegisterLandlord";
+import ConfirmDeleteModal from "@/components/common/DeleteModal";
 
 interface User {
   id: string;
@@ -396,9 +397,9 @@ const ManageUsers = () => {
     nationalIdNumber: "",
     active: true,
     verified: false,
-    passportPhoto: null as File | null,
-    idFront: null as File | null,
-    idBack: null as File | null,
+    PassportPhoto: null as File | null,
+    IdFront: null as File | null,
+    IdBack: null as File | null,
     currentPassportPhoto: "",
     currentIdFront: "",
     currentIdBack: "",
@@ -524,9 +525,9 @@ const ManageUsers = () => {
           nationalIdNumber: userData.nationalIdNumber || "",
           active: userData.active,
           verified: userData.verified,
-          passportPhoto: null,
-          idFront: null,
-          idBack: null,
+          PassportPhoto: null,
+          IdFront: null,
+          IdBack: null,
           currentPassportPhoto: userData.passportPhoto,
           currentIdFront: userData.idFront,
           currentIdBack: userData.idBack,
@@ -534,10 +535,9 @@ const ManageUsers = () => {
         setIsEditModalOpen(true);
       })
       .catch((error) => {
-        console.error("Error fetching user details:", error);
         toast({
           title: "Error",
-          description: error.message,
+          description: error.response.data,
           variant: "destructive",
         });
       });
@@ -659,7 +659,6 @@ const ManageUsers = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("formData", formData);
 
     if (
       !formData.PassportPhoto ||
@@ -746,8 +745,6 @@ const ManageUsers = () => {
         IdBack: null,
       });
     } catch (error) {
-      console.error("Error submitting form:", error);
-
       if (error instanceof Error && error.message.includes("User regis")) {
         toast({
           title: "Landlord Registered",
@@ -771,10 +768,7 @@ const ManageUsers = () => {
       } else {
         toast({
           title: "Error",
-          description:
-            error instanceof Error
-              ? error.message
-              : "An error occurred while registering the landlord.",
+          description: error.response.data,
           variant: "destructive",
         });
       }
@@ -816,39 +810,26 @@ const ManageUsers = () => {
           editFormData.nationalIdNumber || ""
         );
 
-        // Required fields with default values for the API
-        // formData.append("PassportPhoto", "string");
-        // formData.append("IdFront", "string");
-        // formData.append("IdBack", "string");
-        // formData.append("Password", "string");
-        // formData.append("Token", "string");
-        // formData.append("PasswordChanged", "true");
-        // formData.append("SystemRole.Id", "0");
-        // formData.append("SystemRole.Name", "string");
-        // formData.append("SystemRole.Description", "string");
-        // formData.append("SystemRole.Permissions", "string");
-        formData.append("SystemRole.CreatedAt", new Date().toISOString());
-        // formData.append("files", "string");
-
         const files = [];
         console.log("editFormData", editFormData);
-        if (editFormData.passportPhoto) {
+        console.log("previewUrls", previewUrls);
+        if (editFormData.PassportPhoto) {
           files.push({
-            file: editFormData.passportPhoto,
+            file: editFormData.PassportPhoto,
             type: "PassportPhoto",
           });
         }
 
-        if (editFormData.idFront) {
+        if (editFormData.IdFront) {
           files.push({
-            file: editFormData.idFront,
+            file: editFormData.IdFront,
             type: `IdFront`,
           });
         }
 
-        if (editFormData.idBack) {
+        if (editFormData.IdBack) {
           files.push({
-            file: editFormData.idBack,
+            file: editFormData.IdBack,
             type: `IdBack`,
           });
         }
@@ -1391,7 +1372,7 @@ const ManageUsers = () => {
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
         title="Edit user"
-        size="md"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-6">
             <button
@@ -1416,7 +1397,7 @@ const ManageUsers = () => {
           onSubmit={handleUpdateSubmit}
           className="space-y-6 px-2 h-[60vh] overflow-y-auto"
         >
-          <div className="grid grid-cols-1  gap-6">
+          <div className="grid grid-cols-1  gap-2">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="font-medium">Basic Information</h3>
@@ -1447,17 +1428,6 @@ const ManageUsers = () => {
                   id="edit-phoneNumber"
                   name="phoneNumber"
                   value={editFormData.phoneNumber}
-                  onChange={handleEditChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-nationalIdNumber">
-                  National ID Number
-                </Label>
-                <Input
-                  id="edit-nationalIdNumber"
-                  name="nationalIdNumber"
-                  value={editFormData.nationalIdNumber}
                   onChange={handleEditChange}
                 />
               </div>
@@ -1515,76 +1485,190 @@ const ManageUsers = () => {
                   <Label htmlFor="edit-verified">Verified</Label>
                 </div>
               </div>
+
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-sm font-medium">
+                  Identification Type
+                </label>
+                <div className="flex flex-wrap gap-4">
+                  {idTypes.map((type) => (
+                    <label
+                      key={type.value}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="IdType"
+                        value={type.value}
+                        checked={formData.IdType === type.value}
+                        onChange={handleRadioChange}
+                        className="radio-input"
+                      />
+                      <span>{type.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {getIdTypeLabel(formData.IdType)} Number
+                </label>
+                <Input
+                  id="edit-nationalIdNumber"
+                  name="nationalIdNumber"
+                  value={editFormData.nationalIdNumber}
+                  onChange={handleEditChange}
+                />
+              </div>
             </div>
 
             {/* Document Uploads */}
-            <div className="space-y-4">
-              <h3 className="font-medium">Documents</h3>
+            <h3 className="font-medium">Documents</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label>Passport Photo</Label>
-                {editFormData.currentPassportPhoto && (
-                  <div className="mb-2">
-                    <a
-                      href={`${import.meta.env.VITE_API_BASE_URL}/${
-                        editFormData.currentPassportPhoto
-                      }`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 text-sm"
-                    >
-                      View Current Photo
-                    </a>
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleEditFileChange(e, "PassportPhoto")}
-                />
+                <label className="text-sm font-medium flex items-center">
+                  <Camera size={16} className="mr-1" />
+                  Passport Photo
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, "PassportPhoto")}
+                >
+                  {previewUrls.PassportPhoto ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={previewUrls.PassportPhoto}
+                        alt="Passport Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile("PassportPhoto")}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2 text-xs">
+                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                          Upload photo
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleEditFileChange(e, "PassportPhoto")
+                            }
+                          />
+                        </label>
+                        <p>or drag and drop</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label>ID Front</Label>
-                {editFormData.currentIdFront && (
-                  <div className="mb-2">
-                    <a
-                      href={`${import.meta.env.VITE_API_BASE_URL}/${
-                        editFormData.currentIdFront
-                      }`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 text-sm"
-                    >
-                      View Current ID Front
-                    </a>
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleEditFileChange(e, "IdFront")}
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  {formData.IdType === "passport" ? (
+                    <FileText size={16} className="mr-1" />
+                  ) : (
+                    <CreditCard size={16} className="mr-1" />
+                  )}
+                  {formData.IdType === "passport"
+                    ? "Passport Data Page"
+                    : `${getIdTypeLabel(formData.IdType)} Front`}
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, "IdFront")}
+                >
+                  {previewUrls.IdFront ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={previewUrls.IdFront}
+                        alt="ID Front Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile("IdFront")}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2 text-xs">
+                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                          Upload{" "}
+                          {formData.IdType === "passport" ? "page" : "front"}
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) => handleEditFileChange(e, "IdFront")}
+                          />
+                        </label>
+                        <p>or drag and drop</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label>ID Back</Label>
-                {editFormData.currentIdBack && (
-                  <div className="mb-2">
-                    <a
-                      href={`${import.meta.env.VITE_API_BASE_URL}/${
-                        editFormData.currentIdBack
-                      }`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 text-sm"
-                    >
-                      View Current ID Back
-                    </a>
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleEditFileChange(e, "IdBack")}
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  <CreditCard size={16} className="mr-1" />
+                  {getIdTypeLabel(formData.IdType)} Back
+                </label>
+                <div
+                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragLeave={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, "IdBack")}
+                >
+                  {previewUrls.IdBack ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={previewUrls.IdBack}
+                        alt="ID Back Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile("IdBack")}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2 text-xs">
+                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                          Upload back
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={(e) => handleEditFileChange(e, "IdBack")}
+                          />
+                        </label>
+                        <p>or drag and drop</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1604,6 +1688,8 @@ const UserTable = ({
 
   const user = localStorage.getItem("user") || null;
   const token = user ? JSON.parse(user).token : null;
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletedUser, setDeletedUser] = useState<User | null>(null);
 
   const deleteUser = async (userId: string) => {
     if (!token) {
@@ -1630,6 +1716,7 @@ const UserTable = ({
           description: "User deleted successfully!",
         });
         onDeleteSuccess && onDeleteSuccess();
+        setIsDeleteModalOpen(false);
       }
     } catch (error) {
       toast({
@@ -1641,89 +1728,104 @@ const UserTable = ({
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.length === 0 ? (
+    <div>
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell
-              colSpan={5}
-              className="text-center py-8 text-muted-foreground"
-            >
-              No users found
-            </TableCell>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ) : (
-          users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                <Badge
-                  variant={
-                    user.role === "Administrator"
-                      ? "destructive"
-                      : user.role === "Landlord"
-                      ? "default"
-                      : "secondary"
-                  }
-                >
-                  {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {user.status === "active" ? (
-                  <span className="flex items-center gap-1 text-green-600">
-                    <CheckCircle className="h-4 w-4" /> Active
-                  </span>
-                ) : user.status === "inactive" ? (
-                  <span className="flex items-center gap-1 text-yellow-600">
-                    <XCircle className="h-4 w-4" /> Inactive
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-gray-600">
-                    <Clock className="h-4 w-4" /> Pending Verification
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => onViewDetails(user)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => onEditUser(user)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => deleteUser(user.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
+        </TableHeader>
+        <TableBody>
+          {users.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="text-center py-8 text-muted-foreground"
+              >
+                No users found
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      user.role === "Administrator"
+                        ? "destructive"
+                        : user.role === "Landlord"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {user.status === "active" ? (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="h-4 w-4" /> Active
+                    </span>
+                  ) : user.status === "inactive" ? (
+                    <span className="flex items-center gap-1 text-yellow-600">
+                      <XCircle className="h-4 w-4" /> Inactive
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-gray-600">
+                      <Clock className="h-4 w-4" /> Pending Verification
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => onViewDetails(user)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => onEditUser(user)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setDeletedUser(user);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      // onClick={() => deleteUser(user.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      <ConfirmDeleteModal
+        title="Delete User"
+        isOpen={isDeleteModalOpen}
+        tenantName={deletedUser?.name || ""}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => {
+          deleteUser(deletedUser?.id);
+        }}
+      />
+    </div>
   );
 };
 

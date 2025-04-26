@@ -4,12 +4,14 @@ import React from "react";
 type ConfirmDeleteModalProps = {
   isOpen: boolean;
   tenantName: string;
+  title: string;
   onClose: () => void;
   onConfirm: () => void;
 };
 
 const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   isOpen,
+  title,
   tenantName,
   onClose,
   onConfirm,
@@ -19,7 +21,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded shadow-md max-w-sm w-full">
-        <h2 className="text-lg font-semibold mb-4">Delete Tenant</h2>
+        <h2 className="text-lg font-semibold mb-4">{title}</h2>
         <p className="mb-6">
           Are you sure you want to delete <strong>{tenantName}</strong>?
         </p>
