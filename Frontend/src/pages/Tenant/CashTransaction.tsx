@@ -34,40 +34,47 @@ const paymentFormSchema = z.object({
   paymentDate: z.date(),
   paymentMethod: z.string().min(1, "Payment method is required"),
   vendor: z.string().min(1, "Vendor is required"),
-  paymentType: z.string().min(1, "Payment type is required"),
   transactionId: z.string().min(1, "Transaction ID is required"),
   propertyTenantId: z.number().min(1, "Tenant ID is required"),
   description: z.string().optional(),
 });
 
+interface CashTransactionProps {
+  propertyName: string;
+}
+
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
 
-const CashTransactions = () => {
+const CashTransactions = ({ propertyName }: CashTransactionProps) => {
   const { toast } = useToast();
   const [tenant, setTenant] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
       amount: 0,
       paymentDate: new Date(),
-      paymentMethod: "",
-      vendor: "",
-      paymentType: "",
+      paymentMethod: "CASH",
+      vendor: propertyName,
       transactionId: "",
       propertyTenantId: 0,
       description: "",
     },
   });
 
+  const user = localStorage.getItem('user');
+  if (!user) {
+    throw new Error('No user found in localStorage');
+  }
+
+  const userData = JSON.parse(user);
+
   const getUserToken = () => {
     try {
       const user = localStorage.getItem('user');
-      if (!user) {
-        throw new Error('No user found in localStorage');
-      }
+      if (!user) throw new Error('No user found in localStorage');
       const userData = JSON.parse(user);
       return userData.token;
     } catch (error) {
@@ -82,15 +89,11 @@ const CashTransactions = () => {
   useEffect(() => {
     const fetchTenantData = async () => {
       try {
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const user = localStorage.getItem('user');
-        if (!user) {
-          throw new Error('No user found in localStorage');
-        }
-        
+        if (!user) throw new Error('No user found in localStorage');
+
         const userData = JSON.parse(user);
         const response = await fetch(`${apiUrl}/GetTenantById/${userData.id}`, {
           headers: {
@@ -99,13 +102,10 @@ const CashTransactions = () => {
           }
         });
 
-        if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
 
         const data = await response.json();
         setTenant(data);
-        
         form.setValue('propertyTenantId', data.id);
       } catch (err: any) {
         console.error('Failed to fetch tenant data:', err);
@@ -119,9 +119,7 @@ const CashTransactions = () => {
   const onSubmit = async (data: PaymentFormValues) => {
     setIsSubmitting(true);
     try {
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      if (!token) throw new Error('No authentication token found');
 
       const response = await fetch(`${apiUrl}/MakeTenantPayment`, {
         method: 'POST',
@@ -136,15 +134,13 @@ const CashTransactions = () => {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Payment failed');
-      }
+      if (!response.ok) throw new Error('Payment failed');
 
       toast({
         title: "Payment Successful",
         description: "Your payment has been processed successfully.",
       });
-      
+
       form.reset();
       if (tenant) {
         form.setValue('propertyTenantId', tenant.id);
@@ -234,11 +230,7 @@ const CashTransactions = () => {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -248,9 +240,7 @@ const CashTransactions = () => {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
+                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                             initialFocus
                           />
                         </PopoverContent>
@@ -266,17 +256,14 @@ const CashTransactions = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Payment Method</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select disabled defaultValue="CASH">
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
+                            <SelectValue placeholder="Cash" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="MOMO">Mobile Money</SelectItem>
-                          <SelectItem value="BANK">Bank Transfer</SelectItem>
                           <SelectItem value="CASH">Cash</SelectItem>
-                          <SelectItem value="CARD">Credit/Debit Card</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -291,32 +278,8 @@ const CashTransactions = () => {
                     <FormItem>
                       <FormLabel>Vendor</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} disabled />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="paymentType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="RENT">Rent</SelectItem>
-                          <SelectItem value="DEPOSIT">Deposit</SelectItem>
-                          <SelectItem value="UTILITY">Utility</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -350,17 +313,13 @@ const CashTransactions = () => {
                   )}
                 />
 
-                {/* Hidden propertyTenantId field */}
                 <FormField
                   control={form.control}
                   name="propertyTenantId"
                   render={({ field }) => (
                     <FormItem className="hidden">
                       <FormControl>
-                        <Input
-                          type="hidden"
-                          {...field}
-                        />
+                        <Input type="hidden" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -377,6 +336,8 @@ const CashTransactions = () => {
                     if (tenant) {
                       form.setValue('propertyTenantId', tenant.id);
                     }
+                    form.setValue('paymentMethod', 'CASH');
+                    form.setValue('vendor', propertyName);
                   }}
                 >
                   Clear Form
