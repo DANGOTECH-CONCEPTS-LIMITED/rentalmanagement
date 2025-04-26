@@ -14,7 +14,7 @@ namespace Domain.Dtos.Payments
         public string PaymentMethod { get; set; } = string.Empty;
         public string Vendor { get; set; } = string.Empty;
         public string PaymentType { get; set; } = string.Empty;
-        public string TransactionId { get; set; } = string.Empty;
+        public string? TransactionId { get; set; } = string.Empty;
         public string Description { get; set; }
         public int PropertyTenantId { get; set; }
     }
