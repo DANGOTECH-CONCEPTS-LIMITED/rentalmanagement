@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Domain.Dtos.Property;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Microsoft.AspNetCore.Http;
 
 

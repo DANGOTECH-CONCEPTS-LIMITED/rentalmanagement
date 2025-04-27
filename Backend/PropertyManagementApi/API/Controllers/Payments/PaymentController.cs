@@ -1,6 +1,6 @@
 ﻿using Application.Interfaces.PaymentService;
 using Domain.Dtos.Payments;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

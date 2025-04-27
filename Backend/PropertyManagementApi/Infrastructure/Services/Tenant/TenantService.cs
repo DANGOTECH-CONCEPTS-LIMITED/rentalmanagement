@@ -3,6 +3,7 @@ using Application.Interfaces.Tenant;
 using Application.Interfaces.UserServices;
 using Domain.Dtos.Tenant;
 using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;

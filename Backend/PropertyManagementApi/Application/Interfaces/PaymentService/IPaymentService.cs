@@ -1,5 +1,5 @@
 ﻿using Domain.Dtos.Payments;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using System;
 using System.Collections.Generic;
 using System.Linq;

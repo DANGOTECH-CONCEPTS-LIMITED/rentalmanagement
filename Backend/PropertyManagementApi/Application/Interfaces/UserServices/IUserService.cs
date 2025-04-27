@@ -1,11 +1,11 @@
 ﻿using Domain.Dtos.User;
-using Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Domain.Entities.PropertyMgt;
 
 namespace Application.Interfaces.UserServices
 {

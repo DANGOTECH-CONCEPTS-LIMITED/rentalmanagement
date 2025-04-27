@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Domain.Entities;
 using Application.Interfaces.UserServices;
 using Domain.Dtos.User;
 using Microsoft.AspNetCore.Authorization;
+using Domain.Entities.PropertyMgt;
 
 namespace API.Controllers.UserControllers
 {

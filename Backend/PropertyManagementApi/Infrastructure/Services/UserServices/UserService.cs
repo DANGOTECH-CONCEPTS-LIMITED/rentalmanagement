@@ -1,5 +1,4 @@
 ﻿using Domain.Dtos.User;
-using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -16,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Text;
+using Domain.Entities.PropertyMgt;
 
 namespace Infrastructure.Services.UserServices
 {

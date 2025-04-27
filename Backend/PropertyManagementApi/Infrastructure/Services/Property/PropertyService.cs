@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
 using Domain.Dtos.Property;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;

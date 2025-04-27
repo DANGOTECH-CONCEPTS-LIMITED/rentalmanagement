@@ -1,6 +1,6 @@
 ﻿using Application.Interfaces.Property;
 using Domain.Dtos.Property;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

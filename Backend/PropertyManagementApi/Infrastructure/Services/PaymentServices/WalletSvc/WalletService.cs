@@ -1,6 +1,6 @@
 ﻿using Application.Interfaces.PaymentService.WalletSvc;
 using Domain.Dtos.Payments.WalletDto;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System;

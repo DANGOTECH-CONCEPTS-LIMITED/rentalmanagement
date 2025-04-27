@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.PaymentService;
 using Domain.Dtos.Payments;
 using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System;

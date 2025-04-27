@@ -1,5 +1,5 @@
 ﻿using Domain.Dtos.TenantComplaints;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;

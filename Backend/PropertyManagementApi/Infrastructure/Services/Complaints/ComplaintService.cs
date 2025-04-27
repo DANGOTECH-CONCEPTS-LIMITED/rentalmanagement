@@ -1,7 +1,7 @@
 ﻿using Application.Interfaces.Complaints;
 using Application.Interfaces.Settings;
 using Domain.Dtos.TenantComplaints;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;

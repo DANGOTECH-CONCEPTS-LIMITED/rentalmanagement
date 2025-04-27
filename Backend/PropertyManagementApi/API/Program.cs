@@ -1,3 +1,4 @@
+using Application.Interfaces.Collecto;
 using Application.Interfaces.Complaints;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
@@ -5,8 +6,9 @@ using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
 using Application.Interfaces.Tenant;
 using Application.Interfaces.UserServices;
-using Domain.Entities;
+using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
+using Infrastructure.Services.Collecto;
 using Infrastructure.Services.Complaints;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.PaymentServices;
@@ -40,6 +42,9 @@ builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+//builder.Services.AddScoped<ICollectoApiClient, CollectoService>();
+
+builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>();
 
 
 // Singleton services
