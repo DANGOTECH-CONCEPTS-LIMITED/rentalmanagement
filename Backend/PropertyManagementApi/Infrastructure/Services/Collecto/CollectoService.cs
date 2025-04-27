@@ -28,6 +28,8 @@ namespace Infrastructure.Services.Collecto
         {
             _http.DefaultRequestHeaders.Clear();
             _http.DefaultRequestHeaders.Add("x-api-key", _apiKey);
+            //add user agent 
+            _http.DefaultRequestHeaders.Add("User-Agent", "DangoTech");
             _http.BaseAddress = new Uri(_baseUrl);
         }
 
