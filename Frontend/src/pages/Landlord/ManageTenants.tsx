@@ -137,10 +137,10 @@ const ManageTenants = () => {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to load tenants",
+          description:
+            error.status === 401 ? error.statusText : error.response.data,
           variant: "destructive",
         });
-        console.error("Error fetching tenants:", error);
       } finally {
         setIsLoading(false);
       }
@@ -160,7 +160,8 @@ const ManageTenants = () => {
       } catch (error) {
         toast({
           title: "Error",
-          description: error.message,
+          description:
+            error.status === 401 ? error.statusText : error.response.data,
           variant: "destructive",
         });
       } finally {
@@ -307,9 +308,9 @@ const ManageTenants = () => {
       setIsSubmitting(false);
 
       toast({
-        title: "Registration Failed",
+        title: "Error",
         description:
-          "There was an error registering the tenant. Please try again.",
+          error.status === 401 ? error.statusText : error.response.data,
         variant: "destructive",
       });
     }
@@ -364,10 +365,10 @@ const ManageTenants = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete tenant",
+        description:
+          error.status === 401 ? error.statusText : error.response.data,
         variant: "destructive",
       });
-      console.error("Error deleting tenant:", error);
     }
   };
 
@@ -411,7 +412,9 @@ const ManageTenants = () => {
 
           {isLoading ? (
             <div className="py-8 text-center">
-              <div className="animate-pulse">Loading tenants...</div>
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
             </div>
           ) : filteredTenants.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center">
@@ -482,7 +485,22 @@ const ManageTenants = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => setSelectedTenant(tenant)}
+                            onClick={() => {
+                              setSelectedTenant(tenant);
+                              setFormData({
+                                id: tenant.id,
+                                FullName: tenant.fullName,
+                                Name: tenant.fullName,
+                                Email: tenant.email,
+                                PhoneNumber: tenant.phoneNumber,
+                                NationalIdNumber: tenant.nationalIdNumber,
+                                DateMovedIn: new Date(tenant.dateMovedIn)
+                                  .toISOString()
+                                  .split("T")[0],
+                                PropertyId: tenant.propertyId,
+                                Active: String(tenant.active),
+                              });
+                            }}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -557,7 +575,7 @@ const ManageTenants = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">
                   <div className="flex flex-col items-center">
-                    <div className="h-10 w-10 rounded-full overflow-hidden">
+                    <div className="w-60 h-60  rounded-full overflow-hidden">
                       <img
                         src={getImageUrl(selectedTenant.passportPhoto)}
                         alt={selectedTenant.fullName}
@@ -569,6 +587,7 @@ const ManageTenants = () => {
                         }}
                       />
                     </div>
+
                     <h3 className="font-semibold text-lg">
                       {selectedTenant.fullName}
                     </h3>
@@ -682,7 +701,9 @@ const ManageTenants = () => {
                     <h4 className="text-sm font-medium mb-3">Actions</h4>
                     <div className="flex space-x-3">
                       <Button>Record Payment</Button>
-                      <Button variant="outline">Update Information</Button>
+                      <Button variant="outline" onClick={() => setIsEdit(true)}>
+                        Update Information
+                      </Button>
                       <Button
                         variant="destructive"
                         onClick={() => handleDeleteTenant(selectedTenant.id)}
@@ -856,9 +877,9 @@ const ManageTenants = () => {
                         ))}
                       </select>
                       {isLoadingProperties && (
-                        <p className="text-sm text-gray-500">
-                          Loading properties...
-                        </p>
+                        <div className="flex items-center justify-center h-64">
+                          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                        </div>
                       )}
                     </div>
                   </div>
