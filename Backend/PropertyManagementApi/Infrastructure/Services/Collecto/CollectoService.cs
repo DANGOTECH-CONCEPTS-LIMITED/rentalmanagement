@@ -36,7 +36,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> RequestToPayAsync(RequestToPayRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/requestToPay", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/requestToPay", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -44,7 +44,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> GetRequestToPayStatusAsync(RequestToPayStatusRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/requestToPayStatus", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/requestToPayStatus", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -52,7 +52,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> ServicePaymentAsync(ServicePaymentRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/servicePayment", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/servicePayment", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -60,7 +60,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> GetServicePaymentStatusAsync(ServicePaymentStatusRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/servicePaymentStatus", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/servicePaymentStatus", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -68,7 +68,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> SendSingleSmsAsync(SendSingleSmsRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/sendSingleSms", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/sendSingleSms", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -76,7 +76,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> GetCurrentBalanceAsync(CurrentBalanceRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/currentBalance", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/currentBalance", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -84,7 +84,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> VerifyPhoneNumberAsync(VerifyPhoneNumberRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/verifyPhoneNumber", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/verifyPhoneNumber", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -92,7 +92,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> InitiatePayoutAsync(InitiatePayoutRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/initiatePayout", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/initiatePayout", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -100,7 +100,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> GetPayoutStatusAsync(PayoutStatusRequest request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"/{_username}/payoutStatus", request);
+            var res = await _http.PostAsJsonAsync($"{_username}/payoutStatus", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }

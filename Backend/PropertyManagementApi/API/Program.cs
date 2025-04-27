@@ -34,6 +34,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         new MySqlServerVersion(new Version(8, 0, 28)))
 );
 
+// 1. register the handler itself
+builder.Services.AddTransient<LoggingHandler>();
+
 // Register application services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISettings, Settings>();
@@ -44,7 +47,9 @@ builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 //builder.Services.AddScoped<ICollectoApiClient, CollectoService>();
 
-builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>();
+builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>()
+    // this ensures every outgoing request goes through your LoggingHandler
+    .AddHttpMessageHandler<LoggingHandler>(); ;
 
 
 // Singleton services
@@ -147,6 +152,10 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1"
     });
 });
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
 
 var app = builder.Build();
 
