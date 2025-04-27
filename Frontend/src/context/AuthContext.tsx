@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       setUser(userData);
-      console.log("userData", userData);
+
       localStorage.setItem("user", JSON.stringify(userData));
       axios.defaults.headers.common[
         "Authorization"
@@ -138,8 +138,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     } catch (err) {
       setError(
-        axios.isAxiosError(err) && err.response?.status === 401
-          ? "Invalid email or password"
+        axios.isAxiosError(err) && err.response?.status >= 400
+          ? err.response.data
           : "Login failed. Please try again."
       );
       throw err;
@@ -167,7 +167,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       throw new Error(
         axios.isAxiosError(error)
-          ? error.response?.data?.message || "Password change failed"
+          ? error.response?.data
           : "Password change failed"
       );
     }
@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       throw new Error(
         axios.isAxiosError(error)
-          ? error.response?.data?.message || "Failed to send reset email"
+          ? error.response?.data || error.response.data
           : "Failed to send reset email"
       );
     } finally {
@@ -228,7 +228,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       throw new Error(
         axios.isAxiosError(error)
-          ? error.response?.data?.message || "Password reset failed"
+          ? error.response?.data
           : "Password reset failed"
       );
     } finally {
