@@ -284,18 +284,11 @@ const PaymentHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   const tableRef = useRef<HTMLTableElement>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [showDateFilter, setShowDateFilter] = useState(false);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
-  const [activeCalendar, setActiveCalendar] = useState<"start" | "end">(
-    "start"
-  );
+
   const { toast } = useToast();
 
   const user = localStorage.getItem("user");
@@ -330,7 +323,6 @@ const PaymentHistory = () => {
         }
 
         const data = await response.json();
-        setProperties(data);
       } catch (err) {
         console.error("Error fetching properties:", err);
       }
@@ -370,43 +362,6 @@ const PaymentHistory = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleStartDateSelect = (date: Date | undefined) => {
-    setStartDate(date);
-    if (date) {
-      setActiveCalendar("end");
-    }
-  };
-
-  const handleEndDateSelect = (date: Date | undefined) => {
-    setEndDate(date);
-  };
-
-  const handleApplyFilter = () => {
-    if (selectedPropertyId && startDate && endDate) {
-      const formattedStartDate = format(startDate, "yyyy-MM-dd");
-      const formattedEndDate = format(endDate, "yyyy-MM-dd");
-      fetchPayments(selectedPropertyId, formattedStartDate, formattedEndDate);
-      setShowDateFilter(false);
-    } else {
-      // Using toast instead of directly setting error state
-      toast({
-        variant: "destructive",
-        title: "Incomplete Filter",
-        description: "Please select a property, start date, and end date",
-        action: <ToastAction altText="Try again">Try again</ToastAction>,
-      });
-    }
-  };
-
-  const handleClearFilter = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setSelectedPropertyId("");
-    setActiveCalendar("start");
-    fetchPayments();
-    setShowDateFilter(false);
   };
 
   const filteredPayments = payments.filter(
@@ -507,130 +462,7 @@ const PaymentHistory = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Popover open={showDateFilter} onOpenChange={setShowDateFilter}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>Filter by Date & Property</span>
-              </Button>
-            </PopoverTrigger>
-
-            <PopoverContent className="min-w-[500px] p-4" align="end">
-              <div className="space-y-4">
-                <h4 className="font-medium">Filter Payments</h4>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Property</label>
-                  <Select
-                    value={selectedPropertyId}
-                    onValueChange={setSelectedPropertyId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select property" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {properties.map((property) => (
-                        <SelectItem
-                          key={property.id}
-                          value={property.id.toString()}
-                        >
-                          {property.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Calendar and Buttons Side by Side */}
-                <div className="flex items-start gap-4">
-                  {/* Calendar Container */}
-                  <div className="flex-1 border rounded-md p-1">
-                    {activeCalendar === "start" ? (
-                      <CalendarComponent
-                        mode="single"
-                        selected={startDate}
-                        onSelect={handleStartDateSelect}
-                        initialFocus
-                      />
-                    ) : (
-                      <CalendarComponent
-                        mode="single"
-                        selected={endDate}
-                        onSelect={handleEndDateSelect}
-                        initialFocus
-                        disabled={(date) =>
-                          startDate ? date < startDate : false
-                        }
-                      />
-                    )}
-                  </div>
-
-                  {/* Buttons on the Side */}
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setActiveCalendar(
-                          activeCalendar === "start" ? "end" : "start"
-                        )
-                      }
-                    >
-                      Switch to {activeCalendar === "start" ? "End" : "Start"}{" "}
-                      Date
-                    </Button>
-                    {/* Dates Summary */}
-                    <div className="text-sm space-y-1">
-                      {startDate && (
-                        <div>
-                          <span className="font-medium">Start:</span>{" "}
-                          {format(startDate, "MMM dd, yyyy")}
-                        </div>
-                      )}
-                      {endDate && (
-                        <div>
-                          <span className="font-medium">End:</span>{" "}
-                          {format(endDate, "MMM dd, yyyy")}
-                        </div>
-                      )}
-                    </div>
-                    <Button variant="outline" onClick={handleClearFilter}>
-                      Clear
-                    </Button>
-
-                    <Button onClick={handleApplyFilter}>Apply Filter</Button>
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
         </div>
-
-        {selectedPropertyId && startDate && endDate && (
-          <div className="bg-blue-50 p-3 rounded-md mb-4 flex items-center justify-between">
-            <div className="flex items-center text-sm">
-              <span className="font-medium text-blue-700 mr-2">
-                Active Filter:
-              </span>
-              <span className="text-blue-600">
-                {
-                  properties.find((p) => p.id.toString() === selectedPropertyId)
-                    ?.name
-                }{" "}
-                •{format(startDate, "MMM dd, yyyy")} to{" "}
-                {format(endDate, "MMM dd, yyyy")}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearFilter}
-              className="text-blue-700 hover:text-blue-800"
-            >
-              <X className="h-4 w-4 mr-1" /> Clear Filter
-            </Button>
-          </div>
-        )}
         <div className="overflow-x-auto">
           <table className="w-full" ref={tableRef}>
             <thead className="text-xs text-gray-700 uppercase bg-gray-50">
