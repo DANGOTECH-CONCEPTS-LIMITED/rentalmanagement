@@ -416,8 +416,8 @@ const LandlordProperties = () => {
               {error && <p>No properties found</p>}
             </div>
           ) : isLoading ? (
-            <div className="py-8 text-center">
-              <div className="animate-pulse">Loading properties...</div>
+            <div className="flex justify-center items-center py-10">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
             </div>
           ) : filteredProperties.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center">
