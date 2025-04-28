@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  DollarSign,
+  CircleDollarSign,
   Calendar,
   Filter,
   Search,
@@ -405,7 +405,7 @@ const TrackPayments = () => {
             <CardTitle className="text-sm font-medium">
               Total Received
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -441,7 +441,7 @@ const TrackPayments = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cash Payments</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -600,7 +600,7 @@ const TrackPayments = () => {
                   <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center">
                       <div className="flex flex-col items-center justify-center py-8">
-                        <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
+                        <CircleDollarSign className="h-12 w-12 text-muted-foreground mb-4" />
                         <p className="text-muted-foreground">
                           No payments found
                         </p>
