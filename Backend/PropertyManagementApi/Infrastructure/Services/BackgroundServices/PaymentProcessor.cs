@@ -154,7 +154,7 @@ namespace Infrastructure.Services.BackgroundServices
     }
 
     // Strongly-typed response model to replace manual JsonDocument parsing
-    public class RequestToPayResponse
+    internal class RequestToPayResponse
     {
         public DataModel Data { get; set; }
         public string StatusMessage { get; set; }

@@ -16,61 +16,61 @@ namespace API.Controllers.CollectoApi
             _collectoApiClient = collectoApiClient;
         }
 
-        [HttpPost("/requestToPay")]
-        public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequest request)
-        {
-            try
-            {
-                var response = await _collectoApiClient.RequestToPayAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/requestToPay")]
+        //public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _collectoApiClient.RequestToPayAsync(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
-        [HttpPost("/requestToPayStatus")]
-        public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequest request)
-        {
-            try
-            {
-                var response = await _collectoApiClient.GetRequestToPayStatusAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/requestToPayStatus")]
+        //public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _collectoApiClient.GetRequestToPayStatusAsync(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
-        [HttpPost("/servicePayment")]
-        public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequest request)
-        {
-            try
-            {
-                var response = await _collectoApiClient.ServicePaymentAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/servicePayment")]
+        //public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _collectoApiClient.ServicePaymentAsync(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
-        [HttpPost("/servicePaymentStatus")]
-        public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequest request)
-        {
-            try
-            {
-                var response = await _collectoApiClient.GetServicePaymentStatusAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/servicePaymentStatus")]
+        //public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _collectoApiClient.GetServicePaymentStatusAsync(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
         [HttpPost("/sendSingleSms")]
         public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequest request)
@@ -114,33 +114,33 @@ namespace API.Controllers.CollectoApi
             }
         }
 
-        [HttpPost("/initiatePayout")]
-        public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutRequest request)
-        {
-            try
-            {
-                var response = await _collectoApiClient.InitiatePayoutAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/initiatePayout")]
+        //public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _collectoApiClient.InitiatePayoutAsync(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
-        [HttpPost("/payoutStatus")]
-        public async Task<IActionResult> PayoutStatus([FromBody] PayoutStatusRequest request)
-        {
-            try
-            {
-                var response = await _collectoApiClient.GetPayoutStatusAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/payoutStatus")]
+        //public async Task<IActionResult> PayoutStatus([FromBody] PayoutStatusRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _collectoApiClient.GetPayoutStatusAsync(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
     }
 }

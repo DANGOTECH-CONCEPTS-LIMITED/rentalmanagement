@@ -18,6 +18,8 @@ namespace Infrastructure.Services.BackgroundServices
     public class CheckPaymentStatusProcessor : BackgroundService
     {
         private const string PendingStatus = "PENDING AT TELCOM";
+        private const string SucessfulAtTelecom = "SUCCESSFUL AT TELECOM";
+        private const string FailedStatus = "FAILED AT TELECOM";
         private readonly ILogger<CheckPaymentStatusProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
@@ -71,32 +73,16 @@ namespace Infrastructure.Services.BackgroundServices
         {
             using var logScope = _logger.BeginScope(
                new { tenantPayment.TransactionId, tenantPayment.PaymentMethod });
-            try
+
+            if (tenantPayment.PaymentMethod.Equals("MOMO", StringComparison.OrdinalIgnoreCase))
             {
-                var request = new RequestToPayStatusRequest
-                {
-                    TransactionId = tenantPayment.VendorTransactionId
-                };
-                var response = await collecto.GetRequestToPayStatusAsync(request)
-                                             .ConfigureAwait(false);
-                // Check the response and update the payment status accordingly
-                //if (response.Status == "SUCCESS")
-                //{
-                //    tenantPayment.Status = "COMPLETED";
-                //    await paymentService.UpdatePaymentAsync(tenantPayment)
-                //                         .ConfigureAwait(false);
-                //}
-                //else if (response.Status == "FAILED")
-                //{
-                //    tenantPayment.Status = "FAILED";
-                //    await paymentService.UpdatePaymentAsync(tenantPayment)
-                //                         .ConfigureAwait(false);
-                //}
+                await HandleMomoAsync(tenantPayment, collecto, paymentService);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex, $"Error processing payment {tenantPayment.Id}");
+                _logger.LogInformation("Delegating to other channels for non-MOMO payment");
             }
+                
         }
 
 
@@ -117,33 +103,53 @@ namespace Infrastructure.Services.BackgroundServices
             if (!string.IsNullOrWhiteSpace(rawResponse))
             {
                 // deserialize into a typed model
-                var rtpResponse = JsonSerializer.Deserialize<RequestToPayResponse>(rawResponse);
+                var rtpResponse = JsonSerializer.Deserialize<RequestToPayStatusResponse>(rawResponse);
 
-                if (rtpResponse?.Data?.RequestToPay == true)
+                if (rtpResponse?.data?.requestToPayStatus == true)
                 {
-                    //tenantPayment.PaymentStatus = PendingAtTelcom;
-                    //await paymentService.UpdatePaymentStatus(
-                    //    PendingAtTelcom,
-                    //    tenantPayment.TransactionId,
-                    //    rtpResponse.StatusMessage ?? string.Empty,
-                    //    rtpResponse.Data.TransactionId ?? string.Empty);
-                    //_logger.LogInformation("MOMO request accepted");
+                    if (rtpResponse.data.message.Equals("SUCCESSFUL"))
+                    {
+                        tenantPayment.PaymentStatus = SucessfulAtTelecom;
+                    }
+                    else if (rtpResponse.data.status.Contains("FAILED"))
+                    {
+                        tenantPayment.PaymentStatus = FailedStatus;
+                    }
+
+                    await paymentService.UpdatePaymentStatus(
+                        tenantPayment.PaymentStatus,
+                        tenantPayment.TransactionId,
+                        rtpResponse.data.message ?? string.Empty,tenantPayment.VendorTransactionId);
+                    _logger.LogInformation("MOMO request accepted");
                 }
                 else
                 {
-                    //tenantPayment.PaymentStatus = FailedStatus;
-                    //await paymentService.UpdatePaymentStatus(
-                    //    FailedStatus,
-                    //    tenantPayment.TransactionId,
-                    //    rtpResponse?.Data?.Message ?? "Unknown error",
-                    //    string.Empty);
-                    //_logger.LogError("MOMO request failed");
+                    tenantPayment.PaymentStatus = FailedStatus;
+                    await paymentService.UpdatePaymentStatus(
+                        FailedStatus,
+                        tenantPayment.TransactionId,
+                        rtpResponse?.data?.message ?? "Unknown error",
+                        string.Empty);
+                    _logger.LogError("MOMO request failed");
                 }
                 _logger.LogError("Empty response from Collecto");
                 return;
             }
 
             
+        }
+    }
+
+    internal class RequestToPayStatusResponse
+    {
+        public DataModel data { get; set; }
+        public string status_message { get; set; }
+
+        public class DataModel
+        {
+            public bool requestToPayStatus { get; set; }
+            public string status { get; set; }
+            public string message { get; set; }
         }
     }
 }
