@@ -70,7 +70,7 @@ namespace Infrastructure.Services.PaymentServices
                 PaymentMethod = tenantPaymentDto.PaymentMethod,
                 Vendor = tenantPaymentDto.Vendor,
                 PaymentType = tenantPaymentDto.PaymentType,
-                PaymentStatus = "SUCCESSFUL",
+                PaymentStatus = "PENDING",
                 TransactionId = tenantPaymentDto.TransactionId,
                 PropertyTenantId = tenantPaymentDto.PropertyTenantId,
                 PropertyTenant = tenant,
