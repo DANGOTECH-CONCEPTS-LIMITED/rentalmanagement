@@ -1,4 +1,9 @@
-﻿using Application.Interfaces.Collecto;
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
 using Domain.Entities.Collecto;
@@ -11,9 +16,15 @@ namespace Infrastructure.Services.BackgroundServices
 {
     public class PaymentProcessor : BackgroundService
     {
+        private const string PendingStatus = "PENDING";
+        private const string PendingAtTelcom = "PENDING AT TELCOM";
+        private const string FailedStatus = "FAILED";
+
         private readonly ILogger<PaymentProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
-        public  PaymentProcessor(ILogger<PaymentProcessor> logger, IServiceScopeFactory scopeFactory)
+
+        public PaymentProcessor(ILogger<PaymentProcessor> logger,
+                                IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
             _scopeFactory = scopeFactory;
@@ -25,74 +36,134 @@ namespace Infrastructure.Services.BackgroundServices
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                // Create the scope once for the entire loop
-                using (var scope = _scopeFactory.CreateScope())
+                try
                 {
+                    using var scope = _scopeFactory.CreateScope();
                     var payment = scope.ServiceProvider.GetRequiredService<IPaymentService>();
                     var wallet = scope.ServiceProvider.GetRequiredService<IWalletService>();
                     var collecto = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
 
-                    try
-                    {
-                        var pendingpayments = await payment.GetPaymentsByStatusAsync("PENDING");
-                        await ProcessPendingPayments(pendingpayments, collecto, payment);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogInformation($"Bill Period Error {ex.Message}.");
-                    }
+                    var pendingPayments = await payment
+                        .GetPaymentsByStatusAsync(PendingStatus)
+                        .ConfigureAwait(false);
 
+                    foreach (var tenantPayment in pendingPayments)
+                    {
+                        // isolate each payment in its own try/catch
+                        await ProcessSinglePaymentAsync(
+                            tenantPayment,
+                            collecto,
+                            payment,
+                            wallet,
+                            stoppingToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error fetching or processing payments");
                 }
 
-                // delay to prevent busy-waiting and high CPU usage
-                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);  // Delay for 10 minutes
+                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken)
+                          .ConfigureAwait(false);
             }
         }
 
-        private async Task ProcessPendingPayments(IEnumerable<TenantPayment> tenantPayments, ICollectoApiClient collectoApi, IPaymentService paymentService)
+        private async Task ProcessSinglePaymentAsync(
+            TenantPayment tenantPayment,
+            ICollectoApiClient collecto,
+            IPaymentService paymentService,
+            IWalletService walletService,
+            CancellationToken cancellationToken)
         {
-            foreach (var tenantPayment in tenantPayments)
+            using var logScope = _logger.BeginScope(
+                new { tenantPayment.TransactionId, tenantPayment.PaymentMethod });
+
+            try
             {
-                // Process each payment
-                // check if payment is momo
-                if (tenantPayment.PaymentMethod == "MOMO")
+                if (tenantPayment.PaymentMethod.Equals("MOMO", StringComparison.OrdinalIgnoreCase))
                 {
-                    // send request to pay request to collecto
-                    var requestToPay = new RequestToPayRequest
-                    {
-                        PaymentOption = tenantPayment.PaymentMethod,
-                        Phone = tenantPayment.PropertyTenant.PhoneNumber,
-                        Amount = (decimal)tenantPayment.Amount,
-                        Reference = tenantPayment.TransactionId
-                    };
-
-
-                    var response = await collectoApi.RequestToPayAsync(requestToPay);
-                    // Handle the response from Collecto
-                    if (response != null) 
-                    {
-                        // Update the payment status in your database
-                        tenantPayment.PaymentStatus = "PENDING AT TELCOM";
-                        // await _context.SaveChangesAsync(); // Save changes to the database
-                    }
-                    else
-                    {
-                        // Handle error case
-                        _logger.LogError($"Failed to process Momo payment for Tenant ID: {tenantPayment.TransactionId}");
-                    }
-
-                    _logger.LogInformation($"Processing Momo payment for Tenant ID: {tenantPayment.TransactionId}");
+                    await HandleMomoAsync(tenantPayment, collecto, paymentService);
                 }
                 else
                 {
-                    // Handle other payment methods
-                    // await wallet.ProcessOtherPaymentAsync(tenantPayment);
-                    _logger.LogInformation($"Processing other payment for Tenant ID: {tenantPayment.TransactionId}");
+                    _logger.LogInformation("Delegating to wallet for non-MOMO payment");
+                    //await walletService.ProcessOtherPaymentAsync(tenantPayment);
                 }
-                // For example, you might want to call a method to process the payment
-                // await ProcessPaymentAsync(tenantPayment);
-                _logger.LogInformation($"Processing payment for Tenant ID: {tenantPayment.TransactionId}");
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing payment");
+            }
+        }
+
+        private async Task HandleMomoAsync(
+            TenantPayment tenantPayment,
+            ICollectoApiClient collectoApi,
+            IPaymentService paymentService)
+        {
+            _logger.LogInformation("Requesting mobile-money payment");
+
+            var request = new RequestToPayRequest
+            {
+                PaymentOption = "mobilemoney",
+                Phone = tenantPayment.PropertyTenant.PhoneNumber,
+                Amount = (decimal)tenantPayment.Amount,
+                Reference = tenantPayment.TransactionId
+            };
+
+            var rawResponse = await collectoApi
+                .RequestToPayAsync(request)
+                .ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(rawResponse))
+            {
+                tenantPayment.PaymentStatus = FailedStatus;
+                await paymentService.UpdatePaymentStatus(
+                    FailedStatus,
+                    tenantPayment.TransactionId,
+                    "Empty response from Collecto",
+                    string.Empty);
+                _logger.LogError("Empty response from Collecto");
+                return;
+            }
+
+            // deserialize into a typed model
+            var rtpResponse = JsonSerializer.Deserialize<RequestToPayResponse>(rawResponse);
+
+            if (rtpResponse?.Data?.RequestToPay == true)
+            {
+                tenantPayment.PaymentStatus = PendingAtTelcom;
+                await paymentService.UpdatePaymentStatus(
+                    PendingAtTelcom,
+                    tenantPayment.TransactionId,
+                    rtpResponse.StatusMessage ?? string.Empty,
+                    rtpResponse.Data.TransactionId ?? string.Empty);
+                _logger.LogInformation("MOMO request accepted");
+            }
+            else
+            {
+                tenantPayment.PaymentStatus = FailedStatus;
+                await paymentService.UpdatePaymentStatus(
+                    FailedStatus,
+                    tenantPayment.TransactionId,
+                    rtpResponse?.Data?.Message ?? "Unknown error",
+                    string.Empty);
+                _logger.LogError("MOMO request failed");
+            }
+        }
+    }
+
+    // Strongly-typed response model to replace manual JsonDocument parsing
+    public class RequestToPayResponse
+    {
+        public DataModel Data { get; set; }
+        public string StatusMessage { get; set; }
+
+        public class DataModel
+        {
+            public bool RequestToPay { get; set; }
+            public string TransactionId { get; set; }
+            public string Message { get; set; }
         }
     }
 }

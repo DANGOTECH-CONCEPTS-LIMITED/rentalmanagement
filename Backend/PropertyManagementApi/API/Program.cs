@@ -8,6 +8,7 @@ using Application.Interfaces.Tenant;
 using Application.Interfaces.UserServices;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
+using Infrastructure.Services.BackgroundServices;
 using Infrastructure.Services.Collecto;
 using Infrastructure.Services.Complaints;
 using Infrastructure.Services.Email;
@@ -49,12 +50,18 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 
 builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>()
     // this ensures every outgoing request goes through your LoggingHandler
-    .AddHttpMessageHandler<LoggingHandler>(); ;
+    .AddHttpMessageHandler<LoggingHandler>(); 
+
+
 
 
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<EmailService>();
+
+//add hosted services
+builder.Services.AddHostedService<PaymentProcessor>();
+builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

@@ -463,13 +463,15 @@ namespace Infrastructure.Services.PaymentServices
             return payments;
         }
 
-        public async Task UpdatePaymentStatus(string status, string transactionid)
+        public async Task UpdatePaymentStatus(string status, string transactionid,string vendorreason,string vendortranref)
         {
             var payment = await _context.TenantPayments
                 .FirstOrDefaultAsync(tp => tp.TransactionId == transactionid);
             if (payment == null)
                 throw new Exception("Payment not found.");
             payment.PaymentStatus = status;
+            payment.ReasonAtTelecom = vendorreason;
+            payment.VendorTransactionId = vendortranref;
             _context.TenantPayments.Update(payment);
             await _context.SaveChangesAsync();
         }
