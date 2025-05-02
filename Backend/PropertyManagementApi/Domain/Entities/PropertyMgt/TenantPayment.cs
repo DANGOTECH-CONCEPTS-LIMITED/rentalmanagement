@@ -17,6 +17,9 @@ namespace Domain.Entities.PropertyMgt
         public string PaymentType { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
         public string TransactionId { get; set; } = string.Empty;
+        public string VendorTransactionId { get; set; } = string.Empty;
+
+        public string ReasonAtTelecom { get; set; } = string.Empty;
         public string? Description { get; set; } = string.Empty;
         [ForeignKey("PropertyTenant")]
         public int PropertyTenantId { get; set; }

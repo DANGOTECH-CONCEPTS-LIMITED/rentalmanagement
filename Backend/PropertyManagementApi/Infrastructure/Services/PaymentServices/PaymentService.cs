@@ -462,5 +462,16 @@ namespace Infrastructure.Services.PaymentServices
                 .ToListAsync();
             return payments;
         }
+
+        public async Task UpdatePaymentStatus(string status, string transactionid)
+        {
+            var payment = await _context.TenantPayments
+                .FirstOrDefaultAsync(tp => tp.TransactionId == transactionid);
+            if (payment == null)
+                throw new Exception("Payment not found.");
+            payment.PaymentStatus = status;
+            _context.TenantPayments.Update(payment);
+            await _context.SaveChangesAsync();
+        }
     }
 }

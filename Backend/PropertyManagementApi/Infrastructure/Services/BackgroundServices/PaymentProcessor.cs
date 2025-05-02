@@ -1,5 +1,7 @@
-﻿using Application.Interfaces.PaymentService;
+﻿using Application.Interfaces.Collecto;
+using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
+using Domain.Entities.Collecto;
 using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -28,11 +30,12 @@ namespace Infrastructure.Services.BackgroundServices
                 {
                     var payment = scope.ServiceProvider.GetRequiredService<IPaymentService>();
                     var wallet = scope.ServiceProvider.GetRequiredService<IWalletService>();
+                    var collecto = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
 
                     try
                     {
                         var pendingpayments = await payment.GetPaymentsByStatusAsync("PENDING");
-                        await ProcessPendingPayments(pendingpayments);
+                        await ProcessPendingPayments(pendingpayments, collecto, payment);
                     }
                     catch (Exception ex)
                     {
@@ -46,12 +49,46 @@ namespace Infrastructure.Services.BackgroundServices
             }
         }
 
-        private async Task ProcessPendingPayments(IEnumerable<TenantPayment> tenantPayments)
+        private async Task ProcessPendingPayments(IEnumerable<TenantPayment> tenantPayments, ICollectoApiClient collectoApi, IPaymentService paymentService)
         {
             foreach (var tenantPayment in tenantPayments)
             {
                 // Process each payment
+                // check if payment is momo
+                if (tenantPayment.PaymentMethod == "MOMO")
+                {
+                    // send request to pay request to collecto
+                    var requestToPay = new RequestToPayRequest
+                    {
+                        PaymentOption = tenantPayment.PaymentMethod,
+                        Phone = tenantPayment.PropertyTenant.PhoneNumber,
+                        Amount = (decimal)tenantPayment.Amount,
+                        Reference = tenantPayment.TransactionId
+                    };
 
+
+                    var response = await collectoApi.RequestToPayAsync(requestToPay);
+                    // Handle the response from Collecto
+                    if (response != null) 
+                    {
+                        // Update the payment status in your database
+                        tenantPayment.PaymentStatus = "PENDING AT TELCOM";
+                        // await _context.SaveChangesAsync(); // Save changes to the database
+                    }
+                    else
+                    {
+                        // Handle error case
+                        _logger.LogError($"Failed to process Momo payment for Tenant ID: {tenantPayment.TransactionId}");
+                    }
+
+                    _logger.LogInformation($"Processing Momo payment for Tenant ID: {tenantPayment.TransactionId}");
+                }
+                else
+                {
+                    // Handle other payment methods
+                    // await wallet.ProcessOtherPaymentAsync(tenantPayment);
+                    _logger.LogInformation($"Processing other payment for Tenant ID: {tenantPayment.TransactionId}");
+                }
                 // For example, you might want to call a method to process the payment
                 // await ProcessPaymentAsync(tenantPayment);
                 _logger.LogInformation($"Processing payment for Tenant ID: {tenantPayment.TransactionId}");
