@@ -582,11 +582,11 @@ const ManageTenants = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">
                   <div className="flex flex-col items-center">
-                    <div className="w-60 h-60  rounded-full overflow-hidden">
+                    <div className="w-60 h-60 bg-gray-200 p-2 rounded-full overflow-hidden">
                       <img
                         src={getImageUrl2(selectedTenant.passportPhoto)}
                         alt={selectedTenant.fullName}
-                        className="h-full w-full object-contain"
+                        className="h-full w-full  rounded-full"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = PLACEHOLDER_IMAGE;
