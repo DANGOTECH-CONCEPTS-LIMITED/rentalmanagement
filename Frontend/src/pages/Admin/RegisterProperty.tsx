@@ -417,7 +417,7 @@ const RegisterProperty = () => {
       }
 
       const contentType = response.headers.get("content-type");
-      let result;
+      let result: string;
       if (contentType && contentType.includes("application/json")) {
         result = await response.json();
       } else {
@@ -429,7 +429,7 @@ const RegisterProperty = () => {
         description: `Successfully registered property: ${formData.Name}`,
       });
 
-      navigate("/#/admin-dashboard/landlord-properties");
+      navigate("/admin-dashboard/landlord-properties");
 
       setFormData({
         Name: "",
@@ -510,6 +510,7 @@ const RegisterProperty = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Apartment">Apartment</SelectItem>
+                  <SelectItem value="Studio">Studio Room</SelectItem>
                   <SelectItem value="House">House</SelectItem>
                   <SelectItem value="Condo">Condominium</SelectItem>
                   <SelectItem value="Commercial">Commercial</SelectItem>

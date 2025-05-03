@@ -2,20 +2,28 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
-import { ArrowRight, User, Lock } from "lucide-react";
+import { ArrowRight, User, Lock, Eye, EyeOff } from "lucide-react";
 import Button from "../../components/ui/button/Button";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const { login, loading: authLoading, error: authError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // const { systemRoleId, requiresPasswordChange } = await login(
-      const { systemRoleId } = await login(email, password);
+      const { systemRoleId, requiresPasswordChange } = await login(
+        email,
+        password
+      );
+
+      if (requiresPasswordChange) {
+        // The AuthContext will show the modal via its state
+        return;
+      }
 
       switch (systemRoleId) {
         case 1: // Admin
@@ -85,14 +93,25 @@ const SignIn = () => {
                       <Lock size={18} className="text-gray-400" />
                     </div>
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="input-field pl-10"
+                      className="input-field pl-10 pr-10"
                       placeholder="Enter your password"
                       required
                       autoComplete="current-password"
                     />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} className="text-gray-400" />
+                      ) : (
+                        <Eye size={18} className="text-gray-400" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
