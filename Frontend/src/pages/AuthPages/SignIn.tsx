@@ -17,7 +17,6 @@ const SignIn = () => {
       // const { systemRoleId, requiresPasswordChange } = await login(
       const { systemRoleId } = await login(email, password);
 
-      // Handle navigation based on role
       switch (systemRoleId) {
         case 1: // Admin
           navigate("/admin-dashboard");
