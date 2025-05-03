@@ -382,7 +382,10 @@ const LandlordProperties = () => {
       return { ...prev, [name]: value };
     });
   };
-  console.log("url", `${apiUrl}/${selectedProperty?.imageUrl}`);
+  console.log(
+    "url",
+    `${selectedProperty?.imageUrl.split(/[/\\]/).pop() || ""}`
+  );
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
@@ -416,8 +419,8 @@ const LandlordProperties = () => {
               {error && <p>No properties found</p>}
             </div>
           ) : isLoading ? (
-            <div className="py-8 text-center">
-              <div className="animate-pulse">Loading properties...</div>
+            <div className="flex justify-center items-center py-10">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
             </div>
           ) : filteredProperties.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center">
@@ -569,7 +572,9 @@ const LandlordProperties = () => {
                     Property Image
                   </h3>
                   <img
-                    src={`${apiUrl}/${selectedProperty.imageUrl}`}
+                    src={`${apiUrl}/uploads/${
+                      selectedProperty.imageUrl.split(/[/\\]/).pop() || ""
+                    }`}
                     alt={selectedProperty.name}
                     className="rounded-md w-full h-64 object-cover"
                   />

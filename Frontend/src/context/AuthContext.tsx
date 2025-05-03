@@ -9,6 +9,7 @@ import React, {
 import axios from "axios";
 
 interface User {
+  passportPhoto: string;
   verified: boolean;
   id: number;
   fullName: string;
@@ -123,6 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         token: response.data.token,
         systemRoleId: response.data.systemRoleId,
         verified: response.data.verified,
+        passportPhoto: response.data.passportPhoto,
       };
 
       setUser(userData);

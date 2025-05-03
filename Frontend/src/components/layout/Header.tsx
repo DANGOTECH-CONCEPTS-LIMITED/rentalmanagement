@@ -142,7 +142,7 @@ const Header = () => {
         </div> */}
         {/* Profile dropdown */}
         <div className="relative ml-3" ref={userDropdownRef}>
-          <button
+          {/* <button
             type="button"
             className="flex items-center space-x-2 focus:outline-none"
             onClick={() => setShowUserDropdown(!showUserDropdown)}
@@ -150,7 +150,19 @@ const Header = () => {
             <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center uppercase font-medium text-sm">
               {user?.fullName?.charAt(0) || "U"}
             </div>
-          </button>
+          </button> */}
+          <div onClick={() => setShowUserDropdown(!showUserDropdown)}>
+            <img
+              className="h-8 w-8 rounded-full"
+              src={
+                `${
+                  import.meta.env.VITE_API_BASE_URL
+                }/uploads/${user.passportPhoto?.split(/[/\\]/).pop()}` ||
+                "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0="
+              }
+              alt="User profile"
+            />
+          </div>
 
           {showUserDropdown && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 cursor-pointer">
