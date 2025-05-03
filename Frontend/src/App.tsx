@@ -80,6 +80,7 @@ const App = () => (
                 <Route path="reports" element={<Reports />} />
                 <Route path="transactions" element={<Transactions />} />
                 <Route path="system-settings" element={<SystemSettings />} />
+                <Route path="send-sms" element={<SendSMSForm />} />
               </Route>
             </Route>
 
@@ -111,6 +112,7 @@ const App = () => (
                 <Route path="make-payment" element={<MakePayment />} />
                 <Route path="payment-history" element={<PaymentHistory />} />
                 <Route path="submit-complaint" element={<SubmitComplaint />} />
+                <Route path="send-sms" element={<SendSMSForm />} />
               </Route>
             </Route>
 

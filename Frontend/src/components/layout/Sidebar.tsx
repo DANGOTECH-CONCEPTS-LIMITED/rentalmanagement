@@ -262,6 +262,11 @@ function getNavItems(role: number): NavItem[] {
         path: "/admin-dashboard/system-settings",
         hasSubItems: false,
       },
+      {
+        label: "Send SMS",
+        icon: <MessageSquare size={18} />,
+        path: "/admin-dashboard/send-sms",
+      },
     ];
   }
 
@@ -333,6 +338,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Submit Complaint",
         icon: <MessageSquare size={18} />,
         path: "/tenant-dashboard/submit-complaint",
+      },
+      {
+        label: "Send SMS",
+        icon: <MessageSquare size={18} />,
+        path: "/tenant-dashboard/send-sms",
       },
     ];
   }
