@@ -298,6 +298,11 @@ function getNavItems(role: number): NavItem[] {
         icon: <CreditCard size={18} />,
         path: "/landlord-dashboard/payments",
       },
+      {
+        label: "Send SMS",
+        icon: <MessageSquare size={18} />,
+        path: "/landlord-dashboard/send-sms",
+      },
     ];
   }
 
