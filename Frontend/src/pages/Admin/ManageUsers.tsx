@@ -1173,6 +1173,38 @@ const ManageUsers = () => {
                 required
               />
             </div>
+            <div>
+              <label
+                htmlFor="systemRoleId"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                System Role
+              </label>
+              <select
+                id="systemRoleId"
+                name="systemRoleId"
+                value={formData.systemRoleId}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
+                  errors.systemRoleId
+                    ? "border-red-500 focus:ring-red-300 "
+                    : "border-gray-300 focus:ring-blue-300"
+                }`}
+              >
+                <option value="">Select a role</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+              {errors.systemRoleId && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.systemRoleId}
+                </p>
+              )}
+            </div>
+
             <div className="md:col-span-2 space-y-4">
               <label className="text-sm font-medium">Identification Type</label>
               <div className="flex flex-wrap gap-4">
