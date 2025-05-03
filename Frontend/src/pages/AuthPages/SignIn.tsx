@@ -24,7 +24,6 @@ const SignIn = () => {
         return;
       }
 
-      // Handle navigation based on role
       switch (systemRoleId) {
         case 1: // Admin
           navigate("/admin-dashboard");
