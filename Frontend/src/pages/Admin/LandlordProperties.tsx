@@ -382,7 +382,10 @@ const LandlordProperties = () => {
       return { ...prev, [name]: value };
     });
   };
-  console.log("url", `${apiUrl}/${selectedProperty?.imageUrl}`);
+  console.log(
+    "url",
+    `${selectedProperty?.imageUrl.split(/[/\\]/).pop() || ""}`
+  );
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
@@ -569,7 +572,9 @@ const LandlordProperties = () => {
                     Property Image
                   </h3>
                   <img
-                    src={`${apiUrl}/${selectedProperty.imageUrl}`}
+                    src={`${apiUrl}/uploads/${
+                      selectedProperty.imageUrl.split(/[/\\]/).pop() || ""
+                    }`}
                     alt={selectedProperty.name}
                     className="rounded-md w-full h-64 object-cover"
                   />
