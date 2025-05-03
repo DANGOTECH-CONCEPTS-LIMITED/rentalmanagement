@@ -9,17 +9,12 @@ import {
   FileText,
   Settings,
   BarChart3,
-  Calendar,
-  User,
   Menu,
   LogOut,
   ChevronRight,
   House,
   MessageSquare,
-  PlusCircle,
   CreditCard,
-  Clipboard,
-  ClipboardCheck,
   X,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -107,6 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
                 >
                   <NavLink
                     to={item.path}
+                    end
                     className={({ isActive }) =>
                       cn("sidebar-link", isActive ? "active" : "")
                     }
@@ -183,6 +179,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
             >
               <NavLink
                 to={item.path}
+                end
                 className={({ isActive }) =>
                   cn(
                     "sidebar-link",
@@ -300,6 +297,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Track Payments",
         icon: <CreditCard size={18} />,
         path: "/landlord-dashboard/payments",
+      },
+      {
+        label: "Send SMS",
+        icon: <MessageSquare size={18} />,
+        path: "/landlord-dashboard/send-sms",
       },
     ];
   }

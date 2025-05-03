@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Plus, X, Check, FileEdit, Trash2, Eye } from 'lucide-react';
+import { Send, Plus, X, Check, FileEdit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,8 @@ const ComplaintsTable = () => {
   const [images, setImages] = useState([]);
   const [imagesPreviews, setImagesPreviews] = useState([]);
   const [priority, setPriority] = useState('medium');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [currentComplaint, setCurrentComplaint] = useState(null);
@@ -360,12 +362,14 @@ const ComplaintsTable = () => {
       day: 'numeric',
     }).format(date);
   };
-
-  const extractFilename = (path) => {
-    if (!path) return "No attachment";
-    const parts = path.split('\\');
-    return parts[parts.length - 1];
+ 
+  const getPaginationData = () => {
+     const startIndex = (currentPage - 1) * itemsPerPage;
+     const endIndex = startIndex + itemsPerPage;
+     return complaints.slice(startIndex, endIndex);
   };
+
+  const totalPages = Math.ceil(complaints.length / itemsPerPage);
 
   return (
     <div className="space-y-6">
@@ -404,7 +408,7 @@ const ComplaintsTable = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              complaints.map((complaint) => (
+              getPaginationData().map((complaint) => (
                 <TableRow key={complaint.id}>
                   <TableCell className="font-medium">{complaint.subject}</TableCell>
                   <TableCell className="font-medium">{complaint.description}</TableCell>
@@ -457,6 +461,35 @@ const ComplaintsTable = () => {
             )}
           </TableBody>
         </Table>
+        {complaints.length > itemsPerPage && (
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <div className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+              {Math.min(currentPage * itemsPerPage, complaints.length)} of{' '}
+              {complaints.length} complaints
+            </div>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

@@ -459,7 +459,7 @@ const MakePayment = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <DollarSign className="mr-2 h-5 w-5" />
+              <CreditCard className="mr-2 h-5 w-5" />
               Payment Summary
             </CardTitle>
             <CardDescription>Details of your current payment</CardDescription>
