@@ -382,7 +382,14 @@ const ManageTenants = () => {
     return `${apiUrl}/${relativePath}${token ? `?token=${token}` : ""}`;
   };
 
-  console.log("selectedTenant", deleteTenant);
+  const getImageUrl2 = (fullPath?: string): string => {
+    if (!fullPath || typeof fullPath !== "string") return "";
+
+    const fileName = fullPath.split(/[/\\]/).pop()?.trim();
+    if (!fileName) return "";
+
+    return `${apiUrl}/uploads/${fileName}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -577,9 +584,9 @@ const ManageTenants = () => {
                   <div className="flex flex-col items-center">
                     <div className="w-60 h-60  rounded-full overflow-hidden">
                       <img
-                        src={getImageUrl(selectedTenant.passportPhoto)}
+                        src={getImageUrl2(selectedTenant.passportPhoto)}
                         alt={selectedTenant.fullName}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-contain"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = PLACEHOLDER_IMAGE;
