@@ -284,6 +284,12 @@ function getNavItems(role: number): NavItem[] {
       //   path: "/landlord-dashboard/register-tenants",
       // },
       {
+        label: "Properties",
+        icon: <House size={18} />,
+        path: "/landlord-dashboard/properties",
+        hasSubItems: false,
+      },
+      {
         label: "Manage Contracts",
         icon: <FileText size={18} />,
         path: "/landlord-dashboard/rental-contracts",

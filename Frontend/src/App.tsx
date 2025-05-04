@@ -44,6 +44,7 @@ import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
 import Transactions from "./pages/Admin/Transactions";
 import SendSMSForm from "./pages/SendSMSForm";
+import Properties from "./pages/Landlord/LandloardProperties";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ const App = () => (
                 <Route path="rental-contracts" element={<RentalContracts />} />
                 <Route path="complaints" element={<HandleComplaints />} />
                 <Route path="payments" element={<TrackPayments />} />
+                <Route path="properties" element={<Properties />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
               </Route>
             </Route>

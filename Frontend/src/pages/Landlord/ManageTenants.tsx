@@ -107,6 +107,9 @@ const ManageTenants = () => {
     DateMovedIn: "",
     PropertyId: "",
     Active: "true",
+    idFront: "",
+    idBack: "",
+    passportPhoto: "",
   });
 
   const navigate = useNavigate();
@@ -294,8 +297,10 @@ const ManageTenants = () => {
           NationalIdNumber: "",
           DateMovedIn: "",
           PropertyId: "",
-
           Active: "true",
+          idFront: "",
+          idBack: "",
+          passportPhoto: "",
         });
         clearFile("PassportPhoto");
         clearFile("IdFront");
@@ -506,6 +511,9 @@ const ManageTenants = () => {
                                   .split("T")[0],
                                 PropertyId: tenant.propertyId,
                                 Active: String(tenant.active),
+                                idFront: tenant.idFront,
+                                idBack: tenant.idBack,
+                                passportPhoto: tenant.passportPhoto,
                               });
                             }}
                           >
@@ -528,6 +536,9 @@ const ManageTenants = () => {
                                   .split("T")[0],
                                 PropertyId: tenant.propertyId,
                                 Active: String(tenant.active),
+                                idFront: tenant.idFront || "",
+                                idBack: tenant.idBack || "",
+                                passportPhoto: tenant.passportPhoto || "",
                               });
                               setPassportPhotoPreview(
                                 getImageUrl(tenant.passportPhoto)
@@ -582,11 +593,11 @@ const ManageTenants = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">
                   <div className="flex flex-col items-center">
-                    <div className="w-60 h-60  rounded-full overflow-hidden">
+                    <div className="w-60 h-60 bg-gray-200 p-2 rounded-full overflow-hidden">
                       <img
                         src={getImageUrl2(selectedTenant.passportPhoto)}
                         alt={selectedTenant.fullName}
-                        className="h-full w-full object-contain"
+                        className="h-full w-full  rounded-full"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = PLACEHOLDER_IMAGE;
@@ -896,6 +907,36 @@ const ManageTenants = () => {
                     <h3 className="font-medium mb-4">
                       Identification Documents
                     </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <img
+                          src={`${apiUrl}/uploads/${
+                            formData?.passportPhoto.split(/[/\\]/).pop() || ""
+                          }`}
+                          alt="Passport Photo"
+                          className="w-full h-40 object-cover rounded-md"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <img
+                          src={`${apiUrl}/uploads/${
+                            formData?.idFront.split(/[/\\]/).pop() || ""
+                          }`}
+                          alt="Passport Photo"
+                          className="w-full h-40 object-cover rounded-md"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <img
+                          src={`${apiUrl}/uploads/${
+                            formData?.idBack.split(/[/\\]/).pop() || ""
+                          }`}
+                          alt="Passport Photo"
+                          className="w-full h-40 object-cover rounded-md"
+                        />
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Passport Photo */}
                       <div className="space-y-2">
@@ -903,7 +944,14 @@ const ManageTenants = () => {
                           <Camera size={16} className="mr-1" />
                           Passport Photo
                         </label>
-                        <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
+                        <div
+                          className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40 cursor-pointer"
+                          onClick={() =>
+                            document
+                              .getElementById("passportPhotoInput")
+                              ?.click()
+                          }
+                        >
                           {passportPhoto ? (
                             <div className="relative w-full h-full">
                               <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
@@ -917,7 +965,10 @@ const ManageTenants = () => {
                               </div>
                               <button
                                 type="button"
-                                onClick={() => clearFile("PassportPhoto")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  clearFile("PassportPhoto");
+                                }}
                                 className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                               >
                                 <X size={14} />
@@ -927,18 +978,17 @@ const ManageTenants = () => {
                             <>
                               <Upload className="h-8 w-8 text-gray-400 mb-2" />
                               <p className="text-xs text-center text-gray-500">
-                                <label className="text-primary hover:text-primary/80 cursor-pointer">
-                                  Upload photo
-                                  <input
-                                    type="file"
-                                    className="sr-only"
-                                    accept="image/*"
-                                    onChange={(e) =>
-                                      handleFileChange(e, "PassportPhoto")
-                                    }
-                                    required
-                                  />
-                                </label>
+                                Click to upload photo
+                                <input
+                                  id="passportPhotoInput"
+                                  type="file"
+                                  className="sr-only"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    handleFileChange(e, "PassportPhoto")
+                                  }
+                                  required
+                                />
                               </p>
                             </>
                           )}
@@ -951,7 +1001,12 @@ const ManageTenants = () => {
                           <CreditCard size={16} className="mr-1" />
                           ID Front Side
                         </label>
-                        <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
+                        <div
+                          className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40 cursor-pointer"
+                          onClick={() =>
+                            document.getElementById("idFrontInput")?.click()
+                          }
+                        >
                           {idFrontPhoto ? (
                             <div className="relative w-full h-full">
                               <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
@@ -965,7 +1020,10 @@ const ManageTenants = () => {
                               </div>
                               <button
                                 type="button"
-                                onClick={() => clearFile("IdFront")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  clearFile("IdFront");
+                                }}
                                 className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                               >
                                 <X size={14} />
@@ -975,18 +1033,17 @@ const ManageTenants = () => {
                             <>
                               <Upload className="h-8 w-8 text-gray-400 mb-2" />
                               <p className="text-xs text-center text-gray-500">
-                                <label className="text-primary hover:text-primary/80 cursor-pointer">
-                                  Upload front
-                                  <input
-                                    type="file"
-                                    className="sr-only"
-                                    accept="image/*"
-                                    onChange={(e) =>
-                                      handleFileChange(e, "IdFront")
-                                    }
-                                    required
-                                  />
-                                </label>
+                                Click to upload front
+                                <input
+                                  id="idFrontInput"
+                                  type="file"
+                                  className="sr-only"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    handleFileChange(e, "IdFront")
+                                  }
+                                  required
+                                />
                               </p>
                             </>
                           )}
@@ -999,7 +1056,12 @@ const ManageTenants = () => {
                           <CreditCard size={16} className="mr-1" />
                           ID Back Side
                         </label>
-                        <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
+                        <div
+                          className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40 cursor-pointer"
+                          onClick={() =>
+                            document.getElementById("idBackInput")?.click()
+                          }
+                        >
                           {idBackPhoto ? (
                             <div className="relative w-full h-full">
                               <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
@@ -1013,7 +1075,10 @@ const ManageTenants = () => {
                               </div>
                               <button
                                 type="button"
-                                onClick={() => clearFile("IdBack")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  clearFile("IdBack");
+                                }}
                                 className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                               >
                                 <X size={14} />
@@ -1023,18 +1088,17 @@ const ManageTenants = () => {
                             <>
                               <Upload className="h-8 w-8 text-gray-400 mb-2" />
                               <p className="text-xs text-center text-gray-500">
-                                <label className="text-primary hover:text-primary/80 cursor-pointer">
-                                  Upload back
-                                  <input
-                                    type="file"
-                                    className="sr-only"
-                                    accept="image/*"
-                                    onChange={(e) =>
-                                      handleFileChange(e, "IdBack")
-                                    }
-                                    required
-                                  />
-                                </label>
+                                Click to upload back
+                                <input
+                                  id="idBackInput"
+                                  type="file"
+                                  className="sr-only"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    handleFileChange(e, "IdBack")
+                                  }
+                                  required
+                                />
                               </p>
                             </>
                           )}

@@ -36,6 +36,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import axios from "axios";
 
 interface Transaction {
   amount: number;
@@ -53,12 +54,16 @@ const LandlordDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [tenants, setTenants] = useState([]);
 
+  const user = localStorage.getItem("user");
+
+  if (!user) throw new Error("No user found in localStorage");
+  const userData = JSON.parse(user);
   const getUserToken = () => {
     try {
-      const user = localStorage.getItem("user");
-      if (!user) throw new Error("No user found in localStorage");
-      const userData = JSON.parse(user);
+      // setUserInfo(userData);
       return userData.token;
     } catch (error) {
       console.error("Error getting user token:", error);
@@ -70,55 +75,105 @@ const LandlordDashboard = () => {
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const fetchWalletData = async () => {
-      setIsLoading(true);
-      try {
-        if (!token) throw new Error("No authentication token found");
+    fetchWalletData();
+    fetchProperties();
+    fetchTenants();
+  }, [token, apiUrl, toast]);
 
-        const user = localStorage.getItem("user");
-        if (!user) throw new Error("No user found in localStorage");
-        const userData = JSON.parse(user);
+  const fetchWalletData = async () => {
+    setIsLoading(true);
+    try {
+      if (!token) throw new Error("No authentication token found");
 
-        const balanceRes = await fetch(`${apiUrl}/GetBalance/${userData.id}`, {
+      const user = localStorage.getItem("user");
+      if (!user) throw new Error("No user found in localStorage");
+      const userData = JSON.parse(user);
+
+      const balanceRes = await fetch(`${apiUrl}/GetBalance/${userData.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: "*/*",
+        },
+      });
+
+      if (!balanceRes.ok)
+        throw new Error(`Failed to fetch balance: ${balanceRes.status}`);
+      const balanceData = await balanceRes.json();
+      setBalance(balanceData.balance);
+
+      const statementRes = await fetch(
+        `${apiUrl}/GetStatement/${userData.id}`,
+        {
           headers: {
             Authorization: `Bearer ${token}`,
             accept: "*/*",
           },
-        });
+        }
+      );
 
-        if (!balanceRes.ok)
-          throw new Error(`Failed to fetch balance: ${balanceRes.status}`);
-        const balanceData = await balanceRes.json();
-        setBalance(balanceData.balance);
+      if (!statementRes.ok)
+        throw new Error(`Failed to fetch statement: ${statementRes.status}`);
+      const statementData = await statementRes.json();
+      setTransactions(statementData);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to load wallet data",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        const statementRes = await fetch(
-          `${apiUrl}/GetStatement/${userData.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              accept: "*/*",
-            },
-          }
-        );
+  const fetchTenants = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
 
-        if (!statementRes.ok)
-          throw new Error(`Failed to fetch statement: ${statementRes.status}`);
-        const statementData = await statementRes.json();
-        setTransactions(statementData);
-      } catch (err: any) {
-        console.error(err);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: err.message || "Failed to load wallet data",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
+      const filteredData = data.filter(
+        (tenant: any) => tenant?.property?.ownerId === userData.id
+      );
+      setTenants(filteredData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error.response.status === 404
+            ? `Tenants ${error.response.statusText}`
+            : error.response.data,
+        variant: "destructive",
+      });
+    }
+  };
+  const fetchProperties = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
 
-    fetchWalletData();
-  }, [token, apiUrl, toast]);
+    try {
+      const { data } = await axios.get(
+        `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`
+      );
+
+      setProperties(data);
+    } catch (error) {
+      console.error("Error fetching landlords:", error);
+      toast({
+        title: "Error",
+        description:
+          error.response.status === 404
+            ? `Properties ${error.response.statusText}`
+            : error.response.data,
+        variant: "destructive",
+      });
+    }
+  };
 
   const validateWithdrawal = () => {
     if (!withdrawAmount || isNaN(Number(withdrawAmount))) {
@@ -163,14 +218,18 @@ const LandlordDashboard = () => {
       if (!user) throw new Error("No user found in localStorage");
       const userData = JSON.parse(user);
 
-      const response = await fetch(`${apiUrl}/Withdraw/${userData.id}`, {
+      const formData = new FormData();
+      formData.append("amount", amount.toString());
+      formData.append("landlordid", userData.id.toString());
+      formData.append("description", "Withdrawal from wallet");
+
+      const response = await fetch(`${apiUrl}/Withdraw`, {
         method: "POST",
         headers: {
           accept: "*/*",
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify(amount),
+        body: formData,
       });
 
       if (!response.ok) throw new Error("Withdrawal failed");
@@ -413,13 +472,13 @@ const LandlordDashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatCard
             title="Total Properties"
-            value="5"
+            value={properties.length}
             icon={<Home className="h-6 w-6" />}
             change={{ value: 1, type: "increase" }}
           />
           <StatCard
             title="Total Tenants"
-            value="12"
+            value={tenants.length}
             icon={<Users className="h-6 w-6" />}
             change={{ value: 2, type: "increase" }}
           />

@@ -1,10 +1,11 @@
-
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Home, Wallet, TrendingUp } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
 import Button from "../../components/ui/button/Button";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "@/hooks/use-toast";
 
 interface Stats {
   totalProperties: number;
@@ -29,6 +30,9 @@ const AdminDashboard = () => {
     totalRevenue: 0,
     occupancyRate: 0,
   });
+
+  const [properties, setProperties] = useState([]);
+  const [landlords, setLandlords] = useState([]);
 
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
@@ -67,8 +71,51 @@ const AdminDashboard = () => {
     };
 
     fetchStats();
+    fetchProperties();
+    fetchLandlords();
   }, []);
 
+  const fetchLandlords = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetLandlords`);
+
+      setLandlords(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error.response.status === 404
+            ? `Landlords ${error.response.statusText}`
+            : error.response.data,
+        variant: "destructive",
+      });
+    }
+  };
+  const fetchProperties = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
+
+      setProperties(data);
+    } catch (error) {
+      console.error("Error fetching landlords:", error);
+      toast({
+        title: "Error",
+        description:
+          error.response.status === 404
+            ? `Properties ${error.response.statusText}`
+            : error.response.data,
+        variant: "destructive",
+      });
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const fetchBalance = async (type: string) => {
@@ -132,7 +179,9 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard Overview</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Dashboard Overview
+        </h1>
       </div>
 
       <div className="flex gap-4 mb-6">
@@ -220,13 +269,13 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Properties"
-          value={stats.totalProperties}
+          value={properties.length}
           icon={<Home />}
           change={{ value: 12, type: "increase" }}
         />
         <StatCard
           title="Total Landlords"
-          value={stats.totalLandlords}
+          value={landlords.length}
           icon={<Users />}
           change={{ value: 8, type: "increase" }}
         />

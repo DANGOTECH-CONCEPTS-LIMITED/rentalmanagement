@@ -35,7 +35,6 @@ import {
   Trash,
   Search,
   Home,
-  DollarSign,
   User,
   Eye,
   Users,
@@ -155,8 +154,20 @@ const UserDetails = ({
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
-        <div className="bg-primary/10 p-3 rounded-full">
-          <User className="h-6 w-6 text-primary" />
+        <div className="w-60 h-60 bg-gray-200 p-2 rounded-full overflow-hidden">
+          <img
+            src={`${
+              import.meta.env.VITE_API_BASE_URL
+            }/uploads/${user.passportPhoto?.split(/[/\\]/).pop()}`}
+            alt={user.name}
+            className="h-full w-full  rounded-full"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src =
+                "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0=";
+              target.onerror = null; // Prevent infinite loop if placeholder also fails
+            }}
+          />
         </div>
         <div>
           <h3 className="text-lg font-semibold">{user.name}</h3>
@@ -388,6 +399,7 @@ const ManageUsers = () => {
     IdNumber: "",
     systemRoleId: "",
   });
+
   const [editFormData, setEditFormData] = useState({
     id: "",
     fullName: "",
@@ -477,6 +489,7 @@ const ManageUsers = () => {
         role: item.systemRole.name,
         status: item.verified ? "active" : "inactive",
         verified: item.verified,
+        passportPhoto: item.passportPhoto,
       }));
 
       setUsers(formattedUsers);
@@ -726,6 +739,7 @@ const ManageUsers = () => {
       } catch (e) {
         result = { message: responseText };
       }
+      fetchUsers();
       toast({
         title: "Landlord Registered",
         description: `${formData.FullName} has been successfully registered.`,
@@ -1086,7 +1100,7 @@ const ManageUsers = () => {
         open={!!selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
       >
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
             <DialogDescription>
