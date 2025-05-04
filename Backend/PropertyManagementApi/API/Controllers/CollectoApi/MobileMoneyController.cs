@@ -44,33 +44,33 @@ namespace API.Controllers.CollectoApi
         //    }
         //}
 
-        //[HttpPost("/servicePayment")]
-        //public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.ServicePaymentAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/servicePayment")]
+        public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequest request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.ServicePaymentAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-        //[HttpPost("/servicePaymentStatus")]
-        //public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.GetServicePaymentStatusAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/servicePaymentStatus")]
+        public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequest request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.GetServicePaymentStatusAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         [HttpPost("/sendSingleSms")]
         public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequest request)
