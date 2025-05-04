@@ -62,6 +62,7 @@ builder.Services.AddSingleton<EmailService>();
 //add hosted services
 builder.Services.AddHostedService<PaymentProcessor>();
 builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
+builder.Services.AddHostedService<CreditWalletService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

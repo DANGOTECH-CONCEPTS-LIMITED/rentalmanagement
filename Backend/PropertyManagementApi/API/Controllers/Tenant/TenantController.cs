@@ -40,6 +40,8 @@ namespace API.Controllers.Tenant
         {
             try
             {
+                if (files.Count != 3)
+                    return BadRequest("Please upload exactly 3 files: passport photo, ID front, and ID back.");
                 await _tenantService.UpdateTenantAsync(files[0], files[1], files[2], tenant, tenantid);
                 return Ok("Tenant updated successfully.");
             }

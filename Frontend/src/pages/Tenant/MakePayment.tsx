@@ -51,6 +51,10 @@ const MakePayment = () => {
   const formatCurrency = useCurrencyFormatter();
   const [tenantData, setTenantData] = useState<PropertyTenant | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+  const [vendor, setVendor] = useState('');
+const [transactionId, setTransactionId] = useState('');
+const [description, setDescription] = useState('');
+
 
   console.log("tenantData", tenantData);
 
@@ -83,6 +87,7 @@ const MakePayment = () => {
   if (!user) throw new Error('No user found in localStorage');
 
   const userData = JSON.parse(user);
+  console.log('userData', userData);
   const token = userData.token;
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -135,6 +140,49 @@ const MakePayment = () => {
 
     fetchData();
   }, [toast]);
+
+  const handleSubmitMobileMoney = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+  
+    try {
+      const payload = {
+        amount: parseFloat(paymentAmount),
+        paymentDate: new Date().toISOString(),
+        paymentMethod: "MOMO",
+        vendor: vendor,
+        paymentType: "MOMO",
+        transactionId: transactionId,
+        description: description,
+        propertyTenantId: userData.id || 0,
+      };
+  
+      const response = await axios.post(`${apiUrl}/MakeTenantPayment`, payload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      toast({
+        title: "Payment Successful",
+        description: `MOMO Payment of ${formatCurrency(Number(paymentAmount))} submitted successfully.`,
+      });
+  
+      resetFormFields();
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        title: "Payment Failed",
+        description: "There was an issue processing your mobile money payment.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -326,67 +374,97 @@ const MakePayment = () => {
                   </TabsContent>
 
                   <TabsContent value="mobile_money">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor="mobile-amount">
-                          Amount to Pay
-                        </label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                          <Input
-                            id="mobile-amount"
-                            className="pl-10"
-                            type="text"
-                            value={paymentAmount}
-                            onChange={(e) => setPaymentAmount(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
+                  <TabsContent value="mobile_money">
+  <form onSubmit={handleSubmitMobileMoney} className="space-y-6">
+    <div className="space-y-2">
+      <label className="text-sm font-medium" htmlFor="mobile-amount">
+        Amount to Pay
+      </label>
+      <div className="relative">
+        <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+        <Input
+          id="mobile-amount"
+          className="pl-10"
+          type="number"
+          value={paymentAmount}
+          onChange={(e) => setPaymentAmount(e.target.value)}
+          required
+        />
+      </div>
+    </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor="provider">
-                          Mobile Money Provider
-                        </label>
-                        <select
-                          id="provider"
-                          className="flex w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          value={provider}
-                          onChange={(e) => setProvider(e.target.value)}
-                          required
-                        >
-                          <option value="mtn">MTN Mobile Money</option>
-                          <option value="airtel">Airtel Money</option>
-                        </select>
-                      </div>
+    <div className="space-y-2">
+      <label className="text-sm font-medium" htmlFor="provider">
+        Mobile Money Provider
+      </label>
+      <select
+        id="provider"
+        className="flex w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+        value={provider}
+        onChange={(e) => setProvider(e.target.value)}
+        required
+      >
+        <option value="mtn">MTN Mobile Money</option>
+        <option value="airtel">Airtel Money</option>
+      </select>
+    </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium" htmlFor="phoneNumber">
-                          Phone Number
-                        </label>
-                        <Input
-                          id="phoneNumber"
-                          type="tel"
-                          placeholder="078XXXXXXX"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          required
-                        />
-                      </div>
+    <div className="space-y-2">
+      <label className="text-sm font-medium" htmlFor="vendor">
+        Vendor
+      </label>
+      <Input
+        id="vendor"
+        type="text"
+        placeholder="Vendor name"
+        value={vendor}
+        onChange={(e) => setVendor(e.target.value)}
+        required
+      />
+    </div>
 
-                      <div className="pt-4">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                          {isLoading ? "Processing..." : "Proceed to Payment"}
-                        </Button>
-                      </div>
+    <div className="space-y-2">
+      <label className="text-sm font-medium" htmlFor="transactionId">
+        Transaction ID
+      </label>
+      <Input
+        id="transactionId"
+        type="text"
+        placeholder="e.g. MOMO123456"
+        value={transactionId}
+        onChange={(e) => setTransactionId(e.target.value)}
+        required
+      />
+    </div>
 
-                      <div className="text-sm text-muted-foreground mt-4">
-                        <p className="flex items-center">
-                          <AlertCircle className="mr-1 h-4 w-4 text-amber-500" />
-                          You will receive a prompt on your phone to complete the payment.
-                        </p>
-                      </div>
-                    </form>
+    <div className="space-y-2">
+      <label className="text-sm font-medium" htmlFor="description">
+        Description (optional)
+      </label>
+      <Input
+        id="description"
+        type="text"
+        placeholder="e.g. Rent for May"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+      />
+    </div>
+
+    <div className="pt-4">
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? "Processing..." : "Proceed to Payment"}
+      </Button>
+    </div>
+
+    <div className="text-sm text-muted-foreground mt-4">
+      <p className="flex items-center">
+        <AlertCircle className="mr-1 h-4 w-4 text-amber-500" />
+        You will receive a confirmation upon successful payment.
+      </p>
+    </div>
+  </form>
+</TabsContent>
+
                   </TabsContent>
 
                   <TabsContent value="bank_transfer">
