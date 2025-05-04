@@ -76,14 +76,15 @@ const TrackPayments = () => {
 
   console.log("Payments:", payments);
 
+  const user = localStorage.getItem("user");
+  const userData = JSON.parse(user);
   const getAuthToken = () => {
     try {
-      const user = localStorage.getItem("user");
       if (!user) {
         console.error("No user found in localStorage");
         return null;
       }
-      const userData = JSON.parse(user);
+
       return userData.token;
     } catch (error) {
       console.error("Error parsing user data:", error);
@@ -108,7 +109,11 @@ const TrackPayments = () => {
         }
 
         const data = await response.json();
-        setPayments(data);
+        const filteredData = data.filter(
+          (payment: any) =>
+            payment.propertyTenant.property.ownerId === userData.id
+        );
+        setPayments(filteredData);
       } catch (error) {
         console.error("Error fetching payments:", error);
         toast({

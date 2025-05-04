@@ -115,15 +115,15 @@ const ManageTenants = () => {
   const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
+  const user = localStorage.getItem("user");
+  const userData = JSON.parse(user);
   const getAuthToken = () => {
     try {
-      const user = localStorage.getItem("user");
       if (!user) {
         console.error("No user found in localStorage");
         return null;
       }
-      const userData = JSON.parse(user);
+
       return userData.token;
     } catch (error) {
       console.error("Error parsing user data:", error);
@@ -135,8 +135,10 @@ const ManageTenants = () => {
     const fetchTenants = async () => {
       try {
         const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
-
-        setTenants(data);
+        const filteredData = data.filter(
+          (tenant: any) => tenant?.property?.ownerId === userData.id
+        );
+        setTenants(filteredData);
       } catch (error) {
         toast({
           title: "Error",

@@ -20,11 +20,6 @@ const SignIn = () => {
         password
       );
 
-      if (requiresPasswordChange) {
-        // The AuthContext will show the modal via its state
-        return;
-      }
-
       switch (systemRoleId) {
         case 1: // Admin
           navigate("/admin-dashboard");
@@ -55,7 +50,7 @@ const SignIn = () => {
           <div className="p-8">
             <div className="mb-8 text-center">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Nyumba Yo NYUMBA YO
+                NYUMBA YO
               </h1>
               <p className="text-gray-600">
                 Your one stop property management solution
