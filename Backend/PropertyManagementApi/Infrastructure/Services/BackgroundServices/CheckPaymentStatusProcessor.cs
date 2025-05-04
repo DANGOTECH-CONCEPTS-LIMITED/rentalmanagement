@@ -41,7 +41,7 @@ namespace Infrastructure.Services.BackgroundServices
                     var wallet = scope.ServiceProvider.GetRequiredService<IWalletService>();
                     var collecto = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
 
-                    var pendingPayments = await payment.GetPaymentsByStatusAsync(PendingStatus).ConfigureAwait(false);
+                   var pendingPayments = await payment.GetPaymentsByStatusAsync(PendingStatus).ConfigureAwait(false);
 
                     foreach (var tenantPayment in pendingPayments)
                     {
@@ -107,7 +107,7 @@ namespace Infrastructure.Services.BackgroundServices
 
                 if (rtpResponse?.data?.requestToPayStatus == true)
                 {
-                    if (rtpResponse.data.message.Equals("SUCCESSFUL"))
+                    if (rtpResponse.data.status.Equals("SUCCESSFUL"))
                     {
                         tenantPayment.PaymentStatus = SucessfulAtTelecom;
                     }

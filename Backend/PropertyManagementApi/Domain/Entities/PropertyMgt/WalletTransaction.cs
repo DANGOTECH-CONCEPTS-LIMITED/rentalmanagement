@@ -14,6 +14,10 @@ namespace Domain.Entities.PropertyMgt
         // Positive = deposit, Negative = withdrawal
         public decimal Amount { get; set; }
         // e.g. "Rent payout", "Withdrawal"
+
+        public string Status { get; set; } = "SUCCESSFUL";
+
+        public string VendorTranId { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string TransactionId { get; set; } = string.Empty;
         public DateTime TransactionDate { get; set; }

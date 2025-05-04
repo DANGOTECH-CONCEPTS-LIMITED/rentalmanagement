@@ -20,6 +20,31 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             _context = context;
         }
 
+        public async Task AddWalletTransaction(WalletTransaction walletTransaction)
+        {
+            await _context.WalletTransactions.AddAsync(walletTransaction);
+            //update wallet balance
+            var wallet = await _context.Wallets
+                .FirstOrDefaultAsync(w => w.Id == walletTransaction.WalletId);
+            if (wallet == null)
+                throw new Exception("Wallet not found.");
+            wallet.Balance += walletTransaction.Amount;
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<Wallet> CreateWallet(int landlordid, decimal bal)
+        {
+            var wallet = new Wallet
+            {
+                LandlordId = landlordid,
+                Balance = bal
+            };
+            _context.Wallets.Add(wallet);
+           await _context.SaveChangesAsync();
+            return wallet;
+        }
+
         public async Task<WalletBalanceDto> GetBalanceAsync(int landlordId)
         {
             var wallet = await _context.Wallets
@@ -57,6 +82,13 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 .ToListAsync();
         }
 
+        public async Task<Wallet> GetWalletByLandlordId(int landlordId)
+        {
+            var wallet = await _context.Wallets
+               .FirstOrDefaultAsync(w => w.LandlordId == landlordId);
+            return wallet;
+        }
+
         public async Task WithdrawAsync(WithdrawDto withdrawDto)
         {
             if (withdrawDto.amount <= 0)
@@ -80,7 +112,8 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 WalletId = wallet.Id,
                 Amount = -withdrawDto.amount,
                 Description = withdrawDto.description,
-                TransactionDate = DateTime.UtcNow
+                TransactionDate = DateTime.UtcNow,
+                Status = "PENDING",
             };
             _context.WalletTransactions.Add(txn);
 

@@ -130,14 +130,14 @@ namespace Infrastructure.Services.BackgroundServices
             // deserialize into a typed model
             var rtpResponse = JsonSerializer.Deserialize<RequestToPayResponse>(rawResponse);
 
-            if (rtpResponse?.Data?.RequestToPay == true)
+            if (rtpResponse?.data?.requestToPay == true)
             {
                 tenantPayment.PaymentStatus = PendingAtTelcom;
                 await paymentService.UpdatePaymentStatus(
                     PendingAtTelcom,
                     tenantPayment.TransactionId,
-                    rtpResponse.StatusMessage ?? string.Empty,
-                    rtpResponse.Data.TransactionId ?? string.Empty);
+                    rtpResponse.status_message ?? string.Empty,
+                    rtpResponse.data.transactionId ?? string.Empty);
                 _logger.LogInformation("MOMO request accepted");
             }
             else
@@ -146,7 +146,7 @@ namespace Infrastructure.Services.BackgroundServices
                 await paymentService.UpdatePaymentStatus(
                     FailedStatus,
                     tenantPayment.TransactionId,
-                    rtpResponse?.Data?.Message ?? "Unknown error",
+                    rtpResponse?.data?.message ?? "Unknown error",
                     string.Empty);
                 _logger.LogError("MOMO request failed");
             }
@@ -156,14 +156,14 @@ namespace Infrastructure.Services.BackgroundServices
     // Strongly-typed response model to replace manual JsonDocument parsing
     internal class RequestToPayResponse
     {
-        public DataModel Data { get; set; }
-        public string StatusMessage { get; set; }
+        public DataModel data { get; set; }
+        public string status_message { get; set; }
 
         public class DataModel
         {
-            public bool RequestToPay { get; set; }
-            public string TransactionId { get; set; }
-            public string Message { get; set; }
+            public bool requestToPay { get; set; }
+            public string transactionId { get; set; }
+            public string message { get; set; }
         }
     }
 }
