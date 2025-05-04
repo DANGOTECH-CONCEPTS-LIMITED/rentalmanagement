@@ -18,5 +18,10 @@ namespace Application.Interfaces.PaymentService.WalletSvc
 
         Task<Wallet> GetWalletByLandlordId(int landlordId);
         Task<Wallet> CreateWallet(int landlordid, decimal bal);
+        Task<IEnumerable<WalletTransaction>> GetTransactionsByStatus(string status);
+
+        Task UpdateWalletTransaction(WalletTransaction walletTransaction);
+
+        Task ReverseWalletTransaction(WalletTransaction walletTransaction);
     }
 }
