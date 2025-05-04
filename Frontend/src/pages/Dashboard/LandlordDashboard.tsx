@@ -218,14 +218,18 @@ const LandlordDashboard = () => {
       if (!user) throw new Error("No user found in localStorage");
       const userData = JSON.parse(user);
 
-      const response = await fetch(`${apiUrl}/Withdraw/${userData.id}`, {
+      const formData = new FormData();
+      formData.append("amount", amount.toString());
+      formData.append("landlordid", userData.id.toString());
+      formData.append("description", "Withdrawal from wallet");
+
+      const response = await fetch(`${apiUrl}/Withdraw`, {
         method: "POST",
         headers: {
           accept: "*/*",
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify(amount),
+        body: formData,
       });
 
       if (!response.ok) throw new Error("Withdrawal failed");
