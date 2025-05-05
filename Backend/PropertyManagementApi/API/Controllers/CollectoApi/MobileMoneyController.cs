@@ -16,33 +16,33 @@ namespace API.Controllers.CollectoApi
             _collectoApiClient = collectoApiClient;
         }
 
-        //[HttpPost("/requestToPay")]
-        //public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.RequestToPayAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/requestToPay")]
+        public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequest request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.RequestToPayAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-        //[HttpPost("/requestToPayStatus")]
-        //public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.GetRequestToPayStatusAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/requestToPayStatus")]
+        public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequest request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.GetRequestToPayStatusAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         [HttpPost("/servicePayment")]
         public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequest request)
