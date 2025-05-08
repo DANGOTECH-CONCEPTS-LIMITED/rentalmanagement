@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService.WalletSvc;
-using Domain.Entities.Collecto;
+using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -76,7 +76,7 @@ namespace Infrastructure.Services.BackgroundServices
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
                 //prepare initate payout request
-                var request = new InitiatePayoutRequest
+                var request = new InitiatePayoutRequestDto
                 {
                     Gateway = "mobilemoney",
                     SwiftCode = "",

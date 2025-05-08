@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Domain.Entities.PropertyMgt;
-using Domain.Entities.Collecto;
+using Domain.Dtos.Collecto;
 using System.Text.Json;
 
 namespace Infrastructure.Services.BackgroundServices
@@ -93,7 +93,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("Requesting mobile-money payment");
 
-            var request = new RequestToPayStatusRequest
+            var request = new RequestToPayStatusRequestDto
             {
                 TransactionId = tenantPayment.VendorTransactionId,
             };

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Domain.Entities.Collecto
+namespace Domain.Dtos.Collecto
 {
-    public class InitiatePayoutRequest
+    public class InitiatePayoutRequestDto
     {
         public string Gateway { get; set; }         // e.g. "mobilemoney", "flexipay", "stanbicbank", "otherBanks"
         public string SwiftCode { get; set; }       // required for otherBanks

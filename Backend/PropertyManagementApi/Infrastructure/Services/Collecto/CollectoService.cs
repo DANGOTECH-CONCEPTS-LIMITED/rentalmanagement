@@ -5,7 +5,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
-using Domain.Entities.Collecto;
+using Domain.Dtos.Collecto;
 using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Services.Collecto
@@ -33,7 +33,7 @@ namespace Infrastructure.Services.Collecto
             _http.BaseAddress = new Uri(_baseUrl);
         }
 
-        public async Task<string> RequestToPayAsync(RequestToPayRequest request)
+        public async Task<string> RequestToPayAsync(RequestToPayRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/requestToPay", request);
@@ -41,7 +41,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetRequestToPayStatusAsync(RequestToPayStatusRequest request)
+        public async Task<string> GetRequestToPayStatusAsync(RequestToPayStatusRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/requestToPayStatus", request);
@@ -49,7 +49,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> ServicePaymentAsync(ServicePaymentRequest request)
+        public async Task<string> ServicePaymentAsync(ServicePaymentRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/servicePayment", request);
@@ -57,7 +57,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetServicePaymentStatusAsync(ServicePaymentStatusRequest request)
+        public async Task<string> GetServicePaymentStatusAsync(ServicePaymentStatusRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/servicePaymentStatus", request);
@@ -65,7 +65,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> SendSingleSmsAsync(SendSingleSmsRequest request)
+        public async Task<string> SendSingleSmsAsync(SendSingleSmsRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/sendSingleSms", request);
@@ -73,7 +73,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetCurrentBalanceAsync(CurrentBalanceRequest request)
+        public async Task<string> GetCurrentBalanceAsync(CurrentBalanceRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/currentBalance", request);
@@ -81,7 +81,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> VerifyPhoneNumberAsync(VerifyPhoneNumberRequest request)
+        public async Task<string> VerifyPhoneNumberAsync(VerifyPhoneNumberRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/verifyPhoneNumber", request);
@@ -89,7 +89,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> InitiatePayoutAsync(InitiatePayoutRequest request)
+        public async Task<string> InitiatePayoutAsync(InitiatePayoutRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/initiatePayout", request);
@@ -97,7 +97,7 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetPayoutStatusAsync(PayoutStatusRequest request)
+        public async Task<string> GetPayoutStatusAsync(PayoutStatusRequestDto request)
         {
             SetHeaders();
             var res = await _http.PostAsJsonAsync($"{_username}/payoutStatus", request);

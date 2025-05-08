@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Domain.Entities.Collecto
+namespace Domain.Dtos.Collecto
 {
-    public class ServicePaymentRequest
+    public class ServicePaymentRequestDto
     {
         public string Service { get; set; }         // e.g. "SMS"
         public string PaymentOption { get; set; }   // e.g. "mobilemoney"

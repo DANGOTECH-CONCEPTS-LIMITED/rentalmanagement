@@ -1,5 +1,5 @@
 ﻿using Application.Interfaces.Collecto;
-using Domain.Entities.Collecto;
+using Domain.Dtos.Collecto;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,7 +17,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/requestToPay")]
-        public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequest request)
+        public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequestDto request)
         {
             try
             {
@@ -31,7 +31,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/requestToPayStatus")]
-        public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequest request)
+        public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequestDto request)
         {
             try
             {
@@ -45,7 +45,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/servicePayment")]
-        public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequest request)
+        public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequestDto request)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/servicePaymentStatus")]
-        public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequest request)
+        public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequestDto request)
         {
             try
             {
@@ -73,7 +73,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/sendSingleSms")]
-        public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequest request)
+        public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequestDto request)
         {
             try
             {
@@ -87,7 +87,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/currentBalance")]
-        public async Task<IActionResult> CurrentBalance([FromBody] CurrentBalanceRequest request)
+        public async Task<IActionResult> CurrentBalance([FromBody] CurrentBalanceRequestDto request)
         {
             try
             {
@@ -101,7 +101,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/verifyPhoneNumber")]
-        public async Task<IActionResult> VerifyPhoneNumber([FromBody] VerifyPhoneNumberRequest request)
+        public async Task<IActionResult> VerifyPhoneNumber([FromBody] VerifyPhoneNumberRequestDto request)
         {
             try
             {

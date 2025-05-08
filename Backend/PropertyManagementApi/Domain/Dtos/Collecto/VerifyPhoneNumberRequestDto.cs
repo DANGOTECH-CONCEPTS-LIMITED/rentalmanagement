@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Domain.Entities.Collecto
+namespace Domain.Dtos.Collecto
 {
-    public class VerifyPhoneNumberRequest
+    public class VerifyPhoneNumberRequestDto
     {
         public string Phone { get; set; }           // e.g. "256705687760"
     }
