@@ -34,7 +34,7 @@ namespace Infrastructure.Services.PrepaidApi
             var response = await _http.PostAsJsonAsync("api/POS_Customer", new { company_name = "daniel", user_name = "POS1", password = "123456", customer_number = "", meter_number = searchDto.MeterNumber, customer_name = "" });
             response.EnsureSuccessStatusCode();
             string json = await response.Content.ReadAsStringAsync();   
-            var result = await response.Content.ReadFromJsonAsync<CustomerSearchResultDto>();
+            //var result = await response.Content.ReadFromJsonAsync<CustomerSearchResultDto>();
             return json!;
         }
 
