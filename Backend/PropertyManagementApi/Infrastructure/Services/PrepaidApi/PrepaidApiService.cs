@@ -38,7 +38,7 @@ namespace Infrastructure.Services.PrepaidApi
             return json!;
         }
 
-        public async Task<PurchasePreviewDto> PreviewAsync(string meternumber, decimal amount)
+        public async Task<string> PreviewAsync(string meternumber, decimal amount)
         {
             SetHeaders();
 
@@ -46,7 +46,7 @@ namespace Infrastructure.Services.PrepaidApi
             var response = await _http.PostAsJsonAsync("api/pos/preview", new { Token = meternumber, Amount = amount });
             response.EnsureSuccessStatusCode();
             string json = await response.Content.ReadAsStringAsync();
-            return await response.Content.ReadFromJsonAsync<PurchasePreviewDto>()!;
+            return json;
         }
 
         public async Task<PurchaseResultDto> PurchaseAsync(string token, decimal amount)
