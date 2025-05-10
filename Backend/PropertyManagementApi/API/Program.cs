@@ -2,6 +2,7 @@ using Application.Interfaces.Collecto;
 using Application.Interfaces.Complaints;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
+using Application.Interfaces.PrepaidApi;
 using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
 using Application.Interfaces.Tenant;
@@ -14,6 +15,7 @@ using Infrastructure.Services.Complaints;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.PaymentServices;
 using Infrastructure.Services.PaymentServices.WalletSvc;
+using Infrastructure.Services.PrepaidApi;
 using Infrastructure.Services.Property;
 using Infrastructure.Services.Settings;
 using Infrastructure.Services.Tenant;
@@ -52,8 +54,7 @@ builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>()
     // this ensures every outgoing request goes through your LoggingHandler
     .AddHttpMessageHandler<LoggingHandler>(); 
 
-
-
+builder.Services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>().AddHttpMessageHandler<LoggingHandler>();
 
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -63,6 +64,7 @@ builder.Services.AddSingleton<EmailService>();
 builder.Services.AddHostedService<PaymentProcessor>();
 builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
 builder.Services.AddHostedService<CreditWalletService>();
+builder.Services.AddHostedService<PendingWalletWithdrawsProcessor>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

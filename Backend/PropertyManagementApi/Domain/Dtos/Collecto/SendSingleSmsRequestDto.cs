@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Domain.Entities.Collecto
+namespace Domain.Dtos.Collecto
 {
-    public class SendSingleSmsRequest
+    public class SendSingleSmsRequestDto
     {
         public string Phone { get; set; }           // e.g. "256705687760"
         public string Message { get; set; }         // e.g. "SMS Message"

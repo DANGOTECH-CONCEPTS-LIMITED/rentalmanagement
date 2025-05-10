@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
-using Domain.Entities.Collecto;
+using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -103,7 +103,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("Requesting mobile-money payment");
 
-            var request = new RequestToPayRequest
+            var request = new RequestToPayRequestDto
             {
                 PaymentOption = "mobilemoney",
                 Phone = tenantPayment.PropertyTenant.PhoneNumber,

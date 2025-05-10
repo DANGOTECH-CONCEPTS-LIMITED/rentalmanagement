@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +11,8 @@ namespace Domain.Entities.PropertyMgt
     {
         public int Id { get; set; }
         // The landlord who owns this wallet
+
+        [ForeignKey("Landlord")]
         public int LandlordId { get; set; }
         public User Landlord { get; set; } = null!;
         // Current wallet balance

@@ -475,6 +475,7 @@ const PaymentHistory = () => {
                 <th className="px-6 py-3 text-left">Method</th>
                 <th className="px-6 py-3 text-left">Type</th>
                 <th className="px-6 py-3 text-left">Status</th>
+                {/* <th className="px-6 py-3 text-left">Reason</th> */}
                 <th className="px-6 py-3 text-left">Receipt</th>
               </tr>
             </thead>
@@ -512,12 +513,14 @@ const PaymentHistory = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {getStatusIcon(payment.paymentStatus)}
+                        {/* {getStatusIcon(payment.paymentStatus)}
                         <span className="ml-2">
                           {getStatusText(payment.paymentStatus)}
-                        </span>
+                        </span> */}
+                        {payment.paymentStatus}
                       </div>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Button
                         variant="ghost"

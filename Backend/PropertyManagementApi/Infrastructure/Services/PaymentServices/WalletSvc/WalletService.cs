@@ -114,10 +114,55 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 Description = withdrawDto.description,
                 TransactionDate = DateTime.UtcNow,
                 Status = "PENDING",
+                TransactionId = Guid.NewGuid().ToString(),
             };
             _context.WalletTransactions.Add(txn);
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task<IEnumerable<WalletTransaction>> GetTransactionsByStatus(string status)
+        {
+            var transactions = await _context.WalletTransactions
+                .Include(x => x.Wallet)
+                .ThenInclude(x => x.Landlord)
+                .AsNoTracking()
+                .Where(t => t.Status == status)
+                .ToListAsync();
+            return transactions;
+        }
+
+        public async Task UpdateWalletTransaction(WalletTransaction walletTransaction)
+        {
+            var existingTransaction = await _context.WalletTransactions
+                .FirstOrDefaultAsync(t => t.Id == walletTransaction.Id);
+            if (existingTransaction == null)
+                throw new Exception("Transaction not found.");
+            existingTransaction.Status = walletTransaction.Status;
+            existingTransaction.Description = walletTransaction.Description;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task ReverseWalletTransaction(WalletTransaction walletTransaction)
+        {
+            var existingTransaction = await _context.WalletTransactions
+                .FirstOrDefaultAsync(t => t.Id == walletTransaction.Id);
+            if (existingTransaction == null)
+                throw new Exception("Transaction not found.");
+            existingTransaction.Status = "REVERSED";
+
+            //update balance of wallet
+            var wallet = await _context.Wallets
+                .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
+            if (wallet == null)
+                throw new Exception("Wallet not found.");
+            // Revert the balance
+            wallet.Balance -= existingTransaction.Amount;
+
+            existingTransaction.Description = walletTransaction.Description;
+            await _context.SaveChangesAsync();
+        }
+
+
     }
 }

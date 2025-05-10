@@ -80,11 +80,10 @@ const RegisterTenants = () => {
 
   const user = localStorage.getItem("user");
   let token = "";
-
+  const userData = JSON.parse(user);
   const navigate = useNavigate();
   try {
     if (user) {
-      const userData = JSON.parse(user);
       token = userData.token;
     } else {
       console.error("No user found in localStorage");
@@ -111,7 +110,11 @@ const RegisterTenants = () => {
         }
 
         const data = await response.json();
-        setProperties(data);
+
+        const filteredData = data.filter(
+          (property: any) => property.ownerId === userData?.id
+        );
+        setProperties(filteredData);
       } catch (error) {
         console.error("Error fetching properties:", error);
         toast({

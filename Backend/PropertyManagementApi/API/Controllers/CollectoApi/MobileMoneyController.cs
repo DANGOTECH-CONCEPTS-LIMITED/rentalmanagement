@@ -1,5 +1,5 @@
 ﻿using Application.Interfaces.Collecto;
-using Domain.Entities.Collecto;
+using Domain.Dtos.Collecto;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,64 +16,64 @@ namespace API.Controllers.CollectoApi
             _collectoApiClient = collectoApiClient;
         }
 
-        //[HttpPost("/requestToPay")]
-        //public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.RequestToPayAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/requestToPay")]
+        public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequestDto request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.RequestToPayAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-        //[HttpPost("/requestToPayStatus")]
-        //public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.GetRequestToPayStatusAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/requestToPayStatus")]
+        public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequestDto request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.GetRequestToPayStatusAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-        //[HttpPost("/servicePayment")]
-        //public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.ServicePaymentAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/servicePayment")]
+        public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequestDto request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.ServicePaymentAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-        //[HttpPost("/servicePaymentStatus")]
-        //public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.GetServicePaymentStatusAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/servicePaymentStatus")]
+        public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequestDto request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.GetServicePaymentStatusAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         [HttpPost("/sendSingleSms")]
-        public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequest request)
+        public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequestDto request)
         {
             try
             {
@@ -87,7 +87,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/currentBalance")]
-        public async Task<IActionResult> CurrentBalance([FromBody] CurrentBalanceRequest request)
+        public async Task<IActionResult> CurrentBalance([FromBody] CurrentBalanceRequestDto request)
         {
             try
             {
@@ -101,7 +101,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/verifyPhoneNumber")]
-        public async Task<IActionResult> VerifyPhoneNumber([FromBody] VerifyPhoneNumberRequest request)
+        public async Task<IActionResult> VerifyPhoneNumber([FromBody] VerifyPhoneNumberRequestDto request)
         {
             try
             {

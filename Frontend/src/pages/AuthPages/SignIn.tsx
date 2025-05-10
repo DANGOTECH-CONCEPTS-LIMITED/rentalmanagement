@@ -20,11 +20,6 @@ const SignIn = () => {
         password
       );
 
-      if (requiresPasswordChange) {
-        // The AuthContext will show the modal via its state
-        return;
-      }
-
       switch (systemRoleId) {
         case 1: // Admin
           navigate("/admin-dashboard");

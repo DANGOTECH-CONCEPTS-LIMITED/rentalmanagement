@@ -156,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
               animate={{ opacity: 1 }}
               className="ml-3 font-semibold text-lg"
             >
-              RENTAL HUB
+              Nyumba Yo
             </motion.h1>
           )}
         </div>

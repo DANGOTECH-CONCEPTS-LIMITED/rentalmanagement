@@ -109,6 +109,7 @@ const Properties = () => {
   );
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchTerm1, setSearchTerm1] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [addProperty, setAddProperty] = useState(false);
@@ -288,7 +289,7 @@ const Properties = () => {
   ): void => {
     setSelectedRegion(e.target.value as Region | "");
     setSelectedDistrict("");
-    setSearchTerm("");
+    setSearchTerm1("");
   };
 
   useEffect(() => {
@@ -441,13 +442,13 @@ const Properties = () => {
   // Handle district selection
   const selectDistrict = (district: string): void => {
     setSelectedDistrict(district);
-    setSearchTerm(district);
+    setSearchTerm1(district);
     setIsDropdownOpen(false);
   };
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    setSearchTerm(e.target.value);
+    setSearchTerm1(e.target.value);
     setIsDropdownOpen(true);
   };
 
@@ -526,6 +527,8 @@ const Properties = () => {
       } else {
         result = await response.text();
       }
+
+      fetchProperties();
 
       toast({
         title: "Property Registered",
@@ -1010,7 +1013,7 @@ const Properties = () => {
                         type="text"
                         id="district"
                         placeholder="Type to search districts..."
-                        value={searchTerm}
+                        value={searchTerm1}
                         onChange={handleSearchChange}
                         onClick={() => setIsDropdownOpen(true)}
                         className="pl-10 w-full px-3 py-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
@@ -1032,10 +1035,10 @@ const Properties = () => {
                     )}
 
                     {isDropdownOpen &&
-                      searchTerm &&
+                      searchTerm1 &&
                       filteredDistricts.length === 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-center text-gray-500">
-                          No districts found starting with "{searchTerm}"
+                          No districts found starting with "{searchTerm1}"
                         </div>
                       )}
                   </div>
