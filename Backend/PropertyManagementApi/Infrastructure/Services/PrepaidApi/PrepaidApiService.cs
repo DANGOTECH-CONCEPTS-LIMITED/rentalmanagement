@@ -41,6 +41,7 @@ namespace Infrastructure.Services.PrepaidApi
         public async Task<PurchasePreviewDto> PreviewAsync(string meternumber, decimal amount)
         {
             SetHeaders();
+
             // POS API spec (step 2) :contentReference[oaicite:5]{index=5}
             var response = await _http.PostAsJsonAsync("api/pos/preview", new { Token = meternumber, Amount = amount });
             response.EnsureSuccessStatusCode();
