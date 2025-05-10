@@ -47,7 +47,7 @@ namespace API.Controllers.PrepaidApi
         {
             try
             {
-                var result = await _prepaidApiClient.PurchaseAsync(purchaseDto.Token, purchaseDto.Amount);
+                var result = await _prepaidApiClient.PurchaseAsync(purchaseDto.MeterNumber, purchaseDto.Amount);
                 return Ok(result);
             }
             catch (Exception ex)
