@@ -472,15 +472,15 @@ namespace Infrastructure.Services.PaymentServices
             //check if trantype is a utility payment and if not update the other payment
             if (TranType == "UTILITY") 
             {
-                var payment = await _context.TenantPayments
-               .FirstOrDefaultAsync(tp => tp.TransactionId == transactionid);
+                var payment = await _context.UtilityPayments
+               .FirstOrDefaultAsync(tp => tp.TransactionID == transactionid);
 
                 if (payment == null)
                     throw new Exception("Payment not found.");
-                payment.PaymentStatus = status;
+                payment.Status = status;
                 payment.ReasonAtTelecom = vendorreason;
-                payment.VendorTransactionId = vendortranref;
-                _context.TenantPayments.Update(payment);
+                payment.VendorTranId = vendortranref;
+                _context.UtilityPayments.Update(payment);
                 await _context.SaveChangesAsync();
             }
             else
