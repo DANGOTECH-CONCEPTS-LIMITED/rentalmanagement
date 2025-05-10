@@ -286,5 +286,19 @@ namespace API.Controllers.Payments
                 return BadRequest($"Error creating utility payment: {ex.Message}");
             }
         }
+
+        [HttpGet("/GetUtilityPaymentByDateRange{startdate}/{enddate}")]
+        public async Task<IActionResult> GetUtilityPaymentByDateRange(DateTime startdate, DateTime enddate)
+        {
+            try
+            {
+                var utilityPayments = await _paymentService.GetUtilityPaymentByDateRange(startdate, enddate);
+                return Ok(utilityPayments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving utility payments: {ex.Message}");
+            }
+        }
     }
 }

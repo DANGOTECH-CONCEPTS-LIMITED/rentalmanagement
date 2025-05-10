@@ -512,6 +512,14 @@ namespace Infrastructure.Services.PaymentServices
             await _context.SaveChangesAsync();
         }
 
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByStatus(string status) 
+        {
+            var payments = await _context.UtilityPayments
+                .Where(tp => tp.Status == status)
+                .ToListAsync();
+            return payments;
+        }
+
         private static string NormalizePhoneNumber(string phoneNumber)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber))
@@ -527,6 +535,26 @@ namespace Infrastructure.Services.PaymentServices
                 digits = "256" + digits;
 
             return digits;
+        }
+
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByDateRange(DateTime startDate, DateTime endDate) 
+        {
+
+            //format dates to be date only
+            startDate = startDate.Date;
+            endDate = endDate.Date;
+
+            //query the database for payments within the date range
+            if (startDate > endDate)
+                throw new ArgumentException("Start date cannot be greater than end date");
+
+            if (startDate == endDate)
+                endDate = startDate.AddDays(1);
+
+            var payments = await _context.UtilityPayments
+                .Where(tp => DateOnly.FromDateTime(tp.CreatedAt) >= DateOnly.FromDateTime(startDate) && DateOnly.FromDateTime(tp.CreatedAt) <= DateOnly.FromDateTime(endDate))
+                .ToListAsync();
+            return payments;
         }
     }
 }

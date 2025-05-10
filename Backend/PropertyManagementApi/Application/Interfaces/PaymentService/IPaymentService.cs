@@ -38,5 +38,8 @@ namespace Application.Interfaces.PaymentService
         Task UpdatePaymentStatus(string status, string transactionid,string reason,string vendorTranRef);
 
         Task MakeUtilityPayment(UtilityPaymentDto utilityPayment);
+        Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByStatus(string status);
+
+        Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByDateRange(DateTime startDate, DateTime endDate);
     }
 }
