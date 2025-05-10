@@ -43,7 +43,7 @@ namespace Infrastructure.Services.PrepaidApi
             SetHeaders();
 
             // POS API spec (step 2) :contentReference[oaicite:5]{index=5}
-            var response = await _http.PostAsJsonAsync("api/pos/preview", new { Token = meternumber, Amount = amount });
+            var response = await _http.PostAsJsonAsync("api/POS_Preview", new { Token = meternumber, Amount = amount });
             response.EnsureSuccessStatusCode();
             string json = await response.Content.ReadAsStringAsync();
             return json;
@@ -53,7 +53,7 @@ namespace Infrastructure.Services.PrepaidApi
         {
             SetHeaders();
             // POS API spec (step 3) :contentReference[oaicite:7]{index=7}
-            var response = await _http.PostAsJsonAsync("api/pos/purchase", new { Token = token, Amount = amount });
+            var response = await _http.PostAsJsonAsync("api/POS_Purchase", new { Token = token, Amount = amount });
             response.EnsureSuccessStatusCode();
             string json = await response.Content.ReadAsStringAsync();
             return await response.Content.ReadFromJsonAsync<PurchaseResultDto>()!;
