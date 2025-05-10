@@ -578,5 +578,13 @@ namespace Infrastructure.Services.PaymentServices
                 .ToListAsync();
             return payments;
         }
+
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByMeterNumber(string meternumber)
+        {
+            var payments = await _context.UtilityPayments
+                .Where(tp => tp.MeterNumber == meternumber)
+                .ToListAsync();
+            return payments;
+        }
     }
 }

@@ -41,5 +41,7 @@ namespace Application.Interfaces.PaymentService
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByStatus(string status);
 
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByDateRange(DateTime startDate, DateTime endDate);
+
+        Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByMeterNumber(string method);
     }
 }

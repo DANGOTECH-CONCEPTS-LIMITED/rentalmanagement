@@ -300,5 +300,20 @@ namespace API.Controllers.Payments
                 return BadRequest($"Error retrieving utility payments: {ex.Message}");
             }
         }
+
+        [HttpGet("/GetUtilityPaymentByMeterNumber{meternumber}")]
+        public async Task<IActionResult> GetUtilityPaymentByMeterNumber(string meternumber)
+        {
+            try
+            {
+                var utilityPayments = await _paymentService.GetUtilityPaymentByMeterNumber(meternumber);
+                return Ok(utilityPayments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving utility payments: {ex.Message}");
+            }
+        }
+
     }
 }

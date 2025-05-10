@@ -104,7 +104,17 @@ namespace Infrastructure.Services.BackgroundServices
             IWalletService walletService,
             CancellationToken cancellationToken)
         {
-            var wallet = await walletService.GetWalletByUtilityMeterNumber(utilityPayment.MeterNumber);
+            Wallet wallet;
+            try
+            {
+                wallet = await walletService.GetWalletByUtilityMeterNumber(utilityPayment.MeterNumber);
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            
             if (wallet == null)
             {
                 _logger.LogWarning("No wallet found for meter {Meter}. Skipping.", utilityPayment.MeterNumber);
