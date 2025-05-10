@@ -23,5 +23,7 @@ namespace Application.Interfaces.PaymentService.WalletSvc
         Task UpdateWalletTransaction(WalletTransaction walletTransaction);
 
         Task ReverseWalletTransaction(WalletTransaction walletTransaction);
+
+        Task<Wallet> GetWalletByUtilityMeterNumber(string utilityMeterNumber);
     }
 }

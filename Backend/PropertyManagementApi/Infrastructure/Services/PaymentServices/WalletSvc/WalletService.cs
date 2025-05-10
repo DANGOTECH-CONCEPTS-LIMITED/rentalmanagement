@@ -163,6 +163,12 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             await _context.SaveChangesAsync();
         }
 
+        public async Task<Wallet> GetWalletByUtilityMeterNumber(string utilityMeterNumber)
+        {
+            var getlandlordIdByUtilityMeterNumber = await _context.UtilityMeters
+                .FirstOrDefaultAsync(x => x.MeterNumber == utilityMeterNumber);
 
+            return await GetWalletByLandlordId(getlandlordIdByUtilityMeterNumber.LandLordId);
+        }
     }
 }
