@@ -10,7 +10,7 @@ namespace Application.Interfaces.PrepaidApi
     public interface IPrepaidApiClient
     {
         Task<string> SearchCustomerAsync(CustomerSearchDto searchDto);
-        Task<string> PreviewAsync(string token, decimal amount);
-        Task<PurchaseResultDto> PurchaseAsync(string token, decimal amount);
+        Task<string> PreviewAsync(PurchasePreviewDto previewDto);
+        Task<PurchaseResultDto> PurchaseAsync(PurchasePreviewDto purchaseDto);
     }
 }

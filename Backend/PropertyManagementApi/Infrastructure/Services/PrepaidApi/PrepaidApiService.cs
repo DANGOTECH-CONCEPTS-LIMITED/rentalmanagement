@@ -1,63 +1,86 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Json;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Application.Interfaces.PrepaidApi;
 using Domain.Dtos.PrepaidApi;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.PrepaidApi
 {
+    public class PosApiOptions
+    {
+        public string BaseUrl { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string CompanyName { get; set; } = string.Empty;
+    }
+
     public class PrepaidApiService : IPrepaidApiClient
     {
-        private readonly HttpClient _http;
-        private readonly string _baseUrl;
-        public PrepaidApiService(HttpClient http, IConfiguration config)
+        private readonly HttpClient _httpClient;
+        private readonly PosApiOptions _options;
+
+        public PrepaidApiService(HttpClient httpClient, IOptions<PosApiOptions> options)
         {
-            _http = http;
-            _baseUrl = config["PosApi:BaseUrl"];
+            _httpClient = httpClient;
+            _options = options.Value;
+            _httpClient.BaseAddress = new Uri(_options.BaseUrl);
         }
 
-        private void SetHeaders()
+        private async Task<string> PostAndReadStringAsync(string endpoint, object payload)
         {
-            _http.DefaultRequestHeaders.Clear();
-            _http.BaseAddress = new Uri(_baseUrl);
-        }
-        public async Task<string> SearchCustomerAsync(CustomerSearchDto searchDto)
-        {
-            SetHeaders();
-            // according to POS API spec (step 1) :contentReference[oaicite:3]{index=3}
-            var response = await _http.PostAsJsonAsync("api/POS_Customer", new { company_name = "daniel", user_name = "POS1", password = "123456", customer_number = "", meter_number = searchDto.MeterNumber, customer_name = "" });
+            var response = await _httpClient.PostAsJsonAsync(endpoint, payload);
             response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync();   
-            //var result = await response.Content.ReadFromJsonAsync<CustomerSearchResultDto>();
-            return json!;
+            return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> PreviewAsync(string meternumber, decimal amount)
+        public Task<string> SearchCustomerAsync(CustomerSearchDto searchDto)
         {
-            SetHeaders();
+            var request = new
+            {
+                company_name = _options.CompanyName,
+                user_name = _options.UserName,
+                password = _options.Password,
+                customer_number = string.Empty,
+                meter_number = searchDto.MeterNumber,
+                customer_name = string.Empty
+            };
 
-            // POS API spec (step 2) :contentReference[oaicite:5]{index=5}
-            var response = await _http.PostAsJsonAsync("api/POS_Preview", new { Token = meternumber, Amount = amount });
-            response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync();
-            return json;
+            return PostAndReadStringAsync("api/POS_Customer", request);
         }
 
-        public async Task<PurchaseResultDto> PurchaseAsync(string token, decimal amount)
+        public Task<string> PreviewAsync(PurchasePreviewDto previewDto)
         {
-            SetHeaders();
-            // POS API spec (step 3) :contentReference[oaicite:7]{index=7}
-            var response = await _http.PostAsJsonAsync("api/POS_Purchase", new { Token = token, Amount = amount });
-            response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync();
-            return await response.Content.ReadFromJsonAsync<PurchaseResultDto>()!;
+            var request = new
+            {
+                company_name = _options.CompanyName,
+                user_name = _options.UserName,
+                password = _options.Password,
+                meter_number = previewDto.MeterNumber,
+                is_vend_by_unit = false,
+                amount = previewDto.Amount
+            };
+
+            return PostAndReadStringAsync("api/POS_Preview", request);
         }
 
+        public async Task<PurchaseResultDto> PurchaseAsync(PurchasePreviewDto previewDto)
+        {
+            var request = new
+            {
+                meternumber = previewDto.MeterNumber,
+                Amount = previewDto.Amount
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/POS_Purchase", request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<PurchaseResultDto>()
+                   ?? throw new InvalidOperationException("Failed to deserialize purchase result");
+        }
     }
 }
+
+// DI setup (e.g., Startup.cs or Program.cs):
+// services.Configure<PosApiOptions>(configuration.GetSection("PosApi"));
+// services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>();
