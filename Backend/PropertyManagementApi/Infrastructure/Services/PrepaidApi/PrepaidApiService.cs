@@ -38,11 +38,14 @@ namespace Infrastructure.Services.PrepaidApi
             return json!;
         }
 
-        public async Task<PurchasePreviewDto> PreviewAsync(string token, decimal amount)
+        public async Task<PurchasePreviewDto> PreviewAsync(string meternumber, decimal amount)
         {
             SetHeaders();
+
+            //remove 10% of the amount
+            var amountAfterTax = amount - (amount * 0.1m);
             // POS API spec (step 2) :contentReference[oaicite:5]{index=5}
-            var response = await _http.PostAsJsonAsync("api/pos/preview", new { Token = token, Amount = amount });
+            var response = await _http.PostAsJsonAsync("api/pos/preview", new { Token = meternumber, Amount = amountAfterTax });
             response.EnsureSuccessStatusCode();
             string json = await response.Content.ReadAsStringAsync();
             return await response.Content.ReadFromJsonAsync<PurchasePreviewDto>()!;

@@ -32,7 +32,7 @@ namespace API.Controllers.PrepaidApi
         {
             try
             {
-                var result = await _prepaidApiClient.PreviewAsync(previewDto.Token, previewDto.Amount);
+                var result = await _prepaidApiClient.PreviewAsync(previewDto.MeterNumber, previewDto.Amount);
                 return Ok(result);
             }
             catch (Exception ex)
