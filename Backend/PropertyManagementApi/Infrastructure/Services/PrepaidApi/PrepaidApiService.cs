@@ -4,28 +4,28 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Application.Interfaces.PrepaidApi;
 using Domain.Dtos.PrepaidApi;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.PrepaidApi
 {
-    public class PosApiOptions
-    {
-        public string BaseUrl { get; set; } = string.Empty;
-        public string UserName { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-        public string CompanyName { get; set; } = string.Empty;
-    }
 
     public class PrepaidApiService : IPrepaidApiClient
     {
         private readonly HttpClient _httpClient;
-        private readonly PosApiOptions _options;
+        private readonly HttpClient _http;
+        private readonly string _baseUrl;
+        private readonly string _username;
+        private readonly string _password;
+        private readonly string _companyname;
 
-        public PrepaidApiService(HttpClient httpClient, IOptions<PosApiOptions> options)
+        public PrepaidApiService(HttpClient httpClient, IConfiguration config)
         {
             _httpClient = httpClient;
-            _options = options.Value;
-            _httpClient.BaseAddress = new Uri(_options.BaseUrl);
+            _httpClient.BaseAddress = new Uri(config["PosApi:BaseUrl"]);
+            _username = config["PosApi:user_name"];
+            _password = config["PosApi:password"];
+            _companyname = config["PosApi:company_name"];
         }
 
         private async Task<string> PostAndReadStringAsync(string endpoint, object payload)
@@ -39,9 +39,9 @@ namespace Infrastructure.Services.PrepaidApi
         {
             var request = new
             {
-                company_name = _options.CompanyName,
-                user_name = _options.UserName,
-                password = _options.Password,
+                company_name = _companyname,
+                user_name = _username,
+                password = _password,
                 customer_number = string.Empty,
                 meter_number = searchDto.MeterNumber,
                 customer_name = string.Empty
@@ -54,9 +54,9 @@ namespace Infrastructure.Services.PrepaidApi
         {
             var request = new
             {
-                company_name = _options.CompanyName,
-                user_name = _options.UserName,
-                password = _options.Password,
+                company_name = _companyname,
+                user_name = _username,
+                password = _password,
                 meter_number = previewDto.MeterNumber,
                 is_vend_by_unit = false,
                 amount = previewDto.Amount
