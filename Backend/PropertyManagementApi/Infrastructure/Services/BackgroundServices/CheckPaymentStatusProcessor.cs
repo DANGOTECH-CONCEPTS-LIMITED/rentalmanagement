@@ -119,7 +119,7 @@ namespace Infrastructure.Services.BackgroundServices
                     await paymentService.UpdatePaymentStatus(
                         tenantPayment.PaymentStatus,
                         tenantPayment.TransactionId,
-                        rtpResponse.data.message ?? string.Empty,tenantPayment.VendorTransactionId);
+                        rtpResponse.data.message ?? string.Empty,tenantPayment.VendorTransactionId,"RENT");
                     _logger.LogInformation("MOMO request accepted");
                 }
                 else
@@ -129,7 +129,7 @@ namespace Infrastructure.Services.BackgroundServices
                         FailedStatus,
                         tenantPayment.TransactionId,
                         rtpResponse?.data?.message ?? "Unknown error",
-                        string.Empty);
+                        string.Empty, "RENT");
                     _logger.LogError("MOMO request failed");
                 }
                 _logger.LogError("Empty response from Collecto");

@@ -463,17 +463,39 @@ namespace Infrastructure.Services.PaymentServices
             return payments;
         }
 
-        public async Task UpdatePaymentStatus(string status, string transactionid,string vendorreason,string vendortranref)
+        public async Task UpdatePaymentStatus(string status, string transactionid,string vendorreason,string vendortranref, string TranType)
         {
-            var payment = await _context.TenantPayments
+
+            if (string.IsNullOrEmpty(TranType))
+                throw new ArgumentNullException(nameof(status));
+
+            //check if trantype is a utility payment and if not update the other payment
+            if (TranType == "UTILITY") 
+            {
+                var payment = await _context.TenantPayments
+               .FirstOrDefaultAsync(tp => tp.TransactionId == transactionid);
+
+                if (payment == null)
+                    throw new Exception("Payment not found.");
+                payment.PaymentStatus = status;
+                payment.ReasonAtTelecom = vendorreason;
+                payment.VendorTransactionId = vendortranref;
+                _context.TenantPayments.Update(payment);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                var payment = await _context.TenantPayments
                 .FirstOrDefaultAsync(tp => tp.TransactionId == transactionid);
-            if (payment == null)
-                throw new Exception("Payment not found.");
-            payment.PaymentStatus = status;
-            payment.ReasonAtTelecom = vendorreason;
-            payment.VendorTransactionId = vendortranref;
-            _context.TenantPayments.Update(payment);
-            await _context.SaveChangesAsync();
+                if (payment == null)
+                    throw new Exception("Payment not found.");
+                payment.PaymentStatus = status;
+                payment.ReasonAtTelecom = vendorreason;
+                payment.VendorTransactionId = vendortranref;
+                _context.TenantPayments.Update(payment);
+                await _context.SaveChangesAsync();
+            }
+            
         }
 
         public async Task MakeUtilityPayment(UtilityPaymentDto dto)
@@ -485,7 +507,7 @@ namespace Infrastructure.Services.PaymentServices
             if (dto.Amount > MinAmount)
                 throw new ArgumentOutOfRangeException(nameof(dto.Amount), $"Amount cannot be less than {MinAmount}");
 
-            if (string.IsNullOrWhiteSpace(dto.MeterNumber) || dto.MeterNumber.Length < 14)
+            if (string.IsNullOrWhiteSpace(dto.MeterNumber) )
                 throw new ArgumentException("Meter number is not valid", nameof(dto.MeterNumber));
 
             var formattedPhone = NormalizePhoneNumber(dto.PhoneNumber);
@@ -500,7 +522,7 @@ namespace Infrastructure.Services.PaymentServices
                 UtilityType = "PREPAID WATER",
                 Description = "Water Payment",
                 TransactionID = Guid.NewGuid().ToString(),
-                PaymentMethod = "mobilemoney",
+                PaymentMethod = "MOMO",
                 Status = "PENDING",
                 Amount = dto.Amount,
                 Charges = charges,
