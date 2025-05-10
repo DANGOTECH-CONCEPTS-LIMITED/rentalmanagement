@@ -50,6 +50,14 @@ namespace Infrastructure.Data
                     Description = "Tenant role with limited permissions",
                     Permissions = null,
                     CreatedAt = new DateTime(2025, 04, 10)
+                },
+                new SystemRole
+                {
+                    Id = 4,
+                    Name = "Utililty Payment",
+                    Description = "Utility payment role with limited permissions",
+                    Permissions = null,
+                    CreatedAt = new DateTime(2025, 04, 10)
                 });
 
             // one‐to‐one between User⇄Wallet
