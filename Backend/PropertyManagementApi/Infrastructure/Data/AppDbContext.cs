@@ -22,6 +22,7 @@ namespace Infrastructure.Data
         public DbSet<SystemRole> SystemRoles { get; set; }
 
         public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
+        public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

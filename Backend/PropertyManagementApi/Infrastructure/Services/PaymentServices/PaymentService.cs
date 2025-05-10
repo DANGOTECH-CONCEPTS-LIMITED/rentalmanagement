@@ -504,7 +504,7 @@ namespace Infrastructure.Services.PaymentServices
                 throw new ArgumentNullException(nameof(dto));
 
             const double MinAmount = 1000;
-            if (dto.Amount > MinAmount)
+            if (dto.Amount < MinAmount)
                 throw new ArgumentOutOfRangeException(nameof(dto.Amount), $"Amount cannot be less than {MinAmount}");
 
             if (string.IsNullOrWhiteSpace(dto.MeterNumber) )

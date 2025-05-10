@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
@@ -69,15 +70,27 @@ namespace Infrastructure.Services.BackgroundServices
             var tenantPayments = tenantTask.Result;
             var utilityPayments = utilTask.Result;
 
-            // Kick off all of them in parallel, isolating failures
-            var work = new List<Task>();
+            //start with utility payments
             foreach (var u in utilityPayments)
-                work.Add(ProcessUtilityPaymentAsync(u, collectoApi, paymentService, walletService));
+            {
+                await ProcessUtilityPaymentAsync(u, collectoApi, paymentService, walletService);
+            }
 
+            // Then tenant payments
             foreach (var t in tenantPayments)
-                work.Add(ProcessTenantPaymentAsync(t, collectoApi, paymentService, walletService));
+            {
+                await ProcessTenantPaymentAsync(t, collectoApi, paymentService, walletService);
+            }
 
-            await Task.WhenAll(work);
+            // Kick off all of them in parallel, isolating failures
+            //var work = new List<Task>();
+            //foreach (var u in utilityPayments)
+            //    work.Add(ProcessUtilityPaymentAsync(u, collectoApi, paymentService, walletService));
+
+            //foreach (var t in tenantPayments)
+            //    work.Add(ProcessTenantPaymentAsync(t, collectoApi, paymentService, walletService));
+
+            //await Task.WhenAll(work);
         }
 
         private async Task ProcessUtilityPaymentAsync(
@@ -177,8 +190,22 @@ namespace Infrastructure.Services.BackgroundServices
                     tranType);
                 return;
             }
-
-            var resp = JsonSerializer.Deserialize<RequestToPayResponse>(raw);
+            RequestToPayResponse resp;
+            try
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                resp = JsonSerializer.Deserialize<RequestToPayResponse>(raw, options);
+                _logger.LogDebug("Parsed response: {@Resp}", resp);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse Collecto response");
+                throw;
+            }
+            //var resp = JsonSerializer.Deserialize<RequestToPayResponse>(raw);
             if (resp?.data?.requestToPay == true)
             {
                 _logger.LogInformation("MOMO request accepted");
@@ -204,15 +231,49 @@ namespace Infrastructure.Services.BackgroundServices
         // Typed model for the Collecto response
         private class RequestToPayResponse
         {
+            [JsonPropertyName("data")]
             public DataModel data { get; set; }
+            [JsonPropertyName("status_message")]
             public string status_message { get; set; }
 
             public class DataModel
             {
+                [JsonPropertyName("requestToPay")]
                 public bool requestToPay { get; set; }
+                [JsonPropertyName("transactionId")]
+                [JsonConverter(typeof(NumberOrStringJsonConverter))]
                 public string transactionId { get; set; }
+                [JsonPropertyName("message")]
                 public string message { get; set; }
             }
         }
+
+        public class NumberOrStringJsonConverter : JsonConverter<string>
+        {
+            public override string Read(
+                ref Utf8JsonReader reader,
+                Type typeToConvert,
+                JsonSerializerOptions options)
+            {
+                return reader.TokenType switch
+                {
+                    JsonTokenType.String => reader.GetString()!,
+                    JsonTokenType.Number => reader.GetInt64().ToString(),
+                    _ => throw new JsonException(
+                           $"Cannot convert token of type {reader.TokenType} to string")
+                };
+            }
+
+            public override void Write(
+                Utf8JsonWriter writer,
+                string value,
+                JsonSerializerOptions options)
+            {
+                // Always emit as JSON string
+                writer.WriteStringValue(value);
+            }
+        }
+
+
     }
 }

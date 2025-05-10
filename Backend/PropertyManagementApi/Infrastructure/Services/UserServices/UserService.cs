@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Text;
 using Domain.Entities.PropertyMgt;
+using Domain.Dtos.Meters;
 
 namespace Infrastructure.Services.UserServices
 {
@@ -399,6 +400,29 @@ namespace Infrastructure.Services.UserServices
                                $"Your new password is: {newPassword}\n\n" +
                                "Please change your password on your first login.";
             await _emailService.SendEmailAsync(user.Email, "Password Reset", emailContent);
+        }
+
+        public Task AddUtilityMeter(UtilityMeterDto utilityMeter)
+        {
+            // Validate user existence
+            var user = _context.Users.FirstOrDefault(u => u.Id == utilityMeter.LandLordId);
+            if (user == null)
+                throw new Exception("User not found.");
+            // check whether the meter is supplied
+            if (string.IsNullOrEmpty(utilityMeter.MeterNumber))
+            {
+                throw new Exception("Meter Number is not supplied");
+            }
+            // Map UtilityMeterDto to UtilityMeter entity
+            var meter = new UtilityMeter
+            {
+                MeterNumber = utilityMeter.MeterNumber,
+                MeterType = utilityMeter.MeterType,
+                LandLordId = utilityMeter.LandLordId,
+            };
+            _context.UtilityMeters.Add(meter);
+            _context.SaveChanges();
+            return Task.CompletedTask;
         }
     }
 }

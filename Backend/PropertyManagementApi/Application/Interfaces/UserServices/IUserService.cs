@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Domain.Entities.PropertyMgt;
+using Domain.Dtos.Meters;
 
 namespace Application.Interfaces.UserServices
 {
@@ -23,5 +24,6 @@ namespace Application.Interfaces.UserServices
 
         Task DeleteUser(int id);
         Task<IEnumerable<User>> GetLandlordsAsync();
+        Task AddUtilityMeter(UtilityMeterDto utilityMeter);
     }
 }
