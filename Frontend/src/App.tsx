@@ -45,6 +45,7 @@ import ResetPassword from "./components/auth/ResetPassword";
 import Transactions from "./pages/Admin/Transactions";
 import SendSMSForm from "./pages/SendSMSForm";
 import Properties from "./pages/Landlord/LandloardProperties";
+import MeterValidation from "./pages/MeterPayment";
 
 const queryClient = new QueryClient();
 
@@ -57,9 +58,11 @@ const App = () => (
         <HashRouter>
           <ScrollToTop />
           <Routes>
+            {/* Toasts */}
             {/* Home/Auth Routes */}
             <Route path="/" element={<SignIn />} />
             <Route path="/index" element={<Index />} />
+            <Route path="/meter-validation" element={<MeterValidation />} />
 
             {/* Admin Routes */}
             <Route element={<ProtectedRoute role={1} />}>
