@@ -80,7 +80,3 @@ namespace Infrastructure.Services.PrepaidApi
         }
     }
 }
-
-// DI setup (e.g., Startup.cs or Program.cs):
-// services.Configure<PosApiOptions>(configuration.GetSection("PosApi"));
-// services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>();
