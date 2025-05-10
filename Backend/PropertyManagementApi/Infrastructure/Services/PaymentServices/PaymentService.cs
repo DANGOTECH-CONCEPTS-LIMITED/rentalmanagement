@@ -475,5 +475,58 @@ namespace Infrastructure.Services.PaymentServices
             _context.TenantPayments.Update(payment);
             await _context.SaveChangesAsync();
         }
+
+        public async Task MakeUtilityPayment(UtilityPaymentDto dto)
+        {
+            if (dto == null)
+                throw new ArgumentNullException(nameof(dto));
+
+            const double MinAmount = 1000;
+            if (dto.Amount > MinAmount)
+                throw new ArgumentOutOfRangeException(nameof(dto.Amount), $"Amount cannot be less than {MinAmount}");
+
+            if (string.IsNullOrWhiteSpace(dto.MeterNumber) || dto.MeterNumber.Length < 14)
+                throw new ArgumentException("Meter number is not valid", nameof(dto.MeterNumber));
+
+            var formattedPhone = NormalizePhoneNumber(dto.PhoneNumber);
+            if (formattedPhone.Length != 12 || !formattedPhone.StartsWith("256"))
+                throw new ArgumentException("Phone number is not valid", nameof(dto.PhoneNumber));
+
+            const double ChargeRate = 0.1;
+            var charges = dto.Amount * ChargeRate;
+
+            var payment = new UtilityPayment
+            {
+                UtilityType = "PREPAID WATER",
+                Description = "Water Payment",
+                TransactionID = Guid.NewGuid().ToString(),
+                PaymentMethod = "mobilemoney",
+                Status = "PENDING",
+                Amount = dto.Amount,
+                Charges = charges,
+                MeterNumber = dto.MeterNumber,
+                PhoneNumber = formattedPhone
+            };
+
+            await _context.UtilityPayments.AddAsync(payment);
+            await _context.SaveChangesAsync();
+        }
+
+        private static string NormalizePhoneNumber(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return string.Empty;
+
+            // Keep only digit characters
+            var digits = new string(phoneNumber.Where(char.IsDigit).ToArray());
+
+            // Replace leading '0' with country code
+            if (digits.StartsWith("0"))
+                digits = "256" + digits.Substring(1);
+            else if (!digits.StartsWith("256"))
+                digits = "256" + digits;
+
+            return digits;
+        }
     }
 }

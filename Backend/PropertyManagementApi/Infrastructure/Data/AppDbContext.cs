@@ -21,6 +21,8 @@ namespace Infrastructure.Data
 
         public DbSet<SystemRole> SystemRoles { get; set; }
 
+        public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

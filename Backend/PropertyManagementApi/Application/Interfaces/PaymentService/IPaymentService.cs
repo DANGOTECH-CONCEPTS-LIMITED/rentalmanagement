@@ -36,5 +36,7 @@ namespace Application.Interfaces.PaymentService
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByLandLordIdAndMethodAsync(int landlordid, string method);
 
         Task UpdatePaymentStatus(string status, string transactionid,string reason,string vendorTranRef);
+
+        Task MakeUtilityPayment(UtilityPaymentDto utilityPayment);
     }
 }

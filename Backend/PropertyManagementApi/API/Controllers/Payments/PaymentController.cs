@@ -273,7 +273,18 @@ namespace API.Controllers.Payments
             }
         }
 
-
-
+        [HttpPost("/MakeUtilityPayment")]
+        public async Task<IActionResult> MakeUtilityPayment([FromBody] UtilityPaymentDto utilityPaymentDto)
+        {
+            try
+            {
+                await _paymentService.MakeUtilityPayment(utilityPaymentDto);
+                return Ok("Utility payment created successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error creating utility payment: {ex.Message}");
+            }
+        }
     }
 }
