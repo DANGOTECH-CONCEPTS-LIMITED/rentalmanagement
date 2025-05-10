@@ -45,7 +45,8 @@ import ResetPassword from "./components/auth/ResetPassword";
 import Transactions from "./pages/Admin/Transactions";
 import SendSMSForm from "./pages/SendSMSForm";
 import Properties from "./pages/Landlord/LandloardProperties";
-import MeterValidation from "./pages/MeterPayment";
+import MeterValidation from "./pages/ValidateMeter";
+import MakeUtilityPayment from "./pages/MakeutilityPayment";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,10 @@ const App = () => (
             <Route path="/" element={<SignIn />} />
             <Route path="/index" element={<Index />} />
             <Route path="/meter-validation" element={<MeterValidation />} />
+            <Route
+              path="/make-utility-payment"
+              element={<MakeUtilityPayment />}
+            />
 
             {/* Admin Routes */}
             <Route element={<ProtectedRoute role={1} />}>
