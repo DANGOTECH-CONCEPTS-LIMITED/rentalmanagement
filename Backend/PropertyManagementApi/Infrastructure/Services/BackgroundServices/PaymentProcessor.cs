@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;                      // ← for ToList()
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -36,71 +37,65 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("Billing Processing Service started.");
 
-            // Fire every 10s until cancellation
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
-            try
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                while (await timer.WaitForNextTickAsync(stoppingToken))
+                try
                 {
                     await ProcessAllPendingAsync();
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("PaymentProcessor is stopping.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected failure in ExecuteAsync");
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("PaymentProcessor is stopping.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected failure in ExecuteAsync");
+                }
             }
         }
 
         private async Task ProcessAllPendingAsync()
+        {
+            // 1) Fetch & materialize both lists in one short‐lived scope
+            List<UtilityPayment> utilityPayments;
+            List<TenantPayment> tenantPayments;
+
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+
+                // await the Task<IEnumerable<…>>, then ToList()
+                utilityPayments = (await paymentService
+                        .GetUtilityPaymentByStatus(Pending))
+                    .ToList();
+
+                tenantPayments = (await paymentService
+                        .GetPaymentsByStatusAsync(Pending))
+                    .ToList();
+            } // <-- DbContext disposed here
+
+            // 2) Spawn one task per payment, each with its own scope
+            var tasks = new List<Task>(utilityPayments.Count + tenantPayments.Count);
+
+            foreach (var u in utilityPayments)
+                tasks.Add(ProcessUtilityPaymentAsync(u));
+
+            foreach (var t in tenantPayments)
+                tasks.Add(ProcessTenantPaymentAsync(t));
+
+            await Task.WhenAll(tasks);
+        }
+
+        private async Task ProcessUtilityPaymentAsync(UtilityPayment payment)
         {
             using var scope = _scopeFactory.CreateScope();
             var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             var walletService = scope.ServiceProvider.GetRequiredService<IWalletService>();
             var collectoApi = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
 
-            // Load both lists in parallel
-            var tenantTask = paymentService.GetPaymentsByStatusAsync(Pending);
-            var utilTask = paymentService.GetUtilityPaymentByStatus(Pending);
-            await Task.WhenAll(tenantTask, utilTask);
-
-            var tenantPayments = tenantTask.Result;
-            var utilityPayments = utilTask.Result;
-
-            //start with utility payments
-            foreach (var u in utilityPayments)
-            {
-                await ProcessUtilityPaymentAsync(u, collectoApi, paymentService, walletService);
-            }
-
-            // Then tenant payments
-            foreach (var t in tenantPayments)
-            {
-                await ProcessTenantPaymentAsync(t, collectoApi, paymentService, walletService);
-            }
-
-            // Kick off all of them in parallel, isolating failures
-            //var work = new List<Task>();
-            //foreach (var u in utilityPayments)
-            //    work.Add(ProcessUtilityPaymentAsync(u, collectoApi, paymentService, walletService));
-
-            //foreach (var t in tenantPayments)
-            //    work.Add(ProcessTenantPaymentAsync(t, collectoApi, paymentService, walletService));
-
-            //await Task.WhenAll(work);
-        }
-
-        private async Task ProcessUtilityPaymentAsync(
-            UtilityPayment payment,
-            ICollectoApiClient collectoApi,
-            IPaymentService paymentService,
-            IWalletService walletService)
-        {
-            using var logScope = _logger.BeginScope(
-                new { payment.TransactionID, payment.PaymentMethod });
+            using var logScope = _logger.BeginScope(new { payment.TransactionID, payment.PaymentMethod });
 
             try
             {
@@ -127,14 +122,14 @@ namespace Infrastructure.Services.BackgroundServices
             }
         }
 
-        private async Task ProcessTenantPaymentAsync(
-            TenantPayment payment,
-            ICollectoApiClient collectoApi,
-            IPaymentService paymentService,
-            IWalletService walletService)
+        private async Task ProcessTenantPaymentAsync(TenantPayment payment)
         {
-            using var logScope = _logger.BeginScope(
-                new { payment.TransactionId, payment.PaymentMethod });
+            using var scope = _scopeFactory.CreateScope();
+            var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+            var walletService = scope.ServiceProvider.GetRequiredService<IWalletService>();
+            var collectoApi = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
+
+            using var logScope = _logger.BeginScope(new { payment.TransactionId, payment.PaymentMethod });
 
             try
             {
@@ -190,14 +185,12 @@ namespace Infrastructure.Services.BackgroundServices
                     tranType);
                 return;
             }
+
             RequestToPayResponse resp;
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-                resp = JsonSerializer.Deserialize<RequestToPayResponse>(raw, options);
+                resp = JsonSerializer.Deserialize<RequestToPayResponse>(raw,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
                 _logger.LogDebug("Parsed response: {@Resp}", resp);
             }
             catch (Exception ex)
@@ -205,7 +198,7 @@ namespace Infrastructure.Services.BackgroundServices
                 _logger.LogError(ex, "Failed to parse Collecto response");
                 throw;
             }
-            //var resp = JsonSerializer.Deserialize<RequestToPayResponse>(raw);
+
             if (resp?.data?.requestToPay == true)
             {
                 _logger.LogInformation("MOMO request accepted");
@@ -228,52 +221,40 @@ namespace Infrastructure.Services.BackgroundServices
             }
         }
 
-        // Typed model for the Collecto response
+        // Models for Collecto JSON
         private class RequestToPayResponse
         {
             [JsonPropertyName("data")]
-            public DataModel data { get; set; }
+            public DataModel data { get; set; } = null!;
             [JsonPropertyName("status_message")]
-            public string status_message { get; set; }
+            public string status_message { get; set; } = null!;
 
             public class DataModel
             {
                 [JsonPropertyName("requestToPay")]
                 public bool requestToPay { get; set; }
+
                 [JsonPropertyName("transactionId")]
                 [JsonConverter(typeof(NumberOrStringJsonConverter))]
-                public string transactionId { get; set; }
+                public string transactionId { get; set; } = null!;
+
                 [JsonPropertyName("message")]
-                public string message { get; set; }
+                public string message { get; set; } = null!;
             }
         }
 
         public class NumberOrStringJsonConverter : JsonConverter<string>
         {
-            public override string Read(
-                ref Utf8JsonReader reader,
-                Type typeToConvert,
-                JsonSerializerOptions options)
-            {
-                return reader.TokenType switch
+            public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+                => reader.TokenType switch
                 {
                     JsonTokenType.String => reader.GetString()!,
                     JsonTokenType.Number => reader.GetInt64().ToString(),
-                    _ => throw new JsonException(
-                           $"Cannot convert token of type {reader.TokenType} to string")
+                    _ => throw new JsonException($"Cannot convert token {reader.TokenType} to string")
                 };
-            }
 
-            public override void Write(
-                Utf8JsonWriter writer,
-                string value,
-                JsonSerializerOptions options)
-            {
-                // Always emit as JSON string
-                writer.WriteStringValue(value);
-            }
+            public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+                => writer.WriteStringValue(value);
         }
-
-
     }
 }
