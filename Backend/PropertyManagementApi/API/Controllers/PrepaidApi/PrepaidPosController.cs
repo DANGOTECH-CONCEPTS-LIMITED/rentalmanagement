@@ -12,8 +12,8 @@ namespace API.Controllers.PrepaidApi
         private readonly IPrepaidApiClient _prepaidApiClient;
         public PrepaidPosController(IPrepaidApiClient prepaidApiClient) => _prepaidApiClient = prepaidApiClient;
 
-        [HttpPost("/search")]
-        public async Task<IActionResult> SearchCustomer([FromBody] CustomerSearchDto searchDto)
+        [HttpPost("/ValidateMeter")]
+        public async Task<IActionResult> ValidateMeter([FromBody] CustomerSearchDto searchDto)
         {
             try
             {
