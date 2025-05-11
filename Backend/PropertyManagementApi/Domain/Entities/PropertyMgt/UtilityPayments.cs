@@ -21,6 +21,9 @@ namespace Domain.Entities.PropertyMgt
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string PhoneNumber { get; set; } = string.Empty;
         public string MeterNumber { get; set; } = string.Empty;
+        public bool IsTokenGenerated { get; set; } = false;
         public string? Token { get; set; }
+        public string? Units { get; set; }
+        
     }
 }

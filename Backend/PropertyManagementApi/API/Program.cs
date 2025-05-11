@@ -65,6 +65,7 @@ builder.Services.AddHostedService<PaymentProcessor>();
 builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
 builder.Services.AddHostedService<CreditWalletService>();
 builder.Services.AddHostedService<PendingWalletWithdrawsProcessor>();
+builder.Services.AddHostedService<ProcessPendingTokenTransactions>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

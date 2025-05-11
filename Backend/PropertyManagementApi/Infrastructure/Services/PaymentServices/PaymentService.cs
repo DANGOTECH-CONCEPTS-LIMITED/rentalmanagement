@@ -463,14 +463,14 @@ namespace Infrastructure.Services.PaymentServices
             return payments;
         }
 
-        public async Task UpdatePaymentStatus(string status, string transactionid,string vendorreason,string vendortranref, string TranType)
+        public async Task UpdatePaymentStatus(string status, string transactionid, string vendorreason, string vendortranref, string TranType)
         {
 
             if (string.IsNullOrEmpty(TranType))
                 throw new ArgumentNullException(nameof(status));
 
             //check if trantype is a utility payment and if not update the other payment
-            if (TranType == "UTILITY") 
+            if (TranType == "UTILITY")
             {
                 var payment = await _context.UtilityPayments
                .FirstOrDefaultAsync(tp => tp.TransactionID == transactionid);
@@ -495,7 +495,7 @@ namespace Infrastructure.Services.PaymentServices
                 _context.TenantPayments.Update(payment);
                 await _context.SaveChangesAsync();
             }
-            
+
         }
 
         public async Task MakeUtilityPayment(UtilityPaymentDto dto)
@@ -507,7 +507,7 @@ namespace Infrastructure.Services.PaymentServices
             if (dto.Amount < MinAmount)
                 throw new ArgumentOutOfRangeException(nameof(dto.Amount), $"Amount cannot be less than {MinAmount}");
 
-            if (string.IsNullOrWhiteSpace(dto.MeterNumber) )
+            if (string.IsNullOrWhiteSpace(dto.MeterNumber))
                 throw new ArgumentException("Meter number is not valid", nameof(dto.MeterNumber));
 
             var formattedPhone = NormalizePhoneNumber(dto.PhoneNumber);
@@ -534,7 +534,7 @@ namespace Infrastructure.Services.PaymentServices
             await _context.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByStatus(string status) 
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByStatus(string status)
         {
             var payments = await _context.UtilityPayments
                 .Where(tp => tp.Status == status)
@@ -559,7 +559,7 @@ namespace Infrastructure.Services.PaymentServices
             return digits;
         }
 
-        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByDateRange(DateTime startDate, DateTime endDate) 
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByDateRange(DateTime startDate, DateTime endDate)
         {
 
             //format dates to be date only
@@ -590,8 +590,26 @@ namespace Infrastructure.Services.PaymentServices
         public async Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingTokenGeneration()
         {
             var payments = await _context.UtilityPayments
-                .Where(tp => tp.Status == "SUCCESSFUL" && tp.Token == "")
+                .Where(tp => tp.Status == "SUCCESSFUL" && tp.Token == null && tp.IsTokenGenerated == false)
                 .ToListAsync();
             return payments;
         }
+
+        public async Task UpdateUtilityPayment(UtilityPayment utilityPayment)
+        {
+            if (utilityPayment == null)
+                throw new ArgumentNullException(nameof(utilityPayment));
+            //check if payment exists
+            var existingPayment = await _context.UtilityPayments
+                .FirstOrDefaultAsync(tp => tp.TransactionID == utilityPayment.TransactionID);
+            if (existingPayment == null)
+                throw new Exception("Payment not found.");
+            //map dto to entity
+            existingPayment.Token = utilityPayment.Token;
+            existingPayment.Units = utilityPayment.Units;
+
+            _context.UtilityPayments.Update(existingPayment);
+            await _context.SaveChangesAsync();
+        }
+    }
 }
