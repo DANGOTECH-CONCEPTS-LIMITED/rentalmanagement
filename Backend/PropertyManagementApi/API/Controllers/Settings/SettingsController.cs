@@ -15,7 +15,7 @@ namespace API.Controllers.Settings
             _settings = settings;
         }
 
-        [HttpGet("/GetRequestResponseByDate/{startDate}/{endDate}")]
+        [HttpGet("/GetRequestResponseByDate")]
         public async Task<IActionResult> GetRequestResponseByDate([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             try
