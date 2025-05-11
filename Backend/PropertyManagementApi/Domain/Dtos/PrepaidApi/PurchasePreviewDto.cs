@@ -8,8 +8,7 @@ namespace Domain.Dtos.PrepaidApi
 {
     public class PurchasePreviewDto
     {
-        public string Token { get; init; }
+        public string MeterNumber { get; init; }
         public decimal Amount { get; init; }
-        public decimal Fee { get; init; }
     }
 }

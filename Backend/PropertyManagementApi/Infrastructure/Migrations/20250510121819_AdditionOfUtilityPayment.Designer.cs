@@ -4,6 +4,7 @@ using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250510121819_AdditionOfUtilityPayment")]
+    partial class AdditionOfUtilityPayment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -368,34 +371,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("Domain.Entities.PropertyMgt.UtilityMeter", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("LandLordId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MeterNumber")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("MeterType")
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LandLordId");
-
-                    b.ToTable("UtilityMeters");
-                });
-
             modelBuilder.Entity("Domain.Entities.PropertyMgt.UtilityPayment", b =>
                 {
                     b.Property<int>("Id")
@@ -577,17 +552,6 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("SystemRole");
-                });
-
-            modelBuilder.Entity("Domain.Entities.PropertyMgt.UtilityMeter", b =>
-                {
-                    b.HasOne("Domain.Entities.PropertyMgt.User", "User")
-                        .WithMany()
-                        .HasForeignKey("LandLordId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.Wallet", b =>

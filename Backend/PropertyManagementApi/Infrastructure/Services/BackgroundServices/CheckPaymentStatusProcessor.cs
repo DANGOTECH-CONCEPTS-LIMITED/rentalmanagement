@@ -1,155 +1,178 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Linq;                      // for ToList()
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
-using Application.Interfaces.PaymentService.WalletSvc;
 using Application.Interfaces.PaymentService;
+using Application.Interfaces.PaymentService.WalletSvc;
+using Domain.Dtos.Collecto;
+using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Domain.Entities.PropertyMgt;
-using Domain.Dtos.Collecto;
-using System.Text.Json;
 
 namespace Infrastructure.Services.BackgroundServices
 {
     public class CheckPaymentStatusProcessor : BackgroundService
     {
-        private const string PendingStatus = "PENDING AT TELCOM";
-        private const string SucessfulAtTelecom = "SUCCESSFUL AT TELECOM";
-        private const string FailedStatus = "FAILED AT TELECOM";
+        private const string PendingAtTelcom = "PENDING AT TELCOM";
+        private const string SuccessAtTelecom = "SUCCESSFUL AT TELECOM";
+        private const string FailedAtTelecom = "FAILED AT TELECOM";
+
         private readonly ILogger<CheckPaymentStatusProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
-        public CheckPaymentStatusProcessor(ILogger<CheckPaymentStatusProcessor> logger,
-                                IServiceScopeFactory scopeFactory)
+        public CheckPaymentStatusProcessor(
+            ILogger<CheckPaymentStatusProcessor> logger,
+            IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
             _scopeFactory = scopeFactory;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) 
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested) 
+            _logger.LogInformation("CheckPaymentStatusProcessor started.");
+
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+            try
+            {
+                while (await timer.WaitForNextTickAsync(stoppingToken))
+                    await ProcessAllPendingAsync(stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("CheckPaymentStatusProcessor stopping.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fatal error in ExecuteAsync");
+            }
+        }
+
+        private async Task ProcessAllPendingAsync(CancellationToken ct)
+        {
+            // 1) Load and materialize both sets in a short‐lived scope
+            List<TenantPayment> tenantPayments;
+            List<UtilityPayment> utilityPayments;
+
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+
+                tenantPayments = (await paymentSvc
+                        .GetPaymentsByStatusAsync(PendingAtTelcom))
+                    .ToList();
+
+                utilityPayments = (await paymentSvc
+                        .GetUtilityPaymentByStatus(PendingAtTelcom))
+                    .ToList();
+            } // ← DbContext disposed here
+
+            // 2) Spawn one task per payment, each with its own scope
+            var tasks = new List<Task>(tenantPayments.Count + utilityPayments.Count);
+
+            foreach (var t in tenantPayments)
+                tasks.Add(ProcessStatusAsync(
+                    t.TransactionId,
+                    t.VendorTransactionId,
+                    "RENT",
+                    ct));
+
+            foreach (var u in utilityPayments)
+                tasks.Add(ProcessStatusAsync(
+                    u.TransactionID,
+                    u.VendorTranId,
+                    "UTILITY",
+                    ct));
+
+            await Task.WhenAll(tasks);
+        }
+
+        private async Task ProcessStatusAsync(
+            string transactionId,
+            string vendorTranId,
+            string tranType,
+            CancellationToken ct)
+        {
+            // Each status‐check runs in its own DI scope → its own DbContext
+            using var scope = _scopeFactory.CreateScope();
+            var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+            var collectoApi = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
+
+            using (_logger.BeginScope(new { transactionId, vendorTranId, tranType }))
             {
                 try
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var payment = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-                    var wallet = scope.ServiceProvider.GetRequiredService<IWalletService>();
-                    var collecto = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
+                    _logger.LogInformation("Checking status with Collecto");
 
-                   var pendingPayments = await payment.GetPaymentsByStatusAsync(PendingStatus).ConfigureAwait(false);
+                    var responseJson = await collectoApi
+                        .GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
+                        {
+                            TransactionId = vendorTranId
+                        });
 
-                    foreach (var tenantPayment in pendingPayments)
+                    if (string.IsNullOrWhiteSpace(responseJson))
                     {
-                        // isolate each payment in its own try/catch
-                        await ProcessSinglePaymentAsync(
-                            tenantPayment,
-                            collecto,
-                            payment,
-                            wallet,
-                            stoppingToken);
+                        _logger.LogError("Empty response from Collecto");
+                        await paymentSvc.UpdatePaymentStatus(
+                            FailedAtTelecom,
+                            transactionId,
+                            "No response from Collecto",
+                            string.Empty,
+                            tranType);
+                        return;
+                    }
+
+                    var dto = JsonSerializer
+                        .Deserialize<RequestToPayStatusResponse>(responseJson);
+
+                    if (dto?.data?.requestToPayStatus != true)
+                    {
+                        _logger.LogError("Collecto returned requestToPayStatus=false");
+                        await paymentSvc.UpdatePaymentStatus(
+                            FailedAtTelecom,
+                            transactionId,
+                            dto?.data?.message ?? "Unknown error",
+                            string.Empty,
+                            tranType);
+                        return;
+                    }
+                    else if (!dto.data.status.Equals("PENDING"))
+                    {
+                        var newStatus = dto.data.status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase)
+                            ? SuccessAtTelecom
+                            : FailedAtTelecom;
+
+                        await paymentSvc.UpdatePaymentStatus(
+                            newStatus,
+                            transactionId,
+                            dto.data.message ?? string.Empty,
+                            dto.data.transactionId ?? string.Empty,
+                            tranType);
+                        _logger.LogInformation("Status updated to {NewStatus}", newStatus);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error fetching or processing payments");
+                    _logger.LogError(ex, "Error in status check");
                 }
-                // Wait for 10 seconds before checking again
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken)
-                          .ConfigureAwait(false);
             }
         }
 
-        private async Task ProcessSinglePaymentAsync(
-            TenantPayment tenantPayment,
-            ICollectoApiClient collecto,
-            IPaymentService paymentService,
-            IWalletService walletService,
-            CancellationToken cancellationToken)
+        private class RequestToPayStatusResponse
         {
-            using var logScope = _logger.BeginScope(
-               new { tenantPayment.TransactionId, tenantPayment.PaymentMethod });
+            public DataModel data { get; set; } = null!;
 
-            if (tenantPayment.PaymentMethod.Equals("MOMO", StringComparison.OrdinalIgnoreCase))
+            public class DataModel
             {
-                await HandleMomoAsync(tenantPayment, collecto, paymentService);
+                public bool requestToPayStatus { get; set; }
+                public string status { get; set; } = null!;
+                public string message { get; set; } = null!;
+                public string transactionId { get; set; } = null!;
             }
-            else
-            {
-                _logger.LogInformation("Delegating to other channels for non-MOMO payment");
-            }
-                
-        }
-
-
-        private async Task HandleMomoAsync(
-            TenantPayment tenantPayment,
-            ICollectoApiClient collectoApi,
-            IPaymentService paymentService)
-        {
-            _logger.LogInformation("Requesting mobile-money payment");
-
-            var request = new RequestToPayStatusRequestDto
-            {
-                TransactionId = tenantPayment.VendorTransactionId,
-            };
-
-            var rawResponse = await collectoApi.GetRequestToPayStatusAsync(request).ConfigureAwait(false);
-
-            if (!string.IsNullOrWhiteSpace(rawResponse))
-            {
-                // deserialize into a typed model
-                var rtpResponse = JsonSerializer.Deserialize<RequestToPayStatusResponse>(rawResponse);
-
-                if (rtpResponse?.data?.requestToPayStatus == true)
-                {
-                    if (rtpResponse.data.status.Equals("SUCCESSFUL"))
-                    {
-                        tenantPayment.PaymentStatus = SucessfulAtTelecom;
-                    }
-                    else if (rtpResponse.data.status.Contains("FAILED"))
-                    {
-                        tenantPayment.PaymentStatus = FailedStatus;
-                    }
-
-                    await paymentService.UpdatePaymentStatus(
-                        tenantPayment.PaymentStatus,
-                        tenantPayment.TransactionId,
-                        rtpResponse.data.message ?? string.Empty,tenantPayment.VendorTransactionId);
-                    _logger.LogInformation("MOMO request accepted");
-                }
-                else
-                {
-                    tenantPayment.PaymentStatus = FailedStatus;
-                    await paymentService.UpdatePaymentStatus(
-                        FailedStatus,
-                        tenantPayment.TransactionId,
-                        rtpResponse?.data?.message ?? "Unknown error",
-                        string.Empty);
-                    _logger.LogError("MOMO request failed");
-                }
-                _logger.LogError("Empty response from Collecto");
-                return;
-            }
-
-            
-        }
-    }
-
-    internal class RequestToPayStatusResponse
-    {
-        public DataModel data { get; set; }
-        public string status_message { get; set; }
-
-        public class DataModel
-        {
-            public bool requestToPayStatus { get; set; }
-            public string status { get; set; }
-            public string message { get; set; }
         }
     }
 }

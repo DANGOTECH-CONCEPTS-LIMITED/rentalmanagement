@@ -21,6 +21,9 @@ namespace Infrastructure.Data
 
         public DbSet<SystemRole> SystemRoles { get; set; }
 
+        public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
+        public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -48,6 +51,14 @@ namespace Infrastructure.Data
                     Id = 3,
                     Name = "Tenant",
                     Description = "Tenant role with limited permissions",
+                    Permissions = null,
+                    CreatedAt = new DateTime(2025, 04, 10)
+                },
+                new SystemRole
+                {
+                    Id = 4,
+                    Name = "Utililty Payment",
+                    Description = "Utility payment role with limited permissions",
                     Permissions = null,
                     CreatedAt = new DateTime(2025, 04, 10)
                 });

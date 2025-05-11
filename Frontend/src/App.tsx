@@ -48,7 +48,8 @@ import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import UtilityDashboard from "./pages/Utility/Dashboard";
 import UtilityMeter from "./pages/Utility/UtilityMeter";
 
-// Utility pages
+import MeterValidation from "./pages/ValidateMeter";
+import MakeUtilityPayment from "./pages/MakeutilityPayment";
 
 const queryClient = new QueryClient();
 
@@ -61,9 +62,15 @@ const App = () => (
         <HashRouter>
           <ScrollToTop />
           <Routes>
+            {/* Toasts */}
             {/* Home/Auth Routes */}
             <Route path="/" element={<SignIn />} />
             <Route path="/index" element={<Index />} />
+            <Route path="/meter-validation" element={<MeterValidation />} />
+            <Route
+              path="/make-utility-payment"
+              element={<MakeUtilityPayment />}
+            />
 
             {/* Admin Routes */}
             <Route element={<ProtectedRoute role={1} />}>

@@ -273,7 +273,47 @@ namespace API.Controllers.Payments
             }
         }
 
+        [HttpPost("/MakeUtilityPayment")]
+        public async Task<IActionResult> MakeUtilityPayment([FromBody] UtilityPaymentDto utilityPaymentDto)
+        {
+            try
+            {
+                await _paymentService.MakeUtilityPayment(utilityPaymentDto);
+                return Ok("Utility payment created successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error creating utility payment: {ex.Message}");
+            }
+        }
 
+        [HttpGet("/GetUtilityPaymentByDateRange{startdate}/{enddate}")]
+        public async Task<IActionResult> GetUtilityPaymentByDateRange(DateTime startdate, DateTime enddate)
+        {
+            try
+            {
+                var utilityPayments = await _paymentService.GetUtilityPaymentByDateRange(startdate, enddate);
+                return Ok(utilityPayments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving utility payments: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetUtilityPaymentByMeterNumber{meternumber}")]
+        public async Task<IActionResult> GetUtilityPaymentByMeterNumber(string meternumber)
+        {
+            try
+            {
+                var utilityPayments = await _paymentService.GetUtilityPaymentByMeterNumber(meternumber);
+                return Ok(utilityPayments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving utility payments: {ex.Message}");
+            }
+        }
 
     }
 }

@@ -4,6 +4,7 @@ using Application.Interfaces.UserServices;
 using Domain.Dtos.User;
 using Microsoft.AspNetCore.Authorization;
 using Domain.Entities.PropertyMgt;
+using Domain.Dtos.Meters;
 
 namespace API.Controllers.UserControllers
 {
@@ -185,6 +186,21 @@ namespace API.Controllers.UserControllers
             catch (Exception ex)
             {
                 return BadRequest($"Error registering user: {ex.Message}");
+            }
+        }
+
+        [HttpPost("/AddUtilityMeter")]
+        [Authorize]
+        public async Task<IActionResult> AddUtilityMeter([FromBody] UtilityMeterDto utilityMeterDto)
+        {
+            try
+            {
+                await _userService.AddUtilityMeter(utilityMeterDto);
+                return Ok("Utility meter added successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error adding utility meter: {ex.Message}");
             }
         }
     }

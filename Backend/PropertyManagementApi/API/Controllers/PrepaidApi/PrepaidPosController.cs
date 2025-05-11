@@ -12,8 +12,8 @@ namespace API.Controllers.PrepaidApi
         private readonly IPrepaidApiClient _prepaidApiClient;
         public PrepaidPosController(IPrepaidApiClient prepaidApiClient) => _prepaidApiClient = prepaidApiClient;
 
-        [HttpPost("/search")]
-        public async Task<IActionResult> SearchCustomer([FromBody] CustomerSearchDto searchDto)
+        [HttpPost("/ValidateMeter")]
+        public async Task<IActionResult> ValidateMeter([FromBody] CustomerSearchDto searchDto)
         {
             try
             {
@@ -32,7 +32,7 @@ namespace API.Controllers.PrepaidApi
         {
             try
             {
-                var result = await _prepaidApiClient.PreviewAsync(previewDto.Token, previewDto.Amount);
+                var result = await _prepaidApiClient.PreviewAsync(previewDto);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -47,7 +47,7 @@ namespace API.Controllers.PrepaidApi
         {
             try
             {
-                var result = await _prepaidApiClient.PurchaseAsync(purchaseDto.Token, purchaseDto.Amount);
+                var result = await _prepaidApiClient.PurchaseAsync(purchaseDto);
                 return Ok(result);
             }
             catch (Exception ex)

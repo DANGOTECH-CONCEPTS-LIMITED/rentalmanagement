@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Linq;                      // for ToList()
+using System.Threading;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService;
@@ -15,86 +15,150 @@ namespace Infrastructure.Services.BackgroundServices
 {
     public class CreditWalletService : BackgroundService
     {
-        private const string PendingStatus = "SUCCESSFUL AT TELECOM";
-        private const string Successful = "SUCCESSFUL";
-        private const string FailedStatus = "FAILED AT TELECOM";
+        private static class PaymentStatus
+        {
+            public const string Pending = "SUCCESSFUL AT TELECOM";
+            public const string Completed = "SUCCESSFUL";
+            public const string Failed = "FAILED AT TELECOM";
+        }
+
         private readonly ILogger<CreditWalletService> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
-        public CreditWalletService(ILogger<CreditWalletService> logger,
-                                 IServiceScopeFactory scopeFactory)
+        private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(10);
+
+        public CreditWalletService(
+            ILogger<CreditWalletService> logger,
+            IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
             _scopeFactory = scopeFactory;
         }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            _logger.LogInformation("CreditWalletService started.");
+
+            using var timer = new PeriodicTimer(_pollInterval);
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 try
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var payment = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-                    var wallet = scope.ServiceProvider.GetRequiredService<IWalletService>();
-                    var collecto = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
+                    // 1) Fetch & materialize both lists in a short-lived scope
+                    List<UtilityPayment> utilityPayments;
+                    List<TenantPayment> tenantPayments;
 
-                    var pendingPayments = await payment
-                        .GetPaymentsByStatusAsync(PendingStatus)
-                        .ConfigureAwait(false);
-
-                    foreach (var tenantPayment in pendingPayments) 
+                    using (var scope = _scopeFactory.CreateScope())
                     {
-                        // isolate each payment in its own try/catch
-                        await ProcessSinglePaymentAsync(
-                            tenantPayment,
-                            collecto,
-                            payment,
-                            wallet,
-                            stoppingToken);
+                        var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+
+                        utilityPayments = (await paymentService
+                                .GetUtilityPaymentByStatus(PaymentStatus.Pending))
+                            .ToList();
+
+                        tenantPayments = (await paymentService
+                                .GetPaymentsByStatusAsync(PaymentStatus.Pending))
+                            .ToList();
                     }
-                    // Add your logic here to process the credit wallet transactions
+
+                    // 2) Process each payment in its own scope (parallel)
+                    var tasks = new List<Task>(utilityPayments.Count + tenantPayments.Count);
+                    foreach (var up in utilityPayments)
+                        tasks.Add(ProcessUtilityAsync(up, stoppingToken));
+
+                    foreach (var tp in tenantPayments)
+                        tasks.Add(ProcessTenantAsync(tp, stoppingToken));
+
+                    await Task.WhenAll(tasks);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error processing credit wallet transactions");
+                    _logger.LogError(ex, "Error in CreditWalletService polling loop");
                 }
-                // Wait for a while before checking again
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken)
-                          .ConfigureAwait(false);
+            }
+
+            _logger.LogInformation("CreditWalletService stopping.");
+        }
+
+        private async Task ProcessUtilityAsync(UtilityPayment utilityPayment, CancellationToken cancellationToken)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+            var walletService = scope.ServiceProvider.GetRequiredService<IWalletService>();
+
+            using (_logger.BeginScope(new { utilityPayment.TransactionID, utilityPayment.MeterNumber }))
+            {
+                try
+                {
+                    var wallet = await walletService
+                        .GetWalletByUtilityMeterNumber(utilityPayment.MeterNumber);
+
+                    if (wallet == null)
+                    {
+                        _logger.LogWarning("No wallet found for meter {Meter}. Skipping.", utilityPayment.MeterNumber);
+                        return;
+                    }
+
+                    var transaction = new WalletTransaction
+                    {
+                        Amount = (decimal)utilityPayment.Amount,
+                        Description = $"{utilityPayment.Description}. Meter {utilityPayment.MeterNumber}",
+                        TransactionDate = DateTime.UtcNow,
+                        WalletId = wallet.Id
+                    };
+
+                    await walletService.AddWalletTransaction(transaction);
+
+                    await paymentService.UpdatePaymentStatus(
+                        PaymentStatus.Completed,
+                        utilityPayment.TransactionID,
+                        utilityPayment.ReasonAtTelecom,
+                        utilityPayment.VendorTranId,
+                        "UTILITY");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing utility payment");
+                }
             }
         }
-        private async Task ProcessSinglePaymentAsync(
-            TenantPayment tenantPayment,
-            ICollectoApiClient collecto,
-            IPaymentService payment,
-            IWalletService wallet,
-            CancellationToken stoppingToken)
+
+        private async Task ProcessTenantAsync(TenantPayment tenantPayment, CancellationToken cancellationToken)
         {
-            try
-            {
-                // Call the Collecto API to check the payment status
+            using var scope = _scopeFactory.CreateScope();
+            var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+            var walletService = scope.ServiceProvider.GetRequiredService<IWalletService>();
 
-                var wllt = await wallet.GetWalletByLandlordId(tenantPayment.PropertyTenant.Property.OwnerId);
-                //check if wallet exists
-                if (wllt == null)
+            using (_logger.BeginScope(new { tenantPayment.TransactionId, tenantPayment.PropertyTenant.Property.OwnerId }))
+            {
+                try
                 {
-                    wllt = await wallet.CreateWallet(tenantPayment.PropertyTenant.Property.OwnerId, 0);
+                    var ownerId = tenantPayment.PropertyTenant.Property.OwnerId;
+
+                    // ensure landlord wallet exists
+                    var wallet = await walletService.GetWalletByLandlordId(ownerId)
+                                 ?? await walletService.CreateWallet(ownerId, 0m);
+
+                    var transaction = new WalletTransaction
+                    {
+                        Amount = (decimal)tenantPayment.Amount,
+                        Description = $"{tenantPayment.Description}. Tenant {tenantPayment.PropertyTenant.FullName}",
+                        TransactionDate = DateTime.UtcNow,
+                        WalletId = wallet.Id
+                    };
+
+                    await walletService.AddWalletTransaction(transaction);
+
+                    tenantPayment.PaymentStatus = PaymentStatus.Completed;
+                    await paymentService.UpdatePaymentAsync(tenantPayment);
                 }
-                //credit wallet
-                var walletTrannsaction = new WalletTransaction
+                catch (Exception ex)
                 {
-                    Amount = (decimal)tenantPayment.Amount,
-                    Description = $"{tenantPayment.Description}. Tenant {tenantPayment.PropertyTenant.FullName}",
-                    TransactionDate = DateTime.UtcNow,
-                    WalletId = wllt.Id // Assuming you have a WalletId in TenantPayment
-                };
-
-                await wallet.AddWalletTransaction(walletTrannsaction);
-                tenantPayment.PaymentStatus = Successful;
-                await payment.UpdatePaymentAsync(tenantPayment);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing single payment");
+                    _logger.LogError(ex, "Error processing tenant payment");
+                }
             }
         }
     }

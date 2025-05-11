@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Text;
 using Domain.Entities.PropertyMgt;
+using Domain.Dtos.Meters;
 
 namespace Infrastructure.Services.UserServices
 {
@@ -37,59 +38,157 @@ namespace Infrastructure.Services.UserServices
             _configuration = configuration;
         }
 
-        public async Task RegisterUserAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, UserDto userdto)
+        //public async Task RegisterUserAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, UserDto userdto)
+        //{
+        //    // Validate file uploads
+        //    if (passportphoto == null) throw new Exception("Passport photo is required.");
+        //    if (idfront == null) throw new Exception("ID front is required.");
+        //    if (idback == null) throw new Exception("ID back is required.");
+
+        //    // Save files and retrieve paths
+        //    var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
+        //    var idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
+        //    var idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
+
+        //    // Check for duplicate email
+        //    var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == userdto.Email);
+        //    if (existingUser != null)
+        //        throw new Exception("User with this email already exists.");
+
+        //    // Retrieve system role
+        //    var systemRole = await _context.SystemRoles.FirstOrDefaultAsync(r => r.Id == userdto.SystemRoleId);
+        //    if (systemRole == null)
+        //        throw new Exception("System role not found.");
+
+        //    // Generate a unique, temporary password
+        //    var password = Guid.NewGuid().ToString("N").Substring(0, 8);
+
+        //    // Map UserDto to User entity
+        //    var user = new User
+        //    {
+        //        FullName = userdto.FullName,
+        //        Email = userdto.Email,
+        //        PhoneNumber = userdto.PhoneNumber,
+        //        PassportPhoto = passportPhotoPath,
+        //        IdFront = idFrontPath,
+        //        IdBack = idBackPath,
+        //        SystemRoleId = userdto.SystemRoleId,
+        //        NationalIdNumber = userdto.NationalIdNumber,
+        //        PasswordChanged = false,
+        //        Verified = false,
+        //    };
+
+        //    // Hash and set password
+        //    user.Password = _passwordHasher.HashPassword(user, password);
+
+            
+        //    _context.Users.Add(user);
+        //    await _context.SaveChangesAsync();
+
+        //    //check if user is a landlord or a Utility payment to create the wallet instantly
+        //    if (systemRole.Id == 2 || systemRole.Id == 4)
+        //    {
+        //        var wallet = new Wallet
+        //        {
+        //            LandlordId = user.Id,
+        //            Balance = 0,
+        //            CreatedAt = DateTime.UtcNow
+        //        };
+        //        _context.Wallets.Add(wallet);
+        //    }
+
+        //    // Compose and send welcome email
+        //    var emailContent = $"Hello {user.FullName},\n\nThank you for registering with Nyumba Yo. " +
+        //                       $"You have been registered as {systemRole.Name} on our platform.\n\n" +
+        //                       $"Username: {user.Email}\nOne-time password: {password}\n\n" +
+        //                       "Please change your password on your first login.";
+        //    await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
+        //}
+
+        public async Task RegisterUserAsync(
+    IFormFile passportPhoto,
+    IFormFile idFront,
+    IFormFile idBack,
+    UserDto userDto)
         {
-            // Validate file uploads
-            if (passportphoto == null) throw new Exception("Passport photo is required.");
-            if (idfront == null) throw new Exception("ID front is required.");
-            if (idback == null) throw new Exception("ID back is required.");
+            // 1. Guard clauses
+            if (passportPhoto is null) throw new ArgumentNullException(nameof(passportPhoto));
+            if (idFront is null) throw new ArgumentNullException(nameof(idFront));
+            if (idBack is null) throw new ArgumentNullException(nameof(idBack));
+            if (userDto is null) throw new ArgumentNullException(nameof(userDto));
 
-            // Save files and retrieve paths
-            var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
-            var idFrontPath = await _settings.SaveFileAndReturnPathAsync(idfront);
-            var idBackPath = await _settings.SaveFileAndReturnPathAsync(idback);
+            // 2. Duplicate‐email check
+            if (await _context.Users.AnyAsync(u => u.Email == userDto.Email))
+                throw new InvalidOperationException($"A user with email '{userDto.Email}' already exists.");
 
-            // Check for duplicate email
-            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == userdto.Email);
-            if (existingUser != null)
-                throw new Exception("User with this email already exists.");
+            // 3. Load the role
+            var systemRole = await _context.SystemRoles
+                .FirstOrDefaultAsync(r => r.Id == userDto.SystemRoleId)
+                ?? throw new KeyNotFoundException($"SystemRoleId {userDto.SystemRoleId} not found.");
 
-            // Retrieve system role
-            var systemRole = await _context.SystemRoles.FirstOrDefaultAsync(r => r.Id == userdto.SystemRoleId);
-            if (systemRole == null)
-                throw new Exception("System role not found.");
+            // 4. Upload files in parallel (single‐arg overload)
+            var passportTask = _settings.SaveFileAndReturnPathAsync(passportPhoto);
+            var frontTask = _settings.SaveFileAndReturnPathAsync(idFront);
+            var backTask = _settings.SaveFileAndReturnPathAsync(idBack);
+            await Task.WhenAll(passportTask, frontTask, backTask);
 
-            // Generate a unique, temporary password
-            var password = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var passportPath = await passportTask;
+            var idFrontPath = await frontTask;
+            var idBackPath = await backTask;
 
-            // Map UserDto to User entity
+            // 5. Create user & temp password
+            var tempPassword = Guid.NewGuid().ToString("N")[..8];
             var user = new User
             {
-                FullName = userdto.FullName,
-                Email = userdto.Email,
-                PhoneNumber = userdto.PhoneNumber,
-                PassportPhoto = passportPhotoPath,
+                FullName = userDto.FullName,
+                Email = userDto.Email,
+                PhoneNumber = userDto.PhoneNumber,
+                PassportPhoto = passportPath,
                 IdFront = idFrontPath,
                 IdBack = idBackPath,
-                SystemRoleId = userdto.SystemRoleId,
-                NationalIdNumber = userdto.NationalIdNumber,
+                SystemRoleId = systemRole.Id,
+                NationalIdNumber = userDto.NationalIdNumber,
                 PasswordChanged = false,
                 Verified = false,
             };
+            // Hash against the new user instance
+            user.Password = _passwordHasher.HashPassword(user, tempPassword);
 
-            // Hash and set password
-            user.Password = _passwordHasher.HashPassword(user, password);
-
-            _context.Users.Add(user);
+            // 6. Persist user (and wallet) in one transaction
+            await using var tx = await _context.Database.BeginTransactionAsync();
+            await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
 
-            // Compose and send welcome email
-            var emailContent = $"Hello {user.FullName},\n\nThank you for registering with Nyumba Yo. " +
-                               $"You have been registered as {systemRole.Name} on our platform.\n\n" +
-                               $"Username: {user.Email}\nOne-time password: {password}\n\n" +
-                               "Please change your password on your first login.";
-            await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
+            // Only create wallet for specific roles (replace 2/4 with your constants or enum)
+            if (systemRole.Id == 2 || systemRole.Id == 4)
+            {
+                var wallet = new Wallet
+                {
+                    LandlordId = user.Id,
+                    Balance = 0m,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _context.Wallets.AddAsync(wallet);
+                await _context.SaveChangesAsync();
+            }
+
+            await tx.CommitAsync();
+
+            // 7. Send welcome email
+            var body = new StringBuilder()
+                .AppendLine($"Hello {user.FullName},")
+                .AppendLine()
+                .AppendLine($"Welcome to Nyumba Yo as “{systemRole.Name}.”")
+                .AppendLine()
+                .AppendLine($"Username: {user.Email}")
+                .AppendLine($"One-time password: {tempPassword}")
+                .AppendLine()
+                .AppendLine("Please change your password on first login.")
+                .ToString();
+
+            await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", body);
         }
+
 
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
@@ -301,6 +400,29 @@ namespace Infrastructure.Services.UserServices
                                $"Your new password is: {newPassword}\n\n" +
                                "Please change your password on your first login.";
             await _emailService.SendEmailAsync(user.Email, "Password Reset", emailContent);
+        }
+
+        public Task AddUtilityMeter(UtilityMeterDto utilityMeter)
+        {
+            // Validate user existence
+            var user = _context.Users.FirstOrDefault(u => u.Id == utilityMeter.LandLordId);
+            if (user == null)
+                throw new Exception("User not found.");
+            // check whether the meter is supplied
+            if (string.IsNullOrEmpty(utilityMeter.MeterNumber))
+            {
+                throw new Exception("Meter Number is not supplied");
+            }
+            // Map UtilityMeterDto to UtilityMeter entity
+            var meter = new UtilityMeter
+            {
+                MeterNumber = utilityMeter.MeterNumber,
+                MeterType = utilityMeter.MeterType,
+                LandLordId = utilityMeter.LandLordId,
+            };
+            _context.UtilityMeters.Add(meter);
+            _context.SaveChanges();
+            return Task.CompletedTask;
         }
     }
 }
