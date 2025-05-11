@@ -23,6 +23,7 @@ namespace Infrastructure.Data
 
         public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
+        public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

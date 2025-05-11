@@ -1,8 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Application.Interfaces.Settings;
+using Domain.Dtos.HtpRequestsResponse;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services.Collecto
@@ -10,57 +13,97 @@ namespace Infrastructure.Services.Collecto
     public class LoggingHandler : DelegatingHandler
     {
         private readonly ILogger<LoggingHandler> _logger;
+        private readonly ISettings _settings;
 
-        public LoggingHandler(ILogger<LoggingHandler> logger)
+        private static readonly string ReqSep = new string('*', 43) + " Request " + new string('*', 43);
+        private static readonly string ReqEndSep = new string('*', 41) + " End of Request " + new string('*', 41);
+        private static readonly string ResSep = new string('*', 42) + " Response " + new string('*', 42);
+        private static readonly string ResEndSep = new string('*', 38) + " End of Response " + new string('*', 38);
+
+        public LoggingHandler(ILogger<LoggingHandler> logger, ISettings settings)
         {
             _logger = logger;
+            _settings = settings;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            // — Build and emit the Request block —
-            var reqSb = new StringBuilder();
-            reqSb.AppendLine(new string('*', 43) + " Request " + new string('*', 43));
-            reqSb.AppendLine($"{request.Method} {request.RequestUri}");
-            foreach (var header in request.Headers)
-                reqSb.AppendLine($"{header.Key}: {string.Join(", ", header.Value)}");
-            if (request.Content != null)
-            {
-                foreach (var header in request.Content.Headers)
-                    reqSb.AppendLine($"{header.Key}: {string.Join(", ", header.Value)}");
-                var body = await request.Content.ReadAsStringAsync(cancellationToken);
-                reqSb.AppendLine();
-                reqSb.AppendLine(body);
-            }
-            reqSb.AppendLine(new string('*', 41) + " End of Request " + new string('*', 41));
-            _logger.LogInformation(reqSb.ToString());
+            // build & log request, then get response
+            var (reqLog, resLog, response) = await BuildAndLogAsync(request, cancellationToken);
 
-            // — Actually send the HTTP request —
-            var response = await base.SendAsync(request, cancellationToken);
-
-            // — Build and emit the Response block —
-            var resSb = new StringBuilder();
-            resSb.AppendLine(); // blank line between blocks
-            resSb.AppendLine(new string('*', 42) + " Response " + new string('*', 42));
-            resSb.AppendLine($"HTTP/{response.Version} {(int)response.StatusCode} {response.ReasonPhrase}");
-            foreach (var header in response.Headers)
-                resSb.AppendLine($"{header.Key}: {string.Join(", ", header.Value)}");
-            if (response.Content != null)
+            // persist to your DB
+            var dto = new HttpRequesRequestResponseDto
             {
-                foreach (var header in response.Content.Headers)
-                    resSb.AppendLine($"{header.Key}: {string.Join(", ", header.Value)}");
-                var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                resSb.AppendLine();
-                resSb.AppendLine(body);
-            }
-            resSb.AppendLine(new string('*', 38) + " End of Response " + new string('*', 38));
-            _logger.LogInformation(resSb.ToString());
+                Request = reqLog,
+                Response = resLog,
+                Status = response.StatusCode.ToString(),
+                RequestType = request.Method.Method,
+                RequestUrl = request.RequestUri.ToString()
+            };
+            await _settings.LogHttpRequestResponse(dto)
+                           .ConfigureAwait(false);
 
             return response;
         }
+
+        private async Task<(string ReqLog, string ResLog, HttpResponseMessage Response)> BuildAndLogAsync(
+            HttpRequestMessage request,
+            CancellationToken ct)
+        {
+            // — REQUEST —
+            var reqSb = new StringBuilder()
+                .AppendLine(ReqSep)
+                .AppendLine($"{request.Method} {request.RequestUri}");
+            AppendHeaders(reqSb, request.Headers);
+
+            if (request.Content is not null)
+            {
+                AppendHeaders(reqSb, request.Content.Headers);
+                var reqBody = await request.Content
+                                              .ReadAsStringAsync(ct)
+                                              .ConfigureAwait(false);
+                reqSb.AppendLine()
+                     .AppendLine(reqBody);
+            }
+            reqSb.AppendLine(ReqEndSep);
+
+            _logger.LogInformation(reqSb.ToString());
+
+            // — SEND —
+            var response = await base.SendAsync(request, ct)
+                                     .ConfigureAwait(false);
+
+            // — RESPONSE —
+            var resSb = new StringBuilder()
+                .AppendLine()
+                .AppendLine(ResSep)
+                .AppendLine($"HTTP/{response.Version} {(int)response.StatusCode} {response.ReasonPhrase}");
+            AppendHeaders(resSb, response.Headers);
+
+            if (response.Content is not null)
+            {
+                AppendHeaders(resSb, response.Content.Headers);
+                var resBody = await response.Content
+                                              .ReadAsStringAsync(ct)
+                                              .ConfigureAwait(false);
+                resSb.AppendLine()
+                     .AppendLine(resBody);
+            }
+            resSb.AppendLine(ResEndSep);
+
+            _logger.LogInformation(resSb.ToString());
+
+            return (reqSb.ToString(), resSb.ToString(), response);
+        }
+
+        private static void AppendHeaders(StringBuilder sb, HttpHeaders headers)
+        {
+            foreach (var header in headers)
+            {
+                sb.AppendLine($"{header.Key}: {string.Join(", ", header.Value)}");
+            }
+        }
     }
-
-
 }

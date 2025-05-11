@@ -1,5 +1,9 @@
 ﻿using Application.Interfaces.Settings;
+using Domain.Dtos.HtpRequestsResponse;
+using Domain.Entities.PropertyMgt;
+using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -12,9 +16,45 @@ namespace Infrastructure.Services.Settings
     public class Settings : ISettings
     {
         private readonly IConfiguration _configuration;
-        public Settings(IConfiguration configuration)
+        private readonly AppDbContext _context;
+        public Settings(IConfiguration configuration,AppDbContext context)
         {
             _configuration = configuration;
+            _context = context;
+        }
+
+        public async Task<IEnumerable<HttpRequesRequestResponse>> GetRequestResponseByDate(
+        DateTime startDate,
+        DateTime endDate)
+        {
+            // Normalize to whole-day bounds
+            var start = startDate.Date;
+            var end = endDate.Date.AddDays(1).AddTicks(-1);
+
+            return await _context.HttpRequesRequestResponses
+                .Where(x => x.CreatedAt >= start && x.CreatedAt <= end)
+                .AsNoTracking()
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+
+        public async Task LogHttpRequestResponse(HttpRequesRequestResponseDto dto)
+        {
+            //map dto to entity
+            var entity = new HttpRequesRequestResponse
+            {
+                Request = dto.Request,
+                Response = dto.Response,
+                Status = dto.Status,
+                ErrorMessage = dto.ErrorMessage,
+                RequestType = dto.RequestType,
+                RequestUrl = dto.RequestUrl
+            };
+
+            //save to database
+            await _context.HttpRequesRequestResponses.AddAsync(entity);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<string> SaveFileAndReturnPathAsync(IFormFile file)
@@ -42,5 +82,7 @@ namespace Infrastructure.Services.Settings
 
             return fileUrl;
         }
+
+        
     }
 }
