@@ -12,8 +12,7 @@ import AppLayout from "./layout/AppLayout";
 import SignIn from "./pages/AuthPages/SignIn";
 import NotFound from "./pages/NotFound";
 
-// Dashboard Pages
-import AdminDashboard from "./pages/Dashboard/AdminDashboard";
+// Dashboard Pages;
 import LandlordDashboard from "./pages/Dashboard/LandlordDashboard";
 import TenantDashboard from "./pages/Dashboard/TenantDashboard";
 
@@ -45,6 +44,10 @@ import ResetPassword from "./components/auth/ResetPassword";
 import Transactions from "./pages/Admin/Transactions";
 import SendSMSForm from "./pages/SendSMSForm";
 import Properties from "./pages/Landlord/LandloardProperties";
+import AdminDashboard from "./pages/Dashboard/AdminDashboard";
+import UtilityDashboard from "./pages/Utility/Dashboard";
+
+// Utility pages
 
 const queryClient = new QueryClient();
 
@@ -115,6 +118,22 @@ const App = () => (
                 <Route path="payment-history" element={<PaymentHistory />} />
                 <Route path="submit-complaint" element={<SubmitComplaint />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
+              </Route>
+            </Route>
+
+            {/* Tenant Routes */}
+            <Route element={<ProtectedRoute role={4} />}>
+              <Route path="/utility-dashboard" element={<AppLayout role={4} />}>
+                <Route index element={<UtilityDashboard />} />
+                {/* <Route path="property-details" element={<PropertyDetails />} />
+                <Route
+                  path="available-properties"
+                  element={<AvailableProperties />}
+                />
+                <Route path="make-payment" element={<MakePayment />} />
+                <Route path="payment-history" element={<PaymentHistory />} />
+                <Route path="submit-complaint" element={<SubmitComplaint />} />
+                <Route path="send-sms" element={<SendSMSForm />} /> */}
               </Route>
             </Route>
 
