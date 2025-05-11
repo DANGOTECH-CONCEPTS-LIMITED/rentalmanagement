@@ -92,7 +92,7 @@ const MakeUtilityPayment = () => {
     defaultValues: {
       phoneNumber: '',
       meterNumber: '',
-      amount: 0,
+      amount: undefined,
     },
     // Note: We'd use zodResolver here if available
     // resolver: zodResolver(paymentSchema), 
@@ -116,7 +116,7 @@ const MakeUtilityPayment = () => {
       toast({
         variant: 'destructive',
         title: 'Fetch Error',
-        description: 'Could not fetch payment records.',
+        description: error.message,
       });
     } finally {
       setIsFetching(false);
@@ -152,10 +152,11 @@ const MakeUtilityPayment = () => {
       setPreviewData(response.data);
       setShowPreview(true);
     } catch (error) {
+      console.error('Preview error:', error);
       toast({
         variant: 'destructive',
         title: 'Preview Error',
-        description: 'Could not fetch payment preview.',
+        description: error.response.data.message,
       });
       setShowPreview(false);
     } finally {
@@ -179,7 +180,11 @@ const MakeUtilityPayment = () => {
         description: 'Your utility payment has been processed successfully.',
       });
       
-      form.reset();
+      form.reset({
+        phoneNumber: '',
+        meterNumber: '',
+        amount: undefined,
+      });
       setPaymentModalOpen(false);
       setShowPreview(false);
       setPreviewData(null);
@@ -265,7 +270,15 @@ const MakeUtilityPayment = () => {
                           type="number"
                           placeholder="Enter amount"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          value={ field.value || ''}
+                          onChange={(e) => {
+                            field.onChange(Number(e.target.value));
+                            if (e.target.value === '') {
+                              field.onChange(undefined);
+                            }
+                          
+                          }
+                          }
                         />
                       </FormControl>
                       <FormMessage />
