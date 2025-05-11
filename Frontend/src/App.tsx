@@ -46,6 +46,7 @@ import SendSMSForm from "./pages/SendSMSForm";
 import Properties from "./pages/Landlord/LandloardProperties";
 import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import UtilityDashboard from "./pages/Utility/Dashboard";
+import UtilityMeter from "./pages/Utility/UtilityMeter";
 
 // Utility pages
 
@@ -125,15 +126,7 @@ const App = () => (
             <Route element={<ProtectedRoute role={4} />}>
               <Route path="/utility-dashboard" element={<AppLayout role={4} />}>
                 <Route index element={<UtilityDashboard />} />
-                {/* <Route path="property-details" element={<PropertyDetails />} />
-                <Route
-                  path="available-properties"
-                  element={<AvailableProperties />}
-                />
-                <Route path="make-payment" element={<MakePayment />} />
-                <Route path="payment-history" element={<PaymentHistory />} />
-                <Route path="submit-complaint" element={<SubmitComplaint />} />
-                <Route path="send-sms" element={<SendSMSForm />} /> */}
+                <Route path="utility-meter" element={<UtilityMeter />} />
               </Route>
             </Route>
 

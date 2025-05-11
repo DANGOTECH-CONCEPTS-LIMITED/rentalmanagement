@@ -350,6 +350,26 @@ function getNavItems(role: number): NavItem[] {
         icon: <MessageSquare size={18} />,
         path: "/tenant-dashboard/send-sms",
       },
+
+
+
+
+    ];
+  }
+
+  // Utility navigation items
+  if (role === 4) {
+    return [
+      {
+        label: "Utility Dashboard",
+        icon: <Home size={18} />,
+        path: "/utility-dashboard",
+      },
+      {
+        label: "Utility Meter",
+        icon: <FileText size={18} />,
+        path: "/utility-dashboard/utility-meter",
+      }
     ];
   }
 
