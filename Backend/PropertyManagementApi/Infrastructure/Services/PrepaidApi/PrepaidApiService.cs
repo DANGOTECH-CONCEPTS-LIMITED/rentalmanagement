@@ -18,6 +18,7 @@ namespace Infrastructure.Services.PrepaidApi
         private readonly string _username;
         private readonly string _password;
         private readonly string _companyname;
+        private readonly string _password_vend;
 
         public PrepaidApiService(HttpClient httpClient, IConfiguration config)
         {
@@ -26,6 +27,7 @@ namespace Infrastructure.Services.PrepaidApi
             _username = config["PosApi:user_name"];
             _password = config["PosApi:password"];
             _companyname = config["PosApi:company_name"];
+            _password_vend = config["PosApi:vendpassword"];
         }
 
         private async Task<string> PostAndReadStringAsync(string endpoint, object payload)
@@ -65,18 +67,26 @@ namespace Infrastructure.Services.PrepaidApi
             return PostAndReadStringAsync("api/POS_Preview", request);
         }
 
-        public async Task<PurchaseResultDto> PurchaseAsync(PurchasePreviewDto previewDto)
+        public async Task<PurchaseApiResponse> PurchaseAsync(PurchasePreviewDto previewDto)
         {
             var request = new
             {
-                meternumber = previewDto.MeterNumber,
-                Amount = previewDto.Amount
+                company_name = _companyname,
+                user_name = _username,
+                password = _password,
+                password_vend = _password_vend,
+                meter_number = previewDto.MeterNumber,
+                is_vend_by_unit =false,
+                amount = previewDto.Amount
             };
 
             var response = await _httpClient.PostAsJsonAsync("api/POS_Purchase", request);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<PurchaseResultDto>()
+            string json = await response.Content.ReadAsStringAsync();
+            var resp = await response.Content.ReadFromJsonAsync<PurchaseApiResponse>()
                    ?? throw new InvalidOperationException("Failed to deserialize purchase result");
+
+            return resp;
         }
     }
 }

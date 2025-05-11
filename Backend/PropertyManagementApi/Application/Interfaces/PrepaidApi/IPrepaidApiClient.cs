@@ -11,6 +11,6 @@ namespace Application.Interfaces.PrepaidApi
     {
         Task<string> SearchCustomerAsync(CustomerSearchDto searchDto);
         Task<string> PreviewAsync(PurchasePreviewDto previewDto);
-        Task<PurchaseResultDto> PurchaseAsync(PurchasePreviewDto purchaseDto);
+        Task<PurchaseApiResponse> PurchaseAsync(PurchasePreviewDto purchaseDto);
     }
 }

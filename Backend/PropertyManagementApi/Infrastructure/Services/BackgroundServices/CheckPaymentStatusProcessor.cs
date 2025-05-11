@@ -140,19 +140,20 @@ namespace Infrastructure.Services.BackgroundServices
                             tranType);
                         return;
                     }
+                    else if (!dto.data.status.Equals("PENDING"))
+                    {
+                        var newStatus = dto.data.status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase)
+                            ? SuccessAtTelecom
+                            : FailedAtTelecom;
 
-                    var newStatus = dto.data.status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase)
-                        ? SuccessAtTelecom
-                        : FailedAtTelecom;
-
-                    await paymentSvc.UpdatePaymentStatus(
-                        newStatus,
-                        transactionId,
-                        dto.data.message ?? string.Empty,
-                        dto.data.transactionId ?? string.Empty,
-                        tranType);
-
-                    _logger.LogInformation("Status updated to {NewStatus}", newStatus);
+                        await paymentSvc.UpdatePaymentStatus(
+                            newStatus,
+                            transactionId,
+                            dto.data.message ?? string.Empty,
+                            dto.data.transactionId ?? string.Empty,
+                            tranType);
+                        _logger.LogInformation("Status updated to {NewStatus}", newStatus);
+                    }
                 }
                 catch (Exception ex)
                 {

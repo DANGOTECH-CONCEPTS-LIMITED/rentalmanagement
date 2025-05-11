@@ -586,5 +586,12 @@ namespace Infrastructure.Services.PaymentServices
                 .ToListAsync();
             return payments;
         }
-    }
+
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingTokenGeneration()
+        {
+            var payments = await _context.UtilityPayments
+                .Where(tp => tp.Status == "SUCCESSFUL" && tp.Token == "")
+                .ToListAsync();
+            return payments;
+        }
 }
