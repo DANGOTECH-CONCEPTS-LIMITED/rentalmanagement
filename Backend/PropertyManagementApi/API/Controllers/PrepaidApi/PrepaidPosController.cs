@@ -42,18 +42,18 @@ namespace API.Controllers.PrepaidApi
             
         }
 
-        [HttpPost("/purchase")]
-        public async Task<IActionResult> Purchase([FromBody] PurchasePreviewDto purchaseDto)
-        {
-            try
-            {
-                var result = await _prepaidApiClient.PurchaseAsync(purchaseDto);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = "An error occurred while processing the purchase.", error = ex.Message });
-            }
-        }
+        //[HttpPost("/purchase")]
+        //public async Task<IActionResult> Purchase([FromBody] PurchasePreviewDto purchaseDto)
+        //{
+        //    try
+        //    {
+        //        var result = await _prepaidApiClient.PurchaseAsync(purchaseDto);
+        //        return Ok(result);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new { message = "An error occurred while processing the purchase.", error = ex.Message });
+        //    }
+        //}
     }
 }
