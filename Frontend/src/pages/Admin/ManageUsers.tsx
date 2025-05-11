@@ -761,7 +761,7 @@ const ManageUsers = () => {
     } catch (error) {
       if (error instanceof Error && error.message.includes("User regis")) {
         toast({
-          title: "Landlord Registered",
+          title: "User Registered",
           description: `${formData.FullName} has been successfully registered.`,
         });
 
@@ -781,15 +781,15 @@ const ManageUsers = () => {
         });
       } else {
         console.error("Error submitting form:", error);
-        // toast({
-        //   title: "Error",
+        toast({
+          title: "Error",
 
-        //   description: error.response.data,
-        //   variant: "destructive",
-        // });
+          description: error.response.data,
+          variant: "destructive",
+        });
       }
     } finally {
-      // setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -1148,9 +1148,9 @@ const ManageUsers = () => {
       >
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 h-[60vh] overflow-y-auto"
+          className="space-y-4 h-[60vh] overflow-y-auto px-2"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Full Name</label>
               <input
@@ -1159,7 +1159,7 @@ const ManageUsers = () => {
                 value={formData.FullName}
                 onChange={handleInputChange}
                 className="input-field"
-                placeholder="Enter landlord's full name"
+                placeholder="Enter user's full name"
                 required
               />
             </div>
@@ -1189,7 +1189,7 @@ const ManageUsers = () => {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <label
                 htmlFor="systemRoleId"
                 className="block text-sm font-medium text-gray-700 mb-1"

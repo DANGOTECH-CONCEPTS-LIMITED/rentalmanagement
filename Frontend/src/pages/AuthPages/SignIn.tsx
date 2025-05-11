@@ -15,10 +15,7 @@ const SignIn = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { systemRoleId, requiresPasswordChange } = await login(
-        email,
-        password
-      );
+      const { systemRoleId } = await login(email, password);
 
       switch (systemRoleId) {
         case 1: // Admin
@@ -29,6 +26,9 @@ const SignIn = () => {
           break;
         case 3: // Tenant
           navigate("/tenant-dashboard");
+          break;
+        case 4: // Tenant
+          navigate("/utility-dashboard");
           break;
         default:
           navigate("/");
