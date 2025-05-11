@@ -55,12 +55,61 @@ const AdminDashboard = () => {
     console.error("Error parsing user data:", error);
   }
 
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
+  const fetchStats = async () => {
+    const mockStats: Stats = {
+      totalProperties: 150,
+      totalLandlords: 45,
+      totalRevenue: 125000,
+      occupancyRate: 92,
+    };
+    setStats(mockStats);
+  };
+
+  const fetchLandlords = async () => {
+    if (!apiUrl) return;
+
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetLandlords`);
+      setLandlords(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error.response?.status === 404
+            ? `Landlords ${error.response.statusText}`
+            : error.response?.data || "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchProperties = async () => {
+    if (!apiUrl) return;
+
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
+      setProperties(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error.response?.status === 404
+            ? `Properties ${error.response.statusText}`
+            : error.response?.data || "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   const fetchBalance = async (type: string) => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) return;
+
     try {
       setBalanceLoading(true);
-      setBalanceError(null);
       setBalanceType(type);
+      setBalanceError(null);
 
       const response = await fetch(`${apiUrl}/currentBalance`, {
         method: "POST",
@@ -75,9 +124,7 @@ const AdminDashboard = () => {
       const data: BalanceResponse = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.status_message || `HTTP error! status: ${response.status}`
-        );
+        throw new Error(data.status_message || "HTTP error occurred");
       }
 
       if (data.data.currentBalance === false) {
@@ -86,69 +133,14 @@ const AdminDashboard = () => {
 
       setBalance(data);
     } catch (err) {
-      setBalanceError(
-        err instanceof Error ? err.message : "Unknown error occurred"
-      );
+      setBalanceError(err instanceof Error ? err.message : "Unknown error");
       setBalance(null);
     } finally {
       setBalanceLoading(false);
     }
   };
 
-  const fetchLandlords = async () => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    if (!apiUrl) {
-      throw new Error("API base URL is not configured");
-    }
-
-    try {
-      const { data } = await axios.get(`${apiUrl}/GetLandlords`);
-      setLandlords(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error.response.status === 404
-            ? `Landlords ${error.response.statusText}`
-            : error.response.data,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchProperties = async () => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    if (!apiUrl) {
-      throw new Error("API base URL is not configured");
-    }
-
-    try {
-      const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
-      setProperties(data);
-    } catch (error) {
-      console.error("Error fetching landlords:", error);
-      toast({
-        title: "Error",
-        description:
-          error.response.status === 404
-            ? `Properties ${error.response.statusText}`
-            : error.response.data,
-        variant: "destructive",
-      });
-    }
-  };
-
   useEffect(() => {
-    const fetchStats = async () => {
-      const mockStats: Stats = {
-        totalProperties: 150,
-        totalLandlords: 45,
-        totalRevenue: 125000,
-        occupancyRate: 92,
-      };
-      setStats(mockStats);
-    };
-
     fetchStats();
     fetchProperties();
     fetchLandlords();
@@ -185,117 +177,47 @@ const AdminDashboard = () => {
         </h1>
       </div>
 
+      {/* Balance Buttons */}
       <div className="flex gap-4 mb-6">
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            fetchBalance("SME");
-          }}
-          disabled={balanceLoading}
-          variant={
-            balanceType === "SME" && balance?.data.currentBalance !== false
-              ? "primary"
-              : "outline"
-          }
-          className="min-w-32"
-        >
-          {balanceLoading && balanceType === "SME" ? (
-            <div className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Loading...
-            </div>
-          ) : (
-            "SME Balance"
-          )}
-        </Button>
-
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            fetchBalance("bulk");
-          }}
-          disabled={balanceLoading}
-          variant={
-            balanceType === "BULK" && balance?.data.currentBalance !== false
-              ? "primary"
-              : "outline"
-          }
-          className="min-w-32"
-        >
-          {balanceLoading && balanceType === "BULK" ? (
-            <div className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Loading...
-            </div>
-          ) : (
-            "Bulk Balance"
-          )}
-        </Button>
-
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            fetchBalance("wallet");
-          }}
-          disabled={balanceLoading}
-          variant={
-            balanceType === "WALLET" && balance?.data.currentBalance !== false
-              ? "primary"
-              : "outline"
-          }
-          className="min-w-32"
-        >
-          {balanceLoading && balanceType === "WALLET" ? (
-            <div className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Loading...
-            </div>
-          ) : (
-            "Wallet Balance"
-          )}
-        </Button>
+        {["SME", "BULK", "WALLET"].map((type) => (
+          <Button
+            key={type}
+            onClick={(e) => {
+              e.preventDefault();
+              fetchBalance(type);
+            }}
+            disabled={balanceLoading}
+            variant={
+              balanceType === type && balance?.data.currentBalance !== false
+                ? "primary"
+                : "outline"
+            }
+            className="min-w-32"
+          >
+            {balanceLoading && balanceType === type ? (
+              <div className="flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Loading...
+              </div>
+            ) : (
+              `${type} Balance`
+            )}
+          </Button>
+        ))}
       </div>
 
       {/* Balance Display */}
@@ -312,6 +234,7 @@ const AdminDashboard = () => {
         </div>
       ) : null}
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Properties"
@@ -339,6 +262,7 @@ const AdminDashboard = () => {
         />
       </div>
 
+      {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {quickActions.map((action, index) => (
           <motion.div

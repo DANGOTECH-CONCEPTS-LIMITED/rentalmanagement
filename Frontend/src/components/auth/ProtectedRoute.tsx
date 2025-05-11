@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import PasswordChangeModal from "./PasswordChangeModal";
 
 interface ProtectedRouteProps {
-  role?: 1 | 2 | 3;
+  role?: 1 | 2 | 3 | 4;
   fallback?: string;
 }
 
@@ -11,6 +11,7 @@ const roleRedirects = {
   1: "/admin-dashboard",
   2: "/landlord-dashboard",
   3: "/tenant-dashboard",
+  4: "/utility-dashboard",
 };
 
 const LoadingSpinner = () => (
@@ -31,8 +32,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ role, fallback }) => {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
+  console.log("showPasswordModal && ", !user?.verified);
   // Show password change modal if needed
-  if (showPasswordModal && !user?.verified) {
+  if (!user?.verified) {
     return <PasswordChangeModalWrapper />;
   }
 
@@ -63,6 +65,9 @@ const PasswordChangeModalWrapper = () => {
         break;
       case 3:
         navigate("/tenant-dashboard");
+        break;
+      case 4:
+        navigate("/utility-dashboard");
         break;
       default:
         navigate("/");
