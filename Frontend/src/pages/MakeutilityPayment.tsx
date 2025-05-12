@@ -366,6 +366,7 @@ const MakeUtilityPayment = () => {
                     <th className="p-2 text-left">ID</th>
                     <th className="p-2 text-left">Transaction ID</th>
                     <th className="p-2 text-left">Token</th>
+                    <th className="p-2 text-left">Reason At Telecom</th>
                     <th className="p-2 text-left">Phone</th>
                     <th className="p-2 text-left">Amount</th>
                     <th className="p-2 text-left">Status</th>
@@ -378,6 +379,7 @@ const MakeUtilityPayment = () => {
                       <td className="p-2">{payment.id}</td>
                       <td className="p-2">{payment.transactionID}</td>
                       <td className="p-2">{payment.token}</td>
+                      <td className="p-2">{payment.reasonAtTelecom}</td>
                       <td className="p-2">{payment.phoneNumber}</td>
                       <td className="p-2">{payment.amount}</td>
                       <td className="p-2">{payment.status}</td>
