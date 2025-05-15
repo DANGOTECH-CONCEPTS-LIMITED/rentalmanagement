@@ -22,19 +22,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-
-// Define the zod schema for form validation
-const paymentSchema = z.object({
-  phoneNumber: z
-    .string()
-    .min(10, { message: 'Phone number must be at least 10 digits' })
-    .max(15, { message: 'Phone number is too long' }),
-  meterNumber: z.string().min(5, { message: 'Meter number is required' }),
-  amount: z
-    .number({ invalid_type_error: 'Amount is required' })
-    .positive({ message: 'Amount must be greater than 0' }),
-});
 
 interface CustomerInfo {
   customer_name: string;
@@ -82,7 +69,7 @@ interface PaymentPreview {
 }
 
 const MakeUtilityPayment = () => {
-  const [validationStep, setValidationStep] = useState(true); // Start with validation step
+  const [validationStep, setValidationStep] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
 
@@ -258,7 +245,6 @@ const MakeUtilityPayment = () => {
       setValidationStep(true);
       setCustomerInfo(null);
 
-      // Update payment history if meter number is set
       if (meterNumber) {
         fetchPayments();
       }
@@ -273,7 +259,6 @@ const MakeUtilityPayment = () => {
     }
   };
 
-  // Reset preview when modal closes
   const handleModalChange = (isOpen) => {
     setPaymentModalOpen(isOpen);
     if (!isOpen) {
