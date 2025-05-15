@@ -81,7 +81,6 @@ const RegisterTenants = () => {
   const user = localStorage.getItem("user");
   let token = "";
   const userData = JSON.parse(user);
-  const navigate = useNavigate();
   try {
     if (user) {
       token = userData.token;
