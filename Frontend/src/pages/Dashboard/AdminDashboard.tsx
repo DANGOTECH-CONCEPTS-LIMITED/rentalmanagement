@@ -192,7 +192,7 @@ const AdminDashboard = () => {
         <Button
           onClick={(e) => {
             e.preventDefault();
-            fetchBalance("Sms");
+            fetchBalance("SMS");
           }}
           disabled={balanceLoading}
           variant={
