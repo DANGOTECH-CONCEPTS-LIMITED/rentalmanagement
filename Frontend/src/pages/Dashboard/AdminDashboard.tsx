@@ -55,61 +55,12 @@ const AdminDashboard = () => {
     console.error("Error parsing user data:", error);
   }
 
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-  const fetchStats = async () => {
-    const mockStats: Stats = {
-      totalProperties: 150,
-      totalLandlords: 45,
-      totalRevenue: 125000,
-      occupancyRate: 92,
-    };
-    setStats(mockStats);
-  };
-
-  const fetchLandlords = async () => {
-    if (!apiUrl) return;
-
-    try {
-      const { data } = await axios.get(`${apiUrl}/GetLandlords`);
-      setLandlords(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error.response?.status === 404
-            ? `Landlords ${error.response.statusText}`
-            : error.response?.data || "Unknown error",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchProperties = async () => {
-    if (!apiUrl) return;
-
-    try {
-      const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
-      setProperties(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error.response?.status === 404
-            ? `Properties ${error.response.statusText}`
-            : error.response?.data || "Unknown error",
-        variant: "destructive",
-      });
-    }
-  };
-
   const fetchBalance = async (type: string) => {
-    if (!apiUrl) return;
-
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
     try {
       setBalanceLoading(true);
-      setBalanceType(type);
       setBalanceError(null);
+      setBalanceType(type);
 
       const response = await fetch(`${apiUrl}/currentBalance`, {
         method: "POST",
@@ -123,8 +74,12 @@ const AdminDashboard = () => {
 
       const data: BalanceResponse = await response.json();
 
+      console.log("Balance data", data);
+
       if (!response.ok) {
-        throw new Error(data.status_message || "HTTP error occurred");
+        throw new Error(
+          data.status_message || `HTTP error! status: ${response.status}`
+        );
       }
 
       if (data.data.currentBalance === false) {
@@ -133,14 +88,70 @@ const AdminDashboard = () => {
 
       setBalance(data);
     } catch (err) {
-      setBalanceError(err instanceof Error ? err.message : "Unknown error");
+      setBalanceError(
+        err instanceof Error ? err.message : "Unknown error occurred"
+      );
       setBalance(null);
     } finally {
       setBalanceLoading(false);
     }
   };
 
+  const fetchLandlords = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetLandlords`);
+      setLandlords(data);
+      console.log("GetLandlords data", data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error.response.status === 404
+            ? `Landlords ${error.response.statusText}`
+            : error.response.data,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchProperties = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
+      setProperties(data);
+    } catch (error) {
+      console.error("Error fetching landlords:", error);
+      toast({
+        title: "Error",
+        description:
+          error.response.status === 404
+            ? `Properties ${error.response.statusText}`
+            : error.response.data,
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
+    const fetchStats = async () => {
+      const mockStats: Stats = {
+        totalProperties: 150,
+        totalLandlords: 45,
+        totalRevenue: 125000,
+        occupancyRate: 92,
+      };
+      setStats(mockStats);
+    };
+
     fetchStats();
     fetchProperties();
     fetchLandlords();
@@ -148,13 +159,13 @@ const AdminDashboard = () => {
 
   const quickActions = [
     {
-      title: "Register Landlord",
-      description: "Add a new landlord to the system",
+      title: "Register Dealer",
+      description: "Add a new dealer to the system",
       path: "/admin-dashboard/register-landlord",
     },
     {
-      title: "Register Property",
-      description: "Add a new property listing",
+      title: "Register Car",
+      description: "Add a new car to listing",
       path: "/admin-dashboard/register-property",
     },
     {
@@ -177,56 +188,124 @@ const AdminDashboard = () => {
         </h1>
       </div>
 
-      {/* Balance Buttons */}
       <div className="flex gap-4 mb-6">
-        {["SME", "BULK", "WALLET"].map((type) => (
-          <Button
-            key={type}
-            onClick={(e) => {
-              e.preventDefault();
-              fetchBalance(type);
-            }}
-            disabled={balanceLoading}
-            variant={
-              balanceType === type && balance?.data.currentBalance !== false
-                ? "primary"
-                : "outline"
-            }
-            className="min-w-32"
-          >
-            {balanceLoading && balanceType === type ? (
-              <div className="flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Loading...
-              </div>
-            ) : (
-              `${type} Balance`
-            )}
-          </Button>
-        ))}
+        <Button
+          onClick={(e) => {
+            e.preventDefault();
+            fetchBalance("Sms");
+          }}
+          disabled={balanceLoading}
+          variant={
+            balanceType === "SME" && balance?.data.currentBalance !== false
+              ? "primary"
+              : "outline"
+          }
+          className="min-w-32"
+        >
+          {balanceLoading && balanceType === "SME" ? (
+            <div className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Loading...
+            </div>
+          ) : (
+            "SMS Balance"
+          )}
+        </Button>
+
+        <Button
+          onClick={(e) => {
+            e.preventDefault();
+            fetchBalance("BULK");
+          }}
+          disabled={balanceLoading}
+          variant={
+            balanceType === "BULK" && balance?.data.currentBalance !== false
+              ? "primary"
+              : "outline"
+          }
+          className="min-w-32"
+        >
+          {balanceLoading && balanceType === "BULK" ? (
+            <div className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Loading...
+            </div>
+          ) : (
+            "Bulk Balance"
+          )}
+        </Button>
+
+        <Button
+          onClick={(e) => {
+            e.preventDefault();
+            fetchBalance("Wallet");
+          }}
+          disabled={balanceLoading}
+          variant={
+            balanceType === "WALLET" && balance?.data.currentBalance !== false
+              ? "primary"
+              : "outline"
+          }
+          className="min-w-32"
+        >
+          {balanceLoading && balanceType === "WALLET" ? (
+            <div className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Loading...
+            </div>
+          ) : (
+            "Wallet Balance"
+          )}
+        </Button>
       </div>
 
       {/* Balance Display */}
-      {balance && typeof balance.data.currentBalance === "number" ? (
+      {balance && balance.status === "200" && balance.data.message ? (
         <div className="glass-card p-4 rounded-lg">
           <h3 className="font-medium">{balanceType} Balance</h3>
-          <p className="text-2xl font-bold">
-            ${balance.data.currentBalance.toLocaleString()}
-          </p>
+          <p className="text-2xl font-bold">{balance.data.message}</p>
         </div>
       ) : balanceError ? (
         <div className="text-red-500 p-4 bg-red-50 rounded-lg">
@@ -234,23 +313,23 @@ const AdminDashboard = () => {
         </div>
       ) : null}
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total Properties"
+          title="Total Cars"
           value={properties.length}
           icon={<Home />}
           change={{ value: 12, type: "increase" }}
         />
+
         <StatCard
-          title="Total Landlords"
+          title="Total Dealers"
           value={landlords.length}
           icon={<Users />}
           change={{ value: 8, type: "increase" }}
         />
         <StatCard
           title="Total Revenue"
-          value={`$${stats.totalRevenue.toLocaleString()}`}
+          value={`UGX${stats.totalRevenue.toLocaleString()}`}
           icon={<Wallet />}
           change={{ value: 15, type: "increase" }}
         />
@@ -262,7 +341,6 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {quickActions.map((action, index) => (
           <motion.div
