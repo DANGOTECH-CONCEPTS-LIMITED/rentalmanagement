@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
   Loader2,
-  Home,
-  Users,
-  TrendingUp,
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
   ChevronDown,
-  CircleDollarSign,
 } from "lucide-react";
-import StatCard from "../../components/common/StatCard";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
