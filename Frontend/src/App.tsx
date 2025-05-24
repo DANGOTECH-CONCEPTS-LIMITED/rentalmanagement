@@ -64,10 +64,7 @@ const App = () => (
             {/* Home/Auth Routes */}
             <Route path="/" element={<SignIn />} />
             <Route path="/index" element={<Index />} />
-            <Route
-              path="/make-utility-payment"
-              element={<MakeUtilityPayment />}
-            />
+            <Route path="/make-utility-payment" element={<SignIn />} />
 
             {/* Admin Routes */}
             <Route element={<ProtectedRoute role={1} />}>
