@@ -5,13 +5,13 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: mode === "production" ? "/rentalmanagement/frontend/" : "/", 
+  base: mode === "production" ? "/dangotechrentalmanagement/frontend/" : "/", 
   server: {
     host: "localhost",
     port: 8080,
   },
   build: {
-    outDir: "dist",  // Ensure the build output is in dist/
+    outDir: "build",  // Ensure the build output is in dist/
   },
   plugins: [
     react(),
