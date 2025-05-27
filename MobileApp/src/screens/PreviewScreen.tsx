@@ -98,6 +98,7 @@ export default function PreviewScreen({route, navigation}: any) {
       }
     } catch (error) {
       console.error('Payment error:', error);
+      console.log('Payment error:', error);
     } finally {
       setPaying(false);
     }
