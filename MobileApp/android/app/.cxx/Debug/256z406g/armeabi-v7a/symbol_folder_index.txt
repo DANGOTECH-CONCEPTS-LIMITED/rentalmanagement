@@ -1,1 +1,0 @@
-D:\rentalmanagement\DangoPayApp\android\app\build\intermediates\cxx\Debug\256z406g\obj\armeabi-v7a
