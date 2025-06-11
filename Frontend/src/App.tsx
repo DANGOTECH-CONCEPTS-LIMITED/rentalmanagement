@@ -48,6 +48,7 @@ import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import UtilityDashboard from "./pages/Utility/Dashboard";
 import UtilityMeter from "./pages/Utility/UtilityMeter";
 import MakeUtilityPayment from "./pages/MakeutilityPayment";
+import UtilityReport from "./pages/Landlord/UtilityReport";
 
 const queryClient = new QueryClient();
 
@@ -101,9 +102,10 @@ const App = () => (
                 <Route path="manage-tenants" element={<ManageTenants />} />
                 <Route path="rental-contracts" element={<RentalContracts />} />
                 <Route path="complaints" element={<HandleComplaints />} />
-                <Route path="payments" element={<TrackPayments />} />
+                <Route path="payments" element={<TrackPayments />} />t 
                 <Route path="properties" element={<Properties />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
+                <Route path="utility-report" element={<UtilityReport />} />
               </Route>
             </Route>
 

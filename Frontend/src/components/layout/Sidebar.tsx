@@ -314,6 +314,11 @@ function getNavItems(role: number): NavItem[] {
         icon: <MessageSquare size={18} />,
         path: "/landlord-dashboard/send-sms",
       },
+      {
+        label: "Utility Report",
+        icon: <FileText size={18} />,
+        path: "/landlord-dashboard/utility-report",
+      },
     ];
   }
 
