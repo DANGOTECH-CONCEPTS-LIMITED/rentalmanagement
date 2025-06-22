@@ -63,11 +63,12 @@ const handleExportPDF = () => {
 
   autoTable(doc, {
     startY: 30,
-    head: [["Date", "Status", "Amount", "Charges", "Token", "Units", "Reason"]],
+    head: [["Date", "Status", "Amount","Meter Number", "Charges", "Token", "Units", "Reason"]],
     body: data.map((item) => [
       new Date(item.createdAt).toLocaleDateString(),
       item.status,
       item.amount,
+      item.meterNumber,
       item.charges,
       item.isTokenGenerated ? item.token || "N/A" : "N/A",
       item.units || "N/A",
@@ -122,6 +123,7 @@ const handleExportPDF = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Meter Number</TableHead>
                 <TableHead>Charges</TableHead>
                 <TableHead>Token</TableHead>
                 <TableHead>Units</TableHead>
@@ -144,6 +146,7 @@ const handleExportPDF = () => {
                     {item.status}
                   </TableCell>
                   <TableCell>{item.amount}</TableCell>
+                  <TableCell>{item.meterNumber}</TableCell>
                   <TableCell>{item.charges}</TableCell>
                   <TableCell>
                     {item.isTokenGenerated ? item.token || "N/A" : "N/A"}
