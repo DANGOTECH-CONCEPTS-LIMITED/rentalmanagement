@@ -156,10 +156,20 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
             if (wallet == null)
                 throw new Exception("Wallet not found.");
-            // Revert the balance
-            wallet.Balance -= existingTransaction.Amount;
 
-            existingTransaction.Description = walletTransaction.Description;
+            // insert the same amount as a positive transaction
+            var reverseTransaction = new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                Amount = existingTransaction.Amount, // Positive amount to revert the balance
+                Description = "Reversal: " + existingTransaction.Description,
+                TransactionDate = DateTime.UtcNow,
+                Status = "SUCCESSFUL",
+                TransactionId = Guid.NewGuid().ToString(),
+            };
+
+            _context.WalletTransactions.Add(reverseTransaction);
+            // Revert the balance
             await _context.SaveChangesAsync();
         }
 
