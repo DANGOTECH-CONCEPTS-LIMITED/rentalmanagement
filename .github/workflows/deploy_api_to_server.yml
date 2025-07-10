@@ -6,43 +6,40 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest  # Use Ubuntu for building and file transfer
+    runs-on: ubuntu-latest
 
     steps:
       # 1. Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 2. List repository files (for debugging)
-      - name: List Repository Files
-        run: |
-          echo "Listing all files in the repository:"
-          find .
-
-      # 3. Set up .NET SDK
+      # 2. Set up .NET SDK
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '9.x'  # Update if targeting a specific version
+          dotnet-version: '9.x'
 
-      # 4. Restore dependencies using the solution file
+      # 3. Restore dependencies
       - name: Restore Dependencies
         run: dotnet restore Backend/PropertyManagementApi/PropertyManagementApi.sln
 
-      # 5. Build the solution in Release mode
+      # 4. Build the solution in Release mode
       - name: Build Solution
         run: dotnet build Backend/PropertyManagementApi/PropertyManagementApi.sln --configuration Release --no-restore
 
-      # 6. Publish the API project into the ./publish folder
+      # 5. Publish the API project into the ./publish folder
       - name: Publish API
         run: dotnet publish Backend/PropertyManagementApi/API/API.csproj --configuration Release --output ./publish --no-build
 
-      # 7. Zip the published files
+      # 6. Zip only the contents of ./publish (not the folder itself)
       - name: Zip Published Files
-        run: zip -r publish.zip ./publish
+        run: |
+          cd ./publish
+          zip -r ../publish.zip .   # Zip contents, not the folder
+          cd ..
 
-      # 8. Stop the IIS application pool on the EC2 Windows instance
-      - name: Stop Application Pool on EC2
+      # 7. Stop the IIS application pool
+      - name: Stop IIS App Pool
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -52,8 +49,8 @@ jobs:
           script: |
             powershell -Command "Import-Module WebAdministration; Stop-WebAppPool -Name 'PropertyManagementApi' -ErrorAction SilentlyContinue; exit 0"
 
-      # 8.1 Stop the IIS service (W3SVC) on the EC2 Windows instance
-      - name: Stop IIS Service on EC2
+      # 8. Stop IIS Service
+      - name: Stop IIS Service
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -63,8 +60,8 @@ jobs:
           script: |
             powershell -Command "Stop-Service W3SVC -ErrorAction SilentlyContinue; exit 0"
 
-      # 9. Clear the contents of the target folder on EC2
-      - name: Clear Target Folder on EC2
+      # 9. Clear target folder
+      - name: Clear Target Folder
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -72,21 +69,21 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Start-Sleep -Seconds 5; if (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi') { Get-ChildItem 'C:\inetpub\wwwroot\PropertyManagementApi\*' -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } else { New-Item -ItemType Directory -Path 'C:\inetpub\wwwroot\PropertyManagementApi' -Force }; exit 0"
+            powershell -Command "if (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi') { Get-ChildItem 'C:\inetpub\wwwroot\PropertyManagementApi\*' -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } else { New-Item -ItemType Directory -Path 'C:\inetpub\wwwroot\PropertyManagementApi' -Force }; exit 0"
 
-      # 10. Install sshpass (needed for direct scp command)
+      # 10. Install sshpass
       - name: Install sshpass
         run: |
           sudo apt-get update
           sudo apt-get install sshpass -y
 
-      # 11. Copy the zip file to the EC2 Windows instance using scp
-      - name: Copy Zip File to EC2 using scp
+      # 11. Copy the zip file
+      - name: Copy Zip File to EC2
         run: |
           sshpass -p "${{ secrets.EC2_PASSWORD }}" scp -o StrictHostKeyChecking=no publish.zip ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:"C:\\inetpub\\wwwroot\\PropertyManagementApi"
 
-      # 12. Unzip the file on the EC2 Windows instance using PowerShell
-      - name: Unzip on Windows EC2
+      # 12. Unzip directly into target folder
+      - name: Unzip on EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -96,8 +93,8 @@ jobs:
           script: |
             powershell -Command "Expand-Archive -Path 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -DestinationPath 'C:\inetpub\wwwroot\PropertyManagementApi' -Force; exit 0"
 
-      # 13. Remove the zip file from the target folder (optional cleanup)
-      - name: Remove Zip File on Windows EC2
+      # 13. Remove zip file
+      - name: Remove Zip File
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -107,8 +104,8 @@ jobs:
           script: |
             powershell -Command "Remove-Item 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -Force; exit 0"
 
-      # 14. Start the IIS service on the EC2 Windows instance
-      - name: Start IIS Service on EC2
+      # 14. Start IIS Service
+      - name: Start IIS Service
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -118,8 +115,8 @@ jobs:
           script: |
             powershell -Command "Start-Service W3SVC; exit 0"
 
-      # 15. Start the IIS application pool on the EC2 Windows instance
-      - name: Start Application Pool on EC2
+      # 15. Start IIS App Pool
+      - name: Start IIS App Pool
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
