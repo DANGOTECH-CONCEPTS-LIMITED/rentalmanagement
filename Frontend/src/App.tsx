@@ -49,6 +49,8 @@ import UtilityDashboard from "./pages/Utility/Dashboard";
 import UtilityMeter from "./pages/Utility/UtilityMeter";
 import MakeUtilityPayment from "./pages/MakeutilityPayment";
 import UtilityReport from "./pages/Landlord/UtilityReport";
+import ManageUtilityMeters from "./pages/Admin/ManageUtilityMeters";
+import AddUtilityMeter from "./pages/Admin/AddUtilityMeter";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +90,8 @@ const App = () => (
                 <Route path="transactions" element={<Transactions />} />
                 <Route path="system-settings" element={<SystemSettings />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
+                <Route path="manage-utility-meters" element={<ManageUtilityMeters />} />
+                <Route path="add-utility-meter" element={<AddUtilityMeter />} />
               </Route>
             </Route>
 
