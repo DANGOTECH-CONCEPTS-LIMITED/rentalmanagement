@@ -72,7 +72,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Start-Sleep -Seconds 5; Get-ChildItem 'C:\inetpub\wwwroot\PropertyManagementApi -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; exit 0"
+            powershell -Command "Start-Sleep -Seconds 5; Get-ChildItem 'C:\inetpub\wwwroot\PropertyManagementApi\publish' -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; exit 0"
 
       # 10. (Optional) Create the target folder on EC2 if it doesn't exist
       - name: Create Target Folder on EC2
@@ -83,7 +83,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "if (-Not (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi')) { New-Item -ItemType Directory -Force -Path 'C:\inetpub\wwwroot\PropertyManagementApi } ; exit 0"
+            powershell -Command "if (-Not (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi\publish')) { New-Item -ItemType Directory -Force -Path 'C:\inetpub\wwwroot\PropertyManagementApi\publish' } ; exit 0"
 
       # 11. Install sshpass (needed for direct scp command)
       - name: Install sshpass
@@ -94,7 +94,7 @@ jobs:
       # 12. Copy the zip file to the EC2 Windows instance using sshpass and scp
       - name: Copy Zip File to EC2 using scp
         run: |
-          sshpass -p "${{ secrets.EC2_PASSWORD }}" scp -o StrictHostKeyChecking=no publish.zip ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:"C:\\inetpub\\wwwroot\\PropertyManagementApi"
+          sshpass -p "${{ secrets.EC2_PASSWORD }}" scp -o StrictHostKeyChecking=no publish.zip ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:"C:\\inetpub\\wwwroot\\PropertyManagementApi\\publish"
 
       # 13. Unzip the file on the EC2 Windows instance using PowerShell
       - name: Unzip on Windows EC2
@@ -105,7 +105,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Expand-Archive -Path 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -DestinationPath 'C:\inetpub\wwwroot\PropertyManagementApi' -Force; exit 0"
+            powershell -Command "Expand-Archive -Path 'C:\inetpub\wwwroot\PropertyManagementApi\publish\publish.zip' -DestinationPath 'C:\inetpub\wwwroot\PropertyManagementApi\publish' -Force; exit 0"
 
       # 14. Remove the zip file from the target folder (optional cleanup)
       - name: Remove Zip File on Windows EC2
@@ -116,7 +116,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Remove-Item 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -Force; exit 0"
+            powershell -Command "Remove-Item 'C:\inetpub\wwwroot\PropertyManagementApi\publish\publish.zip' -Force; exit 0"
 
       # 14.1 Start the IIS service on the EC2 Windows instance
       - name: Start IIS Service on EC2
