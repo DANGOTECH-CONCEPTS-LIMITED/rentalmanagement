@@ -40,6 +40,15 @@ interface Transaction {
   type?: "deposit" | "withdrawal";
 }
 
+interface UtilityMeter {
+  id: number;
+  meterType: string;
+  meterNumber: string;
+  nwscAccount: string;
+  locationOfNwscMeter: string;
+  landLordId: number;
+}
+
 const UtilityDashboard = () => {
   const formatCurrency = useCurrencyFormatter();
   const { toast } = useToast();
@@ -51,6 +60,8 @@ const UtilityDashboard = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
+  const [isLoadingMeters, setIsLoadingMeters] = useState(false);
 
   const user = localStorage.getItem("user");
 
@@ -73,6 +84,7 @@ const UtilityDashboard = () => {
     fetchWalletData();
     fetchProperties();
     fetchTenants();
+    fetchUtilityMeters();
   }, [token, apiUrl, toast]);
 
   const fetchWalletData = async () => {
@@ -170,6 +182,40 @@ const UtilityDashboard = () => {
     }
   };
 
+  const fetchUtilityMeters = async () => {
+    setIsLoadingMeters(true);
+    try {
+      if (!token) throw new Error("No authentication token found");
+
+      const user = localStorage.getItem("user");
+      if (!user) throw new Error("No user found in localStorage");
+      const userData = JSON.parse(user);
+
+      const response = await fetch(`${apiUrl}/GetUtilityMetersByLandLordId/${userData.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: "*/*",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch utility meters: ${response.status}`);
+      }
+
+      const metersData = await response.json();
+      setUtilityMeters(metersData);
+    } catch (err: any) {
+      console.error("Error fetching utility meters:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to load utility meters",
+      });
+    } finally {
+      setIsLoadingMeters(false);
+    }
+  };
+
   const validateWithdrawal = () => {
     if (!withdrawAmount || isNaN(Number(withdrawAmount))) {
       toast({
@@ -264,13 +310,214 @@ const UtilityDashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-          Utility Dashboard
-        </h1>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Utility Dashboard</h1>
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+
+      {/* Wallet Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold">Wallet Balance</h2>
+          <div className="flex items-center gap-2 mt-2">
+            <Wallet className="h-6 w-6 text-primary" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[300px] p-0">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-start">
+                      View Transaction History
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Transaction History</DialogTitle>
+                    </DialogHeader>
+                    {isLoading ? (
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <Skeleton key={i} className="h-12 w-full" />
+                        ))}
+                      </div>
+                    ) : transactions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No transactions found
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto max-h-[60vh]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">
+                                Amount
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {transactions.map((tx, i) => (
+                              <TableRow key={i}>
+                                <TableCell>
+                                  {new Date(
+                                    tx.transactionDate
+                                  ).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell className="flex items-center gap-2">
+                                  {tx.amount > 0 ? (
+                                    <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <ArrowUpRight className="h-4 w-4 text-red-500" />
+                                  )}
+                                  {tx.description || "Transaction"}
+                                </TableCell>
+                                <TableCell
+                                  className={`text-right font-medium ${
+                                    tx.amount > 0
+                                      ? "text-green-500"
+                                      : "text-red-500"
+                                  }`}
+                                >
+                                  {tx.amount > 0 ? "+" : ""}
+                                  {formatCurrency(tx.amount)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        ) : (
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-2xl font-bold">
+                {balance !== null ? formatCurrency(balance) : "--"}
+              </p>
+              <p className="text-sm text-muted-foreground">Available balance</p>
+            </div>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm">Withdraw</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Withdraw Funds</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Available: {formatCurrency(balance || 0)}
+                  </p>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount to withdraw"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setWithdrawAmount("");
+                        const dialogTrigger = document.querySelector(
+                          '[data-state="open"]'
+                        ) as HTMLButtonElement;
+                        if (dialogTrigger) {
+                          dialogTrigger.click();
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (validateWithdrawal()) {
+                          setShowConfirmation(true);
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+      </div>
+
+      {/* Utility Meters Section */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold">My Utility Meters</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            View all utility meters associated with your account
+          </p>
+        </div>
+        <div className="p-6">
+          {isLoadingMeters ? (
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ) : utilityMeters.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Meter Type</TableHead>
+                    <TableHead>Meter Number</TableHead>
+                    <TableHead>NWSC Account</TableHead>
+                    <TableHead>Location</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {utilityMeters.map((meter) => (
+                    <TableRow key={meter.id}>
+                      <TableCell>{meter.id}</TableCell>
+                      <TableCell>{meter.meterType}</TableCell>
+                      <TableCell>{meter.meterNumber}</TableCell>
+                      <TableCell>{meter.nwscAccount}</TableCell>
+                      <TableCell>{meter.locationOfNwscMeter}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No utility meters found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Contact your administrator to add utility meters
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Transactions Section */}
+      <div className="bg-white rounded-lg shadow">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Wallet Balance</h2>
           <div className="flex items-center gap-2">

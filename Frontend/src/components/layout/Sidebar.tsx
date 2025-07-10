@@ -15,6 +15,7 @@ import {
   House,
   MessageSquare,
   CreditCard,
+  Plus,
   X,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -266,6 +267,16 @@ function getNavItems(role: number): NavItem[] {
         label: "Send SMS",
         icon: <MessageSquare size={18} />,
         path: "/admin-dashboard/send-sms",
+      },
+      {
+        label: "Manage Utility Meters",
+        icon: <Settings size={18} />,
+        path: "/admin-dashboard/manage-utility-meters",
+      },
+      {
+        label: "Add Utility Meter",
+        icon: <Plus size={18} />,
+        path: "/admin-dashboard/add-utility-meter",
       },
     ];
   }
