@@ -28,5 +28,6 @@ namespace Application.Interfaces.UserServices
         Task<IEnumerable<UtilityMeter>> GetUtilityMetersByLandLordIdAsync(int landlordId);
         Task<IEnumerable<UtilityMeter>> GetAllUtilityMetersAsync();
         Task UpdateUtilityMeterAsync(UtilityMeterDto utilityMeter, int id);
+        Task DeleteUtilityMeterAsync(int id);
     }
 }

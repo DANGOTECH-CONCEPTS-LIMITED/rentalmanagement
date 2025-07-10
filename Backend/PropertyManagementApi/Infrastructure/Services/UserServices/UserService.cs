@@ -467,5 +467,16 @@ namespace Infrastructure.Services.UserServices
             _context.UtilityMeters.Update(existingMeter);
             await _context.SaveChangesAsync();
         }
+
+        public async Task DeleteUtilityMeterAsync(int id)
+        {
+            // Validate utility meter existence
+            var existingMeter = await _context.UtilityMeters.FirstOrDefaultAsync(m => m.Id == id);
+            if (existingMeter == null)
+                throw new Exception("Utility meter not found.");
+            // Remove the utility meter
+            _context.UtilityMeters.Remove(existingMeter);
+            await _context.SaveChangesAsync();
+        }
     }
 }

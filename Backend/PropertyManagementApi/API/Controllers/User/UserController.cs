@@ -248,5 +248,20 @@ namespace API.Controllers.UserControllers
                 return BadRequest($"Error updating utility meter: {ex.Message}");
             }
         }
+
+        [HttpDelete("/DeleteUtilityMeter/{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteUtilityMeter(int id)
+        {
+            try
+            {
+                await _userService.DeleteUtilityMeterAsync(id);
+                return Ok("Utility meter deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error deleting utility meter: {ex.Message}");
+            }
+        }
     }
 }
