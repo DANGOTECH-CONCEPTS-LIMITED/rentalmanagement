@@ -19,7 +19,7 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/RegisterUser")]
-        public async Task<IActionResult> Register([FromForm] List<IFormFile> files,[FromForm] UserDto user)
+        public async Task<IActionResult> Register([FromForm] List<IFormFile> files, [FromForm] UserDto user)
         {
             try
             {
@@ -28,13 +28,13 @@ namespace API.Controllers.UserControllers
                 {
                     return BadRequest("Please submit three files: passport photo, ID front, and ID back.");
                 }
-                await _userService.RegisterUserAsync(files[0], files[1], files[2],user);
+                await _userService.RegisterUserAsync(files[0], files[1], files[2], user);
                 return Ok("User registered successfully.");
             }
             catch (Exception ex)
             {
                 return BadRequest($"Error registering user: {ex.Message}");
-            }            
+            }
         }
 
         [HttpGet("/GetAllUsers")]
@@ -231,6 +231,21 @@ namespace API.Controllers.UserControllers
             catch (Exception ex)
             {
                 return BadRequest($"Error retrieving all utility meters: {ex.Message}");
+            }
+        }
+
+        [HttpPut("/UpdateUtilityMeter/{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUtilityMeter([FromBody] UtilityMeterDto utilityMeterDto, int id)
+        {
+            try
+            {
+                await _userService.UpdateUtilityMeterAsync(utilityMeterDto, id);
+                return Ok("Utility meter updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error updating utility meter: {ex.Message}");
             }
         }
     }

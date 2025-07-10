@@ -451,5 +451,21 @@ namespace Infrastructure.Services.UserServices
             // Return the found utility meter
             return meter;
         }
+
+        public async Task UpdateUtilityMeterAsync(UtilityMeterDto utilityMeter, int id)
+        {
+            // Validate utility meter existence
+            var existingMeter = await _context.UtilityMeters.FirstOrDefaultAsync(m => m.Id == id);
+            if (existingMeter == null)
+                throw new Exception("Utility meter not found.");
+            // Update properties
+            existingMeter.MeterNumber = utilityMeter.MeterNumber;
+            existingMeter.MeterType = utilityMeter.MeterType;
+            existingMeter.NWSCAccount = utilityMeter.NwscAccount;
+            existingMeter.LocationOfNwscMeter = utilityMeter.LocationOfNwscMeter;
+            // Save changes
+            _context.UtilityMeters.Update(existingMeter);
+            await _context.SaveChangesAsync();
+        }
     }
 }
