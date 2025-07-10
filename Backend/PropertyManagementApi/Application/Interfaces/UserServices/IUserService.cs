@@ -25,5 +25,7 @@ namespace Application.Interfaces.UserServices
         Task DeleteUser(int id);
         Task<IEnumerable<User>> GetLandlordsAsync();
         Task AddUtilityMeter(UtilityMeterDto utilityMeter);
+        Task<IEnumerable<UtilityMeter>> GetUtilityMetersByLandLordIdAsync(int landlordId);
+        Task<IEnumerable<UtilityMeter>> GetAllUtilityMetersAsync();
     }
 }

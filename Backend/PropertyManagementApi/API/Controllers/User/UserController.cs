@@ -203,5 +203,35 @@ namespace API.Controllers.UserControllers
                 return BadRequest($"Error adding utility meter: {ex.Message}");
             }
         }
+
+        [HttpGet("/GetUtilityMetersByLandLordId/{landlordId}")]
+        [Authorize]
+        public async Task<IActionResult> GetUtilityMetersByLandLordId(int landlordId)
+        {
+            try
+            {
+                var utilityMeters = await _userService.GetUtilityMetersByLandLordIdAsync(landlordId);
+                return Ok(utilityMeters);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving utility meters: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetAllUtilityMeters")]
+        [Authorize]
+        public async Task<IActionResult> GetAllUtilityMeters()
+        {
+            try
+            {
+                var utilityMeters = await _userService.GetAllUtilityMetersAsync();
+                return Ok(utilityMeters);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving all utility meters: {ex.Message}");
+            }
+        }
     }
 }

@@ -13,6 +13,7 @@ namespace Domain.Entities.PropertyMgt
         public string? MeterType { get; set; } // e.g., Electricity, Water, Gas
         public string MeterNumber { get; set; } // Unique identifier for the meter
         public string? NWSCAccount { get; set; }
+        public string? LocationOfNwscMeter { get; set; } // Location of the NWSC meter, if applicable
         [ForeignKey("User")]
         public int LandLordId { get; set; } // Foreign key to the LandLord
         public User User { get; set; } // Navigation property to the LandLord

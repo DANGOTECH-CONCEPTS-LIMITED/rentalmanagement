@@ -419,11 +419,35 @@ namespace Infrastructure.Services.UserServices
                 MeterNumber = utilityMeter.MeterNumber,
                 MeterType = utilityMeter.MeterType,
                 LandLordId = utilityMeter.LandLordId,
-                NWSCAccount = utilityMeter.NwscAccount
+                NWSCAccount = utilityMeter.NwscAccount,
+                LocationOfNwscMeter = utilityMeter.LocationOfNwscMeter,
             };
             _context.UtilityMeters.Add(meter);
             _context.SaveChanges();
             return Task.CompletedTask;
+        }
+
+        public async Task<IEnumerable<UtilityMeter>> GetUtilityMetersByLandLordIdAsync(int landlordId)
+        {
+            // Validate landlord existence
+            var landlord = await _context.Users.FirstOrDefaultAsync(u => u.Id == landlordId);
+            if (landlord == null)
+                throw new Exception("Landlord not found.");
+            // Retrieve utility meters for the specified landlord
+            return await _context.UtilityMeters
+                .Where(m => m.LandLordId == landlordId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<UtilityMeter>> GetAllUtilityMetersAsync()
+        {
+            // Validate utility meter existence
+            var meter = await _context.UtilityMeters
+                .ToListAsync();
+            if (meter == null)
+                throw new Exception("Utility meter not found.");
+            // Return the found utility meter
+            return meter;
         }
     }
 }
