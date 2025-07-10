@@ -35,7 +35,7 @@ jobs:
 
       # 6. Publish the API project into the ./publish folder
       - name: Publish API
-        run: dotnet publish Backend/PropertyManagementApi/API.csproj --configuration Release --output ./publish --no-build
+        run: dotnet publish Backend/PropertyManagementApi/API/API.csproj --configuration Release --output ./publish --no-build
 
       # 7. Zip the published files
       - name: Zip Published Files
