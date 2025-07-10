@@ -419,6 +419,7 @@ namespace Infrastructure.Services.UserServices
                 MeterNumber = utilityMeter.MeterNumber,
                 MeterType = utilityMeter.MeterType,
                 LandLordId = utilityMeter.LandLordId,
+                NWSCAccount = utilityMeter.NwscAccount
             };
             _context.UtilityMeters.Add(meter);
             _context.SaveChanges();

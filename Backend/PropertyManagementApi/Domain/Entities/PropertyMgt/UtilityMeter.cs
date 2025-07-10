@@ -12,6 +12,7 @@ namespace Domain.Entities.PropertyMgt
         public int Id { get; set; }
         public string? MeterType { get; set; } // e.g., Electricity, Water, Gas
         public string MeterNumber { get; set; } // Unique identifier for the meter
+        public string? NWSCAccount { get; set; }
         [ForeignKey("User")]
         public int LandLordId { get; set; } // Foreign key to the LandLord
         public User User { get; set; } // Navigation property to the LandLord
