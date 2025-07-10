@@ -435,6 +435,7 @@ namespace Infrastructure.Services.UserServices
                 throw new Exception("Landlord not found.");
             // Retrieve utility meters for the specified landlord
             return await _context.UtilityMeters
+                .Include(m => m.User) // Include the User navigation property if needed
                 .Where(m => m.LandLordId == landlordId)
                 .ToListAsync();
         }
@@ -443,6 +444,7 @@ namespace Infrastructure.Services.UserServices
         {
             // Validate utility meter existence
             var meter = await _context.UtilityMeters
+                .Include(m => m.User)
                 .ToListAsync();
             if (meter == null)
                 throw new Exception("Utility meter not found.");
