@@ -1058,6 +1058,9 @@ const ManageUsers = () => {
             <TabsTrigger value="tenant">
               Tenants ({getFilteredUsers("Tenant").length})
             </TabsTrigger>
+            <TabsTrigger value="utility">
+              Utility Users ({getFilteredUsers("Utililty Payment").length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
@@ -1090,6 +1093,14 @@ const ManageUsers = () => {
           <TabsContent value="tenant">
             <UserTable
               users={getFilteredUsers("Tenant")}
+              onViewDetails={(user) => setSelectedUser(user)}
+              onEditUser={openEditModal}
+              onDeleteSuccess={fetchUsers}
+            />
+          </TabsContent>
+          <TabsContent value="utility">
+            <UserTable
+              users={getFilteredUsers("Utililty Payment")}
               onViewDetails={(user) => setSelectedUser(user)}
               onEditUser={openEditModal}
               onDeleteSuccess={fetchUsers}

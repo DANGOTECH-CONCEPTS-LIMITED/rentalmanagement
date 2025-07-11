@@ -31,19 +31,31 @@ const meterSchema = z.object({
   landLordId: z.string().min(1, { message: 'Landlord selection is required' }),
 });
 
-interface Landlord {
+interface Role {
   id: number;
+  name: string;
+}
+
+interface User {
+  id: string;
   fullName: string;
   email: string;
-  phoneNumber: string;
+  systemRole: {
+    id: number;
+    name: string;
+  };
   verified: boolean;
 }
 
 const AddUtilityMeter = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [landlords, setLandlords] = useState<Landlord[]>([]);
-  const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const { toast } = useToast();
+
+  console.log("users",users);
 
   let token = '';
   try {
@@ -71,29 +83,55 @@ const AddUtilityMeter = () => {
     },
   });
 
-  // Fetch landlords for admin
+  // Fetch all roles and all users
   useEffect(() => {
-    setIsLoadingLandlords(true);
-    fetch(`${apiUrl}/GetLandlords`, {
-      method: 'GET',
+    setIsLoadingRoles(true);
+    axios.get(`${apiUrl}/GetAllRoles`, {
       headers: {
         accept: '*/*',
         Authorization: `Bearer ${token}`,
       },
     })
-      .then((res) => res.json())
-      .then((data) => {
-        setLandlords(data.filter((l: Landlord) => l.verified));
+      .then((res) => {
+        setRoles(res.data);
       })
       .catch((err) => {
         toast({
           title: 'Error',
-          description: 'Failed to fetch landlords',
+          description: 'Failed to fetch roles',
           variant: 'destructive',
         });
       })
-      .finally(() => setIsLoadingLandlords(false));
+      .finally(() => setIsLoadingRoles(false));
   }, [apiUrl, token, toast]);
+
+  useEffect(() => {
+    setIsLoadingUsers(true);
+    axios.get(`${apiUrl}/GetAllUsers`, {
+      headers: {
+        accept: '*/*',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        setUsers(res.data);
+      })
+      .catch((err) => {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch users',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => setIsLoadingUsers(false));
+  }, [apiUrl, token, toast]);
+
+  // Find the landlord role ID
+  const landlordRole = roles.find((role) => role.name.toLowerCase() === 'landlord');
+  const landlordRoleId = landlordRole?.id;
+
+  // Filter users for landlords
+  const landlordUsers = users.filter((u) => u.systemRole.id === landlordRoleId && u.verified);
 
   const onSubmit = async (values: z.infer<typeof meterSchema>) => {
     setIsSubmitting(true);
@@ -155,19 +193,19 @@ const AddUtilityMeter = () => {
                   name="landLordId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Landlord</FormLabel>
+                      <FormLabel>User</FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
-                        disabled={isLoadingLandlords}
+                        disabled={isLoadingUsers || isLoadingRoles}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={isLoadingLandlords ? 'Loading landlords...' : 'Select a landlord'} />
+                          <SelectValue placeholder={isLoadingUsers ? 'Loading users...' : 'Select a user'} />
                         </SelectTrigger>
                         <SelectContent>
-                          {landlords.map((landlord) => (
-                            <SelectItem key={landlord.id} value={landlord.id.toString()}>
-                              {landlord.fullName} ({landlord.email})
+                          {users.map((user) => (
+                            <SelectItem key={user.id} value={user.id.toString()}>
+                              {user.fullName} ({user.email})
                             </SelectItem>
                           ))}
                         </SelectContent>

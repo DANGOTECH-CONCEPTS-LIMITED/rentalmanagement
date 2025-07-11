@@ -149,8 +149,10 @@ const LandlordProperties = () => {
       const data = await response.json();
       console.log("Properties data:", data);
       setProperties(data);
+      setError(null); // Clear any previous errors
     } catch (err) {
-      setError(err.response.data);
+      console.error("Error fetching properties:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch properties");
     } finally {
       setIsLoading(false);
     }
@@ -174,9 +176,10 @@ const LandlordProperties = () => {
       const data: Landlord[] = await response.json();
       setLandlords(data);
     } catch (error) {
+      console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
-        description: error.response.data,
+        description: error instanceof Error ? error.message : "Failed to fetch landlords",
         variant: "destructive",
       });
     } finally {
@@ -211,9 +214,10 @@ const LandlordProperties = () => {
         description: "Property deleted successfully",
       });
     } catch (err) {
+      console.error("Error deleting property:", err);
       toast({
         title: "Error",
-        description: err.response.data,
+        description: err instanceof Error ? err.message : "Failed to delete property",
         variant: "destructive",
       });
     }
@@ -416,7 +420,8 @@ const LandlordProperties = () => {
 
           {error ? (
             <div className="py-8 text-center text-red-500">
-              {error && <p>No properties found</p>}
+              <p className="font-medium">Error retrieving properties</p>
+              <p className="text-sm mt-1">{error}</p>
             </div>
           ) : isLoading ? (
             <div className="flex justify-center items-center py-10">

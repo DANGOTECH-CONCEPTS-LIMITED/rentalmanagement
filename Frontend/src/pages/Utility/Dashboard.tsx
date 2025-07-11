@@ -171,14 +171,6 @@ const UtilityDashboard = () => {
       setProperties(data);
     } catch (error) {
       console.error("Error fetching landlords:", error);
-      toast({
-        title: "Error",
-        description:
-          error.response.status === 404
-            ? `Properties ${error.response.statusText}`
-            : error.response.data,
-        variant: "destructive",
-      });
     }
   };
 

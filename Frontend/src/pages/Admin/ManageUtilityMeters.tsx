@@ -27,6 +27,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,6 +50,21 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 
+interface Landlord {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  passportPhoto: string;
+  nationalIdNumber: string;
+  systemRoleId: number;
+  systemRole: {
+    id: number;
+    name: string;
+    description: string;
+  };
+}
+
 interface UtilityMeter {
   id: number;
   meterType: string;
@@ -50,6 +72,9 @@ interface UtilityMeter {
   nwscAccount: string;
   locationOfNwscMeter: string;
   landLordId: number;
+  user: {
+    fullName: string;
+  };
 }
 
 const meterSchema = z.object({
@@ -57,7 +82,7 @@ const meterSchema = z.object({
   meterNumber: z.string().min(1, { message: 'Meter number is required' }),
   nwscAccount: z.string().min(1, { message: 'NWSC account is required' }),
   locationOfNwscMeter: z.string().min(1, { message: 'Location of NWSC meter is required' }),
-  landLordId: z.number().min(1, { message: 'Landlord ID is required' }),
+  landLordId: z.number().min(1, { message: 'Landlord is required' }),
 });
 
 const ManageUtilityMeters = () => {
@@ -83,6 +108,8 @@ const ManageUtilityMeters = () => {
     },
   });
 
+
+
   const fetchMeters = async () => {
     setLoading(true);
     try {
@@ -107,6 +134,18 @@ const ManageUtilityMeters = () => {
   useEffect(() => {
     fetchMeters();
   }, []);
+
+  // Get unique landlords from meters data
+  const uniqueLandlords = meters.reduce((acc, meter) => {
+    const existingLandlord = acc.find(l => l.id === meter.landLordId);
+    if (!existingLandlord) {
+      acc.push({
+        id: meter.landLordId,
+        fullName: meter.user.fullName
+      });
+    }
+    return acc;
+  }, [] as { id: number; fullName: string }[]);
 
   const handleEdit = (meter: UtilityMeter) => {
     setEditingMeter(meter);
@@ -201,7 +240,7 @@ const ManageUtilityMeters = () => {
               <TableHead>Meter Number</TableHead>
               <TableHead>NWSC Account</TableHead>
               <TableHead>Location</TableHead>
-              <TableHead>Landlord ID</TableHead>
+              <TableHead>Landlord Name</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -213,7 +252,7 @@ const ManageUtilityMeters = () => {
                 <TableCell>{meter.meterNumber}</TableCell>
                 <TableCell>{meter.nwscAccount}</TableCell>
                 <TableCell>{meter.locationOfNwscMeter}</TableCell>
-                <TableCell>{meter.landLordId}</TableCell>
+                <TableCell>{meter.user.fullName}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Button
@@ -335,15 +374,21 @@ const ManageUtilityMeters = () => {
                 name="landLordId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Landlord ID</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter landlord ID"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
+                    <FormLabel>Landlord</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value.toString()}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a landlord" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {uniqueLandlords.map((landlord) => (
+                          <SelectItem key={landlord.id} value={landlord.id.toString()}>
+                            {landlord.fullName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
