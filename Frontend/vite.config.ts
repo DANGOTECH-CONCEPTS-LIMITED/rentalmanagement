@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   build: {
-    outDir: "build",  // Ensure the build output is in dist/
+    outDir: "frontend",  // Ensure the build output is in dist/
   },
   plugins: [
     react(),

@@ -1,0 +1,220 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\api\\controllers\\user\\usercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|solutionrelative:api\\controllers\\user\\usercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11BF0124-30E2-4D44-9321-572DD6F57BFF}|Infrastructure\\Infrastructure.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\infrastructure\\services\\userservices\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11BF0124-30E2-4D44-9321-572DD6F57BFF}|Infrastructure\\Infrastructure.csproj|solutionrelative:infrastructure\\services\\userservices\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18B3C1CC-1D8C-4F99-910A-D983779439AC}|Domain\\Domain.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\domain\\entities\\propertymgt\\utilitymeter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{18B3C1CC-1D8C-4F99-910A-D983779439AC}|Domain\\Domain.csproj|solutionrelative:domain\\entities\\propertymgt\\utilitymeter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Migrations\\20250710193911_AdditionOfUtilityAccountLocationToUtilityMeter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Infrastructure\\Migrations\\20250710193911_AdditionOfUtilityAccountLocationToUtilityMeter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{82B4F9B6-F090-4C90-AC06-516DEF248644}|Application\\Application.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\application\\interfaces\\userservices\\iuserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{82B4F9B6-F090-4C90-AC06-516DEF248644}|Application\\Application.csproj|solutionrelative:application\\interfaces\\userservices\\iuserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18B3C1CC-1D8C-4F99-910A-D983779439AC}|Domain\\Domain.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\domain\\dtos\\meters\\utilitymeterdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{18B3C1CC-1D8C-4F99-910A-D983779439AC}|Domain\\Domain.csproj|solutionrelative:domain\\dtos\\meters\\utilitymeterdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Migrations\\20250710192957_AdditionOfUtilityAccountToUtilityMeter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Infrastructure\\Migrations\\20250710192957_AdditionOfUtilityAccountToUtilityMeter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|solutionrelative:api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11BF0124-30E2-4D44-9321-572DD6F57BFF}|Infrastructure\\Infrastructure.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\infrastructure\\services\\paymentservices\\walletsvc\\walletservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11BF0124-30E2-4D44-9321-572DD6F57BFF}|Infrastructure\\Infrastructure.csproj|solutionrelative:infrastructure\\services\\paymentservices\\walletsvc\\walletservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\api\\controllers\\payments\\wallet\\walletcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|solutionrelative:api\\controllers\\payments\\wallet\\walletcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\api\\controllers\\payments\\paymentcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{62399B87-AF9D-4AA1-9660-9D7C89809780}|API\\API.csproj|solutionrelative:api\\controllers\\payments\\paymentcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11BF0124-30E2-4D44-9321-572DD6F57BFF}|Infrastructure\\Infrastructure.csproj|d:\\working directory\\rentalmanagement\\backend\\propertymanagementapi\\infrastructure\\services\\backgroundservices\\processpendingtokentransactions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11BF0124-30E2-4D44-9321-572DD6F57BFF}|Infrastructure\\Infrastructure.csproj|solutionrelative:infrastructure\\services\\backgroundservices\\processpendingtokentransactions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 5,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "20250710193911_AdditionOfUtilityAccountLocationToUtilityMeter.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Migrations\\20250710193911_AdditionOfUtilityAccountLocationToUtilityMeter.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Migrations\\20250710193911_AdditionOfUtilityAccountLocationToUtilityMeter.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Migrations\\20250710193911_AdditionOfUtilityAccountLocationToUtilityMeter.cs",
+              "RelativeToolTip": "Infrastructure\\Migrations\\20250710193911_AdditionOfUtilityAccountLocationToUtilityMeter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-10T19:39:11.537Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "IUserService.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Application\\Interfaces\\UserServices\\IUserService.cs",
+              "RelativeDocumentMoniker": "Application\\Interfaces\\UserServices\\IUserService.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Application\\Interfaces\\UserServices\\IUserService.cs",
+              "RelativeToolTip": "Application\\Interfaces\\UserServices\\IUserService.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAAAABwAAABBAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-10T19:35:03.914Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "UserService.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Services\\UserServices\\UserService.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Services\\UserServices\\UserService.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Services\\UserServices\\UserService.cs",
+              "RelativeToolTip": "Infrastructure\\Services\\UserServices\\UserService.cs",
+              "ViewState": "AgIAAK0BAAAAAAAAAAAuwL4BAAAkAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-10T19:28:51.515Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "UtilityMeter.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Domain\\Entities\\PropertyMgt\\UtilityMeter.cs",
+              "RelativeDocumentMoniker": "Domain\\Entities\\PropertyMgt\\UtilityMeter.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Domain\\Entities\\PropertyMgt\\UtilityMeter.cs",
+              "RelativeToolTip": "Domain\\Entities\\PropertyMgt\\UtilityMeter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-10T19:28:26.369Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "UtilityMeterDto.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Domain\\Dtos\\Meters\\UtilityMeterDto.cs",
+              "RelativeDocumentMoniker": "Domain\\Dtos\\Meters\\UtilityMeterDto.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Domain\\Dtos\\Meters\\UtilityMeterDto.cs",
+              "RelativeToolTip": "Domain\\Dtos\\Meters\\UtilityMeterDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAABlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-10T19:27:47.693Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "UserController.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\Controllers\\User\\UserController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\User\\UserController.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\Controllers\\User\\UserController.cs",
+              "RelativeToolTip": "API\\Controllers\\User\\UserController.cs",
+              "ViewState": "AgIAAMkAAAAAAAAAAAAkwNQAAABGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-10T19:27:32.625Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "20250710192957_AdditionOfUtilityAccountToUtilityMeter.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Migrations\\20250710192957_AdditionOfUtilityAccountToUtilityMeter.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Migrations\\20250710192957_AdditionOfUtilityAccountToUtilityMeter.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Migrations\\20250710192957_AdditionOfUtilityAccountToUtilityMeter.cs",
+              "RelativeToolTip": "Infrastructure\\Migrations\\20250710192957_AdditionOfUtilityAccountToUtilityMeter.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-10T19:29:58.261Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\appsettings.json",
+              "RelativeDocumentMoniker": "API\\appsettings.json",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\appsettings.json",
+              "RelativeToolTip": "API\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAABaAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-07-10T17:25:15.395Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "WalletService.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Services\\PaymentServices\\WalletSvc\\WalletService.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Services\\PaymentServices\\WalletSvc\\WalletService.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Services\\PaymentServices\\WalletSvc\\WalletService.cs",
+              "RelativeToolTip": "Infrastructure\\Services\\PaymentServices\\WalletSvc\\WalletService.cs",
+              "ViewState": "AgIAAEQAAAAAAAAAAAAiwJYAAAA+AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-30T10:27:10.144Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "WalletController.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\Controllers\\Payments\\Wallet\\WalletController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\Payments\\Wallet\\WalletController.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\Controllers\\Payments\\Wallet\\WalletController.cs",
+              "RelativeToolTip": "API\\Controllers\\Payments\\Wallet\\WalletController.cs",
+              "ViewState": "AgIAACQAAAAAAAAAAAAAADcAAAAeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-30T08:47:42.029Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "PaymentController.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\Controllers\\Payments\\PaymentController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\Payments\\PaymentController.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\API\\Controllers\\Payments\\PaymentController.cs",
+              "RelativeToolTip": "API\\Controllers\\Payments\\PaymentController.cs",
+              "ViewState": "AgIAACkBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-30T08:47:17.703Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "ProcessPendingTokenTransactions.cs",
+              "DocumentMoniker": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Services\\BackgroundServices\\ProcessPendingTokenTransactions.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Services\\BackgroundServices\\ProcessPendingTokenTransactions.cs",
+              "ToolTip": "D:\\Working Directory\\rentalmanagement\\Backend\\PropertyManagementApi\\Infrastructure\\Services\\BackgroundServices\\ProcessPendingTokenTransactions.cs",
+              "RelativeToolTip": "Infrastructure\\Services\\BackgroundServices\\ProcessPendingTokenTransactions.cs",
+              "ViewState": "AgIAAFEAAAAAAAAAAAAAAFUAAABeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-23T12:33:47.332Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

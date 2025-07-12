@@ -1,0 +1,12 @@
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\bin\Debug\net9.0\Domain.deps.json
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\bin\Debug\net9.0\Domain.dll
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\bin\Debug\net9.0\Domain.pdb
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\Domain.AssemblyInfoInputs.cache
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\Domain.AssemblyInfo.cs
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\Domain.csproj.CoreCompileInputs.cache
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\Domain.sourcelink.json
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\Domain.dll
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\refint\Domain.dll
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\Domain.pdb
+D:\Working Directory\rentalmanagement\Backend\PropertyManagementApi\Domain\obj\Debug\net9.0\ref\Domain.dll

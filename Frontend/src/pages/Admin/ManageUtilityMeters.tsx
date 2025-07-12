@@ -91,6 +91,7 @@ const ManageUtilityMeters = () => {
           accept: '*/*',
         },
       });
+      console.log('Fetched meters:', response.data);
       setMeters(response.data);
     } catch (error) {
       console.error('Error fetching meters:', error);
@@ -201,7 +202,7 @@ const ManageUtilityMeters = () => {
               <TableHead>Meter Number</TableHead>
               <TableHead>NWSC Account</TableHead>
               <TableHead>Location</TableHead>
-              <TableHead>Landlord ID</TableHead>
+              <TableHead>LandLordName</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -213,7 +214,7 @@ const ManageUtilityMeters = () => {
                 <TableCell>{meter.meterNumber}</TableCell>
                 <TableCell>{meter.nwscAccount}</TableCell>
                 <TableCell>{meter.locationOfNwscMeter}</TableCell>
-                <TableCell>{meter.landLordId}</TableCell>
+                <TableCell>{meter.user.fullName}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Button
