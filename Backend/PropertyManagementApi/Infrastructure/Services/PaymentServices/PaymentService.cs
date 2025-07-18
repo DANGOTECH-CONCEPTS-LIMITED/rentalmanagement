@@ -611,5 +611,18 @@ namespace Infrastructure.Services.PaymentServices
             _context.UtilityPayments.Update(existingPayment);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentsByLandlordIdAsync(int landlordId)
+        {
+            var payments = await _context.UtilityPayments
+                .Where(p => _context.UtilityMeters
+                    .Where(m => m.LandLordId == landlordId)
+                    .Select(m => m.MeterNumber)
+                    .Contains(p.MeterNumber))
+                .ToListAsync();
+
+            return payments;
+        }
+
     }
 }

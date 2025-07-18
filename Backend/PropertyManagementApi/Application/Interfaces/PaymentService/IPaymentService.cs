@@ -45,5 +45,6 @@ namespace Application.Interfaces.PaymentService
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByMeterNumber(string method);
         Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingTokenGeneration();
         Task UpdateUtilityPayment(UtilityPayment utilityPayment);
+        Task<IEnumerable<UtilityPayment>> GetUtilityPaymentsByLandlordIdAsync(int landlordId);
     }
 }
