@@ -331,6 +331,7 @@ namespace API.Controllers.Payments
         }
 
         [HttpPut("/UpdateUtilityPaymentWithVendorId")]
+        [Authorize]
         public async Task<IActionResult> UpdateUtilityPaymentWithVendorId(
         [FromQuery] int tranid,
         [FromQuery] string vendorref,
