@@ -51,6 +51,7 @@ import MakeUtilityPayment from "./pages/MakeutilityPayment";
 import UtilityReport from "./pages/Landlord/UtilityReport";
 import ManageUtilityMeters from "./pages/Admin/ManageUtilityMeters";
 import AddUtilityMeter from "./pages/Admin/AddUtilityMeter";
+import UtilityPayments from "./pages/Admin/UtilityPayments";
 
 const queryClient = new QueryClient();
 
@@ -67,7 +68,10 @@ const App = () => (
             {/* Home/Auth Routes */}
             <Route path="/" element={<SignIn />} />
             <Route path="/index" element={<Index />} />
-            <Route path="/make-utility-payment" element={<MakeUtilityPayment />} />
+            <Route
+              path="/make-utility-payment"
+              element={<MakeUtilityPayment />}
+            />
 
             {/* Admin Routes */}
             <Route element={<ProtectedRoute role={1} />}>
@@ -90,8 +94,15 @@ const App = () => (
                 <Route path="transactions" element={<Transactions />} />
                 <Route path="system-settings" element={<SystemSettings />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
-                <Route path="manage-utility-meters" element={<ManageUtilityMeters />} />
+                <Route
+                  path="manage-utility-meters"
+                  element={<ManageUtilityMeters />}
+                />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />
+                <Route
+                  path="utility-payments/:landlordId"
+                  element={<UtilityPayments />}
+                />
               </Route>
             </Route>
 
@@ -106,7 +117,7 @@ const App = () => (
                 <Route path="manage-tenants" element={<ManageTenants />} />
                 <Route path="rental-contracts" element={<RentalContracts />} />
                 <Route path="complaints" element={<HandleComplaints />} />
-                <Route path="payments" element={<TrackPayments />} />t 
+                <Route path="payments" element={<TrackPayments />} />t
                 <Route path="properties" element={<Properties />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
                 <Route path="utility-report" element={<UtilityReport />} />

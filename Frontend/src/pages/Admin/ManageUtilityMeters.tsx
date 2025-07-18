@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -26,18 +26,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Edit, Trash2, Plus } from 'lucide-react';
+} from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Edit, Trash2, Plus, Eye } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -48,7 +48,8 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
+import { useNavigate } from "react-router-dom";
 
 interface Landlord {
   id: number;
@@ -78,11 +79,13 @@ interface UtilityMeter {
 }
 
 const meterSchema = z.object({
-  meterType: z.string().min(1, { message: 'Meter type is required' }),
-  meterNumber: z.string().min(1, { message: 'Meter number is required' }),
-  nwscAccount: z.string().min(1, { message: 'NWSC account is required' }),
-  locationOfNwscMeter: z.string().min(1, { message: 'Location of NWSC meter is required' }),
-  landLordId: z.number().min(1, { message: 'Landlord is required' }),
+  meterType: z.string().min(1, { message: "Meter type is required" }),
+  meterNumber: z.string().min(1, { message: "Meter number is required" }),
+  nwscAccount: z.string().min(1, { message: "NWSC account is required" }),
+  locationOfNwscMeter: z
+    .string()
+    .min(1, { message: "Location of NWSC meter is required" }),
+  landLordId: z.number().min(1, { message: "Landlord is required" }),
 });
 
 const ManageUtilityMeters = () => {
@@ -92,39 +95,36 @@ const ManageUtilityMeters = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [meterToDelete, setMeterToDelete] = useState<UtilityMeter | null>(null);
+  const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const form = useForm<z.infer<typeof meterSchema>>({
     resolver: zodResolver(meterSchema),
     defaultValues: {
-      meterType: '',
-      meterNumber: '',
-      nwscAccount: '',
-      locationOfNwscMeter: '',
+      meterType: "",
+      meterNumber: "",
+      nwscAccount: "",
+      locationOfNwscMeter: "",
       landLordId: 0,
     },
   });
-
-
 
   const fetchMeters = async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/GetAllUtilityMeters`, {
         headers: {
-          accept: '*/*',
+          accept: "*/*",
         },
       });
       setMeters(response.data);
     } catch (error) {
-      console.error('Error fetching meters:', error);
+      console.error("Error fetching meters:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to fetch utility meters',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch utility meters",
       });
     } finally {
       setLoading(false);
@@ -137,11 +137,11 @@ const ManageUtilityMeters = () => {
 
   // Get unique landlords from meters data
   const uniqueLandlords = meters.reduce((acc, meter) => {
-    const existingLandlord = acc.find(l => l.id === meter.landLordId);
+    const existingLandlord = acc.find((l) => l.id === meter.landLordId);
     if (!existingLandlord) {
       acc.push({
         id: meter.landLordId,
-        fullName: meter.user.fullName
+        fullName: meter.user.fullName,
       });
     }
     return acc;
@@ -163,16 +163,20 @@ const ManageUtilityMeters = () => {
     if (!editingMeter) return;
 
     try {
-      await axios.put(`${apiUrl}/UpdateUtilityMeter/${editingMeter.id}`, values, {
-        headers: {
-          accept: '*/*',
-          'Content-Type': 'application/json',
-        },
-      });
+      await axios.put(
+        `${apiUrl}/UpdateUtilityMeter/${editingMeter.id}`,
+        values,
+        {
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       toast({
-        title: 'Success',
-        description: 'Utility meter updated successfully',
+        title: "Success",
+        description: "Utility meter updated successfully",
       });
 
       setIsEditDialogOpen(false);
@@ -180,41 +184,45 @@ const ManageUtilityMeters = () => {
       form.reset();
       fetchMeters();
     } catch (error) {
-      console.error('Error updating meter:', error);
+      console.error("Error updating meter:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to update utility meter',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update utility meter",
       });
     }
   };
 
   const handleDelete = async () => {
-    if (!meterToDelete) return;
+    if (!editingMeter) return;
     setIsDeleting(true);
     try {
-      await axios.delete(`${apiUrl}/DeleteUtilityMeter/${meterToDelete.id}`, {
+      await axios.delete(`${apiUrl}/DeleteUtilityMeter/${editingMeter.id}`, {
         headers: {
-          accept: '*/*',
+          accept: "*/*",
         },
       });
       toast({
-        title: 'Success',
-        description: 'Utility meter deleted successfully',
+        title: "Success",
+        description: "Utility meter deleted successfully",
       });
       fetchMeters();
     } catch (error) {
-      console.error('Error deleting meter:', error);
+      console.error("Error deleting meter:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete utility meter',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete utility meter",
       });
     } finally {
       setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setMeterToDelete(null);
+      setEditingMeter(null);
+      form.reset();
     }
+  };
+
+  const handleViewPayments = (landLordId: number) => {
+    navigate(`/admin-dashboard/utility-payments/${landLordId}`);
   };
 
   if (loading) {
@@ -241,6 +249,7 @@ const ManageUtilityMeters = () => {
               <TableHead>NWSC Account</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Landlord Name</TableHead>
+              <TableHead>Utility Payments</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -254,6 +263,15 @@ const ManageUtilityMeters = () => {
                 <TableCell>{meter.locationOfNwscMeter}</TableCell>
                 <TableCell>{meter.user.fullName}</TableCell>
                 <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewPayments(meter.landLordId)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" /> View
+                  </Button>
+                </TableCell>
+                <TableCell>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -262,17 +280,18 @@ const ManageUtilityMeters = () => {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <AlertDialog open={deleteDialogOpen && meterToDelete?.id === meter.id} onOpenChange={(open) => {
-                      setDeleteDialogOpen(open);
-                      if (!open) setMeterToDelete(null);
-                    }}>
+                    <AlertDialog
+                      open={editingMeter?.id === meter.id}
+                      onOpenChange={(open) => {
+                        if (!open) setEditingMeter(null);
+                      }}
+                    >
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => {
-                            setMeterToDelete(meter);
-                            setDeleteDialogOpen(true);
+                            setEditingMeter(meter);
                           }}
                           disabled={isDeleting}
                         >
@@ -281,15 +300,21 @@ const ManageUtilityMeters = () => {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Utility Meter</AlertDialogTitle>
+                          <AlertDialogTitle>
+                            Delete Utility Meter
+                          </AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete this utility meter? This action cannot be undone.
+                            Are you sure you want to delete this utility meter?
+                            This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-                            {isDeleting ? 'Deleting...' : 'Delete'}
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -312,7 +337,10 @@ const ManageUtilityMeters = () => {
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleUpdate)} className="space-y-4">
+            <form
+              onSubmit={form.handleSubmit(handleUpdate)}
+              className="space-y-4"
+            >
               <FormField
                 control={form.control}
                 name="meterType"
@@ -320,7 +348,10 @@ const ManageUtilityMeters = () => {
                   <FormItem>
                     <FormLabel>Meter Type</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Electricity, Water" {...field} />
+                      <Input
+                        placeholder="e.g., Electricity, Water"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -348,7 +379,10 @@ const ManageUtilityMeters = () => {
                   <FormItem>
                     <FormLabel>NWSC Account</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter NWSC account number" {...field} />
+                      <Input
+                        placeholder="Enter NWSC account number"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -362,7 +396,10 @@ const ManageUtilityMeters = () => {
                   <FormItem>
                     <FormLabel>Location of NWSC Meter</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter location of NWSC meter" {...field} />
+                      <Input
+                        placeholder="Enter location of NWSC meter"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -375,7 +412,10 @@ const ManageUtilityMeters = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Landlord</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value.toString()}>
+                    <Select
+                      onValueChange={(value) => field.onChange(Number(value))}
+                      value={field.value.toString()}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a landlord" />
@@ -383,7 +423,10 @@ const ManageUtilityMeters = () => {
                       </FormControl>
                       <SelectContent>
                         {uniqueLandlords.map((landlord) => (
-                          <SelectItem key={landlord.id} value={landlord.id.toString()}>
+                          <SelectItem
+                            key={landlord.id}
+                            value={landlord.id.toString()}
+                          >
                             {landlord.fullName}
                           </SelectItem>
                         ))}
@@ -412,4 +455,4 @@ const ManageUtilityMeters = () => {
   );
 };
 
-export default ManageUtilityMeters; 
+export default ManageUtilityMeters;
