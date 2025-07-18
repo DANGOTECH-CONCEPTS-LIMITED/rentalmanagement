@@ -52,6 +52,7 @@ import Modal from "@/components/common/Model";
 import { toast } from "@/components/ui/use-toast";
 import { LandlordFormData } from "./RegisterLandlord";
 import ConfirmDeleteModal from "@/components/common/DeleteModal";
+import { useNavigate } from "react-router-dom";
 
 interface User {
   id: string;
@@ -130,6 +131,7 @@ const UserDetails = ({
   onClose,
 }: UserDetailsProps) => {
   const formatCurrency = useCurrencyFormatter();
+  const navigate = useNavigate();
 
   const assignedProperty =
     user.role === "Tenant" && user.propertyId
@@ -373,7 +375,17 @@ const UserDetails = ({
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {["Landlord", "Utililty Payment"].includes(user.role) && (
+          <Button
+            variant="default"
+            onClick={() =>
+              navigate(`/admin-dashboard/utility-payments/${user.id}`)
+            }
+          >
+            View Utility Payments
+          </Button>
+        )}
         <Button variant="outline" onClick={onClose}>
           Close
         </Button>
