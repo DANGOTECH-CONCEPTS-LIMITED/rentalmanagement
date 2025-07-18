@@ -24,6 +24,8 @@ namespace Domain.Entities.PropertyMgt
         public bool IsTokenGenerated { get; set; } = false;
         public string? Token { get; set; }
         public string? Units { get; set; }
-        
+        public string? Vendor { get; set; }
+        public DateTime VendorPaymentDate { get; set; } = DateTime.Now;
+        public string? UtilityAccountNumber { get; set; }
     }
 }

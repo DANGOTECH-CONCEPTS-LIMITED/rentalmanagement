@@ -316,6 +316,7 @@ namespace API.Controllers.Payments
         }
 
         [HttpGet("/GetUtilityPaymentsByLandlordIdAsync/{landlordid}")]
+        [Authorize]
         public async Task<IActionResult> GetUtilityPaymentsByLandlordIdAsync(int landlordid)
         {
             try
@@ -328,5 +329,23 @@ namespace API.Controllers.Payments
                 return BadRequest($"Error retrieving utility payments: {ex.Message}");
             }
         }
+
+        [HttpPut("/UpdateUtilityPaymentWithVendorId")]
+        public async Task<IActionResult> UpdateUtilityPaymentWithVendorId(
+        [FromQuery] int tranid,
+        [FromQuery] string vendorref,
+        [FromQuery] string vendor,
+        [FromQuery] DateTime utilitypaymentdate)
+            {
+                try
+                {
+                    await _paymentService.UpdateUtilityPaymentWithVendorId(tranid, vendorref, vendor, utilitypaymentdate);
+                    return Ok(new { message = "Utility payment updated successfully." });
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new { error = $"Error updating utility payment: {ex.Message}" });
+                }
+            }
     }
 }

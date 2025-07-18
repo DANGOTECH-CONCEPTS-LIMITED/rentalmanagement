@@ -7,11 +7,11 @@ namespace API.Controllers.Flexipay
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PaymentsController : ControllerBase
+    public class FlexipayPaymentsController : ControllerBase
     {
         private readonly IFlexiPayService _flexiPayService;
 
-        public PaymentsController(IFlexiPayService flexiPayService)
+        public FlexipayPaymentsController(IFlexiPayService flexiPayService)
         {
             _flexiPayService = flexiPayService;
         }

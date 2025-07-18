@@ -624,5 +624,23 @@ namespace Infrastructure.Services.PaymentServices
             return payments;
         }
 
+        public async Task UpdateUtilityPaymentWithVendorId(int tranid, string vendorref, string vendor, DateTime utilitypaymentdate)
+        {
+            //check if tranid is valid
+            var utilityPayment = await _context.UtilityPayments
+                .FirstOrDefaultAsync(tp => tp.Id == tranid);
+
+            if (utilityPayment == null)
+                throw new ArgumentException("Invalid transaction ID", nameof(tranid));
+
+            //update the payment with vendor reference and vendor name
+            utilityPayment.VendorTranId = vendorref;
+            utilityPayment.Vendor = vendor;
+            utilityPayment.VendorPaymentDate = utilitypaymentdate;
+
+            _context.UtilityPayments.Update(utilityPayment);
+            await _context.SaveChangesAsync();
+
+        }
     }
 }
