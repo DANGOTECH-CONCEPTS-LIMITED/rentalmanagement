@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Table,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Pencil } from "lucide-react";
+import { ChevronsLeft, ChevronsRight } from "lucide-react";
 
 const UtilityPayments = () => {
   const { landlordId } = useParams<{ landlordId: string }>();
@@ -29,10 +30,29 @@ const UtilityPayments = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editPayment, setEditPayment] = useState<any>(null);
   const [editVendor, setEditVendor] = useState("");
-  const [editVendorTranId, setEditVendorTranId] = useState("");
+  const [editVendorRef, setEditVendorRef] = useState("");
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editVendorPaymentDate, setEditVendorPaymentDate] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+  const [search, setSearch] = useState("");
+  const filteredPayments = useMemo(() => {
+    if (!search.trim()) return payments;
+    const s = search.trim().toLowerCase();
+    return payments.filter(
+      (p) =>
+        (p.meterNumber && p.meterNumber.toLowerCase().includes(s)) ||
+        (p.phoneNumber && p.phoneNumber.toLowerCase().includes(s)) ||
+        (p.status && p.status.toLowerCase().includes(s))
+    );
+  }, [payments, search]);
+  const totalPages = Math.ceil(filteredPayments.length / rowsPerPage);
+  const paginatedPayments = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredPayments.slice(start, start + rowsPerPage);
+  }, [filteredPayments, currentPage]);
 
   console.log("Payments", payments);
 
@@ -57,7 +77,7 @@ const UtilityPayments = () => {
   const handleEditClick = (payment: any) => {
     setEditPayment(payment);
     setEditVendor(payment.vendor || "");
-    setEditVendorTranId(payment.vendorTranId || "");
+    setEditVendorRef(payment.vendorref || "");
     setEditVendorPaymentDate(
       payment.vendorPaymentDate &&
         payment.vendorPaymentDate !== "0001-01-01T00:00:00"
@@ -73,8 +93,8 @@ const UtilityPayments = () => {
     if (!editPayment) return;
 
     // Trim and validate fields
-    if (!editVendor.trim() || !editVendorTranId.trim()) {
-      setEditError("Vendor and Vendor Tran ID are required.");
+    if (!editVendor.trim() || !editVendorRef.trim()) {
+      setEditError("Vendor and Vendor Ref are required.");
       return;
     }
 
@@ -87,7 +107,7 @@ const UtilityPayments = () => {
       const params = new URLSearchParams({
         tranid: String(editPayment.id),
         vendor: editVendor.trim(),
-        vendorTranId: editVendorTranId.trim(),
+        vendorRef: editVendorRef.trim(),
         utilitypaymentdate: editVendorPaymentDate || "",
       });
       const url = `${apiUrl}/UpdateUtilityPaymentWithVendorId?${params.toString()}`;
@@ -108,7 +128,7 @@ const UtilityPayments = () => {
       setEditDialogOpen(false);
       setEditPayment(null);
       setEditVendor("");
-      setEditVendorTranId("");
+      setEditVendorRef("");
       setEditVendorPaymentDate("");
       // Refresh payments
       setLoading(true);
@@ -132,9 +152,21 @@ const UtilityPayments = () => {
       <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">
         Back
       </Button>
-      <h1 className="text-2xl font-bold mb-4">
-        Utility Payments for Landlord ID: {landlordId}
-      </h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">
+          Utility Payments for Landlord ID: {landlordId}
+        </h1>
+        <Input
+          type="text"
+          placeholder="Search by meter, phone, or status..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-64"
+        />
+      </div>
       {loading ? (
         <div className="text-center py-8">Loading payments...</div>
       ) : error ? (
@@ -162,7 +194,7 @@ const UtilityPayments = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payments.map((payment) => (
+              {paginatedPayments.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell>{payment.status || "-"}</TableCell>
                   <TableCell>{payment.amount || "-"}</TableCell>
@@ -194,6 +226,33 @@ const UtilityPayments = () => {
               ))}
             </TableBody>
           </Table>
+          {totalPages > 1 && (
+            <div className="flex justify-end mt-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -212,11 +271,11 @@ const UtilityPayments = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                Vendor Tran ID
+                Vendor Ref
               </label>
               <Input
-                value={editVendorTranId}
-                onChange={(e) => setEditVendorTranId(e.target.value)}
+                value={editVendorRef}
+                onChange={(e) => setEditVendorRef(e.target.value)}
                 required
               />
             </div>
