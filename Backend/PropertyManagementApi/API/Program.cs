@@ -75,13 +75,25 @@ builder.Services.AddControllers()
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowDangopayFrontend", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy
+            .WithOrigins("https://dangopay.dangotechconcepts.com")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Optional, only if using cookies or auth headers
     });
 });
+
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAll", policy =>
+//    {
+//        policy.AllowAnyOrigin()
+//              .AllowAnyMethod()
+//              .AllowAnyHeader();
+//    });
+//});
 
 //// --- Option 1: Using Auth0 as the external identity provider ---
 //// Configure JWT Authentication using Auth0
@@ -173,7 +185,8 @@ var app = builder.Build();
 app.UseStaticFiles(); // For accessing static files if any
 
 // Configure CORS
-app.UseCors("AllowAll");
+//app.UseCors("AllowAll");
+app.UseCors("AllowDangopayFrontend");
 
 // Apply pending migrations (note: remove EnsureCreated/EnsureDeleted for production)
 using (var scope = app.Services.CreateScope())
