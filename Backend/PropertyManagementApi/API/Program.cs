@@ -186,7 +186,7 @@ app.UseStaticFiles(); // For accessing static files if any
 
 // Configure CORS
 //app.UseCors("AllowAll");
-app.UseCors("AllowDangopayFrontend");
+
 
 // Apply pending migrations (note: remove EnsureCreated/EnsureDeleted for production)
 using (var scope = app.Services.CreateScope())
@@ -206,7 +206,7 @@ app.UseSwaggerUI(c =>
 
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseCors("AllowDangopayFrontend");
 app.MapControllers();
 
 app.Run();
