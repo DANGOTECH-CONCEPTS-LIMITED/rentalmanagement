@@ -1,4 +1,4 @@
-using Application.Interfaces.Collecto;
+﻿using Application.Interfaces.Collecto;
 using Application.Interfaces.Complaints;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
@@ -52,7 +52,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 
 builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>()
     // this ensures every outgoing request goes through your LoggingHandler
-    .AddHttpMessageHandler<LoggingHandler>(); 
+    .AddHttpMessageHandler<LoggingHandler>();
 
 builder.Services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>().AddHttpMessageHandler<LoggingHandler>();
 
@@ -60,7 +60,7 @@ builder.Services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>().AddHttpMe
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<EmailService>();
 
-//add hosted services
+// Add hosted services
 builder.Services.AddHostedService<PaymentProcessor>();
 builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
 builder.Services.AddHostedService<CreditWalletService>();
@@ -96,7 +96,6 @@ builder.Services.AddCors(options =>
 //});
 
 //// --- Option 1: Using Auth0 as the external identity provider ---
-//// Configure JWT Authentication using Auth0
 //builder.Services.AddAuthentication(options =>
 //{
 //    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -104,13 +103,10 @@ builder.Services.AddCors(options =>
 //})
 //.AddJwtBearer(options =>
 //{
-//    // These values should match your Auth0 settings.
 //    options.Authority = "https://dev-7z1v7v7z.us.auth0.com/";
-//    // Set this to your API Identifier configured in Auth0 (e.g., "https://your-api-identifier")
 //    options.Audience = "https://your-api-identifier";
 //});
 //// --- End Option 1 ---
-
 
 // --- Option 2: Using your own symmetric key ---
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -138,11 +134,9 @@ builder.Services.AddAuthentication(options =>
 });
 // --- End Option 2 ---
 
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    // Add JWT support to Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -179,34 +173,32 @@ builder.Services.AddSwaggerGen(options =>
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-
 var app = builder.Build();
 
 app.UseStaticFiles(); // For accessing static files if any
 
-// Configure CORS
-//app.UseCors("AllowAll");
+// ✅ Apply CORS FIRST
+app.UseCors("AllowDangopayFrontend");
 
+// ✅ Then authentication and authorization
+app.UseAuthentication();
+app.UseAuthorization();
 
-// Apply pending migrations (note: remove EnsureCreated/EnsureDeleted for production)
+// Apply pending migrations
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
 }
 
-// Always show Swagger (adjust RoutePrefix if needed)
+// Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    // If hosting in a subdirectory, adjust the SwaggerEndpoint path accordingly.
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Property Management API v1");
     c.RoutePrefix = string.Empty;
 });
 
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseCors("AllowDangopayFrontend");
 app.MapControllers();
 
 app.Run();
