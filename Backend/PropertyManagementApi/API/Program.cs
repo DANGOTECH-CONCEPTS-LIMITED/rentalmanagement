@@ -78,7 +78,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowDangopayFrontend", policy =>
     {
         policy
-            .WithOrigins("https://dangopay.dangotechconcepts.com")
+         .SetIsOriginAllowed(_ => true) // ⚠️ allow ANY origin
+                                        //.WithOrigins("https://dangopay.dangotechconcepts.com")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials(); // Optional, only if using cookies or auth headers
