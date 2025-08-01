@@ -69,7 +69,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "if (Test-Path 'C:\inetpub\wwwroot\PropertyManagementApi') { Get-ChildItem 'C:\inetpub\wwwroot\PropertyManagementApi\*' -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } else { New-Item -ItemType Directory -Path 'C:\inetpub\wwwroot\PropertyManagementApi' -Force }; exit 0"
+            powershell -Command "if (Test-Path 'C:\inetpub\wwwroot\PropertyMgtApiCloundflare') { Get-ChildItem 'C:\inetpub\wwwroot\PropertyMgtApiCloundflare\*' -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } else { New-Item -ItemType Directory -Path 'C:\inetpub\wwwroot\PropertyMgtApiCloundflare' -Force }; exit 0"
 
       # 10. Install sshpass
       - name: Install sshpass
@@ -80,7 +80,7 @@ jobs:
       # 11. Copy the zip file
       - name: Copy Zip File to EC2
         run: |
-          sshpass -p "${{ secrets.EC2_PASSWORD }}" scp -o StrictHostKeyChecking=no publish.zip ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:"C:\\inetpub\\wwwroot\\PropertyManagementApi"
+          sshpass -p "${{ secrets.EC2_PASSWORD }}" scp -o StrictHostKeyChecking=no publish.zip ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:"C:\\inetpub\\wwwroot\\PropertyMgtApiCloundflare"
 
       # 12. Unzip directly into target folder
       - name: Unzip on EC2
@@ -91,7 +91,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Expand-Archive -Path 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -DestinationPath 'C:\inetpub\wwwroot\PropertyManagementApi' -Force; exit 0"
+            powershell -Command "Expand-Archive -Path 'C:\inetpub\wwwroot\PropertyMgtApiCloundflare\publish.zip' -DestinationPath 'C:\inetpub\wwwroot\PropertyMgtApiCloundflare' -Force; exit 0"
 
       # 13. Remove zip file
       - name: Remove Zip File
@@ -102,7 +102,7 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Remove-Item 'C:\inetpub\wwwroot\PropertyManagementApi\publish.zip' -Force; exit 0"
+            powershell -Command "Remove-Item 'C:\inetpub\wwwroot\PropertyMgtApiCloundflare\publish.zip' -Force; exit 0"
 
       # 14. Start IIS Service
       - name: Start IIS Service
@@ -124,4 +124,4 @@ jobs:
           password: ${{ secrets.EC2_PASSWORD }}
           port: 22
           script: |
-            powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'PropertyManagementApi'; exit 0"
+            powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'PropertyMgtApiCloundflare'; exit 0"
