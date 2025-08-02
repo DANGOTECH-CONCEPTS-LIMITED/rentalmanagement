@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,14 @@ import {
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Eye } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Plus,
+  Eye,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -97,6 +104,11 @@ const ManageUtilityMeters = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Search and pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+  const [search, setSearch] = useState("");
+
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const form = useForm<z.infer<typeof meterSchema>>({
@@ -146,6 +158,27 @@ const ManageUtilityMeters = () => {
     }
     return acc;
   }, [] as { id: number; fullName: string }[]);
+
+  // Filtered and paginated meters
+  const filteredMeters = useMemo(() => {
+    if (!search.trim()) return meters;
+    const s = search.trim().toLowerCase();
+    return meters.filter(
+      (meter) =>
+        (meter.meterType && meter.meterType.toLowerCase().includes(s)) ||
+        (meter.meterNumber && meter.meterNumber.toLowerCase().includes(s)) ||
+        (meter.nwscAccount && meter.nwscAccount.toLowerCase().includes(s)) ||
+        (meter.locationOfNwscMeter &&
+          meter.locationOfNwscMeter.toLowerCase().includes(s)) ||
+        (meter.user.fullName && meter.user.fullName.toLowerCase().includes(s))
+    );
+  }, [meters, search]);
+
+  const totalPages = Math.ceil(filteredMeters.length / rowsPerPage);
+  const paginatedMeters = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredMeters.slice(start, start + rowsPerPage);
+  }, [filteredMeters, currentPage]);
 
   const handleEdit = (meter: UtilityMeter) => {
     setEditingMeter(meter);
@@ -237,6 +270,16 @@ const ManageUtilityMeters = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Utility Meters</h1>
+        <Input
+          type="text"
+          placeholder="Search by meter type, number, account, location, or landlord..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-64"
+        />
       </div>
 
       <div className="bg-white rounded-lg shadow">
@@ -254,7 +297,7 @@ const ManageUtilityMeters = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {meters.map((meter) => (
+            {paginatedMeters.map((meter) => (
               <TableRow key={meter.id}>
                 <TableCell>{meter.id}</TableCell>
                 <TableCell>{meter.meterType}</TableCell>
@@ -325,6 +368,35 @@ const ManageUtilityMeters = () => {
             ))}
           </TableBody>
         </Table>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-end mt-4 p-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Dialog */}
