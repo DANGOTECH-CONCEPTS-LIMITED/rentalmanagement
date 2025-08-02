@@ -463,6 +463,7 @@ namespace Infrastructure.Services.UserServices
             existingMeter.MeterType = utilityMeter.MeterType;
             existingMeter.NWSCAccount = utilityMeter.NwscAccount;
             existingMeter.LocationOfNwscMeter = utilityMeter.LocationOfNwscMeter;
+            existingMeter.LandLordId = utilityMeter.LandLordId;
             // Save changes
             _context.UtilityMeters.Update(existingMeter);
             await _context.SaveChangesAsync();
