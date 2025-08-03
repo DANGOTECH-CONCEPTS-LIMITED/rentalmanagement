@@ -97,10 +97,13 @@ const meterSchema = z.object({
 
 const ManageUtilityMeters = () => {
   const [meters, setMeters] = useState<UtilityMeter[]>([]);
+  const [allUsers, setAllUsers] = useState<Landlord[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingMeter, setEditingMeter] = useState<UtilityMeter | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [meterToDelete, setMeterToDelete] = useState<UtilityMeter | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -143,21 +146,38 @@ const ManageUtilityMeters = () => {
     }
   };
 
-  useEffect(() => {
-    fetchMeters();
-  }, []);
-
-  // Get unique landlords from meters data
-  const uniqueLandlords = meters.reduce((acc, meter) => {
-    const existingLandlord = acc.find((l) => l.id === meter.landLordId);
-    if (!existingLandlord) {
-      acc.push({
-        id: meter.landLordId,
-        fullName: meter.user.fullName,
+  const fetchAllUsers = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/GetAllUsers`, {
+        headers: {
+          accept: "*/*",
+        },
+      });
+      setAllUsers(response.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch users",
       });
     }
-    return acc;
-  }, [] as { id: number; fullName: string }[]);
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([fetchMeters(), fetchAllUsers()]);
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  // Use all users instead of just landlords from meters data
+  const availableUsers = allUsers.map((user) => ({
+    id: user.id,
+    fullName: user.fullName,
+  }));
 
   // Filtered and paginated meters
   const filteredMeters = useMemo(() => {
@@ -227,10 +247,10 @@ const ManageUtilityMeters = () => {
   };
 
   const handleDelete = async () => {
-    if (!editingMeter) return;
+    if (!meterToDelete) return;
     setIsDeleting(true);
     try {
-      await axios.delete(`${apiUrl}/DeleteUtilityMeter/${editingMeter.id}`, {
+      await axios.delete(`${apiUrl}/DeleteUtilityMeter/${meterToDelete.id}`, {
         headers: {
           accept: "*/*",
         },
@@ -249,8 +269,8 @@ const ManageUtilityMeters = () => {
       });
     } finally {
       setIsDeleting(false);
-      setEditingMeter(null);
-      form.reset();
+      setMeterToDelete(null);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -324,9 +344,12 @@ const ManageUtilityMeters = () => {
                       <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog
-                      open={editingMeter?.id === meter.id}
+                      open={deleteDialogOpen && meterToDelete?.id === meter.id}
                       onOpenChange={(open) => {
-                        if (!open) setEditingMeter(null);
+                        if (!open) {
+                          setDeleteDialogOpen(false);
+                          setMeterToDelete(null);
+                        }
                       }}
                     >
                       <AlertDialogTrigger asChild>
@@ -334,7 +357,8 @@ const ManageUtilityMeters = () => {
                           variant="destructive"
                           size="sm"
                           onClick={() => {
-                            setEditingMeter(meter);
+                            setMeterToDelete(meter);
+                            setDeleteDialogOpen(true);
                           }}
                           disabled={isDeleting}
                         >
@@ -483,23 +507,20 @@ const ManageUtilityMeters = () => {
                 name="landLordId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Landlord</FormLabel>
+                    <FormLabel>User</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
                       value={field.value.toString()}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a landlord" />
+                          <SelectValue placeholder="Select a user" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {uniqueLandlords.map((landlord) => (
-                          <SelectItem
-                            key={landlord.id}
-                            value={landlord.id.toString()}
-                          >
-                            {landlord.fullName}
+                        {availableUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id.toString()}>
+                            {user.fullName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -513,7 +534,11 @@ const ManageUtilityMeters = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsEditDialogOpen(false)}
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingMeter(null);
+                    form.reset();
+                  }}
                 >
                   Cancel
                 </Button>
