@@ -129,7 +129,7 @@ const AdminDashboard = () => {
       const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
       setProperties(data);
     } catch (error) {
-      console.error("Error fetching landlords:", error);
+      console.error("Error fetching properties:", error);
       toast({
         title: "Error",
         description:
@@ -159,13 +159,13 @@ const AdminDashboard = () => {
 
   const quickActions = [
     {
-      title: "Register Dealer",
-      description: "Add a new dealer to the system",
+      title: "Register Landlord",
+      description: "Add a new landlord to the system",
       path: "/admin-dashboard/register-landlord",
     },
     {
-      title: "Register Car",
-      description: "Add a new car to listing",
+      title: "Register Property",
+      description: "Add a new property to listing",
       path: "/admin-dashboard/register-property",
     },
     {
@@ -315,14 +315,14 @@ const AdminDashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total Cars"
+          title="Total Properties"
           value={properties.length}
           icon={<Home />}
           change={{ value: 12, type: "increase" }}
         />
 
         <StatCard
-          title="Total Dealers"
+          title="Total Landlords"
           value={landlords.length}
           icon={<Users />}
           change={{ value: 8, type: "increase" }}
