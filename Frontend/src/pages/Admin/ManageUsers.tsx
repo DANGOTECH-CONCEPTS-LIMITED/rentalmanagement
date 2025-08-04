@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1036,41 +1037,61 @@ const ManageUsers = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Manage Users</h1>
-        <p className="text-muted-foreground">View and manage system users</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Manage Users</h1>
+        <p className="text-white/70">View and manage system users</p>
       </div>
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-white/60" />
           <Input
             placeholder="Search users by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-white/10 border-white/20 text-white placeholder-white/50"
           />
         </div>
-        <Button onClick={openModal}>Add New User</Button>
+        <Button
+          onClick={openModal}
+          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+        >
+          Add New User
+        </Button>
       </div>
 
-      <Card>
+      <div className="bg-white/10 rounded-2xl border border-white/20 p-6">
         <Tabs defaultValue="all" className="p-4">
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">
+          <TabsList className="mb-4 bg-white/10 border border-white/20">
+            <TabsTrigger
+              value="all"
+              className="text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               All Users ({getFilteredUsers().length})
             </TabsTrigger>
-            <TabsTrigger value="admin">
+            <TabsTrigger
+              value="admin"
+              className="text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               Admins ({getFilteredUsers("Administrator").length})
             </TabsTrigger>
-            <TabsTrigger value="landlord">
+            <TabsTrigger
+              value="landlord"
+              className="text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               Landlords ({getFilteredUsers("Landlord").length})
             </TabsTrigger>
-            <TabsTrigger value="tenant">
+            <TabsTrigger
+              value="tenant"
+              className="text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               Tenants ({getFilteredUsers("Tenant").length})
             </TabsTrigger>
-            <TabsTrigger value="utility">
+            <TabsTrigger
+              value="utility"
+              className="text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               Utility Users ({getFilteredUsers("Utililty Payment").length})
             </TabsTrigger>
           </TabsList>
@@ -1119,16 +1140,16 @@ const ManageUsers = () => {
             />
           </TabsContent>
         </Tabs>
-      </Card>
+      </div>
 
       <Dialog
         open={!!selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-gradient-to-br from-slate-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-xl border border-white/20">
           <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">User Details</DialogTitle>
+            <DialogDescription className="text-white/70">
               Detailed information about the selected user.
             </DialogDescription>
           </DialogHeader>
@@ -1800,31 +1821,33 @@ const UserTable = ({
 
   return (
     <div>
-      <Table>
+      <Table className="bg-white/5 rounded-xl border border-white/20">
         <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="border-white/20 hover:bg-white/5">
+            <TableHead className="text-white/90">Name</TableHead>
+            <TableHead className="text-white/90">Email</TableHead>
+            <TableHead className="text-white/90">Role</TableHead>
+            <TableHead className="text-white/90">Status</TableHead>
+            <TableHead className="text-right text-white/90">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={5}
-                className="text-center py-8 text-muted-foreground"
-              >
+            <TableRow className="border-white/20">
+              <TableCell colSpan={5} className="text-center py-8 text-white/60">
                 No users found
               </TableCell>
             </TableRow>
           ) : (
             users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+              <TableRow
+                key={user.id}
+                className="border-white/20 hover:bg-white/5"
+              >
+                <TableCell className="font-medium text-white">
+                  {user.name}
+                </TableCell>
+                <TableCell className="text-white/80">{user.email}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -1859,6 +1882,7 @@ const UserTable = ({
                       variant="outline"
                       size="icon"
                       onClick={() => onViewDetails(user)}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -1866,6 +1890,7 @@ const UserTable = ({
                       variant="outline"
                       size="icon"
                       onClick={() => onEditUser(user)}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -1876,6 +1901,7 @@ const UserTable = ({
                         setDeletedUser(user);
                         setIsDeleteModalOpen(true);
                       }}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                       // onClick={() => deleteUser(user.id)}
                     >
                       <Trash className="h-4 w-4" />

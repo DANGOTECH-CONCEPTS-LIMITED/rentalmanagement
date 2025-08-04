@@ -57,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         {/* Mobile trigger button */}
         <button
           onClick={() => setIsMobileOpen(true)}
-          className="fixed top-4 left-4 z-30 p-2 rounded-md bg-primary text-white shadow-md"
+          className="fixed top-4 left-4 z-30 p-2 rounded-md bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg backdrop-blur-sm"
         >
           <Menu size={20} />
         </button>
@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         {/* Mobile sidebar overlay */}
         {isMobileOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40"
+            className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
             onClick={() => setIsMobileOpen(false)}
           ></div>
         )}
@@ -75,18 +75,20 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           initial={{ x: "-100%" }}
           animate={{ x: isMobileOpen ? 0 : "-100%" }}
           transition={{ duration: 0.3 }}
-          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar border-r border-sidebar-border overflow-y-auto"
+          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 border-r border-white/20 overflow-y-auto backdrop-blur-xl"
         >
-          <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/20 bg-white/5">
             <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
                 <House className="text-white" size={16} />
               </div>
-              <h1 className="ml-3 font-semibold text-lg">Property Hub</h1>
+              <h1 className="ml-3 font-semibold text-lg text-white">
+                Nyumba Yo
+              </h1>
             </div>
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="p-1 rounded-md hover:bg-sidebar-accent transition-colors"
+              className="p-1 rounded-md hover:bg-white/10 transition-colors text-white"
             >
               <X size={18} />
             </button>
@@ -105,7 +107,12 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
                     to={item.path}
                     end
                     className={({ isActive }) =>
-                      cn("sidebar-link", isActive ? "active" : "")
+                      cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200",
+                        isActive
+                          ? "bg-gradient-to-r from-purple-600/20 to-blue-600/20 text-white border border-white/20"
+                          : ""
+                      )
                     }
                     onClick={() => setIsMobileOpen(false)}
                   >
@@ -118,10 +125,10 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
             </ul>
           </nav>
 
-          <div className="p-4 border-t border-sidebar-border">
+          <div className="p-4 border-t border-white/20">
             <button
               onClick={logout}
-              className="w-full sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200"
             >
               <LogOut size={18} />
               <span>Logout</span>
@@ -139,23 +146,51 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "h-screen fixed top-0 left-0 z-30 shadow-sm overflow-hidden transition-all duration-300 ease-in-out",
+        "h-screen fixed top-0 left-0 z-30 shadow-2xl overflow-hidden transition-all duration-300 ease-in-out backdrop-blur-xl",
         sidebarWidth,
-        "bg-sidebar flex flex-col border-r border-sidebar-border"
+        "bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 flex flex-col border-r border-white/20"
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-2xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.6, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-10 w-40 h-40 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-full blur-2xl"
+          animate={{
+            scale: [1.2, 1, 1.2],
+            opacity: [0.4, 0.7, 0.4],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 flex items-center justify-between h-16 px-4 border-b border-white/20 bg-white/5">
         <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
             <House className="text-white" size={16} />
           </div>
           {(!isCollapsed || isHovering) && (
             <motion.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="ml-3 font-semibold text-lg"
+              className="ml-3 font-semibold text-lg text-white"
             >
               Nyumba Yo
             </motion.h1>
@@ -163,13 +198,13 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </div>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1 rounded-md hover:bg-sidebar-accent transition-colors"
+          className="p-1 rounded-md hover:bg-white/10 transition-colors text-white"
         >
           <Menu size={18} />
         </button>
       </div>
 
-      <nav className="flex-1 pt-5 pb-4 overflow-y-auto">
+      <nav className="relative z-10 flex-1 pt-5 pb-4 overflow-y-auto">
         <ul className="space-y-1 px-3">
           {navItems.map((item, idx) => (
             <motion.li
@@ -183,8 +218,10 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
                 end
                 className={({ isActive }) =>
                   cn(
-                    "sidebar-link",
-                    isActive ? "active" : "",
+                    "flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200",
+                    isActive
+                      ? "bg-gradient-to-r from-purple-600/20 to-blue-600/20 text-white border border-white/20"
+                      : "",
                     isCollapsed && !isHovering ? "justify-center px-2" : ""
                   )
                 }
@@ -202,11 +239,11 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="relative z-10 p-4 border-t border-white/20">
         <button
           onClick={logout}
           className={cn(
-            "w-full sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600",
+            "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200",
             isCollapsed && !isHovering ? "justify-center px-2" : ""
           )}
         >
@@ -366,10 +403,6 @@ function getNavItems(role: number): NavItem[] {
         icon: <MessageSquare size={18} />,
         path: "/tenant-dashboard/send-sms",
       },
-
-
-
-
     ];
   }
 
@@ -385,7 +418,7 @@ function getNavItems(role: number): NavItem[] {
         label: "Utility Meter",
         icon: <FileText size={18} />,
         path: "/utility-dashboard/utility-meter",
-      }
+      },
     ];
   }
 
