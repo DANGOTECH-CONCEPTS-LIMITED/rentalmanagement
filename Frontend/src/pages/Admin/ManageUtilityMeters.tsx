@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,14 @@ import {
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Eye } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Plus,
+  Eye,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -90,12 +97,20 @@ const meterSchema = z.object({
 
 const ManageUtilityMeters = () => {
   const [meters, setMeters] = useState<UtilityMeter[]>([]);
+  const [allUsers, setAllUsers] = useState<Landlord[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingMeter, setEditingMeter] = useState<UtilityMeter | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [meterToDelete, setMeterToDelete] = useState<UtilityMeter | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Search and pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+  const [search, setSearch] = useState("");
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -131,21 +146,59 @@ const ManageUtilityMeters = () => {
     }
   };
 
-  useEffect(() => {
-    fetchMeters();
-  }, []);
-
-  // Get unique landlords from meters data
-  const uniqueLandlords = meters.reduce((acc, meter) => {
-    const existingLandlord = acc.find((l) => l.id === meter.landLordId);
-    if (!existingLandlord) {
-      acc.push({
-        id: meter.landLordId,
-        fullName: meter.user.fullName,
+  const fetchAllUsers = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/GetAllUsers`, {
+        headers: {
+          accept: "*/*",
+        },
+      });
+      setAllUsers(response.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch users",
       });
     }
-    return acc;
-  }, [] as { id: number; fullName: string }[]);
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([fetchMeters(), fetchAllUsers()]);
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  // Use all users instead of just landlords from meters data
+  const availableUsers = allUsers.map((user) => ({
+    id: user.id,
+    fullName: user.fullName,
+  }));
+
+  // Filtered and paginated meters
+  const filteredMeters = useMemo(() => {
+    if (!search.trim()) return meters;
+    const s = search.trim().toLowerCase();
+    return meters.filter(
+      (meter) =>
+        (meter.meterType && meter.meterType.toLowerCase().includes(s)) ||
+        (meter.meterNumber && meter.meterNumber.toLowerCase().includes(s)) ||
+        (meter.nwscAccount && meter.nwscAccount.toLowerCase().includes(s)) ||
+        (meter.locationOfNwscMeter &&
+          meter.locationOfNwscMeter.toLowerCase().includes(s)) ||
+        (meter.user.fullName && meter.user.fullName.toLowerCase().includes(s))
+    );
+  }, [meters, search]);
+
+  const totalPages = Math.ceil(filteredMeters.length / rowsPerPage);
+  const paginatedMeters = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredMeters.slice(start, start + rowsPerPage);
+  }, [filteredMeters, currentPage]);
 
   const handleEdit = (meter: UtilityMeter) => {
     setEditingMeter(meter);
@@ -194,10 +247,10 @@ const ManageUtilityMeters = () => {
   };
 
   const handleDelete = async () => {
-    if (!editingMeter) return;
+    if (!meterToDelete) return;
     setIsDeleting(true);
     try {
-      await axios.delete(`${apiUrl}/DeleteUtilityMeter/${editingMeter.id}`, {
+      await axios.delete(`${apiUrl}/DeleteUtilityMeter/${meterToDelete.id}`, {
         headers: {
           accept: "*/*",
         },
@@ -216,8 +269,8 @@ const ManageUtilityMeters = () => {
       });
     } finally {
       setIsDeleting(false);
-      setEditingMeter(null);
-      form.reset();
+      setMeterToDelete(null);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -237,6 +290,16 @@ const ManageUtilityMeters = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Utility Meters</h1>
+        <Input
+          type="text"
+          placeholder="Search by meter type, number, account, location, or landlord..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-64"
+        />
       </div>
 
       <div className="bg-white rounded-lg shadow">
@@ -254,7 +317,7 @@ const ManageUtilityMeters = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {meters.map((meter) => (
+            {paginatedMeters.map((meter) => (
               <TableRow key={meter.id}>
                 <TableCell>{meter.id}</TableCell>
                 <TableCell>{meter.meterType}</TableCell>
@@ -281,9 +344,12 @@ const ManageUtilityMeters = () => {
                       <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog
-                      open={editingMeter?.id === meter.id}
+                      open={deleteDialogOpen && meterToDelete?.id === meter.id}
                       onOpenChange={(open) => {
-                        if (!open) setEditingMeter(null);
+                        if (!open) {
+                          setDeleteDialogOpen(false);
+                          setMeterToDelete(null);
+                        }
                       }}
                     >
                       <AlertDialogTrigger asChild>
@@ -291,7 +357,8 @@ const ManageUtilityMeters = () => {
                           variant="destructive"
                           size="sm"
                           onClick={() => {
-                            setEditingMeter(meter);
+                            setMeterToDelete(meter);
+                            setDeleteDialogOpen(true);
                           }}
                           disabled={isDeleting}
                         >
@@ -325,6 +392,35 @@ const ManageUtilityMeters = () => {
             ))}
           </TableBody>
         </Table>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-end mt-4 p-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Dialog */}
@@ -411,23 +507,20 @@ const ManageUtilityMeters = () => {
                 name="landLordId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Landlord</FormLabel>
+                    <FormLabel>User</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
                       value={field.value.toString()}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a landlord" />
+                          <SelectValue placeholder="Select a user" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {uniqueLandlords.map((landlord) => (
-                          <SelectItem
-                            key={landlord.id}
-                            value={landlord.id.toString()}
-                          >
-                            {landlord.fullName}
+                        {availableUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id.toString()}>
+                            {user.fullName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -441,7 +534,11 @@ const ManageUtilityMeters = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsEditDialogOpen(false)}
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingMeter(null);
+                    form.reset();
+                  }}
                 >
                   Cancel
                 </Button>
