@@ -18,11 +18,13 @@ namespace Infrastructure.Services.Flexipay
     {
         private readonly TokenProvider _tokenProvider;
         private readonly FlexiPayConfig _config;
+        private readonly FlexipaySignatureService _signatureService;
 
-        public FlexiPayService(TokenProvider tokenProvider, IOptions<FlexiPayConfig> config)
+        public FlexiPayService(TokenProvider tokenProvider, IOptions<FlexiPayConfig> config, FlexipaySignatureService signatureService)
         {
             _tokenProvider = tokenProvider;
             _config = config.Value;
+            _signatureService = signatureService;
         }
 
         public async Task<string> GetBearerTokenAsync()

@@ -181,7 +181,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 Amount = existingTransaction.Amount, // Positive amount to revert the balance
                 Description = "Reversal: " + existingTransaction.Description,
                 TransactionDate = DateTime.UtcNow,
-                Status = "SUCCESSFUL",
+                Status = "REVERSED",
                 TransactionId = Guid.NewGuid().ToString(),
             };
 
