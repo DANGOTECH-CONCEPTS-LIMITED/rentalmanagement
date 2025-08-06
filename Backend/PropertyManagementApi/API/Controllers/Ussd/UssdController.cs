@@ -17,7 +17,8 @@ namespace API.Controllers.Ussd
         }
 
         [HttpPost("/ussd")]
-        public async Task<IActionResult> ProcessUssdRequest([FromBody] UssdDto ussdDto)
+        [Consumes("application/x-www-form-urlencoded")]
+        public async Task<IActionResult> ProcessUssdRequest([FromForm] UssdDto ussdDto)
         {
             if (ussdDto == null || string.IsNullOrEmpty(ussdDto.Text))
             {

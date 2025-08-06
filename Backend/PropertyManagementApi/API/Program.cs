@@ -7,6 +7,7 @@ using Application.Interfaces.Property;
 using Application.Interfaces.Settings;
 using Application.Interfaces.Tenant;
 using Application.Interfaces.UserServices;
+using Application.Interfaces.Ussd;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Infrastructure.Services.BackgroundServices;
@@ -20,6 +21,7 @@ using Infrastructure.Services.Property;
 using Infrastructure.Services.Settings;
 using Infrastructure.Services.Tenant;
 using Infrastructure.Services.UserServices;
+using Infrastructure.Services.Ussd;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +50,7 @@ builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IUssdService, UssdService>();
 //builder.Services.AddScoped<ICollectoApiClient, CollectoService>();
 
 builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>()
