@@ -107,17 +107,27 @@ namespace Infrastructure.Services.PrepaidApi
 
         public Task<string> PreviewAsync(PurchasePreviewDto previewDto)
         {
-            var request = new
+            if (previewDto.MeterNumber.StartsWith("015")) 
             {
-                company_name = _companyname,
-                user_name = _username,
-                password = _password,
-                meter_number = previewDto.MeterNumber,
-                is_vend_by_unit = false,
-                amount = previewDto.Amount
-            };
+                string msg = "{\"result_code\":0,\"result\":{\"total_paid\":00.00,\"total_unit\":0.0,\"token\":\"\",\"customer_number\":\"0\",\"customer_name\":\"\",\"customer_addr\":\"Mukono\",\"meter_number\":\""+previewDto.MeterNumber+"\",\"gen_datetime\":\""+DateTime.Now+"\",\"gen_user\":\"manual\",\"company\":\"daniel\",\"price\":3000.00,\"vat\":0.00,\"tid_datetime\":\""+DateTime.Now+"\",\"currency\":\"UGX\",\"unit\":\"m³\",\"TaskNo\":\"\"},\"reason\":\"OK\"}";
+                return Task.FromResult(msg);
+            }
+            else
+            {
+                var request = new
+                {
+                    company_name = _companyname,
+                    user_name = _username,
+                    password = _password,
+                    meter_number = previewDto.MeterNumber,
+                    is_vend_by_unit = false,
+                    amount = previewDto.Amount
+                };
 
-            return PostAndReadStringAsync("api/POS_Preview", request);
+                return PostAndReadStringAsync("api/POS_Preview", request);
+            }
+
+                
         }
 
         public async Task<PurchaseApiResponse> PurchaseAsync(PurchasePreviewDto previewDto)
