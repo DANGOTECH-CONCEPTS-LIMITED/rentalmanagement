@@ -112,7 +112,32 @@ namespace Infrastructure.Services.PrepaidApi
         {
             if (previewDto.MeterNumber.StartsWith("015")) 
             {
-                string msg = "{\"result_code\":0,\"result\":{\"total_paid\":0.00,\"total_unit\":0.0,\"token\":\"\",\"customer_number\":\"4\",\"customer_name\":mukono\",\"customer_addr\":\"Mukono\",\"meter_number\":\""+previewDto.MeterNumber+"\",\"gen_datetime\":\""+DateTime.Now+"\",\"gen_user\":\"manual\",\"company\":\"daniel\",\"price\":3000.00,\"vat\":0.00,\"tid_datetime\":\""+DateTime.Now+"\",\"currency\":\"UGX\",\"unit\":\"m³\",\"TaskNo\":\"\"},\"reason\":\"OK\"}";
+                var response = new
+                {
+                    result_code = 0,
+                    result = new
+                    {
+                        total_paid = 0.00m,
+                        total_unit = 0.0m,
+                        token = "",
+                        customer_number = "4",
+                        customer_name = "Mukono",   // ✅ fixed the broken string
+                        customer_addr = "Mukono",
+                        meter_number = previewDto.MeterNumber,
+                        gen_datetime = DateTime.Now,
+                        gen_user = "manual",
+                        company = "daniel",
+                        price = 3000.00m,
+                        vat = 0.00m,
+                        tid_datetime = DateTime.Now,
+                        currency = "UGX",
+                        unit = "m³",
+                        TaskNo = ""
+                    },
+                    reason = "OK"
+                };
+
+                string msg = JsonSerializer.Serialize(response);
                 return Task.FromResult(msg);
             }
             else
@@ -129,8 +154,6 @@ namespace Infrastructure.Services.PrepaidApi
 
                 return PostAndReadStringAsync("api/POS_Preview", request);
             }
-
-                
         }
 
         public async Task<PurchaseApiResponse> PurchaseAsync(PurchasePreviewDto previewDto)
