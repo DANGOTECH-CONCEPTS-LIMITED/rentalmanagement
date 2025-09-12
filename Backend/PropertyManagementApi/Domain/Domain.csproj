@@ -9,6 +9,7 @@
   <ItemGroup>
     <Folder Include="Dtos\LandLord\" />
     <Folder Include="Entities\Flexipay\" />
+    <Folder Include="Entities\FredPrepaid\" />
   </ItemGroup>
 
 </Project>
