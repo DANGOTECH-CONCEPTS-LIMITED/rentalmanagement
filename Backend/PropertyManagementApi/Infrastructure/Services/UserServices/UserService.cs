@@ -183,6 +183,8 @@ namespace Infrastructure.Services.UserServices
                 .AppendLine($"Username: {user.Email}")
                 .AppendLine($"One-time password: {tempPassword}")
                 .AppendLine()
+                .AppendLine($"Link to access the system is : https://dangopay.dangotechconcepts.com/")
+                .AppendLine()
                 .AppendLine("Please change your password on first login.")
                 .ToString();
 
