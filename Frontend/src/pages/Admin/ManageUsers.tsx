@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -289,20 +290,24 @@ const UserDetails = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Rent Amount</TableHead>
+                <TableHead className="text-black">Name</TableHead>
+                <TableHead className="text-black">Type</TableHead>
+                <TableHead className="text-black">Address</TableHead>
+                <TableHead className="text-black">Status</TableHead>
+                <TableHead className="text-black">Rent Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {ownedProperties.map((property) => (
                 <TableRow key={property.id}>
-                  <TableCell className="font-medium">{property.name}</TableCell>
-                  <TableCell>{property.type}</TableCell>
-                  <TableCell>{property.address}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-black">
+                    {property.name}
+                  </TableCell>
+                  <TableCell className="text-black">{property.type}</TableCell>
+                  <TableCell className="text-black">
+                    {property.address}
+                  </TableCell>
+                  <TableCell className="text-black">
                     <Badge
                       variant={
                         property.status === "available"
@@ -329,11 +334,11 @@ const UserDetails = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Monthly Rent</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="text-black">Name</TableHead>
+                <TableHead className="text-black">Email</TableHead>
+                <TableHead className="text-black">Property</TableHead>
+                <TableHead className="text-black">Monthly Rent</TableHead>
+                <TableHead className="text-black">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -344,19 +349,21 @@ const UserDetails = ({
 
                 return (
                   <TableRow key={tenant.id}>
-                    <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell>{tenant.email}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium text-black">
+                      {tenant.name}
+                    </TableCell>
+                    <TableCell className="text-black">{tenant.email}</TableCell>
+                    <TableCell className="text-black">
                       {tenantProperty ? tenantProperty.name : "N/A"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-black">
                       {tenant.rentAmount
                         ? formatCurrency(tenant.rentAmount)
                         : tenantProperty
                         ? formatCurrency(tenantProperty.rentAmount)
                         : "N/A"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-black">
                       {tenant.status === "active" ? (
                         <span className="flex items-center gap-1 text-green-600">
                           <CheckCircle className="h-3 w-3" /> Active
@@ -1036,41 +1043,61 @@ const ManageUsers = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen p-6 bg-white text-black">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Manage Users</h1>
-        <p className="text-muted-foreground">View and manage system users</p>
+        <h1 className="text-3xl font-bold text-black mb-2">Manage Users</h1>
+        <p className="text-gray-700">View and manage system users</p>
       </div>
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Search users by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-white/10  text-black placeholder-gray-500"
           />
         </div>
-        <Button onClick={openModal}>Add New User</Button>
+        <Button
+          onClick={openModal}
+          className="bg-gradient-to-r text-white from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+        >
+          Add New User
+        </Button>
       </div>
 
-      <Card>
+      <div className="bg-gray-100 rounded-2xl border border-gray-300 p-6 shadow">
         <Tabs defaultValue="all" className="p-4">
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">
+          <TabsList className="mb-4 bg-white/10 border border-white/20">
+            <TabsTrigger
+              value="all"
+              className="text-black data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-black"
+            >
               All Users ({getFilteredUsers().length})
             </TabsTrigger>
-            <TabsTrigger value="admin">
+            <TabsTrigger
+              value="admin"
+              className="text-black data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-black"
+            >
               Admins ({getFilteredUsers("Administrator").length})
             </TabsTrigger>
-            <TabsTrigger value="landlord">
+            <TabsTrigger
+              value="landlord"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               Landlords ({getFilteredUsers("Landlord").length})
             </TabsTrigger>
-            <TabsTrigger value="tenant">
+            <TabsTrigger
+              value="tenant"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               Tenants ({getFilteredUsers("Tenant").length})
             </TabsTrigger>
-            <TabsTrigger value="utility">
+            <TabsTrigger
+              value="utility"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600/20 data-[state=active]:to-blue-600/20 data-[state=active]:text-white"
+            >
               Utility Users ({getFilteredUsers("Utililty Payment").length})
             </TabsTrigger>
           </TabsList>
@@ -1119,16 +1146,16 @@ const ManageUsers = () => {
             />
           </TabsContent>
         </Tabs>
-      </Card>
+      </div>
 
       <Dialog
         open={!!selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-gradient-to-br from-slate-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-xl border border-white/20">
           <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-black">User Details</DialogTitle>
+            <DialogDescription className="text-gray-700">
               Detailed information about the selected user.
             </DialogDescription>
           </DialogHeader>
@@ -1162,7 +1189,7 @@ const ManageUsers = () => {
               onClick={handleSubmit}
               type="submit"
               form="userForm"
-              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
+              className="px-4 py-2 text-black bg-blue-600 hover:bg-blue-700 rounded-md transition"
             >
               Add user
             </button>
@@ -1307,7 +1334,7 @@ const ManageUsers = () => {
                     <button
                       type="button"
                       onClick={() => removeFile("PassportPhoto")}
-                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-black rounded-full hover:bg-red-600 transition-colors"
                     >
                       <X size={14} />
                     </button>
@@ -1360,7 +1387,7 @@ const ManageUsers = () => {
                     <button
                       type="button"
                       onClick={() => removeFile("IdFront")}
-                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-black rounded-full hover:bg-red-600 transition-colors"
                     >
                       <X size={14} />
                     </button>
@@ -1456,7 +1483,7 @@ const ManageUsers = () => {
             <button
               type="submit"
               form="editUserForm"
-              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
+              className="px-4 py-2 text-black bg-blue-600 hover:bg-blue-700 rounded-md transition"
             >
               Update user
             </button>
@@ -1618,7 +1645,7 @@ const ManageUsers = () => {
                       <button
                         type="button"
                         onClick={() => removeFile("PassportPhoto")}
-                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-black rounded-full hover:bg-red-600 transition-colors"
                       >
                         <X size={14} />
                       </button>
@@ -1671,7 +1698,7 @@ const ManageUsers = () => {
                       <button
                         type="button"
                         onClick={() => removeFile("IdFront")}
-                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-black rounded-full hover:bg-red-600 transition-colors"
                       >
                         <X size={14} />
                       </button>
@@ -1717,7 +1744,7 @@ const ManageUsers = () => {
                       <button
                         type="button"
                         onClick={() => removeFile("IdBack")}
-                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-black rounded-full hover:bg-red-600 transition-colors"
                       >
                         <X size={14} />
                       </button>
@@ -1800,31 +1827,33 @@ const UserTable = ({
 
   return (
     <div>
-      <Table>
+      <Table className="rounded-xl border border-white/20">
         <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="border-white/20 hover:bg-white/5">
+            <TableHead className="text-black">Name</TableHead>
+            <TableHead className="text-black">Email</TableHead>
+            <TableHead className="text-black">Role</TableHead>
+            <TableHead className="text-black">Status</TableHead>
+            <TableHead className="text-right text-black">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={5}
-                className="text-center py-8 text-muted-foreground"
-              >
+            <TableRow className="border-white/20">
+              <TableCell colSpan={5} className="text-center py-8 text-black/60">
                 No users found
               </TableCell>
             </TableRow>
           ) : (
             users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+              <TableRow
+                key={user.id}
+                className="border-white/20 hover:bg-white/5"
+              >
+                <TableCell className="font-medium text-black">
+                  {user.name}
+                </TableCell>
+                <TableCell className="">{user.email}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -1859,6 +1888,7 @@ const UserTable = ({
                       variant="outline"
                       size="icon"
                       onClick={() => onViewDetails(user)}
+                      className="bg-white/10 border-white/20 hover:bg-white/20"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -1866,6 +1896,7 @@ const UserTable = ({
                       variant="outline"
                       size="icon"
                       onClick={() => onEditUser(user)}
+                      className="bg-white/10 border-white/20  hover:bg-white/20"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -1876,6 +1907,7 @@ const UserTable = ({
                         setDeletedUser(user);
                         setIsDeleteModalOpen(true);
                       }}
+                      className="bg-white/10 border-white/20 hover:bg-white/20"
                       // onClick={() => deleteUser(user.id)}
                     >
                       <Trash className="h-4 w-4" />

@@ -152,7 +152,9 @@ const LandlordProperties = () => {
       setError(null); // Clear any previous errors
     } catch (err) {
       console.error("Error fetching properties:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch properties");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch properties"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +181,8 @@ const LandlordProperties = () => {
       console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch landlords",
+        description:
+          error instanceof Error ? error.message : "Failed to fetch landlords",
         variant: "destructive",
       });
     } finally {
@@ -217,7 +220,8 @@ const LandlordProperties = () => {
       console.error("Error deleting property:", err);
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to delete property",
+        description:
+          err instanceof Error ? err.message : "Failed to delete property",
         variant: "destructive",
       });
     }
@@ -401,7 +405,10 @@ const LandlordProperties = () => {
             View and manage all properties registered in the system
           </p>
         </div>
-        <Button onClick={handleNavigate} className="w-full sm:w-auto">
+        <Button
+          onClick={handleNavigate}
+          className="bg-gradient-to-r text-white from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+        >
           Add New Property
         </Button>
       </div>
