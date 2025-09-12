@@ -112,7 +112,7 @@ namespace Infrastructure.Services.PrepaidApi
         {
             if (previewDto.MeterNumber.StartsWith("015")) 
             {
-                string msg = "{\"result_code\":0,\"result\":{\"total_paid\":00.00,\"total_unit\":0.0,\"token\":\"\",\"customer_number\":\"0\",\"customer_name\":\"\",\"customer_addr\":\"Mukono\",\"meter_number\":\""+previewDto.MeterNumber+"\",\"gen_datetime\":\""+DateTime.Now+"\",\"gen_user\":\"manual\",\"company\":\"daniel\",\"price\":3000.00,\"vat\":0.00,\"tid_datetime\":\""+DateTime.Now+"\",\"currency\":\"UGX\",\"unit\":\"m³\",\"TaskNo\":\"\"},\"reason\":\"OK\"}";
+                string msg = "{\"result_code\":0,\"result\":{\"total_paid\":0.00,\"total_unit\":0.0,\"token\":\"\",\"customer_number\":\"4\",\"customer_name\":mukono\",\"customer_addr\":\"Mukono\",\"meter_number\":\""+previewDto.MeterNumber+"\",\"gen_datetime\":\""+DateTime.Now+"\",\"gen_user\":\"manual\",\"company\":\"daniel\",\"price\":3000.00,\"vat\":0.00,\"tid_datetime\":\""+DateTime.Now+"\",\"currency\":\"UGX\",\"unit\":\"m³\",\"TaskNo\":\"\"},\"reason\":\"OK\"}";
                 return Task.FromResult(msg);
             }
             else
