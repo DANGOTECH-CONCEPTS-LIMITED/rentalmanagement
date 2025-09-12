@@ -9,6 +9,6 @@ namespace Application.Interfaces.STSVending
     public interface ISTSProcessing
     {
         public Task<string> ValidateSTSMeter(string meterno);
-        
+        public Task<string> GetVendingToken(string meterno, int amount);
     }
 }

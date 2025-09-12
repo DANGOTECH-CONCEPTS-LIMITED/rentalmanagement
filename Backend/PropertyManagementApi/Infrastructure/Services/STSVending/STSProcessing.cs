@@ -35,5 +35,13 @@ namespace Infrastructure.Services.STSVending
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
+
+        public async Task<string> GetVendingToken(string meterno, int amount) 
+        {
+            string endpoint = $"{_baseurl}GetVendingToken?UserId={_userid}&Password={_password}&MeterType=2&MeterCode={meterno}&AmountOrQuantity={amount}&VendingType=0";
+            var response = await _httpClient.GetAsync(endpoint);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
+        }
     }
 }

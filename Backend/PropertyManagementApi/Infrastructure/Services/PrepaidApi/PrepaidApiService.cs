@@ -1,13 +1,16 @@
 ﻿using Application.Interfaces.PrepaidApi;
 using Application.Interfaces.STSVending;
 using Domain.Dtos.PrepaidApi;
+using Domain.Dtos.StsVending;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using System;
+using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Infrastructure.Services.PrepaidApi
@@ -132,24 +135,45 @@ namespace Infrastructure.Services.PrepaidApi
 
         public async Task<PurchaseApiResponse> PurchaseAsync(PurchasePreviewDto previewDto)
         {
-            var request = new
+            if (previewDto.MeterNumber.StartsWith("015"))
             {
-                company_name = _companyname,
-                user_name = _username,
-                password = _password,
-                password_vend = _password_vend,
-                meter_number = previewDto.MeterNumber,
-                is_vend_by_unit = false,
-                amount = previewDto.Amount
-            };
+                var resp = await _stsProcessing.GetVendingToken(previewDto.MeterNumber, int.Parse(previewDto.Amount.ToString()));
+                StsVendResponse? sts;
+                try
+                {
+                    sts = JsonSerializer.Deserialize<StsVendResponse>(
+                        resp,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
+                catch
+                {
+                    return BuildPurchaseError("Invalid STS response");
+                }
 
-            var response = await _httpClient.PostAsJsonAsync("api/POS_Purchase", request);
-            response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync();
-            var resp = await response.Content.ReadFromJsonAsync<PurchaseApiResponse>()
-                   ?? throw new InvalidOperationException("Failed to deserialize purchase result");
+                if (sts == null) return BuildPurchaseError("Empty STS response");
+                return MapStsVendToPurchase(previewDto, sts);
+            }
+            else 
+            {
+                var request = new
+                {
+                    company_name = _companyname,
+                    user_name = _username,
+                    password = _password,
+                    password_vend = _password_vend,
+                    meter_number = previewDto.MeterNumber,
+                    is_vend_by_unit = false,
+                    amount = previewDto.Amount
+                };
 
-            return resp;
+                var response = await _httpClient.PostAsJsonAsync("api/POS_Purchase", request);
+                response.EnsureSuccessStatusCode();
+                string json = await response.Content.ReadAsStringAsync();
+                var resp = await response.Content.ReadFromJsonAsync<PurchaseApiResponse>()
+                       ?? throw new InvalidOperationException("Failed to deserialize purchase result");
+
+                return resp;
+            } 
         }
 
         private static string NormalizeStsToPosJson(string stsJson)
@@ -206,6 +230,60 @@ namespace Infrastructure.Services.PrepaidApi
                 result = new List<PosCustomer>() // empty list on error
             };
             return JsonSerializer.Serialize(err, new JsonSerializerOptions { PropertyNamingPolicy = null });
+        }
+
+        // Helper class to build responses
+
+        // --- Helpers ---
+        private static decimal ParsePriceFromTariff(string? tariff)
+        {
+            if (string.IsNullOrWhiteSpace(tariff)) return 0m;
+
+            // Grab the first number (handles 3000, 3000.000, 3,000.00, etc.)
+            var m = Regex.Match(tariff, @"-?\d{1,3}(?:[,\s]?\d{3})*(?:[.,]\d+)?|-?\d+(?:[.,]\d+)?");
+            var raw = m.Success ? m.Value.Replace(",", "").Trim() : "0";
+
+            return decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var price)
+                ? price
+                : 0m;
+        }
+
+        private PurchaseApiResponse BuildPurchaseError(string msg, int code = 1) => new()
+        {
+            ResultCode = code,
+            Reason = msg,
+            Result = null!
+        };
+
+        private PurchaseApiResponse MapStsVendToPurchase(PurchasePreviewDto dto, StsVendResponse sts)
+        {
+            var ok = sts.Code == 200;
+            var now = DateTime.Now.ToString("s"); // ISO-like "yyyy-MM-ddTHH:mm:ss"
+
+            return new PurchaseApiResponse
+            {
+                ResultCode = ok ? 0 : sts.Code,
+                Reason = string.IsNullOrWhiteSpace(sts.Message) ? (ok ? "OK" : "Unknown") : sts.Message!,
+                Result = ok && sts.Data != null ? new PurchaseResultData
+                {
+                    TotalPaid = sts.Data.VendingAmount,
+                    TotalUnit = sts.Data.VendingQuantity,
+                    Token = sts.Data.Token ?? string.Empty,
+                    CustomerNumber = "0",
+                    CustomerName = string.Empty,
+                    CustomerAddress = string.Empty,
+                    MeterNumber = sts.Data.MeterCode ?? dto.MeterNumber,
+                    GeneratedAt = now,
+                    GeneratedBy = _username,          // or "manual" if you prefer
+                    Company = _companyname,
+                    Price = ParsePriceFromTariff(sts.Data.Tarrif),
+                    Vat = 0m,                 // set if you need VAT here
+                    TidDateTime = now,
+                    Currency = "UGX",              // adjust to your flow
+                    Unit = "m³",               // "kWh" or what your UI expects
+                    TaskNo = string.Empty
+                } : null!
+            };
         }
     }
 }
