@@ -24,9 +24,10 @@ namespace Infrastructure.Services.Ussd
             _context = context;
         }
 
-        public Task DeleteSessionAsync(UssdSession s)
+        public async Task DeleteSessionAsync(UssdSession s)
         {
-            throw new NotImplementedException();
+            _context.UssdSessions.Remove(s);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<string> HandleAsync(string sessionId, string serviceCode, string phone, string text, string menuCode = "waterpay", string currency = "UGX")
@@ -35,7 +36,7 @@ namespace Infrastructure.Services.Ussd
             var nodes = await _context.UssdNodes.Where(n => n.MenuId == menu.Id)
                                        .Include(n => n.Options)
                                        .ToDictionaryAsync(n => n.Id);
-
+            var justNavigated = false;
             // load or create session
             var sess = await _context.UssdSessions.FirstOrDefaultAsync(s => s.SessionId == sessionId);
             if (sess == null)
@@ -62,38 +63,44 @@ namespace Infrastructure.Services.Ussd
             var node = nodes[sess.CurrentNodeId];
 
             // For Menu nodes, the last input selects an option *except* on first load (no input).
+
+            // --- MENU NODES ---
             if (node.Type == NodeType.Menu)
             {
+                // first dial on root menu: show it
                 if (sess.CurrentNodeId == menu.RootNodeId && string.IsNullOrWhiteSpace(lastInput))
                     return Con(RenderPrompt(node.Prompt, data, currency));
 
                 if (!string.IsNullOrWhiteSpace(lastInput))
                 {
                     var opt = node.Options.FirstOrDefault(o => o.Value == lastInput);
-                    if (opt == null) return Con(RenderPrompt(node.Prompt, data, currency) + "\n\nInvalid choice.");
+                    if (opt == null)
+                        return Con(RenderPrompt(node.Prompt, data, currency) + "\n\nInvalid choice.");
+
                     sess.CurrentNodeId = opt.NextNodeId;
+                    justNavigated = true;                    // <— we moved because of a menu choice
                     await TouchAsync(sess, data);
                     node = nodes[sess.CurrentNodeId];
                 }
             }
 
+            // --- INPUT NODES ---
             if (node.Type == NodeType.Input)
             {
-                // If this is the first time we’re displaying this Input node, show prompt
-                if (string.IsNullOrWhiteSpace(lastInput) || nodes.Values.Any(n => n.Options.Any(o => o.NextNodeId == node.Id)))
+                // If we just arrived from a Menu, show the prompt and wait for the next hit
+                if (justNavigated || string.IsNullOrWhiteSpace(lastInput))
                     return Con(RenderPrompt(node.Prompt, data, currency));
 
-                // Validate input
+                // Validate and capture the user's entry
                 if (!string.IsNullOrEmpty(node.ValidationRegex) && !Regex.IsMatch(lastInput, node.ValidationRegex))
                     return Con("Invalid input.\n" + RenderPrompt(node.Prompt, data, currency));
 
                 if (!string.IsNullOrWhiteSpace(node.DataKey))
                     data[node.DataKey] = lastInput;
 
-                // advance
+                // advance to the next node
                 sess.CurrentNodeId = node.NextNodeId ?? sess.CurrentNodeId;
                 await TouchAsync(sess, data);
-
                 node = nodes[sess.CurrentNodeId];
             }
 
@@ -119,7 +126,7 @@ namespace Infrastructure.Services.Ussd
                         var checkoutOk = true;//await _payments.MobileCheckoutAsync(phone, amount, currency, new { meter, customer = data.GetValueOrDefault("customerName", ""), sessionId });
                         await DeleteSessionAsync(sess);
                         return checkoutOk
-                            ? End("Checkout initiated. Approve the prompt on your phone. Thank you.")
+                            ? End("Payment Prompt Initiated. Please approve on your phone. Thank you.")
                             : End("We couldn’t start the payment right now. Please try again later.");
 
                     case "Cancel":
