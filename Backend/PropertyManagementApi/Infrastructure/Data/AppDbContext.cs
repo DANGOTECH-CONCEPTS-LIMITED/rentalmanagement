@@ -1,4 +1,5 @@
 ﻿using Domain.Entities.PropertyMgt;
+using Domain.Entities.USSD;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -25,9 +26,109 @@ namespace Infrastructure.Data
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
 
+        #region USSD
+        public DbSet<UssdMenu> UssdMenus { get; set; }
+        public DbSet<UssdNode> UssdNodes { get; set; }
+        public DbSet<UssdOption> UssdOptions { get; set; }
+        public DbSet<UssdSession> UssdSessions { get; set; }
+
+        #endregion
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            #region USSD
+            //USSD Setup
+
+            // Ids for reference
+            var menuId = 1;
+            var rootId = 10;
+            var meterInputId = 20;
+            var lookupId = 25;
+            var amountInputId = 30;
+            var confirmId = 40;
+            var checkoutId = 50;
+            var exitId = 90;
+
+            modelBuilder.Entity<UssdMenu>().HasData(new UssdMenu
+            {
+                Id = menuId,
+                Code = "waterpay",
+                Title = "Welcome to WaterPay",
+                RootNodeId = rootId
+            });
+
+            modelBuilder.Entity<UssdNode>().HasData(
+            new UssdNode
+            {
+                Id = rootId,
+                MenuId = menuId,
+                Type = NodeType.Menu,
+                Prompt = "Welcome to WaterPay\n1. Pay water bill\n0. Exit"
+            },
+            new UssdNode
+            {
+                Id = meterInputId,
+                MenuId = menuId,
+                Type = NodeType.Input,
+                Prompt = "Enter Meter Number:",
+                ValidationRegex = @"^\d{6,16}$",
+                DataKey = "meter",
+                NextNodeId = lookupId
+            },
+            new UssdNode
+            {
+                Id = lookupId,
+                MenuId = menuId,
+                Type = NodeType.Action,
+                Prompt = "Looking up meter...",
+                ActionKey = "LookupCustomer",
+                NextNodeId = amountInputId
+            },
+            new UssdNode
+            {
+                Id = amountInputId,
+                MenuId = menuId,
+                Type = NodeType.Input,
+                Prompt = "{customerName} - Meter {meter}\nEnter amount ({CURRENCY}):",
+                ValidationRegex = @"^\d+(\.\d{1,2})?$",
+                DataKey = "amount",
+                NextNodeId = confirmId
+            },
+            new UssdNode
+            {
+                Id = confirmId,
+                MenuId = menuId,
+                Type = NodeType.Menu,
+                Prompt = "Pay {CURRENCY} {amount} for Meter {meter}?\n1. Confirm\n2. Cancel"
+            },
+            new UssdNode
+            {
+                Id = checkoutId,
+                MenuId = menuId,
+                Type = NodeType.Action,
+                Prompt = "Processing payment...",
+                ActionKey = "Checkout"
+            },
+            new UssdNode
+            {
+                Id = exitId,
+                MenuId = menuId,
+                Type = NodeType.Exit,
+                Prompt = "Goodbye."
+            }
+        );
+
+            modelBuilder.Entity<UssdOption>().HasData(
+            new UssdOption { Id = 1, NodeId = rootId, Label = "1. Pay water bill", Value = "1", NextNodeId = meterInputId },
+            new UssdOption { Id = 2, NodeId = rootId, Label = "0. Exit", Value = "0", NextNodeId = exitId },
+            new UssdOption { Id = 3, NodeId = confirmId, Label = "1. Confirm", Value = "1", NextNodeId = checkoutId },
+            new UssdOption { Id = 4, NodeId = confirmId, Label = "2. Cancel", Value = "2", NextNodeId = exitId }
+        );
+
+            #endregion
+
 
             // Seed default system roles
             modelBuilder.Entity<SystemRole>().HasData(

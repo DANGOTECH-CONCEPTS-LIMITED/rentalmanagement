@@ -78,7 +78,6 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles; // EF Core 5.0+ way
     });
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowDangopayFrontend", policy =>
@@ -91,6 +90,9 @@ builder.Services.AddCors(options =>
             .AllowCredentials(); // Optional, only if using cookies or auth headers
     });
 });
+
+
+
 
 //builder.Services.AddCors(options =>
 //{
@@ -197,6 +199,24 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
 }
+
+// Africa’s Talking will POST x-www-form-urlencoded -> sessionId, serviceCode, phoneNumber, text
+app.MapPost("/ussd", async (HttpRequest req, UssdService engine, IConfiguration cfg) =>
+{
+    var form = await req.ReadFormAsync();
+    var sessionId = form["sessionId"].ToString();
+    var serviceCode = form["serviceCode"].ToString();
+    var phone = form["phoneNumber"].ToString();
+    var text = form["text"].ToString();
+
+    // (optional) choose menu by shortcode mapping if you host multiple menus
+    var menuCode = "waterpay";
+    var currency = cfg["AT:Currency"] ?? "UGX";
+
+    var result = await engine.HandleAsync(sessionId, serviceCode, phone, text, menuCode, currency);
+    return Results.Text(result, "text/plain");
+})
+.Accepts<IFormCollection>("application/x-www-form-urlencoded");
 
 // Swagger
 app.UseSwagger();

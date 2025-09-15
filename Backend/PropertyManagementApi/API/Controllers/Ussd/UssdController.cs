@@ -16,23 +16,23 @@ namespace API.Controllers.Ussd
             _ussdService = ussdService;
         }
 
-        [HttpPost("/ussd")]
-        [Consumes("application/x-www-form-urlencoded")]
-        public async Task<IActionResult> ProcessUssdRequest([FromForm] UssdDto ussdDto)
-        {
-            if (ussdDto == null || string.IsNullOrEmpty(ussdDto.Text))
-            {
-                return BadRequest("Invalid USSD request.");
-            }
-            try
-            {
-                var response = await _ussdService.ProcessUssdRequestAsync(ussdDto);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Error processing USSD request: {ex.Message}");
-            }
-        }
+        //[HttpPost("/ussd")]
+        //[Consumes("application/x-www-form-urlencoded")]
+        //public async Task<IActionResult> ProcessUssdRequest([FromForm] UssdDto ussdDto)
+        //{
+        //    if (ussdDto == null || string.IsNullOrEmpty(ussdDto.Text))
+        //    {
+        //        return BadRequest("Invalid USSD request.");
+        //    }
+        //    try
+        //    {
+        //        var response = await _ussdService.HandleAsync(ussdDto);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(StatusCodes.Status500InternalServerError, $"Error processing USSD request: {ex.Message}");
+        //    }
+        //}
     }
 }
