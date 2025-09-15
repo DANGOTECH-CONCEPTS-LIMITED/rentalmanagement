@@ -56,6 +56,8 @@ builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISTSProcessing, STSProcessing>();
 //builder.Services.AddScoped<ICollectoApiClient, CollectoService>();
 
+
+
 builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>()
     // this ensures every outgoing request goes through your LoggingHandler
     .AddHttpMessageHandler<LoggingHandler>();
@@ -201,7 +203,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Africa’s Talking will POST x-www-form-urlencoded -> sessionId, serviceCode, phoneNumber, text
-app.MapPost("/ussd", async (HttpRequest req, UssdService engine, IConfiguration cfg) =>
+app.MapPost("/ussd", async (HttpRequest req, IUssdService engine, IConfiguration cfg) =>
 {
     var form = await req.ReadFormAsync();
     var sessionId = form["sessionId"].ToString();
