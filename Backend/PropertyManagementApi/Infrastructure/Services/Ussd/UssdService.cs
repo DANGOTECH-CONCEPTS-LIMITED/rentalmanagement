@@ -18,10 +18,12 @@ namespace Infrastructure.Services.Ussd
     public class UssdService : IUssdService
     {
         private readonly AppDbContext  _context;
+        private readonly IPrepaidApiClient _prepaidApiClient;
 
-        public UssdService(AppDbContext context)
+        public UssdService(AppDbContext context, IPrepaidApiClient prepaidApiClient)
         {
             _context = context;
+            _prepaidApiClient = prepaidApiClient;
         }
 
         public async Task DeleteSessionAsync(UssdSession s)
@@ -109,7 +111,7 @@ namespace Infrastructure.Services.Ussd
                 switch (node.ActionKey)
                 {
                     case "LookupCustomer":
-                        var (ok, name) = await FakeLookupCustomerByMeterAsync(data.GetValueOrDefault("meter", ""));
+                        var (ok, name) = await ValidateMeter(data.GetValueOrDefault("meter", ""));//FakeLookupCustomerByMeterAsync(data.GetValueOrDefault("meter", ""));
                         if (!ok) return Con("Meter not found. Enter Meter Number:");
                         data["customerName"] = name;
                         sess.CurrentNodeId = node.NextNodeId ?? sess.CurrentNodeId;
@@ -176,5 +178,41 @@ namespace Infrastructure.Services.Ussd
 
         private static Task<(bool found, string name)> FakeLookupCustomerByMeterAsync(string meter)
         => Task.FromResult(meter.Length >= 6 ? (true, "James Kaate") : (false, ""));
+
+        private async Task<(bool found,string name)> ValidateMeter(string meter)
+        {
+            if (string.IsNullOrWhiteSpace(meter))
+                return (false, "Meter number is required.");
+            if (!Regex.IsMatch(meter, @"^\d{6,16}$"))
+                return (false, "Meter number must be 6 to 16 digits.");
+            
+            var customer = await _prepaidApiClient.SearchCustomerAsync(new CustomerSearchDto { MeterNumber = meter });
+            ValidateMeterResponse resp = JsonSerializer.Deserialize<ValidateMeterResponse>(customer);
+            if (resp.result_code != 0)
+                return (false, "Meter not found.");
+            if (resp.result_code==0)
+            {
+                return (true, resp.result[0].customer_name);
+            }else
+            {
+                return (false, "Meter not found.");
+            }
+
+        }
+
+        private class ValidateMeterResponse
+        {
+            public int result_code { get; set; }
+            public List<Result> result { get; set; } = new();  // ✅ Change to List
+            public string reason { get; set; } = null!;
+
+            public class Result
+            {
+                public string customer_number { get; set; } = null!;
+                public string customer_name { get; set; } = null!;
+                public string meter_number { get; set; } = null!;
+            }
+        }
+
     }
 }
