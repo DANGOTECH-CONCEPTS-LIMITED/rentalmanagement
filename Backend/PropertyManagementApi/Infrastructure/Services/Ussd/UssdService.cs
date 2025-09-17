@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.PrepaidApi;
+﻿using Application.Interfaces.PaymentService;
+using Application.Interfaces.PrepaidApi;
 using Application.Interfaces.Ussd;
 using Domain.Dtos.PrepaidApi;
 using Domain.Dtos.Ussd;
@@ -18,11 +19,13 @@ namespace Infrastructure.Services.Ussd
     public class UssdService : IUssdService
     {
         private readonly AppDbContext  _context;
+        private readonly IPaymentService _pymsvc;
         private readonly IPrepaidApiClient _prepaidApiClient;
 
-        public UssdService(AppDbContext context, IPrepaidApiClient prepaidApiClient)
+        public UssdService(AppDbContext context, IPaymentService pymsvc, IPrepaidApiClient prepaidApiClient)
         {
             _context = context;
+            _pymsvc = pymsvc;
             _prepaidApiClient = prepaidApiClient;
         }
 
@@ -125,11 +128,12 @@ namespace Infrastructure.Services.Ussd
                         if (!decimal.TryParse(amountText, out var amount) || amount <= 0)
                             return End("Invalid amount.");
 
-                        var checkoutOk = true;//await _payments.MobileCheckoutAsync(phone, amount, currency, new { meter, customer = data.GetValueOrDefault("customerName", ""), sessionId });
+                        string checkoutError = await TryAsync(() => _pymsvc.MakeUtilityPayment(new() { PhoneNumber = sess.PhoneNumber, MeterNumber = meter, Amount = (double)amount }));
+                        var checkoutOk = string.IsNullOrEmpty(checkoutError);
                         await DeleteSessionAsync(sess);
                         return checkoutOk
                             ? End("Payment Prompt Initiated. Please approve on your phone. Thank you.")
-                            : End("We couldn’t start the payment right now. Please try again later.");
+                            : End($"We couldn’t start the payment right now. Please try again later. : {checkoutError}");
 
                     case "Cancel":
                         await DeleteSessionAsync(sess);
@@ -176,9 +180,6 @@ namespace Infrastructure.Services.Ussd
             await _context.SaveChangesAsync(); ;
         }
 
-        private static Task<(bool found, string name)> FakeLookupCustomerByMeterAsync(string meter)
-        => Task.FromResult(meter.Length >= 6 ? (true, "James Kaate") : (false, ""));
-
         private async Task<(bool found,string name)> ValidateMeter(string meter)
         {
             if (string.IsNullOrWhiteSpace(meter))
@@ -211,6 +212,19 @@ namespace Infrastructure.Services.Ussd
                 public string customer_number { get; set; } = null!;
                 public string customer_name { get; set; } = null!;
                 public string meter_number { get; set; } = null!;
+            }
+        }
+
+        private static async Task<string> TryAsync(Func<Task> action)
+        {
+            try
+            {
+                await action();
+                return "";
+            }
+            catch (ArgumentException ex)
+            {
+                return ex.Message;
             }
         }
 
