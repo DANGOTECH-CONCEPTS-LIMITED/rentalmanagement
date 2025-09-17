@@ -222,8 +222,8 @@ namespace Infrastructure.Services.PrepaidApi
                     pos.result.Add(new PosCustomer
                     {
                         // STS doesn’t give these; keep them empty to match your POS format
-                        customer_number = "",
-                        customer_name = "",
+                        customer_number = "5",
+                        customer_name = "Fred Nkutu",
                         // Map the meter number
                         meter_number = sts.Data.MeterCode ?? ""
                     });

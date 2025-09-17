@@ -135,11 +135,11 @@ namespace Infrastructure.Services.BackgroundServices
             var smsservice = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
             var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             string msg = $"Your payment of {pymt.Amount} to meter number {pymt.MeterNumber} has been received Successfully. Your token is {pymt.Token}";
-            //bool messagesent = await smsservice.SendAsync(pymt.PhoneNumber, msg);
-            //if (messagesent) 
-            //{
-            //    await paymentSvc.UpdateUtilityPaymentSmsSent(pymt);
-            //}
+            bool messagesent = await smsservice.SendAsync(pymt.PhoneNumber, msg);
+            if (messagesent)
+            {
+                await paymentSvc.UpdateUtilityPaymentSmsSent(pymt);
+            }
         }
 
         private async Task ProcessTenantPaymentAsync(TenantPayment payment)
