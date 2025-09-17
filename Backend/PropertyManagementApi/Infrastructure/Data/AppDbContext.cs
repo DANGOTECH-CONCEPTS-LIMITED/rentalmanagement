@@ -65,7 +65,7 @@ namespace Infrastructure.Data
                 Id = rootId,
                 MenuId = menuId,
                 Type = NodeType.Menu,
-                Prompt = "Welcome to WaterPay\n1. Pay water bill\n0. Exit"
+                Prompt = "Welcome to DangoPay\n1. Pay water bill\n0. Exit"
             },
             new UssdNode
             {
