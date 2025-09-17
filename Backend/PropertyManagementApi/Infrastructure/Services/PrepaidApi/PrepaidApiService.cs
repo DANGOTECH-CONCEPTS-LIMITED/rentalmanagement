@@ -58,7 +58,6 @@ namespace Infrastructure.Services.PrepaidApi
     public class PrepaidApiService : IPrepaidApiClient
     {
         private readonly HttpClient _httpClient;
-        private readonly HttpClient _http;
         private readonly string _baseUrl;
         private readonly string _username;
         private readonly string _password;
