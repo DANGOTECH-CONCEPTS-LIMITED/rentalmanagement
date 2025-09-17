@@ -647,5 +647,29 @@ namespace Infrastructure.Services.PaymentServices
             await _context.SaveChangesAsync();
 
         }
+
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingSmsSent()
+        {
+            var payments = await _context.UtilityPayments
+                .Where(tp => tp.IsSmsSent == false)
+                .ToListAsync();
+            return payments;
+        }
+
+        public async Task UpdateUtilityPaymentSmsSent(UtilityPayment utilityPayment)
+        {
+            if (utilityPayment == null)
+                throw new ArgumentNullException(nameof(utilityPayment));
+            //check if payment exists
+            var existingPayment = await _context.UtilityPayments
+                .FirstOrDefaultAsync(tp => tp.TransactionID == utilityPayment.TransactionID);
+            if (existingPayment == null)
+                throw new Exception("Payment not found.");
+            //map dto to entity
+            existingPayment.IsSmsSent = true;
+
+            _context.UtilityPayments.Update(existingPayment);
+            await _context.SaveChangesAsync();
+        }
     }
 }

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
+using Application.Interfaces.SMS;
 using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,6 +61,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             // 1) Fetch & materialize both lists in one short‐lived scope
             List<UtilityPayment> utilityPayments;
+            List<UtilityPayment> smspymts;
             List<TenantPayment> tenantPayments;
 
             using (var scope = _scopeFactory.CreateScope())
@@ -74,16 +76,21 @@ namespace Infrastructure.Services.BackgroundServices
                 tenantPayments = (await paymentService
                         .GetPaymentsByStatusAsync(Pending))
                     .ToList();
+
+                smspymts = (await paymentService.GetUtilityPymtsPendingSmsSent()).ToList();
             } // <-- DbContext disposed here
 
             // 2) Spawn one task per payment, each with its own scope
-            var tasks = new List<Task>(utilityPayments.Count + tenantPayments.Count);
+            var tasks = new List<Task>(utilityPayments.Count + tenantPayments.Count+ smspymts.Count);
 
             foreach (var u in utilityPayments)
                 tasks.Add(ProcessUtilityPaymentAsync(u));
 
             foreach (var t in tenantPayments)
                 tasks.Add(ProcessTenantPaymentAsync(t));
+
+            foreach (var t in smspymts)
+                tasks.Add (ProcessUtilityPymtsPendingSmsAsync(t));
 
             await Task.WhenAll(tasks);
         }
@@ -120,6 +127,19 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 _logger.LogError(ex, "Error processing utility payment");
             }
+        }
+
+        private async Task ProcessUtilityPymtsPendingSmsAsync(UtilityPayment pymt) 
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var smsservice = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
+            var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
+            string msg = $"Your payment of {pymt.Amount} to meter number {pymt.MeterNumber} has been received Successfully. Your token is {pymt.Token}";
+            //bool messagesent = await smsservice.SendAsync(pymt.PhoneNumber, msg);
+            //if (messagesent) 
+            //{
+            //    await paymentSvc.UpdateUtilityPaymentSmsSent(pymt);
+            //}
         }
 
         private async Task ProcessTenantPaymentAsync(TenantPayment payment)

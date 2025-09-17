@@ -35,7 +35,9 @@ namespace Application.Interfaces.PaymentService
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByLandLordIdAndStatusAsync(int landlordid, string status);
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByLandLordIdAndMethodAsync(int landlordid, string method);
 
+
         Task UpdatePaymentStatus(string status, string transactionid,string reason,string vendorTranRef,string TranType);
+        Task UpdateUtilityPaymentSmsSent(UtilityPayment utilityPayment);
 
         Task MakeUtilityPayment(UtilityPaymentDto utilityPayment);
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByStatus(string status);
@@ -44,6 +46,7 @@ namespace Application.Interfaces.PaymentService
 
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByMeterNumber(string method);
         Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingTokenGeneration();
+        Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingSmsSent();
         Task UpdateUtilityPayment(UtilityPayment utilityPayment);
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentsByLandlordIdAsync(int landlordId);
 
