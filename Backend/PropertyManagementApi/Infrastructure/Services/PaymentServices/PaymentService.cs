@@ -651,7 +651,7 @@ namespace Infrastructure.Services.PaymentServices
         public async Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingSmsSent()
         {
             var payments = await _context.UtilityPayments
-                .Where(tp => tp.IsSmsSent == false)
+                .Where(tp => tp.IsSmsSent == false && tp.Token!=null)
                 .ToListAsync();
             return payments;
         }
