@@ -116,13 +116,14 @@ namespace Infrastructure.Services.BackgroundServices
 
                     if (string.IsNullOrWhiteSpace(responseJson))
                     {
-                        _logger.LogError("Empty response from Collecto");
-                        await paymentSvc.UpdatePaymentStatus(
-                            FailedAtTelecom,
-                            transactionId,
-                            "No response from Collecto",
-                            string.Empty,
-                            tranType);
+                        //do nothing if the response is empty
+                        //_logger.LogError("Empty response from Collecto");
+                        //await paymentSvc.UpdatePaymentStatus(
+                        //    FailedAtTelecom,
+                        //    transactionId,
+                        //    "No response from Collecto",
+                        //    string.Empty,
+                        //    tranType);
                         return;
                     }
 
@@ -131,6 +132,38 @@ namespace Infrastructure.Services.BackgroundServices
 
                     if (dto?.data?.requestToPayStatus != true)
                     {
+                        if (dto.data.status.Equals("Undetermined"))
+                        {
+                            //do nothing if the status is undetermined
+                            _logger.LogInformation("Status is undetermined, skipping update");
+                            return;
+                        }else if (dto.data.status.Equals("PENDING"))
+                        {
+                            //do nothing if the status is pending
+                            _logger.LogInformation("Status is still pending, skipping update");
+                            return;
+                        }else if (dto.data.status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await paymentSvc.UpdatePaymentStatus(
+                                SuccessAtTelecom,
+                                transactionId,
+                                dto.data.message ?? string.Empty,
+                                dto.data.transactionId ?? string.Empty,
+                                tranType);
+                            _logger.LogInformation("Status updated to {NewStatus}", SuccessAtTelecom);
+                            return;
+                        }
+                        else if (dto.data.status.Equals("FAILED", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await paymentSvc.UpdatePaymentStatus(
+                                FailedAtTelecom,
+                                transactionId,
+                                dto.data.message ?? string.Empty,
+                                dto.data.transactionId ?? string.Empty,
+                                tranType);
+                            _logger.LogInformation("Status updated to {NewStatus}", FailedAtTelecom);
+                            return;
+                        }
                         _logger.LogError("Collecto returned requestToPayStatus=false");
                         await paymentSvc.UpdatePaymentStatus(
                             FailedAtTelecom,
