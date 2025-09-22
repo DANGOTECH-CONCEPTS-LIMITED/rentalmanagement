@@ -148,7 +148,8 @@ namespace Infrastructure.Services.BackgroundServices
                                 SuccessAtTelecom,
                                 transactionId,
                                 dto.data.message ?? string.Empty,
-                                dto.data.transactionId ?? string.Empty,
+                                //dto.data.transactionId ?? string.Empty,
+                                vendorTranId,
                                 tranType);
                             _logger.LogInformation("Status updated to {NewStatus}", SuccessAtTelecom);
                             return;
@@ -159,7 +160,8 @@ namespace Infrastructure.Services.BackgroundServices
                                 FailedAtTelecom,
                                 transactionId,
                                 dto.data.message ?? string.Empty,
-                                dto.data.transactionId ?? string.Empty,
+                                //dto.data.transactionId ?? string.Empty,
+                                vendorTranId,
                                 tranType);
                             _logger.LogInformation("Status updated to {NewStatus}", FailedAtTelecom);
                             return;
@@ -169,7 +171,8 @@ namespace Infrastructure.Services.BackgroundServices
                             FailedAtTelecom,
                             transactionId,
                             dto?.data?.message ?? "Unknown error",
-                            string.Empty,
+                            //string.Empty,
+                            vendorTranId,
                             tranType);
                         return;
                     }
@@ -183,7 +186,7 @@ namespace Infrastructure.Services.BackgroundServices
                             newStatus,
                             transactionId,
                             dto.data.message ?? string.Empty,
-                            dto.data.transactionId ?? string.Empty,
+                            vendorTranId,
                             tranType);
                         _logger.LogInformation("Status updated to {NewStatus}", newStatus);
                     }
