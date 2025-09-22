@@ -117,7 +117,7 @@ namespace Infrastructure.Services.BackgroundServices
                         utilityPayment.TransactionID,
                         utilityPayment.ReasonAtTelecom,
                         utilityPayment.VendorTranId,
-                        "UTILITY","");
+                        "UTILITY");
                 }
                 catch (Exception ex)
                 {

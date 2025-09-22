@@ -463,7 +463,7 @@ namespace Infrastructure.Services.PaymentServices
             return payments;
         }
 
-        public async Task UpdatePaymentStatus(string status, string transactionid, string vendorreason, string vendortranref, string TranType,string rawresponse)
+        public async Task UpdatePaymentStatus(string status, string transactionid, string vendorreason, string vendortranref, string TranType)
         {
 
             if (string.IsNullOrEmpty(TranType))
@@ -480,7 +480,6 @@ namespace Infrastructure.Services.PaymentServices
                 payment.Status = status;
                 payment.ReasonAtTelecom = vendorreason;
                 payment.VendorTranId = vendortranref;
-                payment.RawResponse = rawresponse;
                 _context.UtilityPayments.Update(payment);
                 await _context.SaveChangesAsync();
             }

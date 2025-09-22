@@ -28,6 +28,5 @@ namespace Domain.Entities.PropertyMgt
         public DateTime VendorPaymentDate { get; set; } = DateTime.Now;
         public string? UtilityAccountNumber { get; set; }
         public bool IsSmsSent { get; set; } = false;
-        public string? RawResponse { get; set; }
     }
 }

@@ -202,7 +202,7 @@ namespace Infrastructure.Services.BackgroundServices
                     transactionId,
                     "Empty response from Collecto",
                     string.Empty,
-                    tranType, raw);
+                    tranType);
                 return;
             }
 
@@ -227,7 +227,7 @@ namespace Infrastructure.Services.BackgroundServices
                     transactionId,
                     resp.status_message ?? string.Empty,
                     resp.data.transactionId ?? string.Empty,
-                    tranType, raw);
+                    tranType);
             }
             else
             {
@@ -237,7 +237,7 @@ namespace Infrastructure.Services.BackgroundServices
                     transactionId,
                     resp?.data?.message ?? "Unknown error",
                     string.Empty,
-                    tranType, raw);
+                    tranType);
             }
         }
 
