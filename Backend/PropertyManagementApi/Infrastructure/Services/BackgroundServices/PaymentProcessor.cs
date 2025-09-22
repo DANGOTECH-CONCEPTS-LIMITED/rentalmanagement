@@ -202,7 +202,7 @@ namespace Infrastructure.Services.BackgroundServices
                     transactionId,
                     "Empty response from Collecto",
                     string.Empty,
-                    tranType);
+                    tranType, raw);
                 return;
             }
 
@@ -227,7 +227,7 @@ namespace Infrastructure.Services.BackgroundServices
                     transactionId,
                     resp.status_message ?? string.Empty,
                     resp.data.transactionId ?? string.Empty,
-                    tranType);
+                    tranType, raw);
             }
             else
             {
@@ -237,17 +237,21 @@ namespace Infrastructure.Services.BackgroundServices
                     transactionId,
                     resp?.data?.message ?? "Unknown error",
                     string.Empty,
-                    tranType);
+                    tranType, raw);
             }
         }
 
         // Models for Collecto JSON
         private class RequestToPayResponse
         {
-            [JsonPropertyName("data")]
-            public DataModel data { get; set; } = null!;
+            [JsonPropertyName("status")]
+            public string status { get; set; } = null!;
+
             [JsonPropertyName("status_message")]
             public string status_message { get; set; } = null!;
+
+            [JsonPropertyName("data")]
+            public DataModel data { get; set; } = null!;
 
             public class DataModel
             {
@@ -262,6 +266,7 @@ namespace Infrastructure.Services.BackgroundServices
                 public string message { get; set; } = null!;
             }
         }
+
 
         public class NumberOrStringJsonConverter : JsonConverter<string>
         {

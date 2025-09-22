@@ -149,7 +149,7 @@ namespace Infrastructure.Services.BackgroundServices
                                 transactionId,
                                 dto.data.message ?? string.Empty,
                                 dto.data.transactionId ?? string.Empty,
-                                tranType);
+                                tranType, responseJson);
                             _logger.LogInformation("Status updated to {NewStatus}", SuccessAtTelecom);
                             return;
                         }
@@ -160,7 +160,7 @@ namespace Infrastructure.Services.BackgroundServices
                                 transactionId,
                                 dto.data.message ?? string.Empty,
                                 dto.data.transactionId ?? string.Empty,
-                                tranType);
+                                tranType, responseJson);
                             _logger.LogInformation("Status updated to {NewStatus}", FailedAtTelecom);
                             return;
                         }
@@ -170,7 +170,7 @@ namespace Infrastructure.Services.BackgroundServices
                             transactionId,
                             dto?.data?.message ?? "Unknown error",
                             string.Empty,
-                            tranType);
+                            tranType, responseJson);
                         return;
                     }
                     else if (!dto.data.status.Equals("PENDING"))
@@ -184,7 +184,7 @@ namespace Infrastructure.Services.BackgroundServices
                             transactionId,
                             dto.data.message ?? string.Empty,
                             dto.data.transactionId ?? string.Empty,
-                            tranType);
+                            tranType, responseJson);
                         _logger.LogInformation("Status updated to {NewStatus}", newStatus);
                     }
                 }
