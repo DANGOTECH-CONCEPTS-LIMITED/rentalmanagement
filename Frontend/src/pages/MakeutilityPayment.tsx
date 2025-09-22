@@ -516,7 +516,7 @@ const MakeUtilityPayment = () => {
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="p-2 text-left">Token</th>
-                    <th className="p-2 text-left">Reason At Telecom</th>
+                    <th className="p-2 text-left">VendorTranId</th>
                     <th className="p-2 text-left">Phone</th>
                     <th className="p-2 text-left">Amount</th>
                     <th className="p-2 text-left">Status</th>
@@ -526,8 +526,8 @@ const MakeUtilityPayment = () => {
                 <tbody>
                   {payments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5).map((payment) => (
                     <tr key={payment.id} className="border-t">
-                      <td className="p-2">{payment.token}</td>
-                      <td className="p-2">{payment.reasonAtTelecom}</td>
+                      <td className="p-3">{payment.token}</td>
+                      <td className="p-2">{payment.vendorTranId}</td>
                       <td className="p-2">{payment.phoneNumber}</td>
                       <td className="p-2">{payment.amount}</td>
                       <td className="p-2">{payment.status}</td>
