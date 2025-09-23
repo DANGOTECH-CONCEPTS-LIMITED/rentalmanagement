@@ -114,6 +114,20 @@ namespace API.Controllers.CollectoApi
             }
         }
 
+        [HttpPost("/GetSupportedBanks")]
+        public async Task<IActionResult> GetSupportedBanks(string request) 
+        {
+            try
+            {
+                var response = await _collectoApiClient.GetSupportedBanksAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         //[HttpPost("/initiatePayout")]
         //public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutRequest request)
         //{

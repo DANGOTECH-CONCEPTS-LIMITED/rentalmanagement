@@ -18,5 +18,6 @@ namespace Application.Interfaces.Collecto
         Task<string> VerifyPhoneNumberAsync(VerifyPhoneNumberRequestDto request);
         Task<string> InitiatePayoutAsync(InitiatePayoutRequestDto request);
         Task<string> GetPayoutStatusAsync(PayoutStatusRequestDto request);
+        Task<string> GetSupportedBanksAsync(string request);
     }
 }

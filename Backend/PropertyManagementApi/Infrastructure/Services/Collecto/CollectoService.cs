@@ -104,5 +104,13 @@ namespace Infrastructure.Services.Collecto
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
+
+        public async Task<string> GetSupportedBanksAsync(string request)
+        {
+            SetHeaders();
+            var res = await _http.PostAsJsonAsync($"{_username}/supportedBanks",request);
+            res.EnsureSuccessStatusCode();
+            return await res.Content.ReadAsStringAsync();
+        }
     }
 }
