@@ -128,19 +128,19 @@ namespace API.Controllers.CollectoApi
             }
         }
 
-        //[HttpPost("/initiatePayout")]
-        //public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _collectoApiClient.InitiatePayoutAsync(request);
-        //        return Ok(response);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //}
+        [HttpPost("/initiatePayout")]
+        public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutRequestDto request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.InitiatePayoutAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         //[HttpPost("/payoutStatus")]
         //public async Task<IActionResult> PayoutStatus([FromBody] PayoutStatusRequest request)
