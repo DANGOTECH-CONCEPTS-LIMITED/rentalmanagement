@@ -19,5 +19,6 @@ namespace Application.Interfaces.Collecto
         Task<string> InitiatePayoutAsync(InitiatePayoutRequestDto request);
         Task<string> GetPayoutStatusAsync(PayoutStatusRequestDto request);
         Task<string> GetSupportedBanksAsync(string request);
+        Task<string> InitiateBankPayoutAsync(InitiatePayoutBankRequestDto request);
     }
 }
