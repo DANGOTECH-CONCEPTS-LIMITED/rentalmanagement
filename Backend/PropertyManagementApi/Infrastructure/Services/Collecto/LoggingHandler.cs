@@ -7,23 +7,24 @@ using System.Threading.Tasks;
 using Application.Interfaces.Settings;
 using Domain.Dtos.HtpRequestsResponse;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Services.Collecto
 {
     public class LoggingHandler : DelegatingHandler
     {
         private readonly ILogger<LoggingHandler> _logger;
-        private readonly ISettings _settings;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         private static readonly string ReqSep = new string('*', 43) + " Request " + new string('*', 43);
         private static readonly string ReqEndSep = new string('*', 41) + " End of Request " + new string('*', 41);
         private static readonly string ResSep = new string('*', 42) + " Response " + new string('*', 42);
         private static readonly string ResEndSep = new string('*', 38) + " End of Response " + new string('*', 38);
 
-        public LoggingHandler(ILogger<LoggingHandler> logger, ISettings settings)
+        public LoggingHandler(ILogger<LoggingHandler> logger, IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
-            _settings = settings;
+            _scopeFactory = scopeFactory;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -33,7 +34,7 @@ namespace Infrastructure.Services.Collecto
             // build & log request, then get response
             var (reqLog, resLog, response) = await BuildAndLogAsync(request, cancellationToken);
 
-            // persist to your DB
+            // persist to your DB using a new scope
             var dto = new HttpRequesRequestResponseDto
             {
                 Request = reqLog,
@@ -42,8 +43,10 @@ namespace Infrastructure.Services.Collecto
                 RequestType = request.Method.Method,
                 RequestUrl = request.RequestUri.ToString()
             };
-            await _settings.LogHttpRequestResponse(dto)
-                           .ConfigureAwait(false);
+
+            using var scope = _scopeFactory.CreateScope();
+            var settings = scope.ServiceProvider.GetRequiredService<ISettings>();
+            await settings.LogHttpRequestResponse(dto);
 
             return response;
         }

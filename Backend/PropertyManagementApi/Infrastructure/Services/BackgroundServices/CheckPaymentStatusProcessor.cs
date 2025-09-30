@@ -161,11 +161,6 @@ namespace Infrastructure.Services.BackgroundServices
                         // Fallback: first item.
                         var item = payout.data.data.First();
                         var status = item.status?.Trim().ToUpperInvariant();
-                        if (status != "SUCCESSFUL")
-                        {
-                            _logger.LogInformation("Wallet payout still {Status}; skipping.", item.status);
-                            return;
-                        }
 
                         if (status == "SUCCESSFUL")
                         {
