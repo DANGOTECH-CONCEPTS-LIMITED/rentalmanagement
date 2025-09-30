@@ -95,7 +95,7 @@ namespace Infrastructure.Services.BackgroundServices
 
             foreach (var w in walletTransactions)
                 tasks.Add(ProcessStatusAsync(
-                    w.Id.ToString(),
+                    w.TransactionId.ToString(),
                     w.TransactionId,
                     "WALLET",
                     ct));
