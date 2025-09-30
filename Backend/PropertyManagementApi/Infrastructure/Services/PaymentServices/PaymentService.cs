@@ -734,7 +734,7 @@ namespace Infrastructure.Services.PaymentServices
                 {
                     WalletId = wallet.Id,
                     Amount = Math.Abs(existingTransaction.Amount), // Make it positive
-                    Description = $"Reversal of transaction {existingTransaction.TransactionId}",
+                    Description = $"Reversal of transaction {existingTransaction.TransactionId} Amount {existingTransaction.Amount}",
                     TransactionDate = DateTime.UtcNow,
                     TransactionId = Guid.NewGuid().ToString(), // New unique ID for the reversal
                     Status = "REVERSAL",
