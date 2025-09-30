@@ -748,17 +748,17 @@ namespace Infrastructure.Services.PaymentServices
                 _context.Wallets.Update(wallet);
                 _context.WalletTransactions.Update(existingTransaction);
 
-                await _emailService.SendEmailAsync(
-                    toEmail: "ngobidaniel04@gmail.com", // Replace with wallet.Landlord.Email in production
-                    subject: "Wallet Transaction Reversal",
-                    message: $"Dear {wallet.Landlord.FullName},\n\n" +
-                             $"We would like to inform you that a transaction with ID {existingTransaction.TransactionId} " +
-                             $"amounting to {existingTransaction.Amount} has been reversed in your wallet.\n\n" +
-                             $"Previous balance on the wallet was {balanceBeforeReversal}.\n\n" +
-                             $"New balance after reversal on the wallet is {wallet.Balance}.\n\n" +
-                             $"If you have any questions or concerns, please contact our support team.\n\n" +
-                             $"Best regards,\nProperty Management Team"
-                );
+                //await _emailService.SendEmailAsync(
+                //    toEmail: "ngobidaniel04@gmail.com", // Replace with wallet.Landlord.Email in production
+                //    subject: "Wallet Transaction Reversal",
+                //    message: $"Dear {wallet.Landlord.FullName},\n\n" +
+                //             $"We would like to inform you that a transaction with ID {existingTransaction.TransactionId} " +
+                //             $"amounting to {existingTransaction.Amount} has been reversed in your wallet.\n\n" +
+                //             $"Previous balance on the wallet was {balanceBeforeReversal}.\n\n" +
+                //             $"New balance after reversal on the wallet is {wallet.Balance}.\n\n" +
+                //             $"If you have any questions or concerns, please contact our support team.\n\n" +
+                //             $"Best regards,\nProperty Management Team"
+                //);
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
