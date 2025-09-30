@@ -54,6 +54,7 @@ namespace Application.Interfaces.PaymentService
 
         Task<IEnumerable<WalletTransaction>> GetWalletTransactionByStatus(string status);
         Task UpdateWalletTransaction(WalletTransaction walletTransaction);
+        Task ReverseWalletTransaction(WalletTransaction walletTransaction);
 
     }
 }

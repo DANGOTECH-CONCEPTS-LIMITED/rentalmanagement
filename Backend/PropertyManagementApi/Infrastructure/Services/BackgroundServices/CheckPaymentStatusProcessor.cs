@@ -175,13 +175,27 @@ namespace Infrastructure.Services.BackgroundServices
                                 Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
                                 Status = SuccessFul,
                                 TransactionDate = DateTime.UtcNow,
-                                VendorTranId = item.transaction_id
+                                VendorTranId = item.transaction_id,
+                                ReasonAtTelecom = item.status_message
                             };
                             await paymentSvc.UpdateWalletTransaction(walletTx);
                             _logger.LogInformation("Wallet payout marked SUCCESSFUL AT TELECOM");
                             return;
+                        }else if (status == "FAILED")
+                        {
+                            var walletTx = new WalletTransaction
+                            {
+                                TransactionId = transactionId,
+                                Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
+                                Status = FailedAtTelecom,
+                                TransactionDate = DateTime.UtcNow,
+                                VendorTranId = item.transaction_id,
+                                ReasonAtTelecom = item.status_message
+                            };
+                            await paymentSvc.ReverseWalletTransaction(walletTx);
+                            _logger.LogInformation("Wallet payout marked FAILED AT TELECOM and reversed");
+                            return;
                         }
-                    }
                     else
                     {
                         var dto = JsonSerializer

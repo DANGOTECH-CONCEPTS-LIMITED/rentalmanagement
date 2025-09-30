@@ -20,6 +20,7 @@ namespace Domain.Entities.PropertyMgt
         public string VendorTranId { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string TransactionId { get; set; } = string.Empty;
+        public string ReasonAtTelecom { get; set; } = string.Empty;
         public DateTime TransactionDate { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

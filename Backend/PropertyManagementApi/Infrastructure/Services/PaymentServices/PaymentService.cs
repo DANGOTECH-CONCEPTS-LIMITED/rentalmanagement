@@ -699,5 +699,49 @@ namespace Infrastructure.Services.PaymentServices
             _context.WalletTransactions.Update(existingTransaction);
             await _context.SaveChangesAsync();
         }
+
+        public async Task ReverseWalletTransaction(WalletTransaction walletTransaction)
+        {
+            if (walletTransaction == null)
+                throw new ArgumentNullException(nameof(walletTransaction));
+
+            // Use a database transaction for atomicity
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Check if transaction exists
+                var existingTransaction = await _context.WalletTransactions
+                    .FirstOrDefaultAsync(wt => wt.TransactionId == walletTransaction.TransactionId);
+
+                if (existingTransaction == null)
+                    throw new Exception("Wallet transaction not found.");
+
+                // Check if wallet exists
+                var wallet = await _context.Wallets
+                    .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
+
+                if (wallet == null)
+                    throw new Exception("Wallet not found.");
+
+                // Reverse the wallet balance
+                wallet.Balance -= existingTransaction.Amount;
+
+                // Update the transaction status to reversed
+                existingTransaction.Status = "REVERSED";
+                existingTransaction.ReasonAtTelecom = walletTransaction.ReasonAtTelecom;
+
+                _context.Wallets.Update(wallet);
+                _context.WalletTransactions.Update(existingTransaction);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
     }
 }
