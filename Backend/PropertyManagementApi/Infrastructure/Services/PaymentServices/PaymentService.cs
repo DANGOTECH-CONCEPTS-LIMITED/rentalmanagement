@@ -725,11 +725,28 @@ namespace Infrastructure.Services.PaymentServices
                     throw new Exception("Wallet not found.");
 
                 // Reverse the wallet balance
-                wallet.Balance -= existingTransaction.Amount;
+                //wallet.Balance += existingTransaction.Amount;
+                //add wallet balance with the absolute value of the transaction amount
+                wallet.Balance += Math.Abs(existingTransaction.Amount);
+
+                //record another transaction to reflect the reversal
+                var reversalTransaction = new WalletTransaction
+                {
+                    WalletId = wallet.Id,
+                    Amount = Math.Abs(existingTransaction.Amount), // Make it positive
+                    Description = $"Reversal of transaction {existingTransaction.TransactionId}",
+                    TransactionDate = DateTime.UtcNow,
+                    TransactionId = Guid.NewGuid().ToString(), // New unique ID for the reversal
+                    Status = "REVERSAL",
+                    VendorTranId = walletTransaction.TransactionId,
+                    ReasonAtTelecom = walletTransaction.ReasonAtTelecom
+                };
+                await _context.WalletTransactions.AddAsync(reversalTransaction);
 
                 // Update the transaction status to reversed
                 existingTransaction.Status = "REVERSED";
                 existingTransaction.ReasonAtTelecom = walletTransaction.ReasonAtTelecom;
+                //
 
                 _context.Wallets.Update(wallet);
                 _context.WalletTransactions.Update(existingTransaction);
