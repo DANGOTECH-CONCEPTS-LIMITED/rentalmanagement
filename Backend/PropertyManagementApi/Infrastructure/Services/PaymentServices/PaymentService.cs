@@ -740,6 +740,7 @@ namespace Infrastructure.Services.PaymentServices
                     Status = "REVERSAL",
                     VendorTranId = walletTransaction.TransactionId,
                     ReasonAtTelecom = walletTransaction.ReasonAtTelecom
+
                 };
                 await _context.WalletTransactions.AddAsync(reversalTransaction);
 
