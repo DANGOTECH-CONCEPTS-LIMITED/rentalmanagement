@@ -20,6 +20,7 @@ namespace Infrastructure.Services.BackgroundServices
         private const string PendingAtTelcom = "PENDING AT TELCOM";
         private const string SuccessAtTelecom = "SUCCESSFUL AT TELECOM";
         private const string FailedAtTelecom = "FAILED AT TELECOM";
+        private const string SuccessFul = "SUCCESSFUL";
 
         private readonly ILogger<CheckPaymentStatusProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
@@ -172,7 +173,7 @@ namespace Infrastructure.Services.BackgroundServices
                             {
                                 TransactionId = transactionId,
                                 Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
-                                Status = SuccessAtTelecom,
+                                Status = SuccessFul,
                                 TransactionDate = DateTime.UtcNow,
                                 VendorTranId = item.transaction_id
                             };
