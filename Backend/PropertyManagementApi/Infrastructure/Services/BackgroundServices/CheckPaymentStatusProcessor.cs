@@ -146,7 +146,7 @@ namespace Infrastructure.Services.BackgroundServices
                         return;
                     }
 
-                    if (tranType.Equals("WALLET",StringComparison.OrdinalIgnoreCase))
+                    if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
                     {
                         var payout = JsonSerializer
                         .Deserialize<PayoutStatusResponse>(responseJson);
@@ -181,7 +181,8 @@ namespace Infrastructure.Services.BackgroundServices
                             await paymentSvc.UpdateWalletTransaction(walletTx);
                             _logger.LogInformation("Wallet payout marked SUCCESSFUL AT TELECOM");
                             return;
-                        }else if (status == "FAILED")
+                        }
+                        else if (status == "FAILED")
                         {
                             var walletTx = new WalletTransaction
                             {
@@ -196,6 +197,7 @@ namespace Infrastructure.Services.BackgroundServices
                             _logger.LogInformation("Wallet payout marked FAILED AT TELECOM and reversed");
                             return;
                         }
+                    }
                     else
                     {
                         var dto = JsonSerializer
