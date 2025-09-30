@@ -3,7 +3,9 @@ using Domain.Dtos.Payments;
 using Domain.Entities;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
+using Infrastructure.Services.Email;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,9 +17,11 @@ namespace Infrastructure.Services.PaymentServices
     public class PaymentService : IPaymentService
     {
         private readonly AppDbContext _context;
-        public PaymentService(AppDbContext context)
+        private readonly EmailService _emailService;
+        public PaymentService(AppDbContext context, EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task MakeTenantPaymentAsync(TenantPaymentDto tenantPaymentDto)
@@ -724,10 +728,24 @@ namespace Infrastructure.Services.PaymentServices
                 if (wallet == null)
                     throw new Exception("Wallet not found.");
 
+                var balanceBeforeReversal = wallet.Balance;
                 // Reverse the wallet balance
                 //wallet.Balance += existingTransaction.Amount;
                 //add wallet balance with the absolute value of the transaction amount
                 wallet.Balance += Math.Abs(existingTransaction.Amount);
+
+                //send an email to the landlord notifying them of the reversal
+                await _emailService.SendEmailAsync(
+                    toEmail: "ngobidaniel04@gmail.com",//wallet.Landlord!.Email,
+                    subject: "Wallet Transaction Reversal",
+                    message: $"Dear {wallet.Landlord.FullName},\n\n" +
+                          $"We would like to inform you that a transaction with ID {existingTransaction.TransactionId} " +
+                          $"amounting to {existingTransaction.Amount} has been reversed in your wallet.\n\n" +
+                          $"Previous balance on the wallet was to {balanceBeforeReversal}.\n\n" +
+                          $"New balance after reversal on the wallet is {wallet.Balance}.\n\n" +
+                          $"If you have any questions or concerns, please contact our support team.\n\n" +
+                          $"Best regards,\nProperty Management Team"
+                );
 
                 //record another transaction to reflect the reversal
                 var reversalTransaction = new WalletTransaction
