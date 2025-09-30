@@ -51,5 +51,9 @@ namespace Application.Interfaces.PaymentService
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentsByLandlordIdAsync(int landlordId);
 
         Task UpdateUtilityPaymentWithVendorId(int tranid, string vendorref, string vendor, DateTime utilitypaymentdate);
+
+        Task<IEnumerable<WalletTransaction>> GetWalletTransactionByStatus(string status);
+        Task UpdateWalletTransaction(WalletTransaction walletTransaction);
+
     }
 }

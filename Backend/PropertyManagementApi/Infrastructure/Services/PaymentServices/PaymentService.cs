@@ -671,5 +671,33 @@ namespace Infrastructure.Services.PaymentServices
             _context.UtilityPayments.Update(existingPayment);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<IEnumerable<WalletTransaction>> GetWalletTransactionByStatus(string status)
+        {
+            var walletTransactions = await _context.WalletTransactions
+                .Where(wt => wt.Status == status)
+                .ToListAsync();
+
+            if (walletTransactions == null || walletTransactions.Count == 0)
+                throw new Exception("Wallet transactions not found.");
+
+            return walletTransactions;
+        }
+
+        public async Task UpdateWalletTransaction(WalletTransaction walletTransaction)
+        {
+            if (walletTransaction == null)
+                throw new ArgumentNullException(nameof(walletTransaction));
+            //check if payment exists
+            var existingTransaction = await _context.WalletTransactions
+                .FirstOrDefaultAsync(wt => wt.TransactionId == walletTransaction.TransactionId);
+            if (existingTransaction == null)
+                throw new Exception("Wallet transaction not found.");
+            //map dto to entity
+            existingTransaction.Status = walletTransaction.Status;
+            existingTransaction.VendorTranId = walletTransaction.VendorTranId;
+            _context.WalletTransactions.Update(existingTransaction);
+            await _context.SaveChangesAsync();
+        }
     }
 }
