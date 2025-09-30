@@ -708,7 +708,9 @@ namespace Infrastructure.Services.PaymentServices
         {
             if (walletTransaction == null)
                 throw new ArgumentNullException(nameof(walletTransaction));
+
             await using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
                 var existingTransaction = await _context.WalletTransactions
@@ -717,7 +719,12 @@ namespace Infrastructure.Services.PaymentServices
                 if (existingTransaction == null)
                     throw new Exception("Wallet transaction not found.");
 
-                var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
+                // Prevent double reversal
+                if (existingTransaction.Status == "REVERSED")
+                    throw new InvalidOperationException("Transaction has already been reversed.");
+
+                var wallet = await _context.Wallets
+                    .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
 
                 if (wallet == null)
                     throw new Exception("Wallet not found.");
@@ -729,7 +736,7 @@ namespace Infrastructure.Services.PaymentServices
                 {
                     WalletId = wallet.Id,
                     Amount = Math.Abs(existingTransaction.Amount), // Always positive
-                    Description = $" Test Reversal of transaction {existingTransaction.TransactionId} Amount {existingTransaction.Amount}",
+                    Description = $"Reversal of transaction {existingTransaction.TransactionId} Amount {existingTransaction.Amount}",
                     TransactionDate = DateTime.UtcNow,
                     TransactionId = Guid.NewGuid().ToString(),
                     Status = "REVERSAL",
@@ -748,17 +755,17 @@ namespace Infrastructure.Services.PaymentServices
                 _context.Wallets.Update(wallet);
                 _context.WalletTransactions.Update(existingTransaction);
 
-                //await _emailService.SendEmailAsync(
-                //    toEmail: "ngobidaniel04@gmail.com", // Replace with wallet.Landlord.Email in production
-                //    subject: "Wallet Transaction Reversal",
-                //    message: $"Dear {wallet.Landlord.FullName},\n\n" +
-                //             $"We would like to inform you that a transaction with ID {existingTransaction.TransactionId} " +
-                //             $"amounting to {existingTransaction.Amount} has been reversed in your wallet.\n\n" +
-                //             $"Previous balance on the wallet was {balanceBeforeReversal}.\n\n" +
-                //             $"New balance after reversal on the wallet is {wallet.Balance}.\n\n" +
-                //             $"If you have any questions or concerns, please contact our support team.\n\n" +
-                //             $"Best regards,\nProperty Management Team"
-                //);
+                // Optionally, send an email notification to the landlord
+                // await _emailService.SendEmailAsync(
+                //     toEmail: wallet.Landlord.Email,
+                //     subject: "Wallet Transaction Reversal",
+                //     message: $"Dear {wallet.Landlord.FullName},\n\n" +
+                //              $"A transaction with ID {existingTransaction.TransactionId} " +
+                //              $"amounting to {existingTransaction.Amount} has been reversed.\n\n" +
+                //              $"Previous balance: {balanceBeforeReversal}\n" +
+                //              $"New balance: {wallet.Balance}\n\n" +
+                //              $"Best regards,\nProperty Management Team"
+                // );
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
