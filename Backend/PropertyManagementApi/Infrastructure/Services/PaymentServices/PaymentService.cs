@@ -521,7 +521,7 @@ namespace Infrastructure.Services.PaymentServices
             const double ChargeRate = 0.1;
 
             var charges = dto.Amount * ChargeRate;
-            if (dto.MeterNumber.Equals("0292000010952")) 
+            if (dto.MeterNumber.Equals("0292000010952"))
             {
                 charges = 5000;
             }
@@ -655,7 +655,7 @@ namespace Infrastructure.Services.PaymentServices
         public async Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingSmsSent()
         {
             var payments = await _context.UtilityPayments
-                .Where(tp => tp.IsSmsSent == false && tp.Token!=null)
+                .Where(tp => tp.IsSmsSent == false && tp.Token != null)
                 .ToListAsync();
             return payments;
         }
@@ -708,67 +708,57 @@ namespace Infrastructure.Services.PaymentServices
         {
             if (walletTransaction == null)
                 throw new ArgumentNullException(nameof(walletTransaction));
-
-            // Use a database transaction for atomicity
             await using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
-                // Check if transaction exists
                 var existingTransaction = await _context.WalletTransactions
                     .FirstOrDefaultAsync(wt => wt.TransactionId == walletTransaction.TransactionId);
 
                 if (existingTransaction == null)
                     throw new Exception("Wallet transaction not found.");
 
-                // Check if wallet exists
-                var wallet = await _context.Wallets
-                    .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
+                var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
 
                 if (wallet == null)
                     throw new Exception("Wallet not found.");
 
                 var balanceBeforeReversal = wallet.Balance;
-                // Reverse the wallet balance
-                //wallet.Balance += existingTransaction.Amount;
-                //add wallet balance with the absolute value of the transaction amount
-                wallet.Balance += Math.Abs(existingTransaction.Amount);
 
-                //send an email to the landlord notifying them of the reversal
-                await _emailService.SendEmailAsync(
-                    toEmail: "ngobidaniel04@gmail.com",//wallet.Landlord!.Email,
-                    subject: "Wallet Transaction Reversal",
-                    message: $"Dear {wallet.Landlord.FullName},\n\n" +
-                          $"We would like to inform you that a transaction with ID {existingTransaction.TransactionId} " +
-                          $"amounting to {existingTransaction.Amount} has been reversed in your wallet.\n\n" +
-                          $"Previous balance on the wallet was to {balanceBeforeReversal}.\n\n" +
-                          $"New balance after reversal on the wallet is {wallet.Balance}.\n\n" +
-                          $"If you have any questions or concerns, please contact our support team.\n\n" +
-                          $"Best regards,\nProperty Management Team"
-                );
-
-                //record another transaction to reflect the reversal
+                // Create reversal transaction as a positive amount
                 var reversalTransaction = new WalletTransaction
                 {
                     WalletId = wallet.Id,
-                    Amount = Math.Abs(existingTransaction.Amount), // Make it positive
-                    Description = $"Reversal of transaction {existingTransaction.TransactionId} Amount {existingTransaction.Amount}",
+                    Amount = Math.Abs(existingTransaction.Amount), // Always positive
+                    Description = $" Test Reversal of transaction {existingTransaction.TransactionId} Amount {existingTransaction.Amount}",
                     TransactionDate = DateTime.UtcNow,
-                    TransactionId = Guid.NewGuid().ToString(), // New unique ID for the reversal
+                    TransactionId = Guid.NewGuid().ToString(),
                     Status = "REVERSAL",
                     VendorTranId = walletTransaction.TransactionId,
                     ReasonAtTelecom = walletTransaction.ReasonAtTelecom
-
                 };
                 await _context.WalletTransactions.AddAsync(reversalTransaction);
 
-                // Update the transaction status to reversed
+                // Update wallet balance by adding the reversal transaction's amount
+                wallet.Balance += reversalTransaction.Amount;
+
+                // Update the original transaction status
                 existingTransaction.Status = "REVERSED";
                 existingTransaction.ReasonAtTelecom = walletTransaction.ReasonAtTelecom;
-                //
 
                 _context.Wallets.Update(wallet);
                 _context.WalletTransactions.Update(existingTransaction);
+
+                await _emailService.SendEmailAsync(
+                    toEmail: "ngobidaniel04@gmail.com", // Replace with wallet.Landlord.Email in production
+                    subject: "Wallet Transaction Reversal",
+                    message: $"Dear {wallet.Landlord.FullName},\n\n" +
+                             $"We would like to inform you that a transaction with ID {existingTransaction.TransactionId} " +
+                             $"amounting to {existingTransaction.Amount} has been reversed in your wallet.\n\n" +
+                             $"Previous balance on the wallet was {balanceBeforeReversal}.\n\n" +
+                             $"New balance after reversal on the wallet is {wallet.Balance}.\n\n" +
+                             $"If you have any questions or concerns, please contact our support team.\n\n" +
+                             $"Best regards,\nProperty Management Team"
+                );
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
