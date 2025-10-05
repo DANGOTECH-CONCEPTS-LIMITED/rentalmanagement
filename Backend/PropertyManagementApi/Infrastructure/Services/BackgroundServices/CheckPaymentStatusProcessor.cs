@@ -55,7 +55,6 @@ namespace Infrastructure.Services.BackgroundServices
 
         private async Task ProcessAllPendingAsync(CancellationToken ct)
         {
-            // 1) Load and materialize both sets in a short‐lived scope
             List<TenantPayment> tenantPayments;
             List<UtilityPayment> utilityPayments;
             List<WalletTransaction> walletTransactions;
@@ -75,31 +74,60 @@ namespace Infrastructure.Services.BackgroundServices
                 walletTransactions = (await paymentSvc
                         .GetWalletTransactionByStatus(PendingAtTelcom))
                     .ToList();
-            } // ← DbContext disposed here
+            }
 
-            // 2) Spawn one task per payment, each with its own scope
-            var tasks = new List<Task>(tenantPayments.Count + utilityPayments.Count + walletTransactions.Count);
+            var tasks = new List<Task>();
 
             foreach (var t in tenantPayments)
-                tasks.Add(ProcessStatusAsync(
-                    t.TransactionId,
-                    t.VendorTransactionId,
-                    "RENT",
-                    ct));
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ProcessStatusAsync(
+                            t.TransactionId,
+                            t.VendorTransactionId,
+                            "RENT",
+                            ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error processing tenant payment {t.TransactionId}");
+                    }
+                }));
 
             foreach (var u in utilityPayments)
-                tasks.Add(ProcessStatusAsync(
-                    u.TransactionID,
-                    u.VendorTranId,
-                    "UTILITY",
-                    ct));
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ProcessStatusAsync(
+                            u.TransactionID,
+                            u.VendorTranId,
+                            "UTILITY",
+                            ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error processing utility payment {u.TransactionID}");
+                    }
+                }));
 
             foreach (var w in walletTransactions)
-                tasks.Add(ProcessStatusAsync(
-                    w.TransactionId.ToString(),
-                    w.TransactionId,
-                    "WALLET",
-                    ct));
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ProcessStatusAsync(
+                            w.TransactionId.ToString(),
+                            w.TransactionId,
+                            "WALLET",
+                            ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error processing wallet transaction {w.TransactionId}");
+                    }
+                }));
 
             await Task.WhenAll(tasks);
         }
