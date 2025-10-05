@@ -60,15 +60,18 @@ namespace Infrastructure.Services.BackgroundServices
                             .ToList();
                     }
 
-                    // 2) Process each payment in its own scope (parallel)
-                    var tasks = new List<Task>(utilityPayments.Count + tenantPayments.Count);
-                    foreach (var up in utilityPayments)
-                        tasks.Add(ProcessUtilityAsync(up, stoppingToken));
+                    if (utilityPayments.Count>0 || tenantPayments.Count>0)
+                    {
+                        // 2) Process each payment in its own scope (parallel)
+                        var tasks = new List<Task>(utilityPayments.Count + tenantPayments.Count);
+                        foreach (var up in utilityPayments)
+                            tasks.Add(ProcessUtilityAsync(up, stoppingToken));
 
-                    foreach (var tp in tenantPayments)
-                        tasks.Add(ProcessTenantAsync(tp, stoppingToken));
+                        foreach (var tp in tenantPayments)
+                            tasks.Add(ProcessTenantAsync(tp, stoppingToken));
 
-                    await Task.WhenAll(tasks);
+                        await Task.WhenAll(tasks);
+                    }
                 }
                 catch (OperationCanceledException)
                 {

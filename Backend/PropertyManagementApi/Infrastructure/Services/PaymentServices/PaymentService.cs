@@ -682,8 +682,8 @@ namespace Infrastructure.Services.PaymentServices
                 .Where(wt => wt.Status == status)
                 .ToListAsync();
 
-            if (walletTransactions == null || walletTransactions.Count == 0)
-                throw new Exception("Wallet transactions not found.");
+            //if (walletTransactions == null || walletTransactions.Count == 0)
+            //    throw new Exception("Wallet transactions not found.");
 
             return walletTransactions;
         }
