@@ -4,6 +4,7 @@ using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
 using Application.Interfaces.PrepaidApi;
 using Application.Interfaces.Property;
+using Application.Interfaces.ServiceLogs;
 using Application.Interfaces.Settings;
 using Application.Interfaces.SMS;
 using Application.Interfaces.STSVending;
@@ -20,6 +21,7 @@ using Infrastructure.Services.PaymentServices;
 using Infrastructure.Services.PaymentServices.WalletSvc;
 using Infrastructure.Services.PrepaidApi;
 using Infrastructure.Services.Property;
+using Infrastructure.Services.ServiceLogs;
 using Infrastructure.Services.Settings;
 using Infrastructure.Services.SMS;
 using Infrastructure.Services.STSVending;
@@ -57,6 +59,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISTSProcessing, STSProcessing>();
 builder.Services.AddScoped<ISmsProcessor, SmsProcessor>();
+builder.Services.AddScoped<IServiceLogsRepository, ServiceLogsRepository>();
 //builder.Services.AddScoped<ICollectoApiClient, CollectoService>();
 
 

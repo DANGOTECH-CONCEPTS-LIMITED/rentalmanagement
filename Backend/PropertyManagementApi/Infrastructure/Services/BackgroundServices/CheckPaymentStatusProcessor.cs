@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
+using Application.Interfaces.ServiceLogs;
 using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.DependencyInjection;
@@ -142,6 +143,7 @@ namespace Infrastructure.Services.BackgroundServices
             using var scope = _scopeFactory.CreateScope();
             var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             var collectoApi = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
+            var servicelog = scope.ServiceProvider.GetRequiredService<IServiceLogsRepository>();
 
             using (_logger.BeginScope(new { transactionId, vendorTranId, tranType }))
             {
@@ -294,6 +296,7 @@ namespace Infrastructure.Services.BackgroundServices
                 }
                 catch (Exception ex)
                 {
+                    await servicelog.LogErrorAsync("CheckPaymentStatusProcessor", "Error in status check", "Exception",ex.Message);
                     _logger.LogError(ex, "Error in status check");
                 }
             }

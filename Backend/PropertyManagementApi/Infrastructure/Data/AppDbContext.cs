@@ -1,4 +1,5 @@
 ﻿using Domain.Entities.PropertyMgt;
+using Domain.Entities.ServiceLogs;
 using Domain.Entities.USSD;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -25,6 +26,7 @@ namespace Infrastructure.Data
         public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
+        public DbSet<ServiceLogs> ServiceLogs { get; set; } = null!;
 
         #region USSD
         public DbSet<UssdMenu> UssdMenus { get; set; }
