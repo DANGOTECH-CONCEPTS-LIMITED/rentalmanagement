@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.Collecto;
 using Domain.Dtos.Collecto;
 using Dtos.Collecto;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -144,6 +145,7 @@ namespace API.Controllers.CollectoApi
         //}
 
         [HttpPost("/initiateBankPayout")]
+        [Authorize]
         public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutBankRequestDto request)
         {
             try
@@ -172,6 +174,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/withdrawToCollectoApi")]
+        [Authorize]
         public async Task<IActionResult> WithdrawToCollectoApi([FromBody] CollectoWithdrawRequest request)
         {
             try
