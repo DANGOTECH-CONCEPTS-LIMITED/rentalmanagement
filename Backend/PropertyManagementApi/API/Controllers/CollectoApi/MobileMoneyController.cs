@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces.Collecto;
 using Domain.Dtos.Collecto;
+using Dtos.Collecto;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -162,6 +163,20 @@ namespace API.Controllers.CollectoApi
             try
             {
                 var response = await _collectoApiClient.GetPayoutStatusAsync(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("/withdrawToCollectoApi")]
+        public async Task<IActionResult> WithdrawToCollectoApi([FromBody] CollectoWithdrawRequest request)
+        {
+            try
+            {
+                var response = await _collectoApiClient.WithdrawToCollectoApi(request);
                 return Ok(response);
             }
             catch (Exception ex)

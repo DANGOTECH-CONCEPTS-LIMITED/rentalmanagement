@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
 using Domain.Dtos.Collecto;
+using Dtos.Collecto;
 using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Services.Collecto
@@ -119,6 +120,14 @@ namespace Infrastructure.Services.Collecto
             var res = await _http.PostAsJsonAsync($"{_username}/initiatePayout", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
+        }
+
+        public Task<string> WithdrawToCollectoApi(CollectoWithdrawRequest collectoWithdrawRequest)
+        {
+            SetHeaders();
+            var res =  _http.PostAsJsonAsync($"{_username}/walletToWallet", collectoWithdrawRequest);
+            res.Result.EnsureSuccessStatusCode();
+            return res.Result.Content.ReadAsStringAsync();
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Domain.Dtos.Collecto;
+using Dtos.Collecto;
 
 namespace Application.Interfaces.Collecto
 {
@@ -20,5 +21,6 @@ namespace Application.Interfaces.Collecto
         Task<string> GetPayoutStatusAsync(PayoutStatusRequestDto request);
         Task<string> GetSupportedBanksAsync(string request);
         Task<string> InitiateBankPayoutAsync(InitiatePayoutBankRequestDto request);
+        Task<string> WithdrawToCollectoApi(CollectoWithdrawRequest collectoWithdrawRequest);
     }
 }
