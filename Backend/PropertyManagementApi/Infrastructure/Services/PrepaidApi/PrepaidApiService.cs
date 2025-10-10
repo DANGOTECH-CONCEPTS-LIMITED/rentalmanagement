@@ -91,6 +91,10 @@ namespace Infrastructure.Services.PrepaidApi
                 var resp = await _stsProcessing.ValidateSTSMeter(searchDto.MeterNumber);
                 return NormalizeStsToPosJson(resp);
             }
+            else if (searchDto.MeterNumber.Length<13)
+            {
+                throw new ArgumentException("Invalid Meter Number");
+            }
             else
             {
                 var request = new
