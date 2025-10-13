@@ -63,72 +63,61 @@ namespace Infrastructure.Services.BackgroundServices
             using (var scope = _scopeFactory.CreateScope())
             {
                 var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-
-                tenantPayments = (await paymentSvc
-                        .GetPaymentsByStatusAsync(PendingAtTelcom))
-                    .ToList();
-
-                utilityPayments = (await paymentSvc
-                        .GetUtilityPaymentByStatus(PendingAtTelcom))
-                    .ToList();
-
-                walletTransactions = (await paymentSvc
-                        .GetWalletTransactionByStatus(PendingAtTelcom))
-                    .ToList();
+                tenantPayments = (await paymentSvc.GetPaymentsByStatusAsync(PendingAtTelcom)).ToList();
+                utilityPayments = (await paymentSvc.GetUtilityPaymentByStatus(PendingAtTelcom)).ToList();
+                walletTransactions = (await paymentSvc.GetWalletTransactionByStatus(PendingAtTelcom)).ToList();
             }
 
             var tasks = new List<Task>();
+            using var throttler = new SemaphoreSlim(10); // limit concurrency
+
+            async Task RunSafe(Func<Task> work, string context, string transactionId)
+            {
+                await throttler.WaitAsync(ct);
+                try
+                {
+                    await work();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing {Context} TxId: {TransactionId}", context, transactionId);
+                    using var scope = _scopeFactory.CreateScope();
+                    var servicelog = scope.ServiceProvider.GetRequiredService<IServiceLogsRepository>();
+                    await servicelog.LogErrorAsync(
+                        "CheckPaymentStatusProcessor",
+                        $"Error processing {context}. TxId: {transactionId}",
+                        "Exception",
+                        ex.Message ?? ex.InnerException?.Message ?? "Unknown");
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            }
 
             foreach (var t in tenantPayments)
-                tasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ProcessStatusAsync(
-                            t.TransactionId,
-                            t.VendorTransactionId,
-                            "RENT",
-                            ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Error processing tenant payment {t.TransactionId}");
-                    }
-                }));
+            {
+                tasks.Add(RunSafe(
+                    () => ProcessStatusAsync(t.TransactionId, t.VendorTransactionId, "RENT", ct),
+                    $"tenant payment {t.TransactionId}",
+                    t.TransactionId));
+            }
 
             foreach (var u in utilityPayments)
-                tasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ProcessStatusAsync(
-                            u.TransactionID,
-                            u.VendorTranId,
-                            "UTILITY",
-                            ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Error processing utility payment {u.TransactionID}");
-                    }
-                }));
+            {
+                tasks.Add(RunSafe(
+                    () => ProcessStatusAsync(u.TransactionID!, u.VendorTranId!, "UTILITY", ct),
+                    $"utility payment {u.TransactionID}",
+                    u.TransactionID!));
+            }
 
             foreach (var w in walletTransactions)
-                tasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ProcessStatusAsync(
-                            w.TransactionId.ToString(),
-                            w.TransactionId,
-                            "WALLET",
-                            ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Error processing wallet transaction {w.TransactionId}");
-                    }
-                }));
+            {
+                tasks.Add(RunSafe(
+                    () => ProcessStatusAsync(w.TransactionId, w.TransactionId, "WALLET", ct),
+                    $"wallet transaction {w.TransactionId}",
+                    w.TransactionId));
+            }
 
             await Task.WhenAll(tasks);
         }
@@ -139,7 +128,6 @@ namespace Infrastructure.Services.BackgroundServices
             string tranType,
             CancellationToken ct)
         {
-            // Each status‐check runs in its own DI scope → its own DbContext
             using var scope = _scopeFactory.CreateScope();
             var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             var collectoApi = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
@@ -152,10 +140,9 @@ namespace Infrastructure.Services.BackgroundServices
                     _logger.LogInformation("Checking status with Collecto");
                     var responseJson = string.Empty;
 
-                    if (tranType.Equals("WALLET",StringComparison.OrdinalIgnoreCase))
+                    if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
                     {
-                        responseJson = await collectoApi
-                        .GetPayoutStatusAsync(new PayoutStatusRequestDto
+                        responseJson = await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
                         {
                             Gateway = "mobilemoney",
                             Reference = transactionId
@@ -163,8 +150,7 @@ namespace Infrastructure.Services.BackgroundServices
                     }
                     else
                     {
-                        responseJson = await collectoApi
-                        .GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
+                        responseJson = await collectoApi.GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
                         {
                             TransactionId = vendorTranId
                         });
@@ -178,8 +164,7 @@ namespace Infrastructure.Services.BackgroundServices
 
                     if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
                     {
-                        var payout = JsonSerializer
-                        .Deserialize<PayoutStatusResponse>(responseJson);
+                        var payout = JsonSerializer.Deserialize<PayoutStatusResponse>(responseJson);
 
                         if (payout == null || payout.data == null || payout.data.data.Count == 0)
                         {
@@ -187,8 +172,6 @@ namespace Infrastructure.Services.BackgroundServices
                             return;
                         }
 
-                        // If API can return multiple entries, try to pick the one that matches our best hints.
-                        // Fallback: first item.
                         var item = payout.data.data.First();
                         var status = item.status?.Trim().ToUpperInvariant();
 
@@ -225,20 +208,17 @@ namespace Infrastructure.Services.BackgroundServices
                     }
                     else
                     {
-                        var dto = JsonSerializer
-                        .Deserialize<RequestToPayStatusResponse>(responseJson);
+                        var dto = JsonSerializer.Deserialize<RequestToPayStatusResponse>(responseJson);
 
                         if (dto?.data?.requestToPayStatus != true)
                         {
                             if (dto.data.status.Equals("Undetermined"))
                             {
-                                //do nothing if the status is undetermined
                                 _logger.LogInformation("Status is undetermined, skipping update");
                                 return;
                             }
                             else if (dto.data.status.Equals("PENDING"))
                             {
-                                //do nothing if the status is pending
                                 _logger.LogInformation("Status is still pending, skipping update");
                                 return;
                             }
@@ -248,7 +228,6 @@ namespace Infrastructure.Services.BackgroundServices
                                     SuccessAtTelecom,
                                     transactionId,
                                     dto.data.message ?? string.Empty,
-                                    //dto.data.transactionId ?? string.Empty,
                                     vendorTranId,
                                     tranType);
                                 _logger.LogInformation("Status updated to {NewStatus}", SuccessAtTelecom);
@@ -260,18 +239,17 @@ namespace Infrastructure.Services.BackgroundServices
                                     FailedAtTelecom,
                                     transactionId,
                                     dto.data.message ?? string.Empty,
-                                    //dto.data.transactionId ?? string.Empty,
                                     vendorTranId,
                                     tranType);
                                 _logger.LogInformation("Status updated to {NewStatus}", FailedAtTelecom);
                                 return;
                             }
+
                             _logger.LogError("Collecto returned requestToPayStatus=false");
                             await paymentSvc.UpdatePaymentStatus(
                                 FailedAtTelecom,
                                 transactionId,
                                 dto?.data?.message ?? "Unknown error",
-                                //string.Empty,
                                 vendorTranId,
                                 tranType);
                             return;
@@ -291,13 +269,15 @@ namespace Infrastructure.Services.BackgroundServices
                             _logger.LogInformation("Status updated to {NewStatus}", newStatus);
                         }
                     }
-
-                    
                 }
                 catch (Exception ex)
                 {
-                    await servicelog.LogErrorAsync("CheckPaymentStatusProcessor", "Error in status check", "Exception",ex.Message);
-                    _logger.LogError(ex, "Error in status check");
+                    await servicelog.LogErrorAsync(
+                        "CheckPaymentStatusProcessor",
+                        $"Error in status check. TxId: {transactionId}, Type: {tranType}",
+                        "Exception",
+                        ex.Message ?? ex.InnerException?.Message ?? "Unknown");
+                    _logger.LogError(ex, "Error in status check for TxId: {TransactionId}", transactionId);
                 }
             }
         }
