@@ -1,6 +1,7 @@
 ﻿using Domain.Entities.PropertyMgt;
 using Domain.Entities.ServiceLogs;
 using Domain.Entities.USSD;
+using Domain.Entities.External;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.Data
 {
-    public class AppDbContext : DbContext
+    public partial class AppDbContext : DbContext
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         public DbSet<User> Users { get; set; }
@@ -27,6 +28,7 @@ namespace Infrastructure.Data
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
         public DbSet<ServiceLogs> ServiceLogs { get; set; } = null!;
+        public DbSet<MpesaCallbackAudit> MpesaCallbackAudits { get; set; } = null!;
 
         #region USSD
         public DbSet<UssdMenu> UssdMenus { get; set; }
@@ -176,6 +178,19 @@ namespace Infrastructure.Data
                 .HasOne(t => t.Wallet)
                 .WithMany(w => w.Transactions)
                 .HasForeignKey(t => t.WalletId);
+
+            // Ensure the accounting partial hook is invoked exactly once:
+            OnModelCreatingAccounting(modelBuilder);
+
+            modelBuilder.Entity<MpesaCallbackAudit>(e =>
+            {
+                e.Property(x => x.Payload).HasColumnType("longtext");
+                e.Property(x => x.Headers).HasColumnType("longtext");
+                e.HasIndex(x => x.TransId);
+            });
         }
+
+        // Declaration of the partial hook used by AppDbContext.Accounting.cs
+        partial void OnModelCreatingAccounting(ModelBuilder modelBuilder);
     }
 }

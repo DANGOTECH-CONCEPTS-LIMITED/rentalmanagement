@@ -4,6 +4,7 @@ using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251022081312_AccountingModule")]
+    partial class AccountingModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -131,42 +134,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("JournalEntryId");
 
                     b.ToTable("JournalLines");
-                });
-
-            modelBuilder.Entity("Domain.Entities.External.MpesaCallbackAudit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Amount")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("BillRefNumber")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Headers")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Payload")
-                        .HasColumnType("longtext");
-
-                    b.Property<bool>("Processed")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<DateTime>("ReceivedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("TransId")
-                        .HasColumnType("varchar(255)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TransId");
-
-                    b.ToTable("MpesaCallbackAudits");
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.Complaint", b =>

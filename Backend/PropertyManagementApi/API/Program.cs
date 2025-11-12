@@ -35,6 +35,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Text.Json.Serialization;
+using Application.Interfaces.Accounting;
+using Infrastructure.Services.Accounting;
+using Application.Interfaces.External;
+using Infrastructure.Services.External;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,7 +64,13 @@ builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISTSProcessing, STSProcessing>();
 builder.Services.AddScoped<ISmsProcessor, SmsProcessor>();
 builder.Services.AddScoped<IServiceLogsRepository, ServiceLogsRepository>();
-//builder.Services.AddScoped<ICollectoApiClient, CollectoService>();
+builder.Services.AddScoped<IExternalPayments, ExternalPayments>();
+
+// Accounting services
+builder.Services.AddScoped<IAccountingQueryService, AccountingQueryService>();
+builder.Services.AddScoped<IAccountingService, AccountingService>();
+builder.Services.AddScoped<IWalletChargePolicy, ConfigWalletChargePolicy>();
+builder.Services.AddScoped<WalletAccountingNotifier>();
 
 
 
@@ -80,6 +90,8 @@ builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
 builder.Services.AddHostedService<CreditWalletService>();
 builder.Services.AddHostedService<PendingWalletWithdrawsProcessor>();
 builder.Services.AddHostedService<ProcessPendingTokenTransactions>();
+builder.Services.AddHostedService<MpesaCallbackProcessor>();
+
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
