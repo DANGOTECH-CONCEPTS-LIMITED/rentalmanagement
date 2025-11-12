@@ -31,7 +31,7 @@ namespace API.Controllers.External
             _externalPayments = externalPayments;
         }
 
-        [HttpPost("/mpesa-callback")]
+        [HttpPost("/external-payments-api")]
         public async Task<IActionResult> MpesaCallbackOld([FromBody] MpesaCallbackDto dto)
         {
             try

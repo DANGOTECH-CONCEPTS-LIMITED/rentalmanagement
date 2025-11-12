@@ -13,12 +13,13 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Data.Common;
 
 namespace Infrastructure.Services.Ussd
 {
     public class UssdService : IUssdService
     {
-        private readonly AppDbContext  _context;
+        private readonly AppDbContext _context;
         private readonly IPaymentService _pymsvc;
         private readonly IPrepaidApiClient _prepaidApiClient;
 
@@ -102,6 +103,51 @@ namespace Infrastructure.Services.Ussd
 
                 if (!string.IsNullOrWhiteSpace(node.DataKey))
                     data[node.DataKey] = lastInput;
+
+                // Special-case: immediate NIN lookup demo (no DB session persistence required beyond this)
+                if (string.Equals(node.DataKey, "nin", StringComparison.OrdinalIgnoreCase))
+                {
+                    // basic NIN normalization
+                    var nin = lastInput.Trim();
+                    if (!Regex.IsMatch(nin, @"^[A-Za-z0-9\-]{4,20}$"))
+                    {
+                        await DeleteSessionAsync(sess);
+                        return End("Invalid NIN format.");
+                    }
+
+                    try
+                    {
+                        await using var conn = _context.Database.GetDbConnection();
+                        if (conn.State != System.Data.ConnectionState.Open)
+                            await conn.OpenAsync();
+
+                        await using var cmd = conn.CreateCommand();
+                        cmd.CommandText = "SELECT FullName FROM Students WHERE Nin = @nin LIMIT 1";
+                        var p = cmd.CreateParameter();
+                        p.ParameterName = "@nin";
+                        p.Value = nin;
+                        cmd.Parameters.Add(p);
+
+                        var result = await cmd.ExecuteScalarAsync();
+                        await DeleteSessionAsync(sess);
+
+                        if (result != null && result != DBNull.Value)
+                        {
+                            var full = Convert.ToString(result);
+                            return End($"Student found: {full}");
+                        }
+                        else
+                        {
+                            return End("Student not registered.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // on error, end session and report
+                        await DeleteSessionAsync(sess);
+                        return End("Student registry currently unavailable. Try later.");
+                    }
+                }
 
                 // advance to the next node
                 sess.CurrentNodeId = node.NextNodeId ?? sess.CurrentNodeId;
