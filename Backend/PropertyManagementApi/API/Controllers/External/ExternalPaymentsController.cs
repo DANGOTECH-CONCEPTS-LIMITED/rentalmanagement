@@ -36,19 +36,21 @@ namespace API.Controllers.External
         {
             try
             {
-                var auth = Request.Headers["Authorization"].FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(auth))
-                {
-                    if (!string.IsNullOrWhiteSpace(auth) && auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                        auth = auth.Substring("Bearer ".Length).Trim();
-                }
-                else 
-                {
-                    _logger.LogWarning("Unauthorized callback attempt. Missing token header.");
-                    return Unauthorized("Missing token.");
-                }
+                var auth = "";
+                var headers = "";
+                //var auth = Request.Headers["Authorization"].FirstOrDefault();
+                //if (!string.IsNullOrWhiteSpace(auth))
+                //{
+                //    if (!string.IsNullOrWhiteSpace(auth) && auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                //        auth = auth.Substring("Bearer ".Length).Trim();
+                //}
+                //else 
+                //{
+                //    _logger.LogWarning("Unauthorized callback attempt. Missing token header.");
+                //    return Unauthorized("Missing token.");
+                //}
 
-                var headers = string.Join(";", Request.Headers.Select(h => $"{h.Key}={h.Value}"));
+                //var headers = string.Join(";", Request.Headers.Select(h => $"{h.Key}={h.Value}"));
                 await _externalPayments.RecordMpesaPayment(dto, auth, headers);
                 return Ok(new { received = true, message = "Callback processed successfully" });
             }catch (UnauthorizedAccessException uaex)

@@ -27,11 +27,11 @@ namespace Infrastructure.Services.External
 
         public async Task RecordMpesaPayment(MpesaCallbackDto mpesadto, string callbackToken, string headers)
         {
-            if (!IsValidCallbackToken(callbackToken))
-            {
-                throw new UnauthorizedAccessException("Invalid callback token.");
-                //throw new Un("Invalid callback token.");
-            }
+            //if (!IsValidCallbackToken(callbackToken))
+            //{
+            //    throw new UnauthorizedAccessException("Invalid callback token.");
+            //    //throw new Un("Invalid callback token.");
+            //}
             var payload = JsonSerializer.Serialize(mpesadto);
 
 
