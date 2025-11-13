@@ -20,6 +20,9 @@ namespace Domain.Entities.PropertyMgt
         public string IdFront { get; set; } = string.Empty;
         public string IdBack { get; set; } = string.Empty;
         public string NationalIdNumber { get; set; } = string.Empty;
+        public string? BankAccountNumber { get; set; } = string.Empty;
+        public string? BankName { get; set; } = string.Empty;
+        public string? SwiftCode { get; set; } = string.Empty;
         public bool PasswordChanged { get; set; } = false;
         public bool Verified { get; set; } = false;
         public string? Token { get; set; } = string.Empty;
