@@ -1,5 +1,6 @@
 using Application.Interfaces.External;
 using Domain.Dtos.External;
+using Domain.Dtos.Payments;
 using Domain.Entities.External;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -108,7 +109,7 @@ namespace API.Controllers.External
         //    }
         //    var headers = string.Join(";", Request.Headers.Select(h => $"{h.Key}={h.Value}"));
 
-            
+
 
         //    try
         //    {
@@ -128,5 +129,74 @@ namespace API.Controllers.External
 
         //    return Ok(new { received = true, auditId = audit.Id });
         //}
+
+        [HttpPost("/vendor-payments-api")]
+        public async Task<IActionResult> VendorPaymentsCallback([FromBody] VendorPaymentsDto dto)
+        {
+            try
+            {
+                var auth = Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(auth))
+                {
+                    if (!string.IsNullOrWhiteSpace(auth) && auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                        auth = auth.Substring("Bearer ".Length).Trim();
+                }
+                else
+                {
+                    _logger.LogWarning("Unauthorized vendor payment callback attempt. Missing token header.");
+                    return Unauthorized("Missing token.");
+                }
+                await _externalPayments.RecordVendorPayment(dto, auth);
+                return Ok(new { received = true, message = "Vendor payment callback processed successfully" });
+            }
+            catch (UnauthorizedAccessException uaex)
+            {
+                _logger.LogWarning(uaex, "Unauthorized vendor payment callback attempt.");
+                return Unauthorized("Invalid token.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing vendor payment callback");
+                return StatusCode(500, "Error processing vendor payment callback");
+            }
+        }
+
+
+        [HttpGet("/vendor-payment-status/{vendorPaymentRef}")]
+        public async Task<IActionResult> GetVendorPaymentStatus([FromRoute] string vendorPaymentRef)
+        {
+            try
+            {
+                var auth = Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(auth))
+                {
+                    if (!string.IsNullOrWhiteSpace(auth) && auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                        auth = auth.Substring("Bearer ".Length).Trim();
+                }
+                else
+                {
+                    _logger.LogWarning("Unauthorized vendor payment status attempt. Missing token header.");
+                    return Unauthorized("Missing token.");
+                }
+                var result = await _externalPayments.GetVendorPaymentStatus(vendorPaymentRef, auth);
+                if (result == null)
+                {
+                    return NotFound(new { message = "Vendor payment not found" });
+                }
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException uaex)
+            {
+                _logger.LogWarning(uaex, "Unauthorized vendor payment status attempt.");
+                return Unauthorized("Invalid token.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving vendor payment status");
+                return StatusCode(500, "Error retrieving vendor payment status");
+            }
+        }
+
+
     }
 }

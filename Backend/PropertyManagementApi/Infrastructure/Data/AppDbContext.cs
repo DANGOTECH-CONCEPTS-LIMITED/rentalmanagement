@@ -38,6 +38,11 @@ namespace Infrastructure.Data
 
         #endregion
 
+
+        #region External Payments
+        public DbSet<VendorPayments> VendorPayments { get; set; }
+        #endregion
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

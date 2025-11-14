@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces.External;
 using Domain.Dtos.External;
+using Domain.Dtos.Payments;
 using Domain.Entities.External;
 using Humanizer;
 using Infrastructure.Data;
@@ -49,6 +50,26 @@ namespace Infrastructure.Services.External
             await _dbContext.SaveChangesAsync();
         }
 
+        public async Task RecordVendorPayment(VendorPaymentsDto vendorPayments, string callbackToken)
+        {
+            if (!IsValidCallbackToken(callbackToken))
+            {
+                throw new UnauthorizedAccessException("Invalid callback token.");
+            }
+            var payment = new VendorPayments
+            {
+                VendorName = vendorPayments.VendorName,
+                VendorCode = vendorPayments.VendorCode,
+                Amount = vendorPayments.Amount,
+                PaymentDate = vendorPayments.PaymentDate,
+                PhoneNumber = vendorPayments.PhoneNumber,
+                VendorTranId = vendorPayments.VendorTranId,
+                TransId = Guid.NewGuid().ToString(),
+            };
+            _dbContext.VendorPayments.Add(payment);
+            await _dbContext.SaveChangesAsync();
+        }
+
         private bool IsValidCallbackToken(string token)
         {
             var expected = _cfg["ExternalApi:CallbackToken"];
@@ -58,6 +79,21 @@ namespace Infrastructure.Services.External
                 throw new Exception("Callback token not configured.");
             }
             return !string.IsNullOrWhiteSpace(expected) && token == expected;
+        }
+
+        public async Task<VendorPayments> GetVendorPaymentStatus(string vendorPaymentRef,string callbackToken)
+        {
+            if (!IsValidCallbackToken(callbackToken))
+            {
+                throw new UnauthorizedAccessException("Invalid callback token.");
+            }
+
+            var payment = await _dbContext.VendorPayments
+                .FindAsync(vendorPaymentRef);
+
+            if (payment == null)
+                throw new KeyNotFoundException("Vendor payment not found.");
+            return payment;
         }
     }
 }
