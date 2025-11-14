@@ -123,6 +123,14 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             // Deduct balance
             wallet.Balance -= withdrawDto.amount;
 
+            var finalStatus = status;
+
+            if (!string.IsNullOrWhiteSpace(withdrawDto.description) &&
+                withdrawDto.description.Contains("Automatic", StringComparison.OrdinalIgnoreCase))
+            {
+                finalStatus = "PENDING_BANK_PAYOUT";
+            }
+
             // Record transaction
             var txn = new WalletTransaction
             {
@@ -157,6 +165,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 throw new Exception("Transaction not found.");
             existingTransaction.Status = walletTransaction.Status;
             existingTransaction.Description = walletTransaction.Description;
+            existingTransaction.VendorTranId = walletTransaction.VendorTranId;
             await _context.SaveChangesAsync();
         }
 

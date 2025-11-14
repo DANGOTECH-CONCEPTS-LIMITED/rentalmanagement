@@ -17,6 +17,7 @@ namespace Infrastructure.Services.BackgroundServices
     public class PendingWalletWithdrawsProcessor : BackgroundService
     {
         private const string PendingStatus = "PENDING";
+        private const string PendingBankPayout = "PENDING_BANK_PAYOUT";
         private const string SucessfulAtTelecom = "SUCCESSFUL AT TELECOM";
         private const string FailedStatus = "FAILED AT TELECOM";
         private const string PendingAtTelcom = "PENDING AT TELCOM";
@@ -37,18 +38,32 @@ namespace Infrastructure.Services.BackgroundServices
                 try
                 {
                     using var scope = _scopeFactory.CreateScope();
-                    
+
                     var wallet = scope.ServiceProvider.GetRequiredService<IWalletService>();
                     var collecto = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
-                    
+
                     var pendingwithdraws = await wallet
                         .GetTransactionsByStatus(PendingStatus)
+                        .ConfigureAwait(false);
+
+                    var pendingBankPayouts = await wallet
+                        .GetTransactionsByStatus(PendingBankPayout)
                         .ConfigureAwait(false);
                     foreach (var walletTransaction in pendingwithdraws)
 
                     {
                         // isolate each payment in its own try/catch
                         await ProcessSinglePaymentAsync(
+                            walletTransaction,
+                            collecto,
+                            wallet,
+                            stoppingToken);
+                    }
+
+                    foreach (var walletTransaction in pendingBankPayouts)
+                    {
+                        // isolate each payment in its own try/catch
+                        await ProcessSingleBankPayoutPaymentAsync(
                             walletTransaction,
                             collecto,
                             wallet,
@@ -106,6 +121,55 @@ namespace Infrastructure.Services.BackgroundServices
                     }
                 }
                     
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error processing payment {ex.Message}");
+            }
+        }
+
+        private async Task ProcessSingleBankPayoutPaymentAsync(
+            WalletTransaction walletTransaction,
+            ICollectoApiClient collecto,
+            IWalletService wallet,
+            CancellationToken stoppingToken)
+        {
+            try
+            {
+                //make amount positive
+                walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
+                //prepare initate payout request
+                var request = new InitiatePayoutBankRequestDto
+                {
+                    gateway = "bank",
+                    bankName = walletTransaction.Wallet.Landlord.BankName,
+                    bankSwiftCode = walletTransaction.Wallet.Landlord.SwiftCode,
+                    accountNumber = walletTransaction.Wallet.Landlord.BankAccountNumber,
+                    accountName = walletTransaction.Wallet.Landlord.FullName,
+                    reference = walletTransaction.TransactionId,
+                    amount = walletTransaction.Amount,
+                    message = walletTransaction.Description,
+                    phone = walletTransaction.Wallet.Landlord.PhoneNumber
+                };
+                var rawResponse = await collecto.InitiateBankPayoutAsync(request);
+                if (!string.IsNullOrWhiteSpace(rawResponse))
+                {
+                    var payoutResponse = JsonSerializer.Deserialize<PayoutResponse>(rawResponse);
+                    if (payoutResponse.data.payout)
+                    {
+                        walletTransaction.Status = "PENDING AT THE BANK";
+                        walletTransaction.VendorTranId = payoutResponse.data.otherReference;
+                        await wallet.UpdateWalletTransaction(walletTransaction);
+                    }
+                    else if (!payoutResponse.data.payout)
+                    {
+                        // Handle failed payments
+                        walletTransaction.Status = FailedStatus;
+                        walletTransaction.Description = payoutResponse.data.message;
+                        await wallet.ReverseWalletTransaction(walletTransaction);
+                    }
+                }
+
             }
             catch (Exception ex)
             {

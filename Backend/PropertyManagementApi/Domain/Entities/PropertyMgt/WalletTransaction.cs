@@ -15,6 +15,8 @@ namespace Domain.Entities.PropertyMgt
         public decimal Amount { get; set; }
         // e.g. "Rent payout", "Withdrawal"
 
+        public string? vendorReference { get; set; }
+
         public string Status { get; set; } = "SUCCESSFUL";
 
         public string VendorTranId { get; set; } = string.Empty;

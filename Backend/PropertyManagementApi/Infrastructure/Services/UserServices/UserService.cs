@@ -172,7 +172,7 @@ namespace Infrastructure.Services.UserServices
                 throw new Exception("User not found or incorrect password.");
 
             //check user role is a tenant
-            if (user.SystemRole.Name == "Tenant") 
+            if (user.SystemRole.Name == "Tenant")
             {
                 //get tenant with this user id
                 var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == user.Id);
@@ -413,6 +413,18 @@ namespace Infrastructure.Services.UserServices
             // Remove the utility meter
             _context.UtilityMeters.Remove(existingMeter);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<User> GetUserByUtilityMeter(string meter)
+        {
+            // Validate utility meter existence
+            var utilityMeter = await _context.UtilityMeters
+                .Include(m => m.User)
+                .FirstOrDefaultAsync(m => m.MeterNumber == meter);
+            if (utilityMeter == null)
+                throw new Exception("Utility meter not found.");
+            // Return the associated user
+            return utilityMeter.User;
         }
     }
 }

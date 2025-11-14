@@ -29,5 +29,6 @@ namespace Application.Interfaces.UserServices
         Task<IEnumerable<UtilityMeter>> GetAllUtilityMetersAsync();
         Task UpdateUtilityMeterAsync(UtilityMeterDto utilityMeter, int id);
         Task DeleteUtilityMeterAsync(int id);
+        Task<User> GetUserByUtilityMeter(string meter);
     }
 }

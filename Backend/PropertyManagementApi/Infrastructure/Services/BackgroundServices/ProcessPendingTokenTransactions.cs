@@ -1,14 +1,18 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Application.Interfaces.PaymentService;
+﻿using Application.Interfaces.PaymentService;
+using Application.Interfaces.PaymentService.WalletSvc;
 using Application.Interfaces.PrepaidApi;
+using Application.Interfaces.UserServices;
+using Domain.Dtos.Payments.WalletDto;
 using Domain.Dtos.PrepaidApi;
 using Domain.Entities.PropertyMgt;
+using Microsoft.AspNet.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Services.BackgroundServices
 {
@@ -64,6 +68,8 @@ namespace Infrastructure.Services.BackgroundServices
             using var scope = _scopeFactory.CreateScope();
             var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             var prepaidClient = scope.ServiceProvider.GetRequiredService<IPrepaidApiClient>();
+            var user = scope.ServiceProvider.GetRequiredService<IUserService>();
+            var walletService = scope.ServiceProvider.GetRequiredService<IWalletService>();
 
             var pending = await paymentService
                 .GetUtilityPymtsPendingTokenGeneration()
@@ -83,7 +89,7 @@ namespace Infrastructure.Services.BackgroundServices
                 await semaphore.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
-                    await ProcessSingleTransactionAsync(tx, paymentService, prepaidClient, ct)
+                    await ProcessSingleTransactionAsync(tx, paymentService, prepaidClient, user, walletService, ct)
                         .ConfigureAwait(false);
                 }
                 finally
@@ -98,7 +104,7 @@ namespace Infrastructure.Services.BackgroundServices
         private async Task ProcessSingleTransactionAsync(
             UtilityPayment transaction,
             IPaymentService paymentService,
-            IPrepaidApiClient prepaidClient,
+            IPrepaidApiClient prepaidClient, IUserService userService, IWalletService walletService,
             CancellationToken ct)
         {
             try
@@ -121,6 +127,36 @@ namespace Infrastructure.Services.BackgroundServices
                     await paymentService
                         .UpdateUtilityPayment(transaction)
                         .ConfigureAwait(false);
+
+                    var user = await userService
+                        .GetUserByUtilityMeter(transaction.MeterNumber)
+                        .ConfigureAwait(false);
+
+                    //check if user has bank account linked
+                    if (!string.IsNullOrEmpty(user.BankAccountNumber))
+                    {
+                        // initiate automatic withdrawal from the wallet
+                        // get wallet id by meter number
+                        var wallet = await walletService
+                            .GetWalletByUtilityMeterNumber(transaction.MeterNumber)
+                            .ConfigureAwait(false);
+
+                        // create withdraw dto
+                        var withdrawDto = new WithdrawDto
+                        {
+                            landlordid = wallet.LandlordId,
+                            amount = (decimal)transaction.Amount,
+                            description = $"Automatic withdrawal for utility payment transaction {transaction.Id} to bank account {user.BankAccountNumber}"
+                        };
+
+                        await walletService
+                            .WithdrawAsync(withdrawDto)
+                            .ConfigureAwait(false);
+
+                    }
+
+
+
 
                     _logger.LogInformation(
                         "✔ Transaction {TransactionId} processed successfully.",
