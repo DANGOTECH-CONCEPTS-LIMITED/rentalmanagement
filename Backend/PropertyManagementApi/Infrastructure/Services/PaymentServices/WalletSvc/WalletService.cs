@@ -138,7 +138,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 Amount = -withdrawDto.amount,
                 Description = withdrawDto.description,
                 TransactionDate = DateTime.UtcNow,
-                Status = status,
+                Status = finalStatus,//status,
                 TransactionId = Guid.NewGuid().ToString(),
             };
             _context.WalletTransactions.Add(txn);

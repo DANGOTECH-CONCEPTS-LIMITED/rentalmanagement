@@ -52,6 +52,7 @@ namespace Infrastructure.Services.BackgroundServices
                     foreach (var walletTransaction in pendingwithdraws)
 
                     {
+                        //
                         // isolate each payment in its own try/catch
                         await ProcessSinglePaymentAsync(
                             walletTransaction,
