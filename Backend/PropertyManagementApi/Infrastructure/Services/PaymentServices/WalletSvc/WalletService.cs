@@ -112,6 +112,14 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 {
                     status = "SUCCESSFUL";
                 }
+
+                // check if user is has bank account linked
+                if (!string.IsNullOrWhiteSpace(users.BankAccountNumber) &&
+                    !string.IsNullOrWhiteSpace(users.BankName))
+                {
+                    status = "PENDING_BANK_PAYOUT";
+                }
+
             }
 
             if (wallet == null)

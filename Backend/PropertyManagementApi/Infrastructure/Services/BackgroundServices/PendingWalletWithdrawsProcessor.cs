@@ -139,37 +139,42 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
-                //prepare initate payout request
-                var request = new InitiatePayoutBankRequestDto
+                if(walletTransaction.Amount > 5000) 
                 {
-                    gateway = "bank",
-                    bankName = walletTransaction.Wallet.Landlord.BankName,
-                    bankSwiftCode = walletTransaction.Wallet.Landlord.SwiftCode,
-                    accountNumber = walletTransaction.Wallet.Landlord.BankAccountNumber,
-                    accountName = walletTransaction.Wallet.Landlord.FullName,
-                    reference = walletTransaction.TransactionId,
-                    amount = walletTransaction.Amount,
-                    message = walletTransaction.Description,
-                    phone = walletTransaction.Wallet.Landlord.PhoneNumber
-                };
-                var rawResponse = await collecto.InitiateBankPayoutAsync(request);
-                if (!string.IsNullOrWhiteSpace(rawResponse))
-                {
-                    var payoutResponse = JsonSerializer.Deserialize<PayoutResponse>(rawResponse);
-                    if (payoutResponse.data.payout)
+                    //prepare initate payout request
+                    var request = new InitiatePayoutBankRequestDto
                     {
-                        walletTransaction.Status = "PENDING AT THE BANK";
-                        walletTransaction.VendorTranId = payoutResponse.data.otherReference;
-                        await wallet.UpdateWalletTransaction(walletTransaction);
-                    }
-                    else if (!payoutResponse.data.payout)
+                        gateway = "bank",
+                        bankName = walletTransaction.Wallet.Landlord.BankName,
+                        bankSwiftCode = walletTransaction.Wallet.Landlord.SwiftCode,
+                        accountNumber = walletTransaction.Wallet.Landlord.BankAccountNumber,
+                        accountName = walletTransaction.Wallet.Landlord.FullName,
+                        reference = walletTransaction.TransactionId,
+                        amount = walletTransaction.Amount,
+                        message = walletTransaction.Description,
+                        phone = walletTransaction.Wallet.Landlord.PhoneNumber
+                    };
+
+                    var rawResponse = await collecto.InitiateBankPayoutAsync(request);
+                    if (!string.IsNullOrWhiteSpace(rawResponse))
                     {
-                        // Handle failed payments
-                        walletTransaction.Status = FailedStatus;
-                        walletTransaction.Description = payoutResponse.data.message;
-                        await wallet.ReverseWalletTransaction(walletTransaction);
+                        var payoutResponse = JsonSerializer.Deserialize<PayoutResponse>(rawResponse);
+                        if (payoutResponse.data.payout)
+                        {
+                            walletTransaction.Status = "PENDING AT THE BANK";
+                            walletTransaction.VendorTranId = payoutResponse.data.otherReference;
+                            await wallet.UpdateWalletTransaction(walletTransaction);
+                        }
+                        else if (!payoutResponse.data.payout)
+                        {
+                            // Handle failed payments
+                            walletTransaction.Status = FailedStatus;
+                            walletTransaction.Description = payoutResponse.data.message;
+                            await wallet.ReverseWalletTransaction(walletTransaction);
+                        }
                     }
                 }
+                
 
             }
             catch (Exception ex)
