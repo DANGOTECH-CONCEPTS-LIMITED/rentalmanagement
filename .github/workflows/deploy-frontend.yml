@@ -66,7 +66,7 @@ jobs:
           timeout: 600
           log-level: standard
 
-  deploy-api:
-    needs: build-and-deploy
-    uses: ./.github/workflows/deploy_api_to_server.yml
-    secrets: inherit
+  # deploy-api:
+  #   needs: build-and-deploy
+  #   uses: ./.github/workflows/deploy_api_to_server.yml
+  #   secrets: inherit
