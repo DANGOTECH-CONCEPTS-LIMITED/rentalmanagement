@@ -22,69 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install lftp (for remote backup)
+      - name: Install lftp
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y lftp zip
-
-      - name: FTP environment diagnostics
-        env:
-          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
-          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
-          FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
-          FTP_DIR: ${{ secrets.CPANEL_FTP_SERVERDIR }}
-        run: |
-          echo "Connecting to FTP to show pwd and root listing (masking may hide names)"
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; pwd; cls -1; bye" || echo "Root listing failed"
-          if [ -n "$FTP_DIR" ]; then
-            echo "Attempting listing of specified FTP_DIR='$FTP_DIR'"
-            lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$FTP_DIR\"; pwd; cls -1; bye" || echo "Specified FTP_DIR listing failed (likely unnecessary)."
-          else
-            echo "No FTP_DIR secret set (will deploy to root)."
-          fi
-
-      - name: Backup existing remote directory (conditional)
-        env:
-          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
-          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
-          FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
-          FTP_DIR: ${{ secrets.CPANEL_FTP_SERVERDIR }}
-        run: |
-          set -e
-          TS=$(date +%Y%m%d-%H%M%S)
-          mkdir -p remote_current
-          echo "Downloading current remote contents (excluding Backup & uploads)"
-          TARGET_DIR="$FTP_DIR"
-          if [ -z "$TARGET_DIR" ] || [ "$TARGET_DIR" = "." ]; then
-            TARGET_DIR="."  # treat blank secret as root
-          fi
-          echo "Attempting mirror of '$TARGET_DIR'"
-          if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$TARGET_DIR\"; pwd; mirror . remote_current --exclude Backup --exclude uploads; bye"; then
-            echo "Mirror succeeded from '$TARGET_DIR'"
-          else
-            echo "Primary mirror FAILED for '$TARGET_DIR'"
-            # Fallback possibilities: inside public_html or already chrooted inside subdomain
-            echo "Trying fallback path options..."
-            for FALLBACK in . "public_html" "public_html/$TARGET_DIR"; do
-              echo "Testing fallback '$FALLBACK'"
-              if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$FALLBACK\"; pwd; mirror . remote_current --exclude Backup --exclude uploads; bye"; then
-                echo "Using fallback directory '$FALLBACK' for backup"
-                TARGET_DIR="$FALLBACK"
-                break
-              fi
-            done
-          fi
-          echo "Packaging backup (if any files)"
-          cd remote_current
-          zip -r "site-backup-$TS.zip" . || echo "No files to zip"
-          cd ..
-          if [ -f remote_current/site-backup-$TS.zip ]; then
-            echo "Uploading backup zip to Backup/ folder on server (under $TARGET_DIR)"
-            lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$TARGET_DIR\"; mkdir -p Backup; cd Backup; put remote_current/site-backup-$TS.zip; bye"
-            echo "Backup completed: site-backup-$TS.zip"
-          else
-            echo "No backup zip created (remote empty or inaccessible)."
-          fi
+          sudo apt-get install -y lftp
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -114,21 +55,10 @@ jobs:
         run: |
           set -e
           TARGET_DIR="$FTP_DIR"
-          if [ -z "$TARGET_DIR" ] || [ "$TARGET_DIR" = "." ]; then
-            TARGET_DIR="."  # root
+          if [ -z "$TARGET_DIR" ]; then
+            echo "ERROR: CPANEL_FTP_SERVERDIR secret not set. Set it to 'dangopay.dangotechconcepts.com/'." && exit 1
           fi
-          echo "Starting deploy to '$TARGET_DIR'"
-          # Attempt direct deploy; if fails try common fallbacks
-          if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$TARGET_DIR\"; mirror -R Frontend/build . --delete --exclude Backup --exclude uploads --exclude .git --exclude node_modules; bye"; then
-            echo "Deployment succeeded to '$TARGET_DIR'"
-          else
-            echo "Primary deploy failed for '$TARGET_DIR'. Trying fallbacks..."
-            for FALLBACK in . "public_html" "public_html/$TARGET_DIR"; do
-              echo "Testing deploy fallback '$FALLBACK'"
-              if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$FALLBACK\"; mirror -R Frontend/build . --delete --exclude Backup --exclude uploads --exclude .git --exclude node_modules; bye"; then
-                echo "Deployment succeeded using fallback '$FALLBACK'"
-                break
-              fi
-            done
-          fi
+          echo "Deploying build to '$TARGET_DIR' only"
+          # Ensure directory exists then upload.
+          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; set ftp:passive-mode yes; mkdir -p \"$TARGET_DIR\"; cd \"$TARGET_DIR\"; mirror -R Frontend/build . --ignore-time --parallel=4 --exclude Backup --exclude uploads --exclude .well-known --exclude cgi-bin --exclude assets; bye"
           echo "Deployment complete"
