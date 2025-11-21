@@ -27,7 +27,26 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y lftp zip
 
-      - name: Backup existing remote directory
+      - name: List FTP root (debug)
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
+        run: |
+          echo "Listing FTP root to confirm directory names"
+          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cls -1; bye"
+
+      - name: Verify or create target directory (debug)
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          FTP_DIR: ${{ secrets.CPANEL_FTP_SERVERDIR }}
+        run: |
+          echo "Ensuring target directory '$FTP_DIR' exists (creating if missing)"
+          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mkdir -p \"$FTP_DIR\"; cls -1 \"$FTP_DIR\"; bye"
+
+      - name: Backup existing remote directory (conditional)
         env:
           FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
           FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
@@ -38,14 +57,21 @@ jobs:
           TS=$(date +%Y%m%d-%H%M%S)
           mkdir -p remote_current
           echo "Downloading current remote contents (excluding Backup & uploads)"
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mirror \"$FTP_DIR\" remote_current --exclude Backup --exclude uploads; bye"
-          echo "Packaging backup"
-          cd remote_current
-          zip -r "site-backup-$TS.zip" .
-          cd ..
-          echo "Uploading backup zip to Backup/ folder on server"
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mkdir -p \"$FTP_DIR/Backup\"; cd \"$FTP_DIR/Backup\"; put remote_current/site-backup-$TS.zip; bye"
-          echo "Backup completed: site-backup-$TS.zip"
+          if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mirror \"$FTP_DIR\" remote_current --exclude Backup --exclude uploads; bye"; then
+            echo "Packaging backup"
+            cd remote_current
+            zip -r "site-backup-$TS.zip" . || echo "No files to zip"
+            cd ..
+            if [ -f remote_current/site-backup-$TS.zip ]; then
+              echo "Uploading backup zip to Backup/ folder on server"
+              lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mkdir -p \"$FTP_DIR/Backup\"; cd \"$FTP_DIR/Backup\"; put remote_current/site-backup-$TS.zip; bye"
+              echo "Backup completed: site-backup-$TS.zip"
+            else
+              echo "Backup zip missing (empty remote). Skipping upload."
+            fi
+          else
+            echo "WARNING: Could not mirror '$FTP_DIR'. Skipping backup."
+          fi
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
