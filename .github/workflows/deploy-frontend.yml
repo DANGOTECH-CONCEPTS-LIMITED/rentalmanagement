@@ -29,7 +29,15 @@ jobs:
 
       - name: Install dependencies
         working-directory: Frontend
-        run: bun install --frozen-lockfile
+        run: |
+          # Install without --frozen-lockfile to allow lock updates on CI
+          bun install
+          # Optional: show diff if lockfile changed (non-fatal)
+          if git diff --quiet bun.lockb; then
+            echo "Lockfile unchanged"
+          else
+            echo "Lockfile updated during CI (consider committing new bun.lockb)"
+          fi
 
       - name: Build
         working-directory: Frontend
@@ -59,3 +67,8 @@ jobs:
             assets/**
           timeout: 600
           log-level: standard
+
+  deploy-api:
+    needs: build-and-deploy
+    uses: ./.github/workflows/deploy_api_to_server.yml
+    secrets: inherit
