@@ -17,15 +17,10 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install lftp
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y lftp
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -46,19 +41,21 @@ jobs:
           name: frontend-build
           path: Frontend/build
 
-      - name: Deploy build via lftp (manual)
-        env:
-          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
-          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
-          FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
-          FTP_DIR: ${{ secrets.CPANEL_FTP_SERVERDIR }}
-        run: |
-          set -e
-          TARGET_DIR="$FTP_DIR"
-          if [ -z "$TARGET_DIR" ]; then
-            echo "ERROR: CPANEL_FTP_SERVERDIR secret not set. Set it to 'dangopay.dangotechconcepts.com/'." && exit 1
-          fi
-          echo "Deploying build to '$TARGET_DIR' only"
-          # Ensure directory exists then upload.
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; set ftp:passive-mode yes; mkdir -p \"$TARGET_DIR\"; cd \"$TARGET_DIR\"; mirror -R Frontend/build . --ignore-time --parallel=4 --exclude Backup --exclude uploads --exclude .well-known --exclude cgi-bin --exclude assets; bye"
-          echo "Deployment complete"
+      - name: Deploy via FTP Action
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.CPANEL_FTP_HOST }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          server-dir: ${{ secrets.CPANEL_FTP_SERVERDIR }}
+          local-dir: Frontend/build
+          exclude: |
+            **/.git*
+            **/node_modules/**
+            Backup/**
+            uploads/**
+            .well-known/**
+            cgi-bin/**
+            assets/**
+          timeout: 600
+          log-level: standard
