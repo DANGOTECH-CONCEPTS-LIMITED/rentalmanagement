@@ -67,7 +67,8 @@ jobs:
           path: Frontend/build
 
       - name: FTP Deploy to cPanel
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        # Pin to a specific version to avoid tag resolution issues
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.CPANEL_FTP_HOST }}
           username: ${{ secrets.CPANEL_FTP_USERNAME }}
