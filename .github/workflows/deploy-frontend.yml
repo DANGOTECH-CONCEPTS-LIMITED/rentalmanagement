@@ -62,7 +62,7 @@ jobs:
             uploads/**
             .well-known/**
             cgi-bin/**
-            assets/**
+            # Removed assets/** so Vite build assets deploy; previously blocked JS/CSS bundles
           timeout: 600
           log-level: standard
 
