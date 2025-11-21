@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'Frontend/**'
-  workflow_dispatch:
+#   workflow_dispatch:
 
 permissions:
   contents: read
