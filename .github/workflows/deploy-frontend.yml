@@ -3,8 +3,6 @@ name: Deploy Frontend to cPanel
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'Frontend/**'
 #   workflow_dispatch:
 
 permissions:
