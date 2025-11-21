@@ -27,24 +27,21 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y lftp zip
 
-      - name: List FTP root (debug)
-        env:
-          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
-          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
-          FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
-        run: |
-          echo "Listing FTP root to confirm directory names"
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cls -1; bye"
-
-      - name: Verify or create target directory (debug)
+      - name: FTP environment diagnostics
         env:
           FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
           FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
           FTP_DIR: ${{ secrets.CPANEL_FTP_SERVERDIR }}
         run: |
-          echo "Ensuring target directory '$FTP_DIR' exists (creating if missing)"
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mkdir -p \"$FTP_DIR\"; cls -1 \"$FTP_DIR\"; bye"
+          echo "Connecting to FTP to show pwd and root listing (masking may hide names)"
+          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; pwd; cls -1; bye" || echo "Root listing failed"
+          if [ -n "$FTP_DIR" ]; then
+            echo "Attempting listing of specified FTP_DIR='$FTP_DIR'"
+            lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$FTP_DIR\"; pwd; cls -1; bye" || echo "Specified FTP_DIR listing failed (likely unnecessary)."
+          else
+            echo "No FTP_DIR secret set (will deploy to root)."
+          fi
 
       - name: Backup existing remote directory (conditional)
         env:
