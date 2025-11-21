@@ -57,20 +57,36 @@ jobs:
           TS=$(date +%Y%m%d-%H%M%S)
           mkdir -p remote_current
           echo "Downloading current remote contents (excluding Backup & uploads)"
-          if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mirror \"$FTP_DIR\" remote_current --exclude Backup --exclude uploads; bye"; then
-            echo "Packaging backup"
-            cd remote_current
-            zip -r "site-backup-$TS.zip" . || echo "No files to zip"
-            cd ..
-            if [ -f remote_current/site-backup-$TS.zip ]; then
-              echo "Uploading backup zip to Backup/ folder on server"
-              lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mkdir -p \"$FTP_DIR/Backup\"; cd \"$FTP_DIR/Backup\"; put remote_current/site-backup-$TS.zip; bye"
-              echo "Backup completed: site-backup-$TS.zip"
-            else
-              echo "Backup zip missing (empty remote). Skipping upload."
-            fi
+          TARGET_DIR="$FTP_DIR"
+          if [ -z "$TARGET_DIR" ] || [ "$TARGET_DIR" = "." ]; then
+            TARGET_DIR="."  # treat blank secret as root
+          fi
+          echo "Attempting mirror of '$TARGET_DIR'"
+          if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$TARGET_DIR\"; pwd; mirror . remote_current --exclude Backup --exclude uploads; bye"; then
+            echo "Mirror succeeded from '$TARGET_DIR'"
           else
-            echo "WARNING: Could not mirror '$FTP_DIR'. Skipping backup."
+            echo "Primary mirror FAILED for '$TARGET_DIR'"
+            # Fallback possibilities: inside public_html or already chrooted inside subdomain
+            echo "Trying fallback path options..."
+            for FALLBACK in . "public_html" "public_html/$TARGET_DIR"; do
+              echo "Testing fallback '$FALLBACK'"
+              if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$FALLBACK\"; pwd; mirror . remote_current --exclude Backup --exclude uploads; bye"; then
+                echo "Using fallback directory '$FALLBACK' for backup"
+                TARGET_DIR="$FALLBACK"
+                break
+              fi
+            done
+          fi
+          echo "Packaging backup (if any files)"
+          cd remote_current
+          zip -r "site-backup-$TS.zip" . || echo "No files to zip"
+          cd ..
+          if [ -f remote_current/site-backup-$TS.zip ]; then
+            echo "Uploading backup zip to Backup/ folder on server (under $TARGET_DIR)"
+            lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$TARGET_DIR\"; mkdir -p Backup; cd Backup; put remote_current/site-backup-$TS.zip; bye"
+            echo "Backup completed: site-backup-$TS.zip"
+          else
+            echo "No backup zip created (remote empty or inaccessible)."
           fi
 
       - name: Setup Bun
@@ -100,8 +116,22 @@ jobs:
           FTP_DIR: ${{ secrets.CPANEL_FTP_SERVERDIR }}
         run: |
           set -e
-          echo "Starting lftp reverse mirror to $FTP_DIR"
-          # --reverse uploads local -> remote; --delete removes remote files no longer present (excluding patterns)
-          # Exclude Backup and uploads to preserve backups & user content
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mirror -R Frontend/build $FTP_DIR --delete --exclude Backup --exclude uploads --exclude .git --exclude node_modules; bye"
+          TARGET_DIR="$FTP_DIR"
+          if [ -z "$TARGET_DIR" ] || [ "$TARGET_DIR" = "." ]; then
+            TARGET_DIR="."  # root
+          fi
+          echo "Starting deploy to '$TARGET_DIR'"
+          # Attempt direct deploy; if fails try common fallbacks
+          if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$TARGET_DIR\"; mirror -R Frontend/build . --delete --exclude Backup --exclude uploads --exclude .git --exclude node_modules; bye"; then
+            echo "Deployment succeeded to '$TARGET_DIR'"
+          else
+            echo "Primary deploy failed for '$TARGET_DIR'. Trying fallbacks..."
+            for FALLBACK in . "public_html" "public_html/$TARGET_DIR"; do
+              echo "Testing deploy fallback '$FALLBACK'"
+              if lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; cd \"$FALLBACK\"; mirror -R Frontend/build . --delete --exclude Backup --exclude uploads --exclude .git --exclude node_modules; bye"; then
+                echo "Deployment succeeded using fallback '$FALLBACK'"
+                break
+              fi
+            done
+          fi
           echo "Deployment complete"
