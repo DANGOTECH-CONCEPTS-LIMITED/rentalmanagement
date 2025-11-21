@@ -54,7 +54,7 @@ jobs:
           username: ${{ secrets.CPANEL_FTP_USERNAME }}
           password: ${{ secrets.CPANEL_FTP_PASSWORD }}
           server-dir: ${{ secrets.CPANEL_FTP_SERVERDIR }}
-          local-dir: Frontend/build
+          local-dir: Frontend/build/
           exclude: |
             **/.git*
             **/node_modules/**
