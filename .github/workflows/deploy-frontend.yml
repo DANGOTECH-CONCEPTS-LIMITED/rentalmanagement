@@ -66,17 +66,16 @@ jobs:
           name: frontend-build
           path: Frontend/build
 
-      - name: FTP Deploy to cPanel
-        # Pin to a specific version to avoid tag resolution issues
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.CPANEL_FTP_HOST }}
-          username: ${{ secrets.CPANEL_FTP_USERNAME }}
-          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
-          server-dir: ${{ secrets.CPANEL_FTP_SERVERDIR }}
-          local-dir: Frontend/build
-          exclude: |
-            **/.git*
-            **/node_modules/**
-            uploads/**
-          # By excluding uploads/** we preserve user-uploaded files on the server
+      - name: Deploy build via lftp (manual)
+        env:
+          FTP_HOST: ${{ secrets.CPANEL_FTP_HOST }}
+          FTP_USER: ${{ secrets.CPANEL_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          FTP_DIR: ${{ secrets.CPANEL_FTP_SERVERDIR }}
+        run: |
+          set -e
+          echo "Starting lftp reverse mirror to $FTP_DIR"
+          # --reverse uploads local -> remote; --delete removes remote files no longer present (excluding patterns)
+          # Exclude Backup and uploads to preserve backups & user content
+          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -e "set ssl:verify-certificate no; mirror -R Frontend/build $FTP_DIR --delete --exclude Backup --exclude uploads --exclude .git --exclude node_modules; bye"
+          echo "Deployment complete"
