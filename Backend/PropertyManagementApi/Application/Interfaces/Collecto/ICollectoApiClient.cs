@@ -22,5 +22,6 @@ namespace Application.Interfaces.Collecto
         Task<string> GetSupportedBanksAsync(string request);
         Task<string> InitiateBankPayoutAsync(InitiatePayoutBankRequestDto request);
         Task<string> WithdrawToCollectoApi(CollectoWithdrawRequest collectoWithdrawRequest);
+        Task<string> WithdrawFromCollectoWallet(WithdrawFromCollectoWalletDto walletDto);
     }
 }

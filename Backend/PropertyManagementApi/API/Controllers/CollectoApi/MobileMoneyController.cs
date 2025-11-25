@@ -4,6 +4,7 @@ using Dtos.Collecto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel;
 
 namespace API.Controllers.CollectoApi
 {
@@ -180,6 +181,22 @@ namespace API.Controllers.CollectoApi
             try
             {
                 var response = await _collectoApiClient.WithdrawToCollectoApi(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("/withdrawFromCollectoWallet")]
+        [Description("Withdraw funds from Collecto Wallet to a bank account or mobile money account. withdrawTo = <\"mobilemoney\", \"stanbic\", \"flexipay\", \"SMS\", \"BULK\", \"ADS\", \"EMAILS\", \"AIRTIME\">")]
+        [Authorize]
+        public async Task<IActionResult> WithdrawFromCollectoWallet([FromBody] WithdrawFromCollectoWalletDto walletDto)
+        {
+            try
+            {
+                var response = await _collectoApiClient.WithdrawFromCollectoWallet(walletDto);
                 return Ok(response);
             }
             catch (Exception ex)

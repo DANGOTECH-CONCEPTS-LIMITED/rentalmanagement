@@ -109,7 +109,7 @@ namespace Infrastructure.Services.Collecto
         public async Task<string> GetSupportedBanksAsync(string request)
         {
             SetHeaders();
-            var res = await _http.PostAsJsonAsync($"{_username}/supportedBanks",request);
+            var res = await _http.PostAsJsonAsync($"{_username}/supportedBanks", request);
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync();
         }
@@ -125,7 +125,15 @@ namespace Infrastructure.Services.Collecto
         public Task<string> WithdrawToCollectoApi(CollectoWithdrawRequest collectoWithdrawRequest)
         {
             SetHeaders();
-            var res =  _http.PostAsJsonAsync($"{_username}/walletToWallet", collectoWithdrawRequest);
+            var res = _http.PostAsJsonAsync($"{_username}/walletToWallet", collectoWithdrawRequest);
+            res.Result.EnsureSuccessStatusCode();
+            return res.Result.Content.ReadAsStringAsync();
+        }
+
+        public Task<string> WithdrawFromCollectoWallet(WithdrawFromCollectoWalletDto walletDto)
+        {
+            SetHeaders();
+            var res = _http.PostAsJsonAsync($"{_username}/withdrawFromWallet", walletDto);
             res.Result.EnsureSuccessStatusCode();
             return res.Result.Content.ReadAsStringAsync();
         }
