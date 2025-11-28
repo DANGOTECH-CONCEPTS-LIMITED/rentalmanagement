@@ -502,7 +502,7 @@ namespace Infrastructure.Services.PaymentServices
 
         }
 
-        public async Task MakeUtilityPayment(UtilityPaymentDto dto)
+        public async Task<string> MakeUtilityPayment(UtilityPaymentDto dto)
         {
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
@@ -541,6 +541,15 @@ namespace Infrastructure.Services.PaymentServices
 
             await _context.UtilityPayments.AddAsync(payment);
             await _context.SaveChangesAsync();
+            return payment.TransactionID;
+        }
+
+        public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByTranId(string tranid)
+        {
+            var payments = await _context.UtilityPayments.AsNoTracking()
+                .Where(tp => tp.TransactionID == tranid)
+                .ToListAsync();
+            return payments;
         }
 
         public async Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByStatus(string status)

@@ -279,12 +279,27 @@ namespace API.Controllers.Payments
         {
             try
             {
-                await _paymentService.MakeUtilityPayment(utilityPaymentDto);
-                return Ok("Utility payment created successfully.");
+                string transactionid = await _paymentService.MakeUtilityPayment(utilityPaymentDto);
+                return Ok(transactionid);
             }
             catch (Exception ex)
             {
                 return BadRequest($"Error creating utility payment: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetUtilityPaymentByTranId/{transactionId}")]
+        [Authorize]
+        public async Task<IActionResult> GetUtilityPaymentByTranId(string transactionId)
+        {
+            try
+            {
+                var utilityPayments = await _paymentService.GetUtilityPaymentByTranId(transactionId);
+                return Ok(utilityPayments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving utility payments: {ex.Message}");
             }
         }
 
