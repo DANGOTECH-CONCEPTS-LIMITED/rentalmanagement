@@ -279,7 +279,11 @@ namespace API.Controllers.Payments
             try
             {
                 string transactionid = await _paymentService.MakeUtilityPayment(utilityPaymentDto);
-                return Ok(transactionid);
+                var response = new System.Collections.Generic.Dictionary<string, string>
+                {
+                    { "TranID ", transactionid }
+                };
+                return Ok(response);
             }
             catch (Exception ex)
             {
