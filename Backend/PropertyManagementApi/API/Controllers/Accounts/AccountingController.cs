@@ -44,10 +44,10 @@ namespace API.Controllers.Accounts
         }
 
         [HttpGet("profit")]
-        public async Task<IActionResult> GetProfit([FromQuery] DateTime? date, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        public async Task<IActionResult> GetProfit([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
-            var start = date?.Date ?? from?.Date ?? DateTime.UtcNow.Date;
-            var end = date?.Date ?? to?.Date ?? start;
+            var start = from?.Date ?? DateTime.UtcNow.Date;
+            var end = to?.Date ?? start;
             var dto = await _queries.GetProfitAsync(start, end);
             return Ok(dto);
         }

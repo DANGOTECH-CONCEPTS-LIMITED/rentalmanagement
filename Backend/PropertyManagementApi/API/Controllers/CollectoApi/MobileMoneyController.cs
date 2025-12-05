@@ -20,6 +20,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/requestToPay")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequestDto request)
         {
             try
@@ -34,6 +35,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/requestToPayStatus")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequestDto request)
         {
             try
@@ -48,6 +50,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/servicePayment")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequestDto request)
         {
             try
@@ -62,6 +65,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/servicePaymentStatus")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequestDto request)
         {
             try
@@ -76,6 +80,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/sendSingleSms")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequestDto request)
         {
             try
@@ -90,6 +95,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/currentBalance")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> CurrentBalance([FromBody] CurrentBalanceRequestDto request)
         {
             try
@@ -104,6 +110,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/verifyPhoneNumber")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> VerifyPhoneNumber([FromBody] VerifyPhoneNumberRequestDto request)
         {
             try
@@ -118,6 +125,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/GetSupportedBanks")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> GetSupportedBanks(string request) 
         {
             try
@@ -147,6 +155,7 @@ namespace API.Controllers.CollectoApi
 
         [HttpPost("/initiateBankPayout")]
         [Authorize]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutBankRequestDto request)
         {
             try
@@ -161,6 +170,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/payoutStatus")]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> PayoutStatus([FromBody] PayoutStatusRequestDto request)
         {
             try
@@ -191,7 +201,7 @@ namespace API.Controllers.CollectoApi
 
         [HttpPost("/withdrawFromCollectoWallet")]
         [Description("Withdraw funds from Collecto Wallet to a bank account or mobile money account. withdrawTo = <\"mobilemoney\", \"stanbic\", \"flexipay\", \"SMS\", \"BULK\", \"ADS\", \"EMAILS\", \"AIRTIME\">")]
-        [Authorize]
+        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
         public async Task<IActionResult> WithdrawFromCollectoWallet([FromBody] WithdrawFromCollectoWalletDto walletDto)
         {
             try
