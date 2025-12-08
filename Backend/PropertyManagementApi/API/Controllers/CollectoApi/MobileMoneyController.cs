@@ -134,7 +134,7 @@ namespace API.Controllers.CollectoApi
             try
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
-                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;
                 if (!userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
