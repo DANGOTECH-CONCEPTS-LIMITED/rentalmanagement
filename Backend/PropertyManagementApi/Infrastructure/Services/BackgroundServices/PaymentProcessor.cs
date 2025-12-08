@@ -278,7 +278,7 @@ namespace Infrastructure.Services.BackgroundServices
         private class RequestToPayResponse
         {
             [JsonPropertyName("status")]
-            public string status { get; set; } = null!;
+            public int status { get; set; } = 0;
 
             [JsonPropertyName("status_message")]
             public string status_message { get; set; } = null!;
