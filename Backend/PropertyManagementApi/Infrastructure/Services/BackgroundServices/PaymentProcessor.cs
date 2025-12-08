@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;                      // ← for ToList()
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
+using Application.Interfaces.ServiceLogs;
 using Application.Interfaces.SMS;
 using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
@@ -81,16 +83,47 @@ namespace Infrastructure.Services.BackgroundServices
             } // <-- DbContext disposed here
 
             // 2) Spawn one task per payment, each with its own scope
-            var tasks = new List<Task>(utilityPayments.Count + tenantPayments.Count+ smspymts.Count);
+            var tasks = new List<Task>();
+            using var throttler = new SemaphoreSlim(10); // limit concurrency
+
+            async Task RunSafe(Func<Task> work, string context, string transactionId)
+            {
+                await throttler.WaitAsync();
+                try
+                {
+                    await work();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing {Context} TxId: {TransactionId}", context, transactionId);
+                    using var scope = _scopeFactory.CreateScope();
+                    var servicelog = scope.ServiceProvider.GetRequiredService<IServiceLogsRepository>();
+                    await servicelog.LogErrorAsync(
+                        "PaymentProcessor",
+                        $"Error processing {context}. TxId: {transactionId}",
+                        "Exception",
+                        ex.Message ?? ex.InnerException?.Message ?? "Unknown");
+
+                    // Write to file
+                    var logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "db_exceptions.log");
+                    Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
+                    var logEntry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} - {context} - TxId: {transactionId} - Exception: {ex.Message}{Environment.NewLine}";
+                    await File.AppendAllTextAsync(logFilePath, logEntry);
+                }
+                finally
+                {
+                    throttler.Release();
+                }
+            }
 
             foreach (var u in utilityPayments)
-                tasks.Add(ProcessUtilityPaymentAsync(u));
+                tasks.Add(Task.Run(() => RunSafe(() => ProcessUtilityPaymentAsync(u), $"utility payment {u.TransactionID}", u.TransactionID!)));
 
             foreach (var t in tenantPayments)
-                tasks.Add(ProcessTenantPaymentAsync(t));
+                tasks.Add(Task.Run(() => RunSafe(() => ProcessTenantPaymentAsync(t), $"tenant payment {t.TransactionId}", t.TransactionId)));
 
             foreach (var t in smspymts)
-                tasks.Add (ProcessUtilityPymtsPendingSmsAsync(t));
+                tasks.Add(Task.Run(() => RunSafe(() => ProcessUtilityPymtsPendingSmsAsync(t), $"utility SMS {t.TransactionID}", t.TransactionID!)));
 
             await Task.WhenAll(tasks);
         }
