@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
+using System.Security.Claims;
 
 namespace API.Controllers.CollectoApi
 {
     [Route("api/[controller]")]
     [ApiController]
+
     public class MobileMoneyController : ControllerBase
     {
         private readonly ICollectoApiClient _collectoApiClient;
@@ -20,11 +22,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/requestToPay")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> RequestToPay([FromBody] RequestToPayRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.RequestToPayAsync(request);
                 return Ok(response);
             }
@@ -35,11 +43,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/requestToPayStatus")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> RequestToPayStatus([FromBody] RequestToPayStatusRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.GetRequestToPayStatusAsync(request);
                 return Ok(response);
             }
@@ -50,11 +64,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/servicePayment")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> ServicePayment([FromBody] ServicePaymentRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.ServicePaymentAsync(request);
                 return Ok(response);
             }
@@ -65,11 +85,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/servicePaymentStatus")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> ServicePaymentStatus([FromBody] ServicePaymentStatusRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.GetServicePaymentStatusAsync(request);
                 return Ok(response);
             }
@@ -80,11 +106,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/sendSingleSms")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> SendSingleSms([FromBody] SendSingleSmsRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.SendSingleSmsAsync(request);
                 return Ok(response);
             }
@@ -95,11 +127,18 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/currentBalance")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> CurrentBalance([FromBody] CurrentBalanceRequestDto request)
         {
+
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.GetCurrentBalanceAsync(request);
                 return Ok(response);
             }
@@ -110,11 +149,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/verifyPhoneNumber")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> VerifyPhoneNumber([FromBody] VerifyPhoneNumberRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.VerifyPhoneNumberAsync(request);
                 return Ok(response);
             }
@@ -125,11 +170,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/GetSupportedBanks")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> GetSupportedBanks(string request) 
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.GetSupportedBanksAsync(request);
                 return Ok(response);
             }
@@ -155,11 +206,17 @@ namespace API.Controllers.CollectoApi
 
         [HttpPost("/initiateBankPayout")]
         [Authorize]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutBankRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.InitiateBankPayoutAsync(request);
                 return Ok(response);
             }
@@ -170,11 +227,17 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/payoutStatus")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> PayoutStatus([FromBody] PayoutStatusRequestDto request)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.GetPayoutStatusAsync(request);
                 return Ok(response);
             }
@@ -201,11 +264,17 @@ namespace API.Controllers.CollectoApi
 
         [HttpPost("/withdrawFromCollectoWallet")]
         [Description("Withdraw funds from Collecto Wallet to a bank account or mobile money account. withdrawTo = <\"mobilemoney\", \"stanbic\", \"flexipay\", \"SMS\", \"BULK\", \"ADS\", \"EMAILS\", \"AIRTIME\">")]
-        [Authorize(Roles = "CollectoUser,CollectoAdmin")]
+        [Authorize]
         public async Task<IActionResult> WithdrawFromCollectoWallet([FromBody] WithdrawFromCollectoWalletDto walletDto)
         {
             try
             {
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                if (!userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
                 var response = await _collectoApiClient.WithdrawFromCollectoWallet(walletDto);
                 return Ok(response);
             }
