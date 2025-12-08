@@ -12,5 +12,6 @@ namespace Domain.Entities.External
  public string? Amount { get; set; }
  public string? BillRefNumber { get; set; }
  public bool Processed { get; set; } = false;
- }
+ public string? NyumbaYoId { get; set; } = string.Empty;
+    }
 }

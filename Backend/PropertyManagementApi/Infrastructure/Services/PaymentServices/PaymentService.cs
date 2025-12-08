@@ -785,5 +785,50 @@ namespace Infrastructure.Services.PaymentServices
                 throw;
             }
         }
+
+        public async Task<IEnumerable<UtilityPayment>> GetMpesaPaymentsFromCallBack()
+        {
+            var payments = await _context.MpesaCallbackAudits
+                .Where(tp => tp.Processed == false)
+                .ToListAsync();
+
+            // map to utility payment
+            var utilityPayments = payments.Select(p => new UtilityPayment
+            {
+                VendorTranId = p.TransId,
+                Amount = (double.Parse(p.Amount)- (double.Parse(p.Amount) * 0.1)),
+                PhoneNumber = "",
+                Charges = (double.Parse(p.Amount)*0.1),
+                CreatedAt = p.ReceivedAt,
+                Status = "SUCCESSFUL AT TELCOM",
+                MeterNumber = p.BillRefNumber
+            }).ToList();
+            return utilityPayments;
+        }
+
+        public async Task MakeMPesaUtilityPayment(UtilityPayment payment)
+        {
+            if (payment == null)
+                throw new ArgumentNullException(nameof(payment));
+
+            payment.TransactionID = Guid.NewGuid().ToString();
+            payment.Status = "SUCCESSFUL AT TELECOM";
+            payment.PaymentMethod = "M-PESA";
+            payment.IsSmsSent = true;
+            await _context.UtilityPayments.AddAsync(payment);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateMpesaProcessedPaymt(string vendortranid, string transactionId)
+        {
+            var payment = await _context.MpesaCallbackAudits
+                .FirstOrDefaultAsync(tp => tp.TransId == vendortranid);
+            if (payment == null)
+                throw new Exception("Payment not found.");
+            payment.NyumbaYoId = transactionId;
+            payment.Processed = true;
+            _context.MpesaCallbackAudits.Update(payment);
+            await _context.SaveChangesAsync();
+        }
     }
 }

@@ -90,7 +90,8 @@ builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
 builder.Services.AddHostedService<CreditWalletService>();
 builder.Services.AddHostedService<PendingWalletWithdrawsProcessor>();
 builder.Services.AddHostedService<ProcessPendingTokenTransactions>();
-builder.Services.AddHostedService<MpesaCallbackProcessor>();
+//builder.Services.AddHostedService<MpesaCallbackProcessor>();
+builder.Services.AddHostedService<ProcessMpesaPayments>();
 
 
 builder.Services.AddControllers()

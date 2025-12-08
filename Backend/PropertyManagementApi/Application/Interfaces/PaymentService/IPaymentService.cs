@@ -57,5 +57,10 @@ namespace Application.Interfaces.PaymentService
         Task UpdateWalletTransaction(WalletTransaction walletTransaction);
         Task ReverseWalletTransaction(WalletTransaction walletTransaction);
 
+        Task<IEnumerable<UtilityPayment>> GetMpesaPaymentsFromCallBack();
+
+        Task MakeMPesaUtilityPayment(UtilityPayment payment);
+        Task UpdateMpesaProcessedPaymt(string vendortranid, string transactionId);
+
     }
 }
