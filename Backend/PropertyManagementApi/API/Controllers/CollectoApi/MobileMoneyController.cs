@@ -154,12 +154,12 @@ namespace API.Controllers.CollectoApi
         {
             try
             {
-                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
-                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
-                {
-                    return Unauthorized();
-                }
+                //var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                //var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+                //if (!userrole.Equals("Administrator"))
+                //{
+                //    return Unauthorized();
+                //}
                 var response = await _collectoApiClient.VerifyPhoneNumberAsync(request);
                 return Ok(response);
             }
