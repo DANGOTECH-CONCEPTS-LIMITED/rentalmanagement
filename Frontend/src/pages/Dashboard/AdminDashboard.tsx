@@ -14,13 +14,25 @@ interface Stats {
   occupancyRate: number;
 }
 
-interface BalanceResponse {
-  status: string;
+type BalanceType = "SMS" | "BULK" | "WALLET";
+
+interface BalanceApiResponse {
+  status: number;
   status_message: string;
   data: {
-    currentBalance: number | boolean;
+    currentBalance: boolean;
     message: string;
+    balance?: {
+      type: BalanceType;
+      amount: string; // sample shows amount as string
+    };
   };
+}
+
+interface SimpleBalance {
+  type: BalanceType;
+  amount: string;
+  message: string;
 }
 
 const AdminDashboard = () => {
@@ -34,10 +46,10 @@ const AdminDashboard = () => {
   const [properties, setProperties] = useState([]);
   const [landlords, setLandlords] = useState([]);
 
-  const [balance, setBalance] = useState<BalanceResponse | null>(null);
+  const [balance, setBalance] = useState<SimpleBalance | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
-  const [balanceType, setBalanceType] = useState<string>("");
+  const [balanceType, setBalanceType] = useState<BalanceType | "">("");
 
   const navigate = useNavigate();
 
@@ -49,18 +61,19 @@ const AdminDashboard = () => {
       const userData = JSON.parse(user);
       token = userData.token;
     } else {
-      console.error("No user found in localStorage");
+      
     }
   } catch (error) {
-    console.error("Error parsing user data:", error);
   }
 
-  const fetchBalance = async (type: string) => {
+  const fetchBalance = async (type: BalanceType) => {
     const apiUrl = import.meta.env.VITE_API_BASE_URL;
     try {
       setBalanceLoading(true);
       setBalanceError(null);
-      setBalanceType(type);
+      // normalize and track the active type
+      const normalizedType = (type || "") as BalanceType;
+      setBalanceType(normalizedType);
 
       const response = await fetch(`${apiUrl}/currentBalance`, {
         method: "POST",
@@ -69,24 +82,29 @@ const AdminDashboard = () => {
           Authorization: "Bearer " + token,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ type }),
+        body: JSON.stringify({ type: normalizedType }),
       });
 
-      const data: BalanceResponse = await response.json();
-
-      console.log("Balance data", data);
+      const data: BalanceApiResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.status_message || `HTTP error! status: ${response.status}`
+          data?.status_message || `HTTP error! status: ${response.status}`
         );
       }
 
-      if (data.data.currentBalance === false) {
-        throw new Error(data.data.message || "Unknown balance type");
+      if (!data?.data?.currentBalance) {
+        throw new Error(data?.data?.message || "Unknown balance type");
       }
 
-      setBalance(data);
+      const apiBalance = data.data.balance;
+      const message = data.data.message;
+      const simple: SimpleBalance = {
+        type: (apiBalance?.type || normalizedType) as BalanceType,
+        amount: apiBalance?.amount || "0",
+        message: message || "",
+      };
+      setBalance(simple);
     } catch (err) {
       setBalanceError(
         err instanceof Error ? err.message : "Unknown error occurred"
@@ -106,7 +124,6 @@ const AdminDashboard = () => {
     try {
       const { data } = await axios.get(`${apiUrl}/GetLandlords`);
       setLandlords(data);
-      console.log("GetLandlords data", data);
     } catch (error) {
       toast({
         title: "Error",
@@ -129,7 +146,6 @@ const AdminDashboard = () => {
       const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
       setProperties(data);
     } catch (error) {
-      console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
         description:
@@ -195,14 +211,10 @@ const AdminDashboard = () => {
             fetchBalance("SMS");
           }}
           disabled={balanceLoading}
-          variant={
-            balanceType === "SME" && balance?.data.currentBalance !== false
-              ? "primary"
-              : "outline"
-          }
+          variant={balanceType === "SMS" ? "primary" : "outline"}
           className="min-w-32"
         >
-          {balanceLoading && balanceType === "SME" ? (
+          {balanceLoading && balanceType === "SMS" ? (
             <div className="flex items-center gap-2">
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                 <circle
@@ -232,11 +244,7 @@ const AdminDashboard = () => {
             fetchBalance("BULK");
           }}
           disabled={balanceLoading}
-          variant={
-            balanceType === "BULK" && balance?.data.currentBalance !== false
-              ? "primary"
-              : "outline"
-          }
+          variant={balanceType === "BULK" ? "primary" : "outline"}
           className="min-w-32"
         >
           {balanceLoading && balanceType === "BULK" ? (
@@ -269,11 +277,7 @@ const AdminDashboard = () => {
             fetchBalance("Wallet");
           }}
           disabled={balanceLoading}
-          variant={
-            balanceType === "WALLET" && balance?.data.currentBalance !== false
-              ? "primary"
-              : "outline"
-          }
+          variant={balanceType === "WALLET" ? "primary" : "outline"}
           className="min-w-32"
         >
           {balanceLoading && balanceType === "WALLET" ? (
@@ -302,15 +306,15 @@ const AdminDashboard = () => {
       </div>
 
       {/* Balance Display */}
-      {balance && balance.status === "200" && balance.data.message ? (
+      {balance && !balanceError ? (
         <div className="glass-card p-4 rounded-lg">
-          <h3 className="font-medium">{balanceType} Balance</h3>
-          <p className="text-2xl font-bold">{balance.data.message}</p>
+          <h3 className="font-medium">{balance.type} Balance</h3>
+          <p className="text-2xl font-bold">
+            {balance.message || `UGX ${Number(balance.amount).toLocaleString()}`}
+          </p>
         </div>
       ) : balanceError ? (
-        <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-          Error: {balanceError}
-        </div>
+        <div className="text-red-500 p-4 bg-red-50 rounded-lg">Error: {balanceError}</div>
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
