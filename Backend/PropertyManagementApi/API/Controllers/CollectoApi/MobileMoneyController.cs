@@ -149,7 +149,7 @@ namespace API.Controllers.CollectoApi
         }
 
         [HttpPost("/verifyPhoneNumber")]
-        [Authorize]
+        //[Authorize]
         public async Task<IActionResult> VerifyPhoneNumber([FromBody] VerifyPhoneNumberRequestDto request)
         {
             try
