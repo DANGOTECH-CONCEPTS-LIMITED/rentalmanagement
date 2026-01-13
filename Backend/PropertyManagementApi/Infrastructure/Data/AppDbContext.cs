@@ -29,6 +29,7 @@ namespace Infrastructure.Data
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
         public DbSet<ServiceLogs> ServiceLogs { get; set; } = null!;
         public DbSet<MpesaCallbackAudit> MpesaCallbackAudits { get; set; } = null!;
+        public DbSet<MeterToken> MeterTokens { get; set; }
 
         #region USSD
         public DbSet<UssdMenu> UssdMenus { get; set; }

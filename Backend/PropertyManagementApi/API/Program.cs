@@ -11,6 +11,7 @@ using Application.Interfaces.STSVending;
 using Application.Interfaces.Tenant;
 using Application.Interfaces.UserServices;
 using Application.Interfaces.Ussd;
+using Application.Interfaces.Meter;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Infrastructure.Services.BackgroundServices;
@@ -39,6 +40,7 @@ using Application.Interfaces.Accounting;
 using Infrastructure.Services.Accounting;
 using Application.Interfaces.External;
 using Infrastructure.Services.External;
+using Infrastructure.Services.Meter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +60,8 @@ builder.Services.AddScoped<ISettings, Settings>();
 builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IExternalPaymentService, ExternalPaymentService>();
+builder.Services.AddScoped<IMeterTokenService, MeterTokenService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUssdService, UssdService>();
@@ -92,6 +96,7 @@ builder.Services.AddHostedService<PendingWalletWithdrawsProcessor>();
 builder.Services.AddHostedService<ProcessPendingTokenTransactions>();
 //builder.Services.AddHostedService<MpesaCallbackProcessor>();
 builder.Services.AddHostedService<ProcessMpesaPayments>();
+builder.Services.AddHostedService<MeterTokenGeneratorService>();
 
 
 builder.Services.AddControllers()
