@@ -40,9 +40,19 @@ using Application.Interfaces.Accounting;
 using Infrastructure.Services.Accounting;
 using Application.Interfaces.External;
 using Infrastructure.Services.External;
-using Infrastructure.Services.Meter;
+using System.Security.Claims;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .WriteTo.Console()
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // Configure MySQL connection
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -61,7 +71,7 @@ builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IExternalPaymentService, ExternalPaymentService>();
-builder.Services.AddScoped<IMeterTokenService, MeterTokenService>();
+builder.Services.AddScoped<Application.Interfaces.Meter.IMeterTokenService, Infrastructure.Services.Meter.MeterTokenService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUssdService, UssdService>();

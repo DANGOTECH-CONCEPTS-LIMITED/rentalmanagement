@@ -225,18 +225,6 @@ namespace Infrastructure.Services.BackgroundServices
                         Amount = walletTransaction.Amount,
                         ReceivingWallet = long.Parse(walletTransaction.Wallet.Landlord.BankAccountNumber)//long.Parse(walletTransaction.Wallet.Landlord.CollectoWalletId)
                     };
-                    //var request = new InitiatePayoutBankRequestDto
-                    //{
-                    //    gateway = "bank",
-                    //    bankName = walletTransaction.Wallet.Landlord.BankName,
-                    //    bankSwiftCode = walletTransaction.Wallet.Landlord.SwiftCode,
-                    //    accountNumber = walletTransaction.Wallet.Landlord.BankAccountNumber,
-                    //    accountName = walletTransaction.Wallet.Landlord.FullName,
-                    //    reference = walletTransaction.TransactionId,
-                    //    amount = walletTransaction.Amount,
-                    //    message = walletTransaction.Description,
-                    //    phone = walletTransaction.Wallet.Landlord.PhoneNumber
-                    //};
 
                     var rawResponse = await collecto.WithdrawToCollectoApi(request);
                     if (!string.IsNullOrWhiteSpace(rawResponse))
