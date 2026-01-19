@@ -3,6 +3,7 @@ using Domain.Dtos.Payments.WalletDto;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,10 +15,12 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
     public class WalletService : IWalletService
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<WalletService> _logger; // Add logger
 
-        public WalletService(AppDbContext context)
+        public WalletService(AppDbContext context, ILogger<WalletService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task AddWalletTransaction(WalletTransaction walletTransaction)
@@ -120,6 +123,11 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                     status = "PENDING_BANK_PAYOUT";
                 }
 
+                if (!string.IsNullOrEmpty(users.BankName) && users.BankName.Equals("Wallet"))
+                {
+                    status = "PENDING_WALLET_PAYOUT";
+                }
+
             }
 
             if (wallet == null)
@@ -179,32 +187,49 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
 
         public async Task ReverseWalletTransaction(WalletTransaction walletTransaction)
         {
-            var existingTransaction = await _context.WalletTransactions
-                .FirstOrDefaultAsync(t => t.Id == walletTransaction.Id);
-            if (existingTransaction == null)
-                throw new Exception("Transaction not found.");
-            existingTransaction.Status = "REVERSED";
-
-            //update balance of wallet
-            var wallet = await _context.Wallets
-                .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
-            if (wallet == null)
-                throw new Exception("Wallet not found.");
-
-            // insert the same amount as a positive transaction
-            var reverseTransaction = new WalletTransaction
+            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                WalletId = wallet.Id,
-                Amount = existingTransaction.Amount, // Positive amount to revert the balance
-                Description = "Reversal: " + existingTransaction.Description,
-                TransactionDate = DateTime.UtcNow,
-                Status = "REVERSED",
-                TransactionId = Guid.NewGuid().ToString(),
-            };
+                var existingTransaction = await _context.WalletTransactions
+                    .FirstOrDefaultAsync(t => t.Id == walletTransaction.Id);
+                if (existingTransaction == null)
+                    throw new Exception("Transaction not found.");
+                if (existingTransaction.Status == "REVERSED")
+                    throw new InvalidOperationException("Transaction already reversed.");
 
-            _context.WalletTransactions.Add(reverseTransaction);
-            // Revert the balance
-            await _context.SaveChangesAsync();
+                existingTransaction.Status = "REVERSED";
+
+                var wallet = await _context.Wallets
+                    .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
+                if (wallet == null)
+                    throw new Exception("Wallet not found.");
+
+                var reversalAmount = Math.Abs(existingTransaction.Amount); // Ensure positive
+                var reverseTransaction = new WalletTransaction
+                {
+                    WalletId = wallet.Id,
+                    Amount = reversalAmount,
+                    Description = $"Reversal of {existingTransaction.TransactionId}: {existingTransaction.Description}",
+                    TransactionDate = DateTime.UtcNow,
+                    Status = "REVERSAL", // Distinct status
+                    TransactionId = Guid.NewGuid().ToString(),
+                    VendorTranId = existingTransaction.TransactionId // Link to original
+                };
+
+                _context.WalletTransactions.Add(reverseTransaction);
+                wallet.Balance += reversalAmount; // Update balance
+
+                await _context.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                _logger.LogInformation($"Reversed transaction {existingTransaction.TransactionId}, added {reversalAmount} to wallet {wallet.Id}");
+            }
+            catch (Exception ex)
+            {
+                await dbTransaction.RollbackAsync();
+                _logger.LogError(ex, $"Failed to reverse transaction {walletTransaction.Id}");
+                throw;
+            }
         }
 
         public async Task<Wallet> GetWalletByUtilityMeterNumber(string utilityMeterNumber)
