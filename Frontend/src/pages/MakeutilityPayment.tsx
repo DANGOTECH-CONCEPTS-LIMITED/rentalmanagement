@@ -164,7 +164,7 @@ const MakeUtilityPayment = () => {
 
     setIsFetching(true);
     try {
-      const response = await axios.get(`${apiUrl}/GetUtilityPaymentByMeterNumber${meterNumber}`);
+      const response = await axios.get(`${apiUrl}/GetUtilityPaymentByMeterNumber/${meterNumber}`);
       setPayments(response.data);
     } catch (error) {
       toast({

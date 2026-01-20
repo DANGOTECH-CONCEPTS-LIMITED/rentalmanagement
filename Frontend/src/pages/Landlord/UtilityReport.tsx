@@ -44,7 +44,7 @@ const UtilityReport: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get<UtilityTransaction[]>(
-        `${apiUrl}/GetUtilityPaymentByMeterNumber${meterNumber}`
+        `${apiUrl}/GetUtilityPaymentByMeterNumber/${meterNumber}`
       );
       setData(response.data);
       setCurrentPage(1);
