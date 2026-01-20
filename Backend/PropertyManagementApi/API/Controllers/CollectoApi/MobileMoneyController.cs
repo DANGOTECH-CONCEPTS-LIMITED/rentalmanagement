@@ -29,7 +29,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -50,7 +50,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -71,7 +71,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -92,7 +92,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -113,7 +113,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -135,7 +135,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -177,7 +177,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -213,7 +213,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -234,7 +234,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }
@@ -271,7 +271,7 @@ namespace API.Controllers.CollectoApi
             {
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
                 var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (!userrole.Equals("Administrator"))
+                if (userrole == null || !userrole.Equals("Administrator"))
                 {
                     return Unauthorized();
                 }

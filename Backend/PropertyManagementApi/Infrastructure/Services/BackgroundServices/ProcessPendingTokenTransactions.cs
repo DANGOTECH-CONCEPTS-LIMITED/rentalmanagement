@@ -5,7 +5,6 @@ using Application.Interfaces.UserServices;
 using Domain.Dtos.Payments.WalletDto;
 using Domain.Dtos.PrepaidApi;
 using Domain.Entities.PropertyMgt;
-using Microsoft.AspNet.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

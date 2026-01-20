@@ -17,6 +17,7 @@ using System.Security.Claims;
 using System.Text;
 using Domain.Entities.PropertyMgt;
 using Domain.Dtos.Meters;
+using System.IO;
 
 namespace Infrastructure.Services.UserServices
 {
@@ -49,6 +50,18 @@ namespace Infrastructure.Services.UserServices
             if (idFront is null) throw new ArgumentNullException(nameof(idFront));
             if (idBack is null) throw new ArgumentNullException(nameof(idBack));
             if (userDto is null) throw new ArgumentNullException(nameof(userDto));
+
+            // File validation
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+            var maxFileSize = 5 * 1024 * 1024; // 5MB
+            foreach (var file in new[] { passportPhoto, idFront, idBack })
+            {
+                if (file.Length > maxFileSize)
+                    throw new ArgumentException($"File {file.FileName} exceeds maximum size of 5MB.");
+                var extension = Path.GetExtension(file.FileName).ToLower();
+                if (!allowedExtensions.Contains(extension))
+                    throw new ArgumentException($"File {file.FileName} has invalid extension. Allowed: {string.Join(", ", allowedExtensions)}");
+            }
 
             // 2. Duplicate‐email check
             if (await _context.Users.AnyAsync(u => u.Email == userDto.Email))

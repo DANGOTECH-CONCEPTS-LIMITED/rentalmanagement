@@ -29,7 +29,7 @@ namespace API.Controllers.Complaints
                 if (file == null || file.Count == 0)
                 {
                     //pass an empty file
-                    file.Add(new FormFile(null, 0, 0, null, null));
+                    file = new List<IFormFile> { new FormFile(Stream.Null, 0, 0, "", "") };
                 }
                 await _complaintService.LogTenantComplaint(file[0], complaint);
                 return Ok("Complaint logged successfully.");

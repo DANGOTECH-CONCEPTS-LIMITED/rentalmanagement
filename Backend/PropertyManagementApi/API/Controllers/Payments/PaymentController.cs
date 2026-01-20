@@ -281,7 +281,7 @@ namespace API.Controllers.Payments
                 string transactionid = await _paymentService.MakeUtilityPayment(utilityPaymentDto);
                 var response = new System.Collections.Generic.Dictionary<string, string>
                 {
-                    { "TranID ", transactionid }
+                    { "TranID", transactionid }
                 };
                 return Ok(response);
             }
@@ -306,7 +306,7 @@ namespace API.Controllers.Payments
             }
         }
 
-        [HttpGet("/GetUtilityPaymentByDateRange{startdate}/{enddate}")]
+        [HttpGet("/GetUtilityPaymentByDateRange/{startdate}/{enddate}")]
         public async Task<IActionResult> GetUtilityPaymentByDateRange(DateTime startdate, DateTime enddate)
         {
             try
@@ -320,7 +320,7 @@ namespace API.Controllers.Payments
             }
         }
 
-        [HttpGet("/GetUtilityPaymentByMeterNumber{meternumber}")]
+        [HttpGet("/GetUtilityPaymentByMeterNumber/{meternumber}")]
         public async Task<IActionResult> GetUtilityPaymentByMeterNumber(string meternumber)
         {
             try

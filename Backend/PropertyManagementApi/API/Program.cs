@@ -88,11 +88,17 @@ builder.Services.AddScoped<WalletAccountingNotifier>();
 
 
 
-builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>()
+builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
     // this ensures every outgoing request goes through your LoggingHandler
     .AddHttpMessageHandler<LoggingHandler>();
 
-builder.Services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>().AddHttpMessageHandler<LoggingHandler>();
+builder.Services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+}).AddHttpMessageHandler<LoggingHandler>();
 
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -158,6 +164,11 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
 var issuer = jwtSettings["Issuer"];
 var audience = jwtSettings["Audience"];
+
+if (string.IsNullOrEmpty(secretKey) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(audience))
+{
+    throw new InvalidOperationException("JWT settings are not properly configured.");
+}
 
 builder.Services.AddAuthentication(options =>
 {
@@ -233,7 +244,16 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
+    try
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating the database.");
+        throw;
+    }
 }
 
 // Africa’s Talking will POST x-www-form-urlencoded -> sessionId, serviceCode, phoneNumber, text

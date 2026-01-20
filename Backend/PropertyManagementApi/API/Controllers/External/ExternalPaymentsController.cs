@@ -2,15 +2,9 @@ using Application.Interfaces.External;
 using Domain.Dtos.External;
 using Domain.Dtos.Payments;
 using Domain.Entities.External;
-using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis.Differencing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace API.Controllers.External
@@ -19,9 +13,7 @@ namespace API.Controllers.External
     [Route("api/[controller]")]
     public class ExternalPaymentsController : ControllerBase
     {
-        private readonly IConfiguration _cfg;
         private readonly ILogger<ExternalPaymentsController> _logger;
-        private readonly AppDbContext _db;
         private IExternalPayments _externalPayments;
 
         public ExternalPaymentsController(

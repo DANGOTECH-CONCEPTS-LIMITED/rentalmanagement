@@ -5,6 +5,7 @@ using Domain.Dtos.User;
 using Microsoft.AspNetCore.Authorization;
 using Domain.Entities.PropertyMgt;
 using Domain.Dtos.Meters;
+using Microsoft.Extensions.Logging;
 
 namespace API.Controllers.UserControllers
 {
@@ -13,9 +14,11 @@ namespace API.Controllers.UserControllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        public UserController(IUserService userService)
+        private readonly ILogger<UserController> _logger;
+        public UserController(IUserService userService, ILogger<UserController> logger)
         {
             _userService = userService;
+            _logger = logger;
         }
 
         [HttpPost("/RegisterUser")]
@@ -24,7 +27,7 @@ namespace API.Controllers.UserControllers
             try
             {
                 //check if files submited are three
-                if (files.Count != 3)
+                if (files == null || files.Count != 3)
                 {
                     return BadRequest("Please submit three files: passport photo, ID front, and ID back.");
                 }
@@ -33,7 +36,8 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error registering user: {ex.Message}");
+                _logger.LogError(ex, "Error registering user");
+                return BadRequest("An error occurred while registering the user.");
             }
         }
 
@@ -48,6 +52,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving users");
                 return BadRequest($"Error retrieving users: {ex.Message}");
             }
         }
@@ -63,6 +68,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving roles");
                 return BadRequest($"Error retrieving roles: {ex.Message}");
             }
         }
@@ -78,6 +84,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error changing password");
                 return BadRequest($"Error changing password: {ex.Message}");
             }
         }
@@ -92,6 +99,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error authenticating user");
                 return BadRequest($"Error authenticating user: {ex.Message}");
             }
         }
@@ -107,6 +115,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving user");
                 return BadRequest($"Error retrieving user: {ex.Message}");
             }
         }
@@ -118,7 +127,7 @@ namespace API.Controllers.UserControllers
             try
             {
                 //check if files submited are three
-                if (files.Count != 3)
+                if (files == null || files.Count != 3)
                 {
                     return BadRequest("Please submit three files: passport photo, ID front, and ID back.");
                 }
@@ -127,6 +136,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating user");
                 return BadRequest($"Error updating user: {ex.Message}");
             }
         }
@@ -142,6 +152,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error deleting user");
                 return BadRequest($"Error deleting user: {ex.Message}");
             }
         }
@@ -157,6 +168,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving landlords");
                 return BadRequest($"Error retrieving landlords: {ex.Message}");
             }
         }
@@ -166,12 +178,30 @@ namespace API.Controllers.UserControllers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
+                {
+                    return BadRequest("Invalid email address.");
+                }
                 await _userService.ForgotPassword(email);
                 return Ok("Password reset link sent successfully.");
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error sending password reset link: {ex.Message}");
+                _logger.LogError(ex, "Error sending password reset for {Email}", email);
+                return BadRequest("An error occurred while processing the request.");
+            }
+        }
+
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -185,7 +215,8 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error registering user: {ex.Message}");
+                _logger.LogError(ex, "Error registering user");
+                return BadRequest("An error occurred while registering the user.");
             }
         }
 
@@ -200,6 +231,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error adding utility meter");
                 return BadRequest($"Error adding utility meter: {ex.Message}");
             }
         }
@@ -215,6 +247,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving utility meters");
                 return BadRequest($"Error retrieving utility meters: {ex.Message}");
             }
         }
@@ -230,6 +263,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving all utility meters");
                 return BadRequest($"Error retrieving all utility meters: {ex.Message}");
             }
         }
@@ -245,6 +279,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating utility meter");
                 return BadRequest($"Error updating utility meter: {ex.Message}");
             }
         }
@@ -260,6 +295,7 @@ namespace API.Controllers.UserControllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error deleting utility meter");
                 return BadRequest($"Error deleting utility meter: {ex.Message}");
             }
         }
