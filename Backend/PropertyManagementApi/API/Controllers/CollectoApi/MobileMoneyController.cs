@@ -204,27 +204,27 @@ namespace API.Controllers.CollectoApi
         //    }
         //}
 
-        [HttpPost("/initiateBankPayout")]
-        [Authorize]
-        [Authorize]
-        public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutBankRequestDto request)
-        {
-            try
-            {
-                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
-                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (userrole == null || !userrole.Equals("Administrator"))
-                {
-                    return Unauthorized();
-                }
-                var response = await _collectoApiClient.InitiateBankPayoutAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/initiateBankPayout")]
+        //[Authorize]
+        //[Authorize]
+        //public async Task<IActionResult> InitiatePayout([FromBody] InitiatePayoutBankRequestDto request)
+        //{
+        //    try
+        //    {
+        //        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+        //        var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
+        //        if (userrole == null || !userrole.Equals("Administrator"))
+        //        {
+        //            return Unauthorized();
+        //        }
+        //        var response = await _collectoApiClient.InitiateBankPayoutAsync(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
         [HttpPost("/payoutStatus")]
         [Authorize]
@@ -247,20 +247,20 @@ namespace API.Controllers.CollectoApi
             }
         }
 
-        [HttpPost("/withdrawToCollectoApi")]
-        [Authorize]
-        public async Task<IActionResult> WithdrawToCollectoApi([FromBody] CollectoWithdrawRequest request)
-        {
-            try
-            {
-                var response = await _collectoApiClient.WithdrawToCollectoApi(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+        //[HttpPost("/withdrawToCollectoApi")]
+        //[Authorize]
+        //public async Task<IActionResult> WithdrawToCollectoApi([FromBody] CollectoWithdrawRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _collectoApiClient.WithdrawToCollectoApi(request);
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //}
 
         [HttpPost("/withdrawFromCollectoWallet")]
         [Description("Withdraw funds from Collecto Wallet to a bank account or mobile money account. withdrawTo = <\"mobilemoney\", \"stanbic\", \"flexipay\", \"SMS\", \"BULK\", \"ADS\", \"EMAILS\", \"AIRTIME\">")]
