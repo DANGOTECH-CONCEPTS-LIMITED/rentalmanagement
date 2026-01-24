@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;                      // for ToList()
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
@@ -16,15 +17,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services.BackgroundServices
 {
+    // Note: Ensure database indexes on Status and TransactionId columns in TenantPayments, UtilityPayments, and WalletTransactions tables for better query performance.
     public class CheckPaymentStatusProcessor : BackgroundService
     {
         private const string PendingAtTelcom = "PENDING AT TELCOM";
         private const string SuccessAtTelecom = "SUCCESSFUL AT TELECOM";
         private const string FailedAtTelecom = "FAILED AT TELECOM";
         private const string SuccessFul = "SUCCESSFUL";
+        private const string PENDING_AT_BANK = "PENDING AT THE BANK";
+        private const string FailedAtBank = "FAILED AT THE BANK";
+        private const string SuccessAtBank = "SUCCESSFUL AT THE BANK";
+        private const string UnknownStatus = "UNKNOWN";
 
         private readonly ILogger<CheckPaymentStatusProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
         public CheckPaymentStatusProcessor(
             ILogger<CheckPaymentStatusProcessor> logger,
@@ -59,6 +66,7 @@ namespace Infrastructure.Services.BackgroundServices
             List<TenantPayment> tenantPayments;
             List<UtilityPayment> utilityPayments;
             List<WalletTransaction> walletTransactions;
+            List<WalletTransaction> pendingatbank;
 
             using (var scope = _scopeFactory.CreateScope())
             {
@@ -66,6 +74,7 @@ namespace Infrastructure.Services.BackgroundServices
                 tenantPayments = (await paymentSvc.GetPaymentsByStatusAsync(PendingAtTelcom)).ToList();
                 utilityPayments = (await paymentSvc.GetUtilityPaymentByStatus(PendingAtTelcom)).ToList();
                 walletTransactions = (await paymentSvc.GetWalletTransactionByStatus(PendingAtTelcom)).ToList();
+                pendingatbank = (await paymentSvc.GetWalletTransactionByStatus(PENDING_AT_BANK)).ToList();
             }
 
             var tasks = new List<Task>();
@@ -98,7 +107,7 @@ namespace Infrastructure.Services.BackgroundServices
             foreach (var t in tenantPayments)
             {
                 tasks.Add(RunSafe(
-                    () => ProcessStatusAsync(t.TransactionId, t.VendorTransactionId, "RENT", ct),
+                    () => ProcessStatusAsync(t.TransactionId, t.VendorTransactionId, "RENT", "MOMO", ct),
                     $"tenant payment {t.TransactionId}",
                     t.TransactionId));
             }
@@ -106,7 +115,7 @@ namespace Infrastructure.Services.BackgroundServices
             foreach (var u in utilityPayments)
             {
                 tasks.Add(RunSafe(
-                    () => ProcessStatusAsync(u.TransactionID!, u.VendorTranId!, "UTILITY", ct),
+                    () => ProcessStatusAsync(u.TransactionID!, u.VendorTranId!, "UTILITY", "MOMO", ct),
                     $"utility payment {u.TransactionID}",
                     u.TransactionID!));
             }
@@ -114,9 +123,17 @@ namespace Infrastructure.Services.BackgroundServices
             foreach (var w in walletTransactions)
             {
                 tasks.Add(RunSafe(
-                    () => ProcessStatusAsync(w.TransactionId, w.TransactionId, "WALLET", ct),
+                    () => ProcessStatusAsync(w.TransactionId, w.TransactionId, "WALLET", "MOMO", ct),
                     $"wallet transaction {w.TransactionId}",
                     w.TransactionId));
+            }
+
+            foreach (var b in pendingatbank)
+            {
+                tasks.Add(RunSafe(
+                    () => ProcessStatusAsync(b.TransactionId, b.TransactionId, "WALLET", "BANK", ct),
+                    $"wallet transaction pending at bank {b.TransactionId}",
+                    b.TransactionId));
             }
 
             await Task.WhenAll(tasks);
@@ -125,9 +142,20 @@ namespace Infrastructure.Services.BackgroundServices
         private async Task ProcessStatusAsync(
             string transactionId,
             string vendorTranId,
-            string tranType,
+            string tranType,string type,
             CancellationToken ct)
         {
+            if (string.IsNullOrWhiteSpace(transactionId))
+            {
+                _logger.LogError("TransactionId is null or empty");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(tranType))
+            {
+                _logger.LogError("TranType is null or empty for TransactionId: {TransactionId}", transactionId);
+                return;
+            }
+
             using var scope = _scopeFactory.CreateScope();
             var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             var collectoApi = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
@@ -138,23 +166,7 @@ namespace Infrastructure.Services.BackgroundServices
                 try
                 {
                     _logger.LogInformation("Checking status with Collecto");
-                    var responseJson = string.Empty;
-
-                    if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
-                    {
-                        responseJson = await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
-                        {
-                            Gateway = "mobilemoney",
-                            Reference = transactionId
-                        });
-                    }
-                    else
-                    {
-                        responseJson = await collectoApi.GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
-                        {
-                            TransactionId = vendorTranId
-                        });
-                    }
+                    var responseJson = await GetApiResponseWithRetryAsync(collectoApi, transactionId, vendorTranId, tranType, type, ct);
 
                     if (string.IsNullOrWhiteSpace(responseJson))
                     {
@@ -164,7 +176,7 @@ namespace Infrastructure.Services.BackgroundServices
 
                     if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
                     {
-                        var payout = JsonSerializer.Deserialize<PayoutStatusResponse>(responseJson);
+                        var payout = JsonSerializer.Deserialize<PayoutStatusResponse>(responseJson, _jsonOptions);
 
                         if (payout == null || payout.data == null || payout.data.data.Count == 0)
                         {
@@ -173,56 +185,115 @@ namespace Infrastructure.Services.BackgroundServices
                         }
 
                         var item = payout.data.data.First();
-                        var status = item.status?.Trim().ToUpperInvariant();
+                        var status = item.status?.Trim()?.ToUpperInvariant() ?? string.Empty;
 
                         if (status == "SUCCESSFUL")
                         {
+                            if(type.Equals("BANK", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var walletTx = new WalletTransaction
+                                {
+                                    TransactionId = transactionId,
+                                    Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
+                                    Status = SuccessAtBank,
+                                    TransactionDate = DateTime.UtcNow,
+                                    VendorTranId = item.transaction_id,
+                                    ReasonAtTelecom = item.status_message
+                                };
+                                await paymentSvc.UpdateWalletTransaction(walletTx);
+                                _logger.LogInformation("Wallet payout marked SUCCESSFUL AT BANK");
+                                return;
+                            }
+                            else 
+                            {
+                                var walletTx = new WalletTransaction
+                                {
+                                    TransactionId = transactionId,
+                                    Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
+                                    Status = SuccessFul,
+                                    TransactionDate = DateTime.UtcNow,
+                                    VendorTranId = item.transaction_id,
+                                    ReasonAtTelecom = item.status_message
+                                };
+                                await paymentSvc.UpdateWalletTransaction(walletTx);
+                                _logger.LogInformation("Wallet payout marked SUCCESSFUL AT TELECOM");
+                                return;
+                            }
+                                
+                        }
+                        else if (status == "FAILED")
+                        {
+                            if (type.Equals("BANK", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var walletTx = new WalletTransaction
+                                {
+                                    TransactionId = transactionId,
+                                    Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
+                                    Status = FailedAtBank,
+                                    TransactionDate = DateTime.UtcNow,
+                                    VendorTranId = item.transaction_id,
+                                    ReasonAtTelecom = item.status_message
+                                };
+                                await paymentSvc.ReverseWalletTransaction(walletTx);
+                                _logger.LogInformation("Wallet payout marked FAILED AT BANK and reversed");
+                                return;
+                            }
+                            else 
+                            {
+                                var walletTx = new WalletTransaction
+                                {
+                                    TransactionId = transactionId,
+                                    Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
+                                    Status = FailedAtTelecom,
+                                    TransactionDate = DateTime.UtcNow,
+                                    VendorTranId = item.transaction_id,
+                                    ReasonAtTelecom = item.status_message
+                                };
+                                await paymentSvc.ReverseWalletTransaction(walletTx);
+                                _logger.LogInformation("Wallet payout marked FAILED AT TELECOM and reversed");
+                                return;
+                            }     
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Unhandled status '{Status}' for wallet transaction {TransactionId}", status, transactionId);
+                            // Optionally, update to UNKNOWN
                             var walletTx = new WalletTransaction
                             {
                                 TransactionId = transactionId,
-                                Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
-                                Status = SuccessFul,
+                                Description = "Unknown status from API",
+                                Status = UnknownStatus,
                                 TransactionDate = DateTime.UtcNow,
                                 VendorTranId = item.transaction_id,
                                 ReasonAtTelecom = item.status_message
                             };
                             await paymentSvc.UpdateWalletTransaction(walletTx);
-                            _logger.LogInformation("Wallet payout marked SUCCESSFUL AT TELECOM");
-                            return;
-                        }
-                        else if (status == "FAILED")
-                        {
-                            var walletTx = new WalletTransaction
-                            {
-                                TransactionId = transactionId,
-                                Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
-                                Status = FailedAtTelecom,
-                                TransactionDate = DateTime.UtcNow,
-                                VendorTranId = item.transaction_id,
-                                ReasonAtTelecom = item.status_message
-                            };
-                            await paymentSvc.ReverseWalletTransaction(walletTx);
-                            _logger.LogInformation("Wallet payout marked FAILED AT TELECOM and reversed");
                             return;
                         }
                     }
                     else
                     {
-                        var dto = JsonSerializer.Deserialize<RequestToPayStatusResponse>(responseJson);
+                        var dto = JsonSerializer.Deserialize<RequestToPayStatusResponse>(responseJson, _jsonOptions);
 
-                        if (dto?.data?.requestToPayStatus != true)
+                        if (dto == null || dto.data == null)
                         {
-                            if (dto.data.status.Equals("Undetermined"))
+                            _logger.LogError("Invalid response structure from Collecto for TransactionId: {TransactionId}", transactionId);
+                            return;
+                        }
+
+                        if (dto.data.requestToPayStatus != true)
+                        {
+                            if (dto.data.status?.Equals("Undetermined", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 _logger.LogInformation("Status is undetermined, skipping update");
                                 return;
                             }
-                            else if (dto.data.status.Equals("PENDING"))
+                            else if (dto.data.status?.Equals("PENDING", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 _logger.LogInformation("Status is still pending, skipping update");
                                 return;
                             }
-                            else if (dto.data.status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase))
+                            else if (dto.data.status?.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 await paymentSvc.UpdatePaymentStatus(
                                     SuccessAtTelecom,
@@ -233,7 +304,7 @@ namespace Infrastructure.Services.BackgroundServices
                                 _logger.LogInformation("Status updated to {NewStatus}", SuccessAtTelecom);
                                 return;
                             }
-                            else if (dto.data.status.Equals("FAILED", StringComparison.OrdinalIgnoreCase))
+                            else if (dto.data.status?.Equals("FAILED", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 await paymentSvc.UpdatePaymentStatus(
                                     FailedAtTelecom,
@@ -245,18 +316,18 @@ namespace Infrastructure.Services.BackgroundServices
                                 return;
                             }
 
-                            _logger.LogError("Collecto returned requestToPayStatus=false");
+                            _logger.LogError("Collecto returned requestToPayStatus=false with status '{Status}' for TransactionId: {TransactionId}", dto.data.status, transactionId);
                             await paymentSvc.UpdatePaymentStatus(
                                 FailedAtTelecom,
                                 transactionId,
-                                dto?.data?.message ?? "Unknown error",
+                                dto.data.message ?? "Unknown error",
                                 vendorTranId,
                                 tranType);
                             return;
                         }
-                        else if (!dto.data.status.Equals("PENDING"))
+                        else if (!dto.data.status?.Equals("PENDING", StringComparison.OrdinalIgnoreCase) == true)
                         {
-                            var newStatus = dto.data.status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase)
+                            var newStatus = dto.data.status?.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase) == true
                                 ? SuccessAtTelecom
                                 : FailedAtTelecom;
 
@@ -282,6 +353,56 @@ namespace Infrastructure.Services.BackgroundServices
             }
         }
 
+        private async Task<string> GetApiResponseWithRetryAsync(ICollectoApiClient collectoApi, string transactionId, string vendorTranId, string tranType, string type, CancellationToken ct)
+        {
+            const int maxRetries = 3;
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (type.Equals("BANK", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
+                            {
+                                Gateway = "bank",
+                                Reference = transactionId
+                            });
+                        }
+                        else
+                        {
+                            return await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
+                            {
+                                Gateway = "mobilemoney",
+                                Reference = transactionId
+                            });
+                        }
+                    }
+                    else
+                    {
+                        return await collectoApi.GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
+                        {
+                            TransactionId = vendorTranId
+                        });
+                    }
+                }
+                catch (Exception ex) when (attempt < maxRetries)
+                {
+                    _logger.LogWarning(ex, "API call failed on attempt {Attempt} for TransactionId: {TransactionId}. Retrying...", attempt, transactionId);
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), ct); // Exponential backoff
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "API call failed after {MaxRetries} attempts for TransactionId: {TransactionId}", maxRetries, transactionId);
+                    throw;
+                }
+            }
+            return string.Empty; // Should not reach here
+        }
+
+        // Response models for Collecto API
+        // RequestToPayStatusResponse: Used for tenant and utility payments
         private class RequestToPayStatusResponse
         {
             public DataModel data { get; set; } = null!;
@@ -295,6 +416,7 @@ namespace Infrastructure.Services.BackgroundServices
             }
         }
 
+        // PayoutStatusResponse: Used for wallet transactions
         private class PayoutStatusResponse
         {
             public string status { get; set; } = "";            // "200"
@@ -328,299 +450,8 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 public string date_and_time { get; set; } = "";
                 public string user_id { get; set; } = "";
-                public string user_name { get; set; } = "";
+                public string user_name { get; set;} = "";
             }
         }
     }
 }
-
-
-//commenited out code
-
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;                      // for ToList()
-//using System.Text.Json;
-//using System.Threading;
-//using System.Threading.Tasks;
-//using Application.Interfaces.Collecto;
-//using Application.Interfaces.PaymentService;
-//using Application.Interfaces.PaymentService.WalletSvc;
-//using Domain.Dtos.Collecto;
-//using Domain.Entities.PropertyMgt;
-//using Microsoft.Extensions.DependencyInjection;
-//using Microsoft.Extensions.Hosting;
-//using Microsoft.Extensions.Logging;
-
-//namespace Infrastructure.Services.BackgroundServices
-//{
-//    public class CheckPaymentStatusProcessor : BackgroundService
-//    {
-//        private const string PendingAtTelcom = "PENDING AT TELCOM";
-//        private const string SuccessAtTelecom = "SUCCESSFUL AT TELECOM";
-//        private const string FailedAtTelecom = "FAILED AT TELECOM";
-
-//        private readonly ILogger<CheckPaymentStatusProcessor> _logger;
-//        private readonly IServiceScopeFactory _scopeFactory;
-
-//        public CheckPaymentStatusProcessor(
-//            ILogger<CheckPaymentStatusProcessor> logger,
-//            IServiceScopeFactory scopeFactory)
-//        {
-//            _logger = logger;
-//            _scopeFactory = scopeFactory;
-//        }
-
-//        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-//        {
-//            _logger.LogInformation("CheckPaymentStatusProcessor started.");
-
-//            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
-//            try
-//            {
-//                while (await timer.WaitForNextTickAsync(stoppingToken))
-//                    await ProcessAllPendingAsync(stoppingToken);
-//            }
-//            catch (OperationCanceledException)
-//            {
-//                _logger.LogInformation("CheckPaymentStatusProcessor stopping.");
-//            }
-//            catch (Exception ex)
-//            {
-//                _logger.LogError(ex, "Fatal error in ExecuteAsync");
-//            }
-//        }
-
-//        private async Task ProcessAllPendingAsync(CancellationToken ct)
-//        {
-//            using var scope = _scopeFactory.CreateScope();
-//            var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-//            var walletSvc = scope.ServiceProvider.GetRequiredService<IWalletService>();
-
-//            var tenantPaymentsTask = paymentSvc.GetPaymentsByStatusAsync(PendingAtTelcom);
-//            var utilityPaymentsTask = paymentSvc.GetUtilityPaymentByStatus(PendingAtTelcom);
-//            var walletTransactionsTask = walletSvc.GetTransactionsByStatus(PendingAtTelcom);
-
-//            // explain below code
-
-//            await Task.WhenAll(
-//                tenantPaymentsTask,
-//                utilityPaymentsTask,
-//                walletTransactionsTask);
-
-//            var tenantPayments = (await tenantPaymentsTask).ToList();
-//            var utilityPayments = (await utilityPaymentsTask).ToList();
-//            var walletTransactions = (await walletTransactionsTask).ToList();
-
-//            var allTransactions = new List<(string TxnId, string VendorTranId, string Type)>();
-
-//            allTransactions.AddRange(tenantPayments.Select(t => (t.TransactionId, t.VendorTransactionId, "RENT")));
-//            allTransactions.AddRange(utilityPayments.Select(u => (u.TransactionID, u.VendorTranId, "UTILITY")));
-//            allTransactions.AddRange(walletTransactions.Select(w => (w.Id.ToString(), w.TransactionId, "WALLET")));
-
-//            var tasks = new List<Task>();
-//            using var throttler = new SemaphoreSlim(10); // Limit to 10 concurrent tasks
-
-//            foreach (var (txnId, vendorId, type) in allTransactions)
-//            {
-//                tasks.Add(RunWithThrottleAsync(throttler, async () =>
-//                {
-//                    await ProcessStatusAsync(txnId, vendorId, type, ct);
-//                }, ct));
-//            }
-
-//            await Task.WhenAll(tasks);
-
-//            //using (var scope = _scopeFactory.CreateScope())
-//            //{
-//            //    var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-//            //    var walletSvc = scope.ServiceProvider.GetRequiredService<IWalletService>();
-
-//            //    tenantPayments = (await paymentSvc
-//            //            .GetPaymentsByStatusAsync(PendingAtTelcom))
-//            //        .ToList();
-
-//            //    utilityPayments = (await paymentSvc
-//            //            .GetUtilityPaymentByStatus(PendingAtTelcom))
-//            //        .ToList();
-
-//            //    walletTransactions = (await walletSvc
-//            //            .GetTransactionsByStatus(PendingAtTelcom))
-//            //        .ToList();
-//            //} // ← DbContext disposed here
-
-//            // 2) Spawn one task per payment, each with its own scope
-//            //var tasks = new List<Task>(tenantPaymentsTask.Count + utilityPayments.Count+walletTransactions.Count);
-
-//            //foreach (var t in tenantPayments)
-//            //    tasks.Add(ProcessStatusAsync(
-//            //        t.TransactionId,
-//            //        t.VendorTransactionId,
-//            //        "RENT",
-//            //        ct));
-
-//            //foreach (var u in utilityPayments)
-//            //    tasks.Add(ProcessStatusAsync(
-//            //        u.TransactionID,
-//            //        u.VendorTranId,
-//            //        "UTILITY",
-//            //        ct));
-
-//            //foreach (var w in walletTransactions)
-//            //    tasks.Add(ProcessStatusAsync(
-//            //        w.Id.ToString(),
-//            //        w.TransactionId,
-//            //        "WALLET",
-//            //        ct));
-
-//            //await Task.WhenAll(tasks);
-//        }
-
-//        private async Task ProcessStatusAsync(
-//            string transactionId,
-//            string vendorTranId,
-//            string tranType,
-//            CancellationToken ct)
-//        {
-//            // Each status‐check runs in its own DI scope → its own DbContext
-//            using var scope = _scopeFactory.CreateScope();
-//            var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-//            var collectoApi = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
-//            var walletSvc = scope.ServiceProvider.GetRequiredService<IWalletService>();
-
-//            using (_logger.BeginScope(new { transactionId, vendorTranId, tranType }))
-//            {
-//                try
-//                {
-//                    _logger.LogInformation("Checking status with Collecto");
-
-//                    var responseJson = await collectoApi
-//                        .GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
-//                        {
-//                            TransactionId = vendorTranId
-//                        });
-
-//                    if (string.IsNullOrWhiteSpace(responseJson))
-//                    {
-//                        _logger.LogError("Empty response from Collecto");
-//                        //check if trantype is wallet
-//                        if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
-//                        {
-//                            _logger.LogInformation("Wallet transaction failed at telecom");
-//                            //generate a wallet transaction
-//                            var walletTransaction = new WalletTransaction
-//                            {
-//                                TransactionId = transactionId,
-//                                Description = "No response from Collecto",
-//                                Status = FailedAtTelecom,
-//                                TransactionDate = DateTime.UtcNow,
-//                            };
-//                            await walletSvc.UpdateWalletTransaction(walletTransaction);
-
-//                            //reverse wallet transaction
-//                            await walletSvc.ReverseWalletTransaction(walletTransaction);
-//                            return;
-//                        }
-//                        else
-//                        {
-//                            await paymentSvc.UpdatePaymentStatus(
-//                                FailedAtTelecom,
-//                                transactionId,
-//                                "No response from Collecto",
-//                                string.Empty,
-//                                tranType);
-//                            return;
-//                        }
-//                    }
-
-//                    var dto = JsonSerializer
-//                        .Deserialize<RequestToPayStatusResponse>(responseJson);
-
-//                    if (dto?.data?.requestToPayStatus != true)
-//                    {
-//                        _logger.LogError("Collecto returned requestToPayStatus=false");
-
-//                        //check if trantype is wallet
-//                        if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
-//                        {
-//                            _logger.LogInformation("Wallet transaction failed at telecom");
-//                            //generate a wallet transaction
-//                            var walletTransaction = new WalletTransaction
-//                            {
-//                                TransactionId = transactionId,
-//                                Description = dto?.data?.message ?? "Unknown error",
-//                                Status = FailedAtTelecom,
-//                                TransactionDate = DateTime.UtcNow,
-//                            };
-
-//                            await walletSvc.UpdateWalletTransaction(walletTransaction);
-//                            await walletSvc.ReverseWalletTransaction(walletTransaction);
-//                            return;
-//                        }
-//                        else
-//                        {
-//                            await paymentSvc.UpdatePaymentStatus(
-//                                FailedAtTelecom,
-//                                transactionId,
-//                                dto?.data?.message ?? "Unknown error",
-//                                string.Empty,
-//                                tranType);
-//                            return;
-//                        }
-
-//                    }
-//                    else if (!dto.data.status.Equals("PENDING"))
-//                    {
-//                        //check if trantype is wallet
-//                        if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
-//                        {
-//                            //skip
-//                            return;
-//                        }
-//                        var newStatus = dto.data.status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase)
-//                            ? SuccessAtTelecom
-//                            : FailedAtTelecom;
-
-//                        await paymentSvc.UpdatePaymentStatus(
-//                            newStatus,
-//                            transactionId,
-//                            dto.data.message ?? string.Empty,
-//                            dto.data.transactionId ?? string.Empty,
-//                            tranType);
-//                        _logger.LogInformation("Status updated to {NewStatus}", newStatus);
-//                    }
-//                }
-//                catch (Exception ex)
-//                {
-//                    _logger.LogError(ex, "Error in status check");
-//                }
-//            }
-//        }
-
-//        private class RequestToPayStatusResponse
-//        {
-//            public DataModel data { get; set; } = null!;
-
-//            public class DataModel
-//            {
-//                public bool requestToPayStatus { get; set; }
-//                public string status { get; set; } = null!;
-//                public string message { get; set; } = null!;
-//                public string transactionId { get; set; } = null!;
-//            }
-//        }
-
-//        private static async Task RunWithThrottleAsync(SemaphoreSlim throttler, Func<Task> action, CancellationToken ct)
-//        {
-//            await throttler.WaitAsync(ct);
-//            try
-//            {
-//                await action();
-//            }
-//            finally
-//            {
-//                throttler.Release();
-//            }
-//        }
-//    }
-//}
