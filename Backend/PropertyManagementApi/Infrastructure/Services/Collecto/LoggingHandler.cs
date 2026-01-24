@@ -75,8 +75,17 @@ namespace Infrastructure.Services.Collecto
             _logger.LogInformation(reqSb.ToString());
 
             // — SEND —
-            var response = await base.SendAsync(request, ct)
+            HttpResponseMessage response;
+            try
+            {
+                response = await base.SendAsync(request, ct)
                                      .ConfigureAwait(false);
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogWarning(ex, "HTTP request was cancelled for {RequestUri}", request.RequestUri);
+                throw; // Re-throw to maintain behavior
+            }
 
             // — RESPONSE —
             var resSb = new StringBuilder()
