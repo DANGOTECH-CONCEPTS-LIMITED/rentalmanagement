@@ -87,6 +87,10 @@ namespace Infrastructure.Services.BackgroundServices
                 {
                     await work();
                 }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Task cancelled for {Context} TxId: {TransactionId}", context, transactionId);
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error processing {Context} TxId: {TransactionId}", context, transactionId);
@@ -96,7 +100,7 @@ namespace Infrastructure.Services.BackgroundServices
                         "CheckPaymentStatusProcessor",
                         $"Error processing {context}. TxId: {transactionId}",
                         "Exception",
-                        ex.Message ?? ex.InnerException?.Message ?? "Unknown");
+                        ex.ToString());
                 }
                 finally
                 {
@@ -347,7 +351,7 @@ namespace Infrastructure.Services.BackgroundServices
                         "CheckPaymentStatusProcessor",
                         $"Error in status check. TxId: {transactionId}, Type: {tranType}",
                         "Exception",
-                        ex.Message ?? ex.InnerException?.Message ?? "Unknown");
+                        ex.ToString());
                     _logger.LogError(ex, "Error in status check for TxId: {TransactionId}", transactionId);
                 }
             }

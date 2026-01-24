@@ -3,6 +3,7 @@ using Domain.Entities.ServiceLogs;
 using Infrastructure.Data;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,6 +28,20 @@ namespace Infrastructure.Services.ServiceLogs
             };
             _context.ServiceLogs.Add(logEntry);
             await _context.SaveChangesAsync();
+
+            // Also log to Windows Event Viewer
+            try
+            {
+                using var eventLog = new EventLog("Application");
+                eventLog.Source = serviceName;
+                string fullMessage = $"{level}: {message} - Exception: {exception}";
+                eventLog.WriteEntry(fullMessage, EventLogEntryType.Error);
+            }
+            catch (Exception ex)
+            {
+                // If EventLog fails, don't throw; perhaps log to console or ignore
+                Console.WriteLine($"Failed to write to EventLog: {ex.Message}");
+            }
         }
     }
 }
