@@ -170,7 +170,35 @@ namespace Infrastructure.Services.BackgroundServices
                 try
                 {
                     _logger.LogInformation("Checking status with Collecto");
-                    var responseJson = await GetApiResponseWithRetryAsync(collectoApi, transactionId, vendorTranId, tranType, type, ct);
+                    var responseJson = string.Empty;
+
+                    if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (type.Equals("BANK", StringComparison.OrdinalIgnoreCase))
+                        {
+                            responseJson = await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
+                            {
+                                Gateway = "bank",
+                                Reference = transactionId
+                            });
+                        }
+                        else 
+                        {
+                            responseJson = await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
+                            {
+                                Gateway = "mobilemoney",
+                                Reference = transactionId
+                            });
+                        }
+                            
+                    }
+                    else
+                    {
+                        responseJson = await collectoApi.GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
+                        {
+                            TransactionId = vendorTranId
+                        });
+                    }
 
                     if (string.IsNullOrWhiteSpace(responseJson))
                     {
@@ -182,7 +210,20 @@ namespace Infrastructure.Services.BackgroundServices
                     {
                         var payout = JsonSerializer.Deserialize<PayoutStatusResponse>(responseJson, _jsonOptions);
 
-                        if (payout == null || payout.data == null || payout.data.data.Count == 0)
+                        if (payout == null)
+                        {
+                            _logger.LogError("Invalid response structure for wallet transaction {TransactionId}", transactionId);
+                            return;
+                        }
+
+                        // Check for rate limit (429)
+                        if (payout.status == "429" && payout.status_message?.Contains("temporarily blocked", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            _logger.LogWarning("Rate limited for wallet transaction {TransactionId}: {StatusMessage}. Leaving transaction as is.", transactionId, payout.status_message);
+                            return;
+                        }
+
+                        if (payout.data == null || payout.data.data.Count == 0)
                         {
                             _logger.LogInformation("No payout records found; skipping.");
                             return;
@@ -355,54 +396,6 @@ namespace Infrastructure.Services.BackgroundServices
                     _logger.LogError(ex, "Error in status check for TxId: {TransactionId}", transactionId);
                 }
             }
-        }
-
-        private async Task<string> GetApiResponseWithRetryAsync(ICollectoApiClient collectoApi, string transactionId, string vendorTranId, string tranType, string type, CancellationToken ct)
-        {
-            const int maxRetries = 3;
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
-            {
-                try
-                {
-                    if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (type.Equals("BANK", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
-                            {
-                                Gateway = "bank",
-                                Reference = transactionId
-                            });
-                        }
-                        else
-                        {
-                            return await collectoApi.GetPayoutStatusAsync(new PayoutStatusRequestDto
-                            {
-                                Gateway = "mobilemoney",
-                                Reference = transactionId
-                            });
-                        }
-                    }
-                    else
-                    {
-                        return await collectoApi.GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
-                        {
-                            TransactionId = vendorTranId
-                        });
-                    }
-                }
-                catch (Exception ex) when (attempt < maxRetries)
-                {
-                    _logger.LogWarning(ex, "API call failed on attempt {Attempt} for TransactionId: {TransactionId}. Retrying...", attempt, transactionId);
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), ct); // Exponential backoff
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "API call failed after {MaxRetries} attempts for TransactionId: {TransactionId}", maxRetries, transactionId);
-                    throw;
-                }
-            }
-            return string.Empty; // Should not reach here
         }
 
         // Response models for Collecto API
