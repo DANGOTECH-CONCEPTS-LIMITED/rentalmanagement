@@ -45,7 +45,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("CheckPaymentStatusProcessor started.");
 
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1)); // was 10
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5)); // was 10
             try
             {
                 while (await timer.WaitForNextTickAsync(stoppingToken))
