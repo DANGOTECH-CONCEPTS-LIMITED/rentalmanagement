@@ -786,6 +786,11 @@ namespace Infrastructure.Services.PaymentServices
             }
         }
 
+        public async Task<WalletTransaction> GetWalletTransactionByIdAsync(string transactionId)
+        {
+            return await _context.WalletTransactions.FirstOrDefaultAsync(wt => wt.TransactionId == transactionId);
+        }
+
         public async Task<IEnumerable<UtilityPayment>> GetMpesaPaymentsFromCallBack()
         {
             var payments = await _context.MpesaCallbackAudits
@@ -796,9 +801,9 @@ namespace Infrastructure.Services.PaymentServices
             var utilityPayments = payments.Select(p => new UtilityPayment
             {
                 VendorTranId = p.TransId,
-                Amount = (double.Parse(p.Amount)- (double.Parse(p.Amount) * 0.1)),
+                Amount = (double.Parse(p.Amount) - (double.Parse(p.Amount) * 0.1)),
                 PhoneNumber = "",
-                Charges = (double.Parse(p.Amount)*0.1),
+                Charges = (double.Parse(p.Amount) * 0.1),
                 CreatedAt = p.ReceivedAt,
                 Status = "SUCCESSFUL AT TELCOM",
                 MeterNumber = p.BillRefNumber

@@ -216,6 +216,31 @@ namespace Infrastructure.Services.BackgroundServices
                             return;
                         }
 
+                        // Get the wallet transaction to check CreatedAt
+                        var existingWalletTx = await paymentSvc.GetWalletTransactionByIdAsync(transactionId);
+                        if (existingWalletTx == null)
+                        {
+                            _logger.LogError("Wallet transaction not found for {TransactionId}", transactionId);
+                            return;
+                        }
+
+                        // Special handling for bank payouts not found, only for transactions created before 23rd Jan 2025
+                        if (type.Equals("BANK", StringComparison.OrdinalIgnoreCase) && payout.data != null && payout.data.payout == false && payout.data.message == "Payouts not found" && existingWalletTx.CreatedAt < new DateTime(2025, 1, 23))
+                        {
+                            var updateTx = new WalletTransaction
+                            {
+                                TransactionId = transactionId,
+                                Description = "Payout not found, assumed successful",
+                                Status = SuccessAtBank,
+                                TransactionDate = DateTime.UtcNow,
+                                VendorTranId = "",
+                                ReasonAtTelecom = payout.data.message
+                            };
+                            await paymentSvc.UpdateWalletTransaction(updateTx);
+                            _logger.LogInformation("Wallet bank payout marked SUCCESSFUL AT THE BANK due to 'Payouts not found' for old transaction");
+                            return;
+                        }
+
                         // Check for rate limit (429)
                         if ((payout.status is string strStatus && strStatus == "429") || (payout.status is int intStatus && intStatus == 429))
                         {
