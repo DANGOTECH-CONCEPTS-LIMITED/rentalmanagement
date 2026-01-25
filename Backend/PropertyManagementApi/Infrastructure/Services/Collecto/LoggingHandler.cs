@@ -83,7 +83,7 @@ namespace Infrastructure.Services.Collecto
             }
             catch (TaskCanceledException ex)
             {
-                _logger.LogWarning(ex, "HTTP request was cancelled for {RequestUri}", request.RequestUri);
+                _logger.LogWarning(ex, "HTTP request was cancelled for {RequestUri} request : {Content}", request.RequestUri,request.Content);
                 throw; // Re-throw to maintain behavior
             }
 
