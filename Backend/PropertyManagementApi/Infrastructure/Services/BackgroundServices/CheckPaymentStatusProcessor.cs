@@ -45,7 +45,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("CheckPaymentStatusProcessor started.");
 
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5)); // was 10
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1)); // was 10
             try
             {
                 while (await timer.WaitForNextTickAsync(stoppingToken))
@@ -66,7 +66,7 @@ namespace Infrastructure.Services.BackgroundServices
             List<TenantPayment> tenantPayments;
             List<UtilityPayment> utilityPayments;
             List<WalletTransaction> walletTransactions;
-            List<WalletTransaction> pendingatbank;
+            //List<WalletTransaction> pendingatbank;
 
             using (var scope = _scopeFactory.CreateScope())
             {
@@ -74,7 +74,7 @@ namespace Infrastructure.Services.BackgroundServices
                 tenantPayments = (await paymentSvc.GetPaymentsByStatusAsync(PendingAtTelcom)).ToList();
                 utilityPayments = (await paymentSvc.GetUtilityPaymentByStatus(PendingAtTelcom)).ToList();
                 walletTransactions = (await paymentSvc.GetWalletTransactionByStatus(PendingAtTelcom)).ToList();
-                pendingatbank = (await paymentSvc.GetWalletTransactionByStatus(PENDING_AT_BANK)).ToList();
+                //pendingatbank = (await paymentSvc.GetWalletTransactionByStatus(PENDING_AT_BANK)).ToList();
             }
 
             var tasks = new List<Task>();
@@ -132,13 +132,13 @@ namespace Infrastructure.Services.BackgroundServices
                     w.TransactionId));
             }
 
-            foreach (var b in pendingatbank)
-            {
-                tasks.Add(RunSafe(
-                    () => ProcessStatusAsync(b.TransactionId, b.TransactionId, "WALLET", "BANK", ct),
-                    $"wallet transaction pending at bank {b.TransactionId}",
-                    b.TransactionId));
-            }
+            //foreach (var b in pendingatbank)
+            //{
+            //    tasks.Add(RunSafe(
+            //        () => ProcessStatusAsync(b.TransactionId, b.TransactionId, "WALLET", "BANK", ct),
+            //        $"wallet transaction pending at bank {b.TransactionId}",
+            //        b.TransactionId));
+            //}
 
             await Task.WhenAll(tasks);
         }
