@@ -45,7 +45,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("CheckPaymentStatusProcessor started.");
 
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(10)); // was 10
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5)); // was 10
             try
             {
                 while (await timer.WaitForNextTickAsync(stoppingToken))
@@ -217,10 +217,13 @@ namespace Infrastructure.Services.BackgroundServices
                         }
 
                         // Check for rate limit (429)
-                        if (payout.status == "429" && payout.status_message?.Contains("temporarily blocked", StringComparison.OrdinalIgnoreCase) == true)
+                        if ((payout.status is string strStatus && strStatus == "429") || (payout.status is int intStatus && intStatus == 429))
                         {
-                            _logger.LogWarning("Rate limited for wallet transaction {TransactionId}: {StatusMessage}. Leaving transaction as is.", transactionId, payout.status_message);
-                            return;
+                            if (payout.status_message?.Contains("temporarily blocked", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                _logger.LogWarning("Rate limited for wallet transaction {TransactionId}: {StatusMessage}. Leaving transaction as is.", transactionId, payout.status_message);
+                                return;
+                            }
                         }
 
                         if (payout.data == null || payout.data.data.Count == 0)
@@ -416,7 +419,7 @@ namespace Infrastructure.Services.BackgroundServices
         // PayoutStatusResponse: Used for wallet transactions
         private class PayoutStatusResponse
         {
-            public string status { get; set; } = "";            // "200"
+            public object status { get; set; } = "";            // 200 or "429"
             public string status_message { get; set; } = "";    // "success"
             public PayoutData data { get; set; } = null!;
 
