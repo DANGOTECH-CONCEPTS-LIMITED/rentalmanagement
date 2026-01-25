@@ -100,6 +100,18 @@ builder.Services.AddHttpClient<IPrepaidApiClient, PrepaidApiService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<LoggingHandler>();
 
+builder.Services.AddHttpClient<IMtnMomoApiClient, MtnMomoService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
+    .AddHttpMessageHandler<LoggingHandler>();
+
+builder.Services.AddHttpClient<IAirtelApiClient, AirtelService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
+    .AddHttpMessageHandler<LoggingHandler>();
+
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<EmailService>();
