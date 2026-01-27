@@ -65,7 +65,7 @@ namespace Infrastructure.Services.Collecto
             return _accessToken;
         }
 
-        public async Task<string> CollectAsync(CollectRequestDto request)
+        public async Task<string> CollectAsync(AirtelCollectRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();
@@ -74,7 +74,7 @@ namespace Infrastructure.Services.Collecto
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetCollectStatusAsync(CollectStatusRequestDto request)
+        public async Task<string> GetCollectStatusAsync(AirtelCollectStatusRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();
@@ -83,7 +83,7 @@ namespace Infrastructure.Services.Collecto
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> DisburseAsync(DisburseRequestDto request)
+        public async Task<string> DisburseAsync(AirtelDisburseRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();
@@ -92,7 +92,7 @@ namespace Infrastructure.Services.Collecto
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetDisburseStatusAsync(DisburseStatusRequestDto request)
+        public async Task<string> GetDisburseStatusAsync(AirtelDisburseStatusRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();

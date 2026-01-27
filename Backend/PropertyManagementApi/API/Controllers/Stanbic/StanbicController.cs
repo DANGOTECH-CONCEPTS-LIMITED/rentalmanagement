@@ -1,26 +1,26 @@
 using Application.Interfaces.Collecto;
-using Domain.Dtos.MtnMomo;
+using Domain.Dtos.Stanbic;
 using Microsoft.AspNetCore.Mvc;
 
-namespace API.Controllers.MtnMomo
+namespace API.Controllers.Stanbic
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class MtnMomoController : ControllerBase
+    public class StanbicController : ControllerBase
     {
-        private readonly IMtnMomoApiClient _mtnMomoApi;
+        private readonly IStanbicApiClient _stanbicApi;
 
-        public MtnMomoController(IMtnMomoApiClient mtnMomoApi)
+        public StanbicController(IStanbicApiClient stanbicApi)
         {
-            _mtnMomoApi = mtnMomoApi;
+            _stanbicApi = stanbicApi;
         }
 
-        [HttpPost("requesttopay")]
-        public async Task<IActionResult> RequestToPay([FromBody] MtnMomoRequestToPayRequestDto request)
+        [HttpPost("collect")]
+        public async Task<IActionResult> Collect([FromBody] StanbicCollectRequestDto request)
         {
             try
             {
-                var result = await _mtnMomoApi.RequestToPayAsync(request);
+                var result = await _stanbicApi.CollectAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -29,13 +29,13 @@ namespace API.Controllers.MtnMomo
             }
         }
 
-        [HttpGet("requesttopay/{transactionId}")]
-        public async Task<IActionResult> GetRequestToPayStatus(string transactionId)
+        [HttpGet("collect/{transactionId}")]
+        public async Task<IActionResult> GetCollectStatus(string transactionId)
         {
             try
             {
-                var request = new MtnMomoRequestToPayStatusRequestDto { TransactionId = transactionId };
-                var result = await _mtnMomoApi.GetRequestToPayStatusAsync(request);
+                var request = new StanbicCollectStatusRequestDto { TransactionId = transactionId };
+                var result = await _stanbicApi.GetCollectStatusAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -45,11 +45,11 @@ namespace API.Controllers.MtnMomo
         }
 
         [HttpPost("transfer")]
-        public async Task<IActionResult> Transfer([FromBody] MtnMomoTransferRequestDto request)
+        public async Task<IActionResult> Transfer([FromBody] StanbicTransferRequestDto request)
         {
             try
             {
-                var result = await _mtnMomoApi.TransferAsync(request);
+                var result = await _stanbicApi.TransferAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -63,8 +63,8 @@ namespace API.Controllers.MtnMomo
         {
             try
             {
-                var request = new MtnMomoTransferStatusRequestDto { TransactionId = transactionId };
-                var result = await _mtnMomoApi.GetTransferStatusAsync(request);
+                var request = new StanbicTransferStatusRequestDto { TransactionId = transactionId };
+                var result = await _stanbicApi.GetTransferStatusAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -78,7 +78,7 @@ namespace API.Controllers.MtnMomo
         {
             try
             {
-                var token = await _mtnMomoApi.GetAccessTokenAsync();
+                var token = await _stanbicApi.GetAccessTokenAsync();
                 return Ok(new { access_token = token });
             }
             catch (Exception ex)

@@ -6,9 +6,9 @@ namespace Application.Interfaces.Collecto
     public interface IMtnMomoApiClient
     {
         Task<string> GetAccessTokenAsync();
-        Task<string> RequestToPayAsync(RequestToPayRequestDto request);
-        Task<string> GetRequestToPayStatusAsync(RequestToPayStatusRequestDto request);
-        Task<string> TransferAsync(TransferRequestDto request);
-        Task<string> GetTransferStatusAsync(TransferStatusRequestDto request);
+        Task<string> RequestToPayAsync(MtnMomoRequestToPayRequestDto request);
+        Task<string> GetRequestToPayStatusAsync(MtnMomoRequestToPayStatusRequestDto request);
+        Task<string> TransferAsync(MtnMomoTransferRequestDto request);
+        Task<string> GetTransferStatusAsync(MtnMomoTransferStatusRequestDto request);
     }
 }

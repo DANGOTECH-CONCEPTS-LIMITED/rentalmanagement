@@ -6,30 +6,28 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Application.Interfaces.Collecto;
-using Domain.Dtos.MtnMomo;
+using Domain.Dtos.Stanbic;
 using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Services.Collecto
 {
-    public class MtnMomoService : IMtnMomoApiClient
+    public class StanbicService : IStanbicApiClient
     {
         private readonly HttpClient _http;
-        private readonly string _subscriptionKey;
         private readonly string _apiKey;
         private readonly string _apiSecret;
         private readonly string _baseUrl;
-        private readonly string _targetEnvironment;
+        private readonly string _environment;
         private string _accessToken;
         private DateTime _tokenExpiry;
 
-        public MtnMomoService(HttpClient http, IConfiguration config)
+        public StanbicService(HttpClient http, IConfiguration config)
         {
             _http = http;
-            _subscriptionKey = config["MtnMomo:SubscriptionKey"];
-            _apiKey = config["MtnMomo:ApiKey"];
-            _apiSecret = config["MtnMomo:ApiSecret"];
-            _baseUrl = config["MtnMomo:BaseUrl"];
-            _targetEnvironment = config["MtnMomo:TargetEnvironment"];
+            _apiKey = config["Stanbic:ApiKey"];
+            _apiSecret = config["Stanbic:ApiSecret"];
+            _baseUrl = config["Stanbic:BaseUrl"];
+            _environment = config["Stanbic:Environment"];
             _http.BaseAddress = new Uri(_baseUrl);
         }
 
@@ -38,12 +36,15 @@ namespace Infrastructure.Services.Collecto
             if (!string.IsNullOrEmpty(_accessToken) && DateTime.UtcNow < _tokenExpiry)
                 return;
 
-            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_apiKey}:{_apiSecret}"));
-            _http.DefaultRequestHeaders.Clear();
-            _http.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", _subscriptionKey);
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+            var credentials = new Dictionary<string, string>
+            {
+                { "client_id", _apiKey },
+                { "client_secret", _apiSecret },
+                { "grant_type", "client_credentials" }
+            };
 
-            var response = await _http.PostAsync("collection/token/", null);
+            _http.DefaultRequestHeaders.Clear();
+            var response = await _http.PostAsync("oauth2/token", new FormUrlEncodedContent(credentials));
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(json);
@@ -54,8 +55,6 @@ namespace Infrastructure.Services.Collecto
         private void SetHeaders()
         {
             _http.DefaultRequestHeaders.Clear();
-            _http.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", _subscriptionKey);
-            _http.DefaultRequestHeaders.Add("X-Target-Environment", _targetEnvironment);
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
         }
 
@@ -65,38 +64,38 @@ namespace Infrastructure.Services.Collecto
             return _accessToken;
         }
 
-        public async Task<string> RequestToPayAsync(MtnMomoRequestToPayRequestDto request)
+        public async Task<string> CollectAsync(StanbicCollectRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();
-            var response = await _http.PostAsJsonAsync("collection/v1_0/requesttopay", request);
+            var response = await _http.PostAsJsonAsync("collections/v1/collect", request);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetRequestToPayStatusAsync(MtnMomoRequestToPayStatusRequestDto request)
+        public async Task<string> GetCollectStatusAsync(StanbicCollectStatusRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();
-            var response = await _http.GetAsync($"collection/v1_0/requesttopay/{request.TransactionId}");
+            var response = await _http.GetAsync($"collections/v1/collect/{request.TransactionId}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> TransferAsync(MtnMomoTransferRequestDto request)
+        public async Task<string> TransferAsync(StanbicTransferRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();
-            var response = await _http.PostAsJsonAsync("disbursement/v1_0/transfer", request);
+            var response = await _http.PostAsJsonAsync("transfers/v1/transfer", request);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetTransferStatusAsync(MtnMomoTransferStatusRequestDto request)
+        public async Task<string> GetTransferStatusAsync(StanbicTransferStatusRequestDto request)
         {
             await EnsureAccessTokenAsync();
             SetHeaders();
-            var response = await _http.GetAsync($"disbursement/v1_0/transfer/{request.TransactionId}");
+            var response = await _http.GetAsync($"transfers/v1/transfer/{request.TransactionId}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }

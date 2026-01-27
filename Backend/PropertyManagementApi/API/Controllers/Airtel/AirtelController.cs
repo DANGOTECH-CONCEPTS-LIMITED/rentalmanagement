@@ -16,7 +16,7 @@ namespace API.Controllers.Airtel
         }
 
         [HttpPost("collect")]
-        public async Task<IActionResult> Collect([FromBody] CollectRequestDto request)
+        public async Task<IActionResult> Collect([FromBody] AirtelCollectRequestDto request)
         {
             try
             {
@@ -34,7 +34,7 @@ namespace API.Controllers.Airtel
         {
             try
             {
-                var request = new CollectStatusRequestDto { TransactionId = transactionId };
+                var request = new AirtelCollectStatusRequestDto { TransactionId = transactionId };
                 var result = await _airtelApi.GetCollectStatusAsync(request);
                 return Ok(result);
             }
@@ -45,7 +45,7 @@ namespace API.Controllers.Airtel
         }
 
         [HttpPost("disburse")]
-        public async Task<IActionResult> Disburse([FromBody] DisburseRequestDto request)
+        public async Task<IActionResult> Disburse([FromBody] AirtelDisburseRequestDto request)
         {
             try
             {
@@ -63,7 +63,7 @@ namespace API.Controllers.Airtel
         {
             try
             {
-                var request = new DisburseStatusRequestDto { TransactionId = transactionId };
+                var request = new AirtelDisburseStatusRequestDto { TransactionId = transactionId };
                 var result = await _airtelApi.GetDisburseStatusAsync(request);
                 return Ok(result);
             }

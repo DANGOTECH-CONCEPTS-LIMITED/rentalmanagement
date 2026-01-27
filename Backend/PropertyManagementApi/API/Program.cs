@@ -112,6 +112,12 @@ builder.Services.AddHttpClient<IAirtelApiClient, AirtelService>(client =>
 })
     .AddHttpMessageHandler<LoggingHandler>();
 
+builder.Services.AddHttpClient<IStanbicApiClient, StanbicService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
+    .AddHttpMessageHandler<LoggingHandler>();
+
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<EmailService>();

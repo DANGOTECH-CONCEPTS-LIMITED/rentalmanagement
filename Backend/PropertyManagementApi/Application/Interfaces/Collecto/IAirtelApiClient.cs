@@ -6,9 +6,9 @@ namespace Application.Interfaces.Collecto
     public interface IAirtelApiClient
     {
         Task<string> GetAccessTokenAsync();
-        Task<string> CollectAsync(CollectRequestDto request);
-        Task<string> GetCollectStatusAsync(CollectStatusRequestDto request);
-        Task<string> DisburseAsync(DisburseRequestDto request);
-        Task<string> GetDisburseStatusAsync(DisburseStatusRequestDto request);
+        Task<string> CollectAsync(AirtelCollectRequestDto request);
+        Task<string> GetCollectStatusAsync(AirtelCollectStatusRequestDto request);
+        Task<string> DisburseAsync(AirtelDisburseRequestDto request);
+        Task<string> GetDisburseStatusAsync(AirtelDisburseStatusRequestDto request);
     }
 }
