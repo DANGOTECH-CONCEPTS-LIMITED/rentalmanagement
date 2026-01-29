@@ -166,6 +166,7 @@ const MakeUtilityPayment = () => {
     try {
       const response = await axios.get(`${apiUrl}/GetUtilityPaymentByMeterNumber/${meterNumber}`);
       setPayments(response.data);
+      console.log(response.data);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -509,7 +510,6 @@ const MakeUtilityPayment = () => {
               {isFetching ? 'Fetching...' : 'Fetch Payments'}
             </Button>
           </div>
-
           {payments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -519,6 +519,7 @@ const MakeUtilityPayment = () => {
                     <th className="p-2 text-left">VendorTranId</th>
                     <th className="p-2 text-left">Phone</th>
                     <th className="p-2 text-left">Amount</th>
+                    <th className='p-2 text-left'>Units</th>
                     <th className="p-2 text-left">Status</th>
                     <th className="p-2 text-left">Date</th>
                   </tr>
@@ -530,11 +531,13 @@ const MakeUtilityPayment = () => {
                       <td className="p-2">{payment.vendorTranId}</td>
                       <td className="p-2">{payment.phoneNumber}</td>
                       <td className="p-2">{payment.amount}</td>
+                      <td className='p-2'>{payment.units}</td>
                       <td className="p-2">{payment.status}</td>
                       <td className="p-2">{new Date(payment.createdAt).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
+                
               </table>
             </div>
           ) : (
