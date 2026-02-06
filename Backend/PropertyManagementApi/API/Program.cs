@@ -42,6 +42,8 @@ using Application.Interfaces.External;
 using Infrastructure.Services.External;
 using System.Security.Claims;
 using Serilog;
+using Application.Interfaces.STSVending;
+using Infrastructure.Services.STSVending;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,7 +86,7 @@ builder.Services.AddScoped<IAccountingQueryService, AccountingQueryService>();
 builder.Services.AddScoped<IAccountingService, AccountingService>();
 builder.Services.AddScoped<IWalletChargePolicy, ConfigWalletChargePolicy>();
 builder.Services.AddScoped<WalletAccountingNotifier>();
-
+builder.Services.AddScoped<ISTSProcessing, STSProcessing>();
 
 
 builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>(client =>
