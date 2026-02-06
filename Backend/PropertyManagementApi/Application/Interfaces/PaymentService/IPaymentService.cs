@@ -62,5 +62,6 @@ namespace Application.Interfaces.PaymentService
         Task MakeMPesaUtilityPayment(UtilityPayment payment);
         Task UpdateMpesaProcessedPaymt(string vendortranid, string transactionId);
 
+        Task<decimal> GetWalletBalanceAsync(int landlordId);
     }
 }

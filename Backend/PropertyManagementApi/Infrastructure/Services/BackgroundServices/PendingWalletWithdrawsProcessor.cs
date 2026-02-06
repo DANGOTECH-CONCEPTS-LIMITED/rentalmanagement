@@ -20,19 +20,19 @@ namespace Infrastructure.Services.BackgroundServices
     {
         private const string PendingStatus = "PENDING";
         private const string PendingBankPayout = "PENDING_BANK_PAYOUT";
-        private const string SucessfulAtTelecom = "SUCCESSFUL AT TELECOM";
-        private const string SucessfulAtBank = "SUCCESSFUL AT THE BANK";
-        private const string SucessfulWalletTransfer = "SUCCESSFUL_WALLET_TRANSFER";
+        private const string SuccessfulAtTelecom = "SUCCESSFUL AT TELECOM";
+        private const string SuccessfulAtBank = "SUCCESSFUL AT THE BANK";
+        private const string SuccessfulWalletTransfer = "SUCCESSFUL_WALLET_TRANSFER";
         private const string FailedAtBank = "FAILED AT THE BANK";
         private const string FailedAtWalletTransfer = "FAILED_WALLET_TRANSFER";
         private const string FailedStatus = "FAILED AT TELECOM";
         private const string PendingAtTelcom = "PENDING AT TELCOM";
         private const string PendingWalletPayout = "PENDING_WALLET_PAYOUT";
-        private readonly ILogger<CheckPaymentStatusProcessor> _logger;
+        private readonly ILogger<PendingWalletWithdrawsProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
-        public PendingWalletWithdrawsProcessor(ILogger<CheckPaymentStatusProcessor> logger,
-                                 IServiceScopeFactory scopeFactory)
+        public PendingWalletWithdrawsProcessor(ILogger<PendingWalletWithdrawsProcessor> logger,
+                                  IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
             _scopeFactory = scopeFactory;
@@ -61,8 +61,8 @@ namespace Infrastructure.Services.BackgroundServices
                         .GetTransactionsByStatus(PendingWalletPayout)
                         .ConfigureAwait(false);
                     foreach (var walletTransaction in pendingwithdraws)
-
                     {
+                        if (stoppingToken.IsCancellationRequested) break;
                         //
                         // isolate each payment in its own try/catch
                         await ProcessSinglePaymentAsync(
@@ -74,6 +74,7 @@ namespace Infrastructure.Services.BackgroundServices
 
                     foreach (var walletTransaction in pendingBankPayouts)
                     {
+                        if (stoppingToken.IsCancellationRequested) break;
                         // isolate each payment in its own try/catch
                         await ProcessSingleBankPayoutPaymentAsync(
                             walletTransaction,
@@ -84,6 +85,7 @@ namespace Infrastructure.Services.BackgroundServices
 
                     foreach (var walletTransaction in pendingWalletPayouts)
                     {
+                        if (stoppingToken.IsCancellationRequested) break;
                         // isolate each payment in its own try/catch
                         await ProcessSingleWalletPayoutPaymentAsync(
                             walletTransaction,
@@ -112,6 +114,12 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
+                // Check if landlord data is available
+                if (walletTransaction.Wallet?.Landlord == null)
+                {
+                    _logger.LogError("Wallet or Landlord data is null for transaction {TransactionId}", walletTransaction.TransactionId);
+                    return;
+                }
                 //prepare initate payout request
                 var request = new InitiatePayoutRequestDto
                 {
@@ -127,7 +135,12 @@ namespace Infrastructure.Services.BackgroundServices
                 var rawResponse = await collecto.InitiatePayoutAsync(request);
                 if (!string.IsNullOrWhiteSpace(rawResponse)) 
                 {
-                    var payoutResponse = JsonSerializer.Deserialize< PayoutResponse >(rawResponse);
+                    var payoutResponse = JsonSerializer.Deserialize<PayoutResponse>(rawResponse);
+                    if (payoutResponse?.data == null)
+                    {
+                        _logger.LogError("Invalid payout response for transaction {TransactionId}", walletTransaction.TransactionId);
+                        return;
+                    }
                     if (payoutResponse.data.payout)
                     {
                         walletTransaction.Status = PendingAtTelcom;
@@ -160,6 +173,11 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
+                if (walletTransaction.Wallet?.Landlord == null)
+                {
+                    _logger.LogError("Wallet or Landlord data is null for transaction {TransactionId}", walletTransaction.TransactionId);
+                    return;
+                }
                 if(walletTransaction.Amount > 5000) 
                 {
                     //prepare initate payout request
@@ -180,6 +198,11 @@ namespace Infrastructure.Services.BackgroundServices
                     if (!string.IsNullOrWhiteSpace(rawResponse))
                     {
                         var payoutResponse = JsonSerializer.Deserialize<PayoutResponse>(rawResponse);
+                        if (payoutResponse?.data == null)
+                        {
+                            _logger.LogError("Invalid payout response for transaction {TransactionId}", walletTransaction.TransactionId);
+                            return;
+                        }
                         if (payoutResponse.data.payout)
                         {
                             walletTransaction.Status = "PENDING AT THE BANK";
@@ -195,8 +218,13 @@ namespace Infrastructure.Services.BackgroundServices
                         }
                     }
                 }
-                
-
+                else 
+                {
+                    //reverse the transaction and update status to failed with reason amount too low for bank payout
+                    walletTransaction.Status = FailedStatus;
+                    walletTransaction.Description = "Amount too low for bank payout. Minimum amount is 5000";
+                    await wallet.ReverseWalletTransaction(walletTransaction);
+                }
             }
             catch (Exception ex)
             {
@@ -215,6 +243,11 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
+                if (walletTransaction.Wallet?.Landlord == null)
+                {
+                    _logger.LogError("Wallet or Landlord data is null for transaction {TransactionId}", walletTransaction.TransactionId);
+                    return;
+                }
                 if (walletTransaction.Amount > 5000)
                 {
                     //prepare initate payout request
@@ -230,9 +263,14 @@ namespace Infrastructure.Services.BackgroundServices
                     if (!string.IsNullOrWhiteSpace(rawResponse))
                     {
                         var payoutResponse = JsonSerializer.Deserialize<CollectoWithdrawResponse>(rawResponse);
+                        if (payoutResponse?.data == null)
+                        {
+                            _logger.LogError("Invalid withdraw response for transaction {TransactionId}", walletTransaction.TransactionId);
+                            return;
+                        }
                         if (payoutResponse.data.walletToWallet)
                         {
-                            walletTransaction.Status = SucessfulWalletTransfer;
+                            walletTransaction.Status = SuccessfulWalletTransfer;
                             walletTransaction.VendorTranId = payoutResponse.data.transactionId;
                             walletTransaction.ReasonAtTelecom = payoutResponse.data.message;
                             await wallet.UpdateWalletTransaction(walletTransaction);
@@ -246,8 +284,13 @@ namespace Infrastructure.Services.BackgroundServices
                         }
                     }
                 }
-
-
+                else
+                {
+                    // Handle low amount for wallet payout
+                    walletTransaction.Status = FailedAtWalletTransfer;
+                    walletTransaction.ReasonAtTelecom = "Amount too low for wallet payout. Minimum amount is 5000";
+                    await wallet.ReverseWalletTransaction(walletTransaction);
+                }
             }
             catch (Exception ex)
             {

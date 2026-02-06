@@ -791,6 +791,12 @@ namespace Infrastructure.Services.PaymentServices
             return await _context.WalletTransactions.FirstOrDefaultAsync(wt => wt.TransactionId == transactionId);
         }
 
+        public async Task<decimal> GetWalletBalanceAsync(int landlordId)
+        {
+            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.LandlordId == landlordId);
+            return wallet?.Balance ?? 0m;
+        }
+
         public async Task<IEnumerable<UtilityPayment>> GetMpesaPaymentsFromCallBack()
         {
             var payments = await _context.MpesaCallbackAudits

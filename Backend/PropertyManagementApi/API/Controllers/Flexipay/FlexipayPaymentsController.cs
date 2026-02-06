@@ -1,5 +1,5 @@
-﻿using Application.Interfaces.Flexipay;
-using Domain.Dtos.Flexipay;
+﻿using Application.Interfaces.Stanbic;
+using Domain.Dtos.Stanbic;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,19 +9,19 @@ namespace API.Controllers.Flexipay
     [ApiController]
     public class FlexipayPaymentsController : ControllerBase
     {
-        private readonly IFlexiPayService _flexiPayService;
+        private readonly IStanbicApiClient _stanbicApi;
 
-        public FlexipayPaymentsController(IFlexiPayService flexiPayService)
+        public FlexipayPaymentsController(IStanbicApiClient stanbicApi)
         {
-            _flexiPayService = flexiPayService;
+            _stanbicApi = stanbicApi;
         }
 
         [HttpPost("/merchant-payment")]
-        public async Task<IActionResult> MerchantPayment([FromBody] MerchantPaymentRequestDto request)
+        public async Task<IActionResult> MerchantPayment([FromBody] StanbicCollectRequestDto request)
         {
             try
             {
-                var result = await _flexiPayService.InitiateMerchantPaymentAsync(request);
+                var result = await _stanbicApi.CollectAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -31,25 +31,25 @@ namespace API.Controllers.Flexipay
         }
 
         [HttpPost("/transaction-status")]
-        public async Task<IActionResult> GetTransactionStatus([FromBody] TransactionStatusRequestDto request)
+        public async Task<IActionResult> GetTransactionStatus([FromBody] StanbicCollectStatusRequestDto request)
         {
             try
             {
-                var result = await _flexiPayService.GetTransactionStatusAsync(request);
+                var result = await _stanbicApi.GetCollectStatusAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error creating payment: {ex.Message}");
+                return BadRequest($"Error getting transaction status: {ex.Message}");
             }
         }
 
         [HttpPost("/bill-payment")]
-        public async Task<IActionResult> BillPayment([FromBody] BillPaymentRequestDto request)
+        public async Task<IActionResult> BillPayment([FromBody] StanbicTransferRequestDto request)
         {
             try
             {
-                var result = await _flexiPayService.InitiateBillPaymentAsync(request);
+                var result = await _stanbicApi.TransferAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)

@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.PaymentService.WalletSvc;
+﻿using Application.Interfaces.PaymentService;
+using Application.Interfaces.PaymentService.WalletSvc;
 using Domain.Dtos.Payments.WalletDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,9 +13,11 @@ namespace API.Controllers.Payments.Wallet
     public class WalletController : ControllerBase
     {
         private readonly IWalletService _svc;
-        public WalletController(IWalletService svc)
+        private readonly IPaymentService _paymentSvc;
+        public WalletController(IWalletService svc, IPaymentService paymentSvc)
         {
             _svc = svc;
+            _paymentSvc = paymentSvc;
         }
 
         [HttpGet("/GetBalance/{landlordid}")]
@@ -59,6 +62,20 @@ namespace API.Controllers.Payments.Wallet
             catch (Exception ex)
             {
                 return BadRequest($"Error processing withdrawal: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetWalletBalance/{landlordid}")]
+        public async Task<IActionResult> GetWalletBalance(int landlordid)
+        {
+            try
+            {
+                var balance = await _paymentSvc.GetWalletBalanceAsync(landlordid);
+                return Ok(new { balance });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving wallet balance: {ex.Message}");
             }
         }
     }

@@ -39,4 +39,20 @@ namespace Domain.Dtos.Stanbic
     {
         public string TransactionId { get; set; } = string.Empty;
     }
+
+    public class StanbicAccountInquiryRequestDto
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+    }
+
+    public class StanbicBalanceRequestDto
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+    }
+
+    public class StanbicReverseRequestDto
+    {
+        public string TransactionId { get; set; } = string.Empty;
+        public string Reason { get; set; } = string.Empty;
+    }
 }

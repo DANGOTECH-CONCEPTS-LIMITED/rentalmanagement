@@ -1,15 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Application.Interfaces.Collecto;
+using Application.Interfaces.Stanbic;
 using Domain.Dtos.Stanbic;
 using Microsoft.Extensions.Configuration;
 
-namespace Infrastructure.Services.Collecto
+namespace Infrastructure.Services.Stanbic
 {
     public class StanbicService : IStanbicApiClient
     {
@@ -20,6 +21,7 @@ namespace Infrastructure.Services.Collecto
         private readonly string _environment;
         private string _accessToken;
         private DateTime _tokenExpiry;
+        private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
         public StanbicService(HttpClient http, IConfiguration config)
         {
@@ -47,9 +49,9 @@ namespace Infrastructure.Services.Collecto
             var response = await _http.PostAsync("oauth2/token", new FormUrlEncodedContent(credentials));
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
-            var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(json);
-            _accessToken = tokenResponse.AccessToken;
-            _tokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+            var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(json, _jsonOptions);
+            _accessToken = tokenResponse.access_token;
+            _tokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.expires_in);
         }
 
         private void SetHeaders()
@@ -100,10 +102,40 @@ namespace Infrastructure.Services.Collecto
             return await response.Content.ReadAsStringAsync();
         }
 
+        public async Task<string> AccountInquiryAsync(StanbicAccountInquiryRequestDto request)
+        {
+            await EnsureAccessTokenAsync();
+            SetHeaders();
+            var response = await _http.GetAsync($"accounts/v1/inquiry/{request.AccountNumber}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        public async Task<string> GetBalanceAsync(StanbicBalanceRequestDto request)
+        {
+            await EnsureAccessTokenAsync();
+            SetHeaders();
+            var response = await _http.GetAsync($"accounts/v1/balance/{request.AccountNumber}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        public async Task<string> ReverseTransactionAsync(StanbicReverseRequestDto request)
+        {
+            await EnsureAccessTokenAsync();
+            SetHeaders();
+            var response = await _http.PostAsJsonAsync($"transactions/v1/reverse", request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
+        }
+
         private class TokenResponse
         {
-            public string AccessToken { get; set; } = string.Empty;
-            public int ExpiresIn { get; set; }
+            public string token_type { get; set; } = string.Empty;
+            public string access_token { get; set; } = string.Empty;
+            public string scope { get; set; } = string.Empty;
+            public int expires_in { get; set; }
+            public long consented_on { get; set; }
         }
     }
 }
