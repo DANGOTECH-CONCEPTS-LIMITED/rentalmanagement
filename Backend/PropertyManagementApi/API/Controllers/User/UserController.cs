@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Domain.Entities.PropertyMgt;
 using Domain.Dtos.Meters;
 using Microsoft.Extensions.Logging;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers.UserControllers
 {
@@ -15,10 +17,12 @@ namespace API.Controllers.UserControllers
     {
         private readonly IUserService _userService;
         private readonly ILogger<UserController> _logger;
-        public UserController(IUserService userService, ILogger<UserController> logger)
+        private readonly AppDbContext _db;
+        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db)
         {
             _userService = userService;
             _logger = logger;
+            _db = db;
         }
 
         [HttpPost("/RegisterUser")]
@@ -297,6 +301,84 @@ namespace API.Controllers.UserControllers
             {
                 _logger.LogError(ex, "Error deleting utility meter");
                 return BadRequest($"Error deleting utility meter: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetLandlordUtilityStats/{landlordId}")]
+        //[Authorize]
+        public async Task<IActionResult> GetLandlordUtilityStats(int landlordId)
+        {
+            try
+            {
+                var metersQuery = _db.UtilityMeters.AsNoTracking().Where(m => m.LandLordId == landlordId);
+                var meters = await metersQuery.Select(m => new { m.MeterNumber }).ToListAsync();
+
+                var meterNumbers = meters.Select(m => m.MeterNumber).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+
+                var paymentsQuery = _db.UtilityPayments.AsNoTracking().Where(p => meterNumbers.Contains(p.MeterNumber));
+
+                var payments = await paymentsQuery
+                    .Select(p => new { p.MeterNumber, p.Amount, p.Charges, p.Status, p.CreatedAt })
+                    .ToListAsync();
+
+                var successfulStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "SUCCESSFUL",
+                    "SUCCESSFUL AT TELECOM",
+                    "SUCCESSFUL AT THE BANK",
+                    "SUCCESSFUL AT TELCOM"
+                };
+
+                var pendingStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "PENDING",
+                    "PENDING AT TELCOM",
+                    "PENDING AT THE BANK"
+                };
+
+                var failedStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "FAILED",
+                    "FAILED AT TELECOM",
+                    "FAILED AT THE BANK"
+                };
+
+                var dto = new LandlordUtilityStatsDto
+                {
+                    LandlordId = landlordId,
+                    TotalMeters = meters.Count,
+                    ActiveMeters = 0,
+                    InactiveMeters = 0,
+                    TotalUtilityPayments = payments.Count,
+                    TotalUtilityAmount = payments.Where(p => p.Status != null && successfulStatuses.Contains(p.Status)).Sum(p => p.Amount),
+                    TotalUtilityCharges = payments.Where(p => p.Status != null && successfulStatuses.Contains(p.Status)).Sum(p => p.Charges),
+                    SuccessfulPayments = payments.Count(p => p.Status != null && successfulStatuses.Contains(p.Status)),
+                    PendingPayments = payments.Count(p => p.Status != null && pendingStatuses.Contains(p.Status)),
+                    FailedPayments = payments.Count(p => p.Status != null && failedStatuses.Contains(p.Status)),
+                    FirstPaymentAt = payments.Count == 0 ? null : payments.Min(p => (DateTime?)p.CreatedAt),
+                    LastPaymentAt = payments.Count == 0 ? null : payments.Max(p => (DateTime?)p.CreatedAt)
+                };
+
+                dto.Meters = payments
+                    .GroupBy(p => p.MeterNumber ?? string.Empty)
+                    .Where(g => !string.IsNullOrWhiteSpace(g.Key))
+                    .Select(g => new MeterPaymentStatsDto
+                    {
+                        MeterNumber = g.Key,
+                        Payments = g.Count(),
+                        Amount = g.Sum(x => x.Amount),
+                        //Charges = g.Sum(x => x.Charges),
+                        LastPaymentAt = g.Max(x => (DateTime?)x.CreatedAt)
+                    })
+                    .OrderByDescending(x => x.Payments)
+                    .ToList();
+
+                return Ok(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving landlord utility stats for {LandlordId}", landlordId);
+                return BadRequest("An error occurred while retrieving landlord statistics.");
             }
         }
     }

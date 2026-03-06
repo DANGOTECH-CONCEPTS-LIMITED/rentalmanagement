@@ -385,6 +385,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Utility Meter",
         icon: <FileText size={18} />,
         path: "/utility-dashboard/utility-meter",
+      },
+      {
+        label: "Payment Dashboard",
+        icon: <FileText size={18} />,
+        path: "/utility-dashboard/utility-payment-dashboard",
       }
     ];
   }

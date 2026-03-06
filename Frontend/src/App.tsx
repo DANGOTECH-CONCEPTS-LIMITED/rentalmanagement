@@ -48,6 +48,7 @@ import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import UtilityDashboard from "./pages/Utility/Dashboard";
 import UtilityMeter from "./pages/Utility/UtilityMeter";
 import MakeUtilityPayment from "./pages/MakeutilityPayment";
+import UtilityPaymentDashboard from "./pages/Utility/UtilityPaymentDashboard";
 import UtilityReport from "./pages/Landlord/UtilityReport";
 import ManageUtilityMeters from "./pages/Admin/ManageUtilityMeters";
 import AddUtilityMeter from "./pages/Admin/AddUtilityMeter";
@@ -117,10 +118,11 @@ const App = () => (
                 <Route path="manage-tenants" element={<ManageTenants />} />
                 <Route path="rental-contracts" element={<RentalContracts />} />
                 <Route path="complaints" element={<HandleComplaints />} />
-                <Route path="payments" element={<TrackPayments />} />t
+                <Route path="payments" element={<TrackPayments />} />
                 <Route path="properties" element={<Properties />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
                 <Route path="utility-report" element={<UtilityReport />} />
+                <Route path="utility-payment-dashboard" element={<UtilityPaymentDashboard />} />
               </Route>
             </Route>
 
@@ -145,6 +147,7 @@ const App = () => (
               <Route path="/utility-dashboard" element={<AppLayout role={4} />}>
                 <Route index element={<UtilityDashboard />} />
                 <Route path="utility-meter" element={<UtilityMeter />} />
+                <Route path="utility-payment-dashboard" element={<UtilityPaymentDashboard />} />
               </Route>
             </Route>
 

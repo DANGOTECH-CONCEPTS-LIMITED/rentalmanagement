@@ -9,6 +9,10 @@ import {
   ArrowDownLeft,
   ChevronDown,
   CircleDollarSign,
+  Zap,
+  CheckCircle,
+  Clock,
+  XCircle,
 } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
@@ -45,6 +49,28 @@ interface Transaction {
   type?: "deposit" | "withdrawal";
 }
 
+interface UtilityStats {
+  landlordId: number;
+  totalMeters: number;
+  activeMeters: number;
+  inactiveMeters: number;
+  totalUtilityPayments: number;
+  totalUtilityAmount: number;
+  totalUtilityCharges: number;
+  successfulPayments: number;
+  pendingPayments: number;
+  failedPayments: number;
+  firstPaymentAt: string;
+  lastPaymentAt: string;
+  meters: {
+    meterNumber: string;
+    payments: number;
+    amount: number;
+    charges: number;
+    lastPaymentAt: string;
+  }[];
+}
+
 const LandlordDashboard = () => {
   const formatCurrency = useCurrencyFormatter();
   const { toast } = useToast();
@@ -56,6 +82,7 @@ const LandlordDashboard = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [utilityStats, setUtilityStats] = useState<UtilityStats | null>(null);
 
   const user = localStorage.getItem("user");
 
@@ -78,6 +105,7 @@ const LandlordDashboard = () => {
     fetchWalletData();
     fetchProperties();
     fetchTenants();
+    fetchUtilityStats();
   }, [token, apiUrl, toast]);
 
   const fetchWalletData = async () => {
@@ -146,6 +174,33 @@ const LandlordDashboard = () => {
           error.response.status === 404
             ? `Tenants ${error.response.statusText}`
             : error.response.data,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchUtilityStats = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not configured");
+    }
+
+    try {
+      const response = await axios.get(
+        `${apiUrl}/GetLandlordUtilityStats/${userData.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            accept: "*/*",
+          },
+        }
+      );
+      setUtilityStats(response.data);
+    } catch (error) {
+      console.error("Error fetching utility stats:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load utility statistics",
         variant: "destructive",
       });
     }
@@ -493,6 +548,54 @@ const LandlordDashboard = () => {
             value="95%"
             icon={<TrendingUp className="h-6 w-6" />}
             change={{ value: 5, type: "increase" }}
+          />
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 lg:col-span-2">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Utility Statistics</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Meters"
+            value={utilityStats?.totalMeters || 0}
+            icon={<Zap className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Active Meters"
+            value={utilityStats?.activeMeters || 0}
+            icon={<CheckCircle className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Total Payments"
+            value={utilityStats?.totalUtilityPayments || 0}
+            icon={<CircleDollarSign className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Successful Payments"
+            value={utilityStats?.successfulPayments || 0}
+            icon={<CheckCircle className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Pending Payments"
+            value={utilityStats?.pendingPayments || 0}
+            icon={<Clock className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Failed Payments"
+            value={utilityStats?.failedPayments || 0}
+            icon={<XCircle className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Total Amount"
+            value={formatCurrency(utilityStats?.totalUtilityAmount || 0)}
+            icon={<TrendingUp className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Total Charges"
+            value={formatCurrency(utilityStats?.totalUtilityCharges || 0)}
+            icon={<CircleDollarSign className="h-6 w-6" />}
           />
         </div>
       </div>
