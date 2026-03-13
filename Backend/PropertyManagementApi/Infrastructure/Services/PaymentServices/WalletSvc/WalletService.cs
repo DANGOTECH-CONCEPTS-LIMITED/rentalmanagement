@@ -234,10 +234,21 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
 
         public async Task<Wallet> GetWalletByUtilityMeterNumber(string utilityMeterNumber)
         {
-            var getlandlordIdByUtilityMeterNumber = await _context.UtilityMeters
+            if (string.IsNullOrWhiteSpace(utilityMeterNumber))
+                throw new ArgumentException("Utility meter number is required.", nameof(utilityMeterNumber));
+
+            var utilityMeter = await _context.UtilityMeters
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.MeterNumber == utilityMeterNumber);
 
-            return await GetWalletByLandlordId(getlandlordIdByUtilityMeterNumber.LandLordId);
+            if (utilityMeter == null)
+                throw new Exception($"Utility meter '{utilityMeterNumber}' was not found.");
+
+            var wallet = await GetWalletByLandlordId(utilityMeter.LandLordId);
+            if (wallet == null)
+                throw new Exception($"Wallet not found for landlord linked to meter '{utilityMeterNumber}'.");
+
+            return wallet;
         }
     }
 }
