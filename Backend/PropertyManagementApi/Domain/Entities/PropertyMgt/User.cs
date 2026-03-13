@@ -26,6 +26,10 @@ namespace Domain.Entities.PropertyMgt
         public bool PasswordChanged { get; set; } = false;
         public bool Verified { get; set; } = false;
         public string? Token { get; set; } = string.Empty;
+        public string? UtilityChargeType { get; set; } = "Percentage";
+        public double? UtilityChargePercentage { get; set; }
+        public double? UtilityChargeFlatFee { get; set; }
+        public string? UtilityChargeTiersJson { get; set; }
         [ForeignKey("SystemRole")]
         public int SystemRoleId { get; set; }
 

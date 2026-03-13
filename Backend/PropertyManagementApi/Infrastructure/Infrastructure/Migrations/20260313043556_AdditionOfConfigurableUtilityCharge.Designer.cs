@@ -4,16 +4,19 @@ using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Infrastructure.Migrations
+namespace Infrastructure.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260313043556_AdditionOfConfigurableUtilityCharge")]
+    partial class AdditionOfConfigurableUtilityCharge
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -636,17 +639,8 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Token")
                         .HasColumnType("longtext");
 
-                    b.Property<double?>("UtilityChargeFlatFee")
-                        .HasColumnType("double");
-
                     b.Property<double?>("UtilityChargePercentage")
                         .HasColumnType("double");
-
-                    b.Property<string>("UtilityChargeTiersJson")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("UtilityChargeType")
-                        .HasColumnType("longtext");
 
                     b.Property<bool>("Verified")
                         .HasColumnType("tinyint(1)");

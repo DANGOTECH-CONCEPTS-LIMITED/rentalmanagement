@@ -10,12 +10,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Infrastructure.Services.PaymentServices
 {
     public class PaymentService : IPaymentService
     {
+        private const double DefaultUtilityChargePercentage = 10d;
+        private const string PercentageChargeType = "Percentage";
+        private const string FlatFeeChargeType = "FlatFee";
+        private const string TieredChargeType = "Tiered";
         private readonly AppDbContext _context;
         private readonly EmailService _emailService;
         public PaymentService(AppDbContext context, EmailService emailService)
@@ -518,9 +523,7 @@ namespace Infrastructure.Services.PaymentServices
             if (formattedPhone.Length != 12 || !formattedPhone.StartsWith("256"))
                 throw new ArgumentException("Phone number is not valid", nameof(dto.PhoneNumber));
 
-            const double ChargeRate = 0.1;
-
-            var charges = dto.Amount * ChargeRate;
+            var charges = await CalculateUtilityChargeAsync(dto.MeterNumber, dto.Amount);
             if (dto.MeterNumber.Equals("0292000010952"))
             {
                 charges = 5000;
@@ -803,18 +806,103 @@ namespace Infrastructure.Services.PaymentServices
                 .Where(tp => tp.Processed == false)
                 .ToListAsync();
 
-            // map to utility payment
-            var utilityPayments = payments.Select(p => new UtilityPayment
+            var utilityPayments = new List<UtilityPayment>();
+            foreach (var p in payments)
             {
-                VendorTranId = p.TransId,
-                Amount = (double.Parse(p.Amount) - (double.Parse(p.Amount) * 0.1)),
-                PhoneNumber = "",
-                Charges = (double.Parse(p.Amount) * 0.1),
-                CreatedAt = p.ReceivedAt,
-                Status = "SUCCESSFUL AT TELCOM",
-                MeterNumber = p.BillRefNumber
-            }).ToList();
+                var totalAmount = double.Parse(p.Amount);
+                var charges = await CalculateUtilityChargeAsync(p.BillRefNumber, totalAmount);
+
+                if (p.BillRefNumber == "0292000010952")
+                {
+                    charges = 5000;
+                }
+
+                utilityPayments.Add(new UtilityPayment
+                {
+                    VendorTranId = p.TransId,
+                    Amount = totalAmount - charges,
+                    PhoneNumber = "",
+                    Charges = charges,
+                    CreatedAt = p.ReceivedAt,
+                    Status = "SUCCESSFUL AT TELCOM",
+                    MeterNumber = p.BillRefNumber
+                });
+            }
+
             return utilityPayments;
+        }
+
+        private async Task<double> CalculateUtilityChargeAsync(string meterNumber, double amount)
+        {
+            var config = await GetUtilityChargeConfigAsync(meterNumber);
+            if (config == null)
+            {
+                return amount * (DefaultUtilityChargePercentage / 100d);
+            }
+
+            if (string.Equals(config.ChargeType, FlatFeeChargeType, StringComparison.OrdinalIgnoreCase))
+            {
+                return Math.Min(amount, Math.Max(0d, config.FlatFee.GetValueOrDefault()));
+            }
+
+            if (string.Equals(config.ChargeType, TieredChargeType, StringComparison.OrdinalIgnoreCase))
+            {
+                var tier = config.Tiers
+                    .OrderBy(t => t.MinAmount ?? 0d)
+                    .FirstOrDefault(t =>
+                        amount >= (t.MinAmount ?? 0d) &&
+                        (!t.MaxAmount.HasValue || amount <= t.MaxAmount.Value));
+
+                if (tier != null)
+                {
+                    return Math.Min(amount, Math.Max(0d, tier.Charge));
+                }
+            }
+
+            var percentage = config.ChargePercentage.GetValueOrDefault(DefaultUtilityChargePercentage);
+            return Math.Min(amount, Math.Max(0d, amount * (percentage / 100d)));
+        }
+
+        private async Task<UtilityChargeConfig?> GetUtilityChargeConfigAsync(string meterNumber)
+        {
+            if (string.IsNullOrWhiteSpace(meterNumber))
+            {
+                return null;
+            }
+
+            return await _context.UtilityMeters
+                .Where(m => m.MeterNumber == meterNumber)
+                .Join(
+                    _context.Users,
+                    meter => meter.LandLordId,
+                    user => user.Id,
+                    (meter, user) => new UtilityChargeConfig
+                    {
+                        ChargeType = user.UtilityChargeType,
+                        ChargePercentage = user.UtilityChargePercentage,
+                        FlatFee = user.UtilityChargeFlatFee,
+                        TiersJson = user.UtilityChargeTiersJson
+                    })
+                .FirstOrDefaultAsync();
+        }
+
+        private sealed class UtilityChargeConfig
+        {
+            public string? ChargeType { get; set; }
+            public double? ChargePercentage { get; set; }
+            public double? FlatFee { get; set; }
+            public string? TiersJson { get; set; }
+
+            public List<UtilityChargeTier> Tiers => string.IsNullOrWhiteSpace(TiersJson)
+                ? new List<UtilityChargeTier>()
+                : JsonSerializer.Deserialize<List<UtilityChargeTier>>(TiersJson) ?? new List<UtilityChargeTier>();
+        }
+
+        private sealed class UtilityChargeTier
+        {
+            public double? MinAmount { get; set; }
+            public double? MaxAmount { get; set; }
+            public double Charge { get; set; }
         }
 
         public async Task MakeMPesaUtilityPayment(UtilityPayment payment)

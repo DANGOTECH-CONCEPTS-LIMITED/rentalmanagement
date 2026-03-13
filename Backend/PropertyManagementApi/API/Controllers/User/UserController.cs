@@ -256,6 +256,164 @@ namespace API.Controllers.UserControllers
             }
         }
 
+        [HttpGet("/GetLandlordUtilityCharge/{landlordId}")]
+        [Authorize]
+        public async Task<IActionResult> GetLandlordUtilityCharge(int landlordId)
+        {
+            try
+            {
+                var landlord = await _db.Users
+                    .AsNoTracking()
+                    .Where(u => u.Id == landlordId)
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.UtilityChargeType,
+                        u.UtilityChargePercentage,
+                        u.UtilityChargeFlatFee,
+                        u.UtilityChargeTiersJson
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (landlord == null)
+                {
+                    return NotFound("Landlord not found.");
+                }
+
+                return Ok(new LandlordUtilityChargeDto
+                {
+                    LandlordId = landlord.Id,
+                    ChargeType = string.IsNullOrWhiteSpace(landlord.UtilityChargeType) ? "Percentage" : landlord.UtilityChargeType,
+                    ChargePercentage = landlord.UtilityChargePercentage ?? 10d,
+                    FlatFee = landlord.UtilityChargeFlatFee,
+                    Tiers = string.IsNullOrWhiteSpace(landlord.UtilityChargeTiersJson)
+                        ? new List<LandlordUtilityChargeTierDto>()
+                        : System.Text.Json.JsonSerializer.Deserialize<List<LandlordUtilityChargeTierDto>>(landlord.UtilityChargeTiersJson) ?? new List<LandlordUtilityChargeTierDto>()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving utility charge for landlord {LandlordId}", landlordId);
+                return BadRequest("An error occurred while retrieving the landlord utility charge.");
+            }
+        }
+
+        [HttpPut("/ConfigureLandlordUtilityCharge")]
+        [Authorize]
+        public async Task<IActionResult> ConfigureLandlordUtilityCharge([FromBody] LandlordUtilityChargeDto request)
+        {
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest("Request is required.");
+                }
+
+                if (!IsValidUtilityChargeRequest(request, out var validationError))
+                {
+                    return BadRequest(validationError);
+                }
+
+                var landlord = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.LandlordId);
+                if (landlord == null)
+                {
+                    return NotFound("Landlord not found.");
+                }
+
+                landlord.UtilityChargeType = request.ChargeType;
+                landlord.UtilityChargePercentage = request.ChargeType.Equals("Percentage", StringComparison.OrdinalIgnoreCase)
+                    ? request.ChargePercentage
+                    : null;
+                landlord.UtilityChargeFlatFee = request.ChargeType.Equals("FlatFee", StringComparison.OrdinalIgnoreCase)
+                    ? request.FlatFee
+                    : null;
+                landlord.UtilityChargeTiersJson = request.ChargeType.Equals("Tiered", StringComparison.OrdinalIgnoreCase)
+                    ? System.Text.Json.JsonSerializer.Serialize(request.Tiers)
+                    : null;
+                _db.Users.Update(landlord);
+                await _db.SaveChangesAsync();
+
+                return Ok(new LandlordUtilityChargeDto
+                {
+                    LandlordId = landlord.Id,
+                    ChargeType = landlord.UtilityChargeType ?? "Percentage",
+                    ChargePercentage = landlord.UtilityChargePercentage,
+                    FlatFee = landlord.UtilityChargeFlatFee,
+                    Tiers = string.IsNullOrWhiteSpace(landlord.UtilityChargeTiersJson)
+                        ? new List<LandlordUtilityChargeTierDto>()
+                        : System.Text.Json.JsonSerializer.Deserialize<List<LandlordUtilityChargeTierDto>>(landlord.UtilityChargeTiersJson) ?? new List<LandlordUtilityChargeTierDto>()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error configuring utility charge for landlord {LandlordId}", request?.LandlordId);
+                return BadRequest("An error occurred while configuring the landlord utility charge.");
+            }
+        }
+
+        private static bool IsValidUtilityChargeRequest(LandlordUtilityChargeDto request, out string validationError)
+        {
+            validationError = string.Empty;
+            var chargeType = request.ChargeType?.Trim();
+
+            if (string.IsNullOrWhiteSpace(chargeType))
+            {
+                validationError = "Charge type is required.";
+                return false;
+            }
+
+            if (chargeType.Equals("Percentage", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!request.ChargePercentage.HasValue || request.ChargePercentage.Value < 0)
+                {
+                    validationError = "Charge percentage must be provided and cannot be negative.";
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (chargeType.Equals("FlatFee", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!request.FlatFee.HasValue || request.FlatFee.Value < 0)
+                {
+                    validationError = "Flat fee must be provided and cannot be negative.";
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (chargeType.Equals("Tiered", StringComparison.OrdinalIgnoreCase))
+            {
+                if (request.Tiers == null || request.Tiers.Count == 0)
+                {
+                    validationError = "At least one tier must be provided for tiered charges.";
+                    return false;
+                }
+
+                foreach (var tier in request.Tiers)
+                {
+                    if (tier.Charge < 0)
+                    {
+                        validationError = "Tier charge cannot be negative.";
+                        return false;
+                    }
+
+                    if (tier.MaxAmount.HasValue && tier.MinAmount.GetValueOrDefault() > tier.MaxAmount.Value)
+                    {
+                        validationError = "Tier minimum amount cannot be greater than maximum amount.";
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            validationError = "Charge type must be Percentage, FlatFee, or Tiered.";
+            return false;
+        }
+
         [HttpGet("/GetAllUtilityMeters")]
         [Authorize]
         public async Task<IActionResult> GetAllUtilityMeters()
