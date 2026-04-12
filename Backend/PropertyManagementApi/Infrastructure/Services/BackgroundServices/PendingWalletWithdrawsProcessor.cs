@@ -297,8 +297,6 @@ namespace Infrastructure.Services.BackgroundServices
                 _logger.LogError(ex, $"Error processing payment {ex.Message}");
             }
         }
-
-
     }
 
 
