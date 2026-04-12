@@ -17,6 +17,7 @@ import {
   CreditCard,
   Plus,
   X,
+  FileSearch,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -277,6 +278,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Utility Statistics",
         icon: <BarChart3 size={18} />,
         path: "/admin-dashboard/utility-payment-dashboard",
+      },
+      {
+        label: "HTTP Logs",
+        icon: <FileSearch size={18} />,
+        path: "/admin-dashboard/http-logs",
       },
       {
         label: "Add Utility Meter",

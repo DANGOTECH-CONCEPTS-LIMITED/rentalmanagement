@@ -53,6 +53,7 @@ import UtilityReport from "./pages/Landlord/UtilityReport";
 import ManageUtilityMeters from "./pages/Admin/ManageUtilityMeters";
 import AddUtilityMeter from "./pages/Admin/AddUtilityMeter";
 import UtilityPayments from "./pages/Admin/UtilityPayments";
+import HttpLogs from "./pages/Admin/HttpLogs";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => (
                   path="utility-payment-dashboard"
                   element={<UtilityPaymentDashboard />}
                 />
+                <Route path="http-logs" element={<HttpLogs />} />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />
                 <Route
                   path="utility-payments/:landlordId"

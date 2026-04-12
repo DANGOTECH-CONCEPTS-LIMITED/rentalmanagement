@@ -41,7 +41,7 @@ namespace Infrastructure.Services.Collecto
                 Response = resLog,
                 Status = response.StatusCode.ToString(),
                 RequestType = request.Method.Method,
-                RequestUrl = request.RequestUri.ToString()
+                RequestUrl = request.RequestUri?.ToString()
             };
 
             using var scope = _scopeFactory.CreateScope();
