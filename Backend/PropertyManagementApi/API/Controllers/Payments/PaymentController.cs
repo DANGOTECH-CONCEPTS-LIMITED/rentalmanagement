@@ -334,6 +334,21 @@ namespace API.Controllers.Payments
             }
         }
 
+        [HttpGet("/GetAllUtilityPayments")]
+        [Authorize]
+        public async Task<IActionResult> GetAllUtilityPayments()
+        {
+            try
+            {
+                var utilityPayments = await _paymentService.GetAllUtilityPaymentsAsync();
+                return Ok(utilityPayments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving utility payments: {ex.Message}");
+            }
+        }
+
         [HttpGet("/GetUtilityPaymentsByLandlordIdAsync/{landlordid}")]
         [Authorize]
         public async Task<IActionResult> GetUtilityPaymentsByLandlordIdAsync(int landlordid)

@@ -275,7 +275,7 @@ function getNavItems(role: number): NavItem[] {
         path: "/admin-dashboard/manage-utility-meters",
       },
       {
-        label: "Utility Statistics",
+        label: "Utility Dashboard",
         icon: <BarChart3 size={18} />,
         path: "/admin-dashboard/utility-payment-dashboard",
       },

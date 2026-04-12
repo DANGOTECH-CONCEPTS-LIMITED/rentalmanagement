@@ -166,7 +166,7 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -179,16 +179,21 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cash Transactions</h1>
-          <p className="text-muted-foreground">
-            {tenant ? `Recording payment for ${tenant.fullName}` : 'Record and manage tenant payments'}
-          </p>
+      <section className="page-hero">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Tenant Cash Payment
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Cash Transactions</h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              {tenant ? `Recording payment for ${tenant.fullName}` : 'Record and manage tenant payments'}
+            </p>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <Card>
+      <Card className="form-shell border-none shadow-none">
         <CardHeader>
           <CardTitle>Record New Payment</CardTitle>
         </CardHeader>
@@ -226,7 +231,7 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-full justify-start pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >

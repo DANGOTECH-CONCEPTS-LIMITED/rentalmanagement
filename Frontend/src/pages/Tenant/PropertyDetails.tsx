@@ -65,19 +65,19 @@ const PropertyDetails = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center text-sm text-muted-foreground">
         Loading property details...
       </div>
     );
-  if (error) return <div className="text-red-500">Error: {error}</div>;
+  if (error) return <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-600">Error: {error}</div>;
   if (!tenant || !tenant.property)
-    return <div>No property information available</div>;
+    return <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center text-sm text-muted-foreground">No property information available</div>;
 
   const { property } = tenant;
   const { owner } = property;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -90,14 +90,22 @@ const PropertyDetails = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Property Details
-        </h1>
-      </div>
+      <section className="page-hero">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Tenant Residence
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Property Details</h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              Review your current rental unit, landlord contact information, and billing context.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 data-surface border-none shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Home className="mr-2 h-5 w-5" />
@@ -108,7 +116,7 @@ const PropertyDetails = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="aspect-video relative overflow-hidden rounded-lg mb-6">
+            <div className="aspect-video relative overflow-hidden rounded-[24px] mb-6 bg-slate-100">
               {property.imageUrl ? (
                 <img
                   // src={`${apiUrl}/${property.imageUrl}`}
@@ -216,7 +224,7 @@ const PropertyDetails = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="data-surface border-none shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center">
               <User className="mr-2 h-5 w-5" />

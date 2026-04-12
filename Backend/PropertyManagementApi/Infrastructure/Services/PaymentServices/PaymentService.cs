@@ -608,6 +608,13 @@ namespace Infrastructure.Services.PaymentServices
             return payments;
         }
 
+        public async Task<IEnumerable<UtilityPayment>> GetAllUtilityPaymentsAsync()
+        {
+            return await _context.UtilityPayments
+                .OrderByDescending(payment => payment.CreatedAt)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingTokenGeneration()
         {
             var payments = await _context.UtilityPayments

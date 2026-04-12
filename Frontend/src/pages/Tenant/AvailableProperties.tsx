@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Breadcrumb, 
   BreadcrumbItem, 
@@ -160,7 +160,7 @@ const AvailableProperties = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -173,15 +173,24 @@ const AvailableProperties = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Available Properties</h1>
-          <p className="text-muted-foreground">Browse all available properties for rent</p>
+      <section className="page-hero">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Tenant Search
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Available Properties</h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">Browse all available properties for rent.</p>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="data-surface border-none shadow-none">
+        <CardHeader>
+          <CardTitle>Property catalogue</CardTitle>
+          <CardDescription>Filter by type, bedroom count, or rent budget to narrow the search.</CardDescription>
+        </CardHeader>
+        <CardContent>
           <PropertyFilters 
             searchTerm={searchTerm}
             filters={filters}
@@ -191,7 +200,7 @@ const AvailableProperties = () => {
           />
 
           {isLoading ? (
-            <div className="py-8 text-center">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center">
               <div className="animate-pulse">Loading properties...</div>
             </div>
           ) : filteredProperties.length === 0 ? (

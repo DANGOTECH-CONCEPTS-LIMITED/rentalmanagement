@@ -54,6 +54,7 @@ import ManageUtilityMeters from "./pages/Admin/ManageUtilityMeters";
 import AddUtilityMeter from "./pages/Admin/AddUtilityMeter";
 import UtilityPayments from "./pages/Admin/UtilityPayments";
 import HttpLogs from "./pages/Admin/HttpLogs";
+import AdminUtilityDashboard from "./pages/Admin/AdminUtilityDashboard";
 
 const queryClient = new QueryClient();
 
@@ -102,7 +103,7 @@ const App = () => (
                 />
                 <Route
                   path="utility-payment-dashboard"
-                  element={<UtilityPaymentDashboard />}
+                  element={<AdminUtilityDashboard />}
                 />
                 <Route path="http-logs" element={<HttpLogs />} />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />

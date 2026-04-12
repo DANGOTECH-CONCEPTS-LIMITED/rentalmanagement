@@ -46,6 +46,7 @@ namespace Application.Interfaces.PaymentService
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByDateRange(DateTime startDate, DateTime endDate);
 
         Task<IEnumerable<UtilityPayment>> GetUtilityPaymentByMeterNumber(string method);
+        Task<IEnumerable<UtilityPayment>> GetAllUtilityPaymentsAsync();
         Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingTokenGeneration();
         Task<IEnumerable<UtilityPayment>> GetUtilityPymtsPendingSmsSent();
         Task UpdateUtilityPayment(UtilityPayment utilityPayment);
