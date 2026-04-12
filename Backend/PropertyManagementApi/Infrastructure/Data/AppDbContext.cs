@@ -192,6 +192,13 @@ namespace Infrastructure.Data
             modelBuilder.Entity<CollectoWalletWithdrawalHistory>()
                 .HasIndex(x => x.Reference);
 
+            modelBuilder.Entity<ServiceLogs>()
+                .HasIndex(x => x.LogDate);
+
+            modelBuilder.Entity<ServiceLogs>()
+                .HasIndex(x => x.EventHash)
+                .IsUnique();
+
             // Ensure the accounting partial hook is invoked exactly once:
             OnModelCreatingAccounting(modelBuilder);
 

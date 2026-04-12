@@ -43,18 +43,19 @@ using Infrastructure.Services.External;
 using System.Security.Claims;
 using Serilog;
 using Application.Interfaces.STSVending;
+using API.Logging;
 using Infrastructure.Services.STSVending;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .WriteTo.Console()
-    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
-
-builder.Host.UseSerilog();
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .WriteTo.Console()
+        .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+        .WriteTo.Sink(new ServiceLogDatabaseSink(services.GetRequiredService<IServiceScopeFactory>()));
+});
 
 // Configure MySQL connection
 builder.Services.AddDbContext<AppDbContext>(options =>

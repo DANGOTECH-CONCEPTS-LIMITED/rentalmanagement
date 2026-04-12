@@ -14,5 +14,9 @@ namespace Domain.Entities.ServiceLogs
         public string LogLevel { get; set; }
         public string Message { get; set; }
         public string Exception { get; set; }
+        public string? SourceType { get; set; }
+        public string? SourceIdentifier { get; set; }
+        public string? EventHash { get; set; }
+        public string? RawContent { get; set; }
     }
 }

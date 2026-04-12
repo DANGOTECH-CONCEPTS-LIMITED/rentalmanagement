@@ -1,7 +1,9 @@
-﻿using Application.Interfaces.Settings;
+﻿using Application.Interfaces.ServiceLogs;
+using Application.Interfaces.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -11,6 +13,7 @@ namespace API.Controllers.Settings
     [ApiController]
     public class SettingsController : ControllerBase
     {
+        private readonly IServiceLogsRepository _serviceLogsRepository;
         private readonly ISettings _settings;
         private readonly IWebHostEnvironment _environment;
         private static readonly string MaskedValue = "***MASKED***";
@@ -24,10 +27,11 @@ namespace API.Controllers.Settings
             "(?i)((api[_-]?key|secret|password|token|subscription[_-]?key|client[_-]?secret)=)([^&\\s]+)",
             RegexOptions.Compiled);
 
-        public SettingsController(ISettings settings, IWebHostEnvironment environment)
+        public SettingsController(ISettings settings, IWebHostEnvironment environment, IServiceLogsRepository serviceLogsRepository)
         {
             _settings = settings;
             _environment = environment;
+            _serviceLogsRepository = serviceLogsRepository;
         }
 
         [HttpGet("/GetRequestResponseByDate")]
@@ -123,6 +127,63 @@ namespace API.Controllers.Settings
             catch (Exception ex)
             {
                 return BadRequest(new { message = "An error occurred while retrieving log file content.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("/ImportSerilogLogsToDb")]
+        [Authorize]
+        public async Task<IActionResult> ImportSerilogLogsToDb([FromQuery] string? fileName = null)
+        {
+            try
+            {
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;
+                if (userrole == null || !userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
+
+                var logsDirectory = Path.Combine(_environment.ContentRootPath, "logs");
+                var result = await _serviceLogsRepository.ImportSerilogFilesAsync(logsDirectory, fileName);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "An error occurred while importing Serilog logs to the database.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("/GetDbServiceLogs")]
+        [Authorize]
+        public async Task<IActionResult> GetDbServiceLogs([FromQuery] DateTime startDate, [FromQuery] DateTime endDate, [FromQuery] string? sourceType = null)
+        {
+            try
+            {
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;
+                if (userrole == null || !userrole.Equals("Administrator"))
+                {
+                    return Unauthorized();
+                }
+
+                var logs = await _serviceLogsRepository.GetByDateRangeAsync(startDate, endDate, sourceType);
+                var maskedLogs = logs.Select(log => new
+                {
+                    id = log.Id,
+                    serviceName = log.ServiceName,
+                    logDate = log.LogDate,
+                    logLevel = log.LogLevel,
+                    message = MaskSensitiveText(log.Message),
+                    exception = MaskSensitiveText(log.Exception),
+                    sourceType = log.SourceType,
+                    sourceIdentifier = log.SourceIdentifier,
+                    rawContent = MaskSensitiveText(log.RawContent),
+                    eventHash = log.EventHash,
+                });
+
+                return Ok(maskedLogs);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "An error occurred while retrieving database service logs.", error = ex.Message });
             }
         }
 
