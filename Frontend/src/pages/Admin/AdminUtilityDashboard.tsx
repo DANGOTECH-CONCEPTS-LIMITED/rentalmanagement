@@ -724,6 +724,7 @@ const AdminUtilityDashboard = () => {
     { title: "Pending Payments", value: stats.pendingPayments, icon: <Clock className="h-6 w-6" /> },
     { title: "Failed Payments", value: stats.failedPayments, icon: <XCircle className="h-6 w-6" /> },
     { title: "Total Amount", value: formatCurrency(stats.totalAmount), icon: <TrendingUp className="h-6 w-6" /> },
+    { title: "Total Charges", value: formatCurrency(stats.totalCharges), icon: <CircleDollarSign className="h-6 w-6" /> },
   ];
 
   return (
@@ -1018,6 +1019,7 @@ const AdminUtilityDashboard = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">Rows: {sortedTransactionRows.length}</Badge>
                   <Badge variant="outline">Page: {currentPage} / {totalPages}</Badge>
+                  <Badge variant="secondary">Charges: {formatCurrency(stats.totalCharges)}</Badge>
                   <Button variant="outline" onClick={exportTransactions} disabled={sortedTransactionRows.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
                     Export CSV
