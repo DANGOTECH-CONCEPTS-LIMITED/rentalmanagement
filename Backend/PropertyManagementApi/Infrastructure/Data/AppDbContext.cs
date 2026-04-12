@@ -27,6 +27,7 @@ namespace Infrastructure.Data
         public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
+        public DbSet<CollectoWalletWithdrawalHistory> CollectoWalletWithdrawalHistories { get; set; } = null!;
         public DbSet<ServiceLogs> ServiceLogs { get; set; } = null!;
         public DbSet<MpesaCallbackAudit> MpesaCallbackAudits { get; set; } = null!;
         public DbSet<MeterToken> MeterTokens { get; set; }
@@ -184,6 +185,12 @@ namespace Infrastructure.Data
                 .HasOne(t => t.Wallet)
                 .WithMany(w => w.Transactions)
                 .HasForeignKey(t => t.WalletId);
+
+            modelBuilder.Entity<CollectoWalletWithdrawalHistory>()
+                .HasIndex(x => x.CreatedAt);
+
+            modelBuilder.Entity<CollectoWalletWithdrawalHistory>()
+                .HasIndex(x => x.Reference);
 
             // Ensure the accounting partial hook is invoked exactly once:
             OnModelCreatingAccounting(modelBuilder);

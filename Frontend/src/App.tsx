@@ -56,6 +56,7 @@ import UtilityPayments from "./pages/Admin/UtilityPayments";
 import HttpLogs from "./pages/Admin/HttpLogs";
 import AdminUtilityDashboard from "./pages/Admin/AdminUtilityDashboard";
 import AdminWalletManagement from "./pages/Admin/AdminWalletManagement";
+import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,10 @@ const App = () => (
                 <Route
                   path="wallet-management"
                   element={<AdminWalletManagement />}
+                />
+                <Route
+                  path="collecto-withdraw-logs"
+                  element={<CollectoWithdrawLogs />}
                 />
                 <Route path="http-logs" element={<HttpLogs />} />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />

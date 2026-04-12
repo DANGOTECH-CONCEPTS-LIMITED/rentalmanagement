@@ -8,6 +8,8 @@ using Application.Interfaces.Collecto;
 using Domain.Dtos.Collecto;
 using Dtos.Collecto;
 using Microsoft.Extensions.Configuration;
+using System.Net;
+using System.Text.Json;
 
 namespace Infrastructure.Services.Collecto
 {
@@ -130,12 +132,41 @@ namespace Infrastructure.Services.Collecto
             return res.Result.Content.ReadAsStringAsync();
         }
 
-        public Task<string> WithdrawFromCollectoWallet(WithdrawFromCollectoWalletDto walletDto)
+        public async Task<CollectoWalletWithdrawalExecutionResultDto> WithdrawFromCollectoWallet(WithdrawFromCollectoWalletDto walletDto)
         {
             SetHeaders();
-            var res = _http.PostAsJsonAsync($"{_username}/withdrawFromWallet", walletDto);
-            res.Result.EnsureSuccessStatusCode();
-            return res.Result.Content.ReadAsStringAsync();
+            var requestUrl = new Uri(_http.BaseAddress!, $"{_username}/withdrawFromWallet").ToString();
+            var requestPayload = JsonSerializer.Serialize(walletDto);
+
+            try
+            {
+                var response = await _http.PostAsJsonAsync($"{_username}/withdrawFromWallet", walletDto);
+                var responsePayload = await response.Content.ReadAsStringAsync();
+
+                return new CollectoWalletWithdrawalExecutionResultDto
+                {
+                    RequestUrl = requestUrl,
+                    RequestPayload = requestPayload,
+                    ResponsePayload = responsePayload,
+                    HttpStatusCode = (int)response.StatusCode,
+                    Status = response.StatusCode.ToString(),
+                    IsSuccess = response.IsSuccessStatusCode,
+                    ErrorMessage = response.IsSuccessStatusCode ? string.Empty : responsePayload,
+                };
+            }
+            catch (Exception ex)
+            {
+                return new CollectoWalletWithdrawalExecutionResultDto
+                {
+                    RequestUrl = requestUrl,
+                    RequestPayload = requestPayload,
+                    ResponsePayload = string.Empty,
+                    HttpStatusCode = (int)HttpStatusCode.InternalServerError,
+                    Status = HttpStatusCode.InternalServerError.ToString(),
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message,
+                };
+            }
         }
     }
 }

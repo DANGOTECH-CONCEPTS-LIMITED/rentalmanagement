@@ -80,6 +80,7 @@ builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISmsProcessor, SmsProcessor>();
 builder.Services.AddScoped<IServiceLogsRepository, ServiceLogsRepository>();
 builder.Services.AddScoped<IExternalPayments, ExternalPayments>();
+builder.Services.AddScoped<ICollectoWalletWithdrawalHistoryService, CollectoWalletWithdrawalHistoryService>();
 
 // Accounting services
 builder.Services.AddScoped<IAccountingQueryService, AccountingQueryService>();
