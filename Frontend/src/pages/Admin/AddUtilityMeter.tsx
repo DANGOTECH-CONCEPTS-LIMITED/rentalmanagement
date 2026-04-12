@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -13,17 +13,20 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Cable, MapPin, UserRound, Waves } from 'lucide-react';
+import { Cable, Check, ChevronsUpDown, MapPin, UserRound, Waves } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 const meterSchema = z.object({
   meterType: z.string().min(1, { message: 'Meter type is required' }),
@@ -32,11 +35,6 @@ const meterSchema = z.object({
   locationOfNwscMeter: z.string().min(1, { message: 'Location of NWSC meter is required' }),
   landLordId: z.string().min(1, { message: 'Landlord selection is required' }),
 });
-
-interface Role {
-  id: number;
-  name: string;
-}
 
 interface User {
   id: string;
@@ -52,9 +50,8 @@ interface User {
 const AddUtilityMeter = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
   const { toast } = useToast();
 
   let token = '';
@@ -83,28 +80,6 @@ const AddUtilityMeter = () => {
     },
   });
 
-  // Fetch all roles and all users
-  useEffect(() => {
-    setIsLoadingRoles(true);
-    axios.get(`${apiUrl}/GetAllRoles`, {
-      headers: {
-        accept: '*/*',
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        setRoles(res.data);
-      })
-      .catch(() => {
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch roles',
-          variant: 'destructive',
-        });
-      })
-      .finally(() => setIsLoadingRoles(false));
-  }, [apiUrl, token, toast]);
-
   useEffect(() => {
     setIsLoadingUsers(true);
     axios.get(`${apiUrl}/GetAllUsers`, {
@@ -126,12 +101,21 @@ const AddUtilityMeter = () => {
       .finally(() => setIsLoadingUsers(false));
   }, [apiUrl, token, toast]);
 
-  // Find the landlord role ID
-  const landlordRole = roles.find((role) => role.name.toLowerCase() === 'landlord');
-  const landlordRoleId = landlordRole?.id;
+  const selectableUsers = useMemo(
+    () =>
+      users
+        .filter((user) => {
+          const normalizedRole = user.systemRole?.name?.trim().toLowerCase() ?? '';
+          return normalizedRole === 'landlord' || normalizedRole === 'utility payment' || normalizedRole === 'utililty payment';
+        })
+        .sort((left, right) => left.fullName.localeCompare(right.fullName)),
+    [users]
+  );
 
-  // Filter users for landlords
-  const landlordUsers = users.filter((u) => u.systemRole.id === landlordRoleId && u.verified);
+  const selectedUser = useMemo(
+    () => selectableUsers.find((user) => user.id.toString() === form.watch('landLordId')),
+    [form, selectableUsers]
+  );
 
   const onSubmit = async (values: z.infer<typeof meterSchema>) => {
     setIsSubmitting(true);
@@ -208,24 +192,67 @@ const AddUtilityMeter = () => {
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>User</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        disabled={isLoadingUsers || isLoadingRoles}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingUsers ? 'Loading users...' : 'Select a user'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {landlordUsers.map((user) => (
-                            <SelectItem key={user.id} value={user.id.toString()}>
-                              {user.fullName} ({user.email})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              disabled={isLoadingUsers}
+                              className={cn(
+                                'w-full justify-between font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {selectedUser
+                                ? `${selectedUser.fullName} (${selectedUser.systemRole?.name ?? 'User'})`
+                                : isLoadingUsers
+                                  ? 'Loading users...'
+                                  : 'Search landlord or utility payment user'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search by name, email, or role" />
+                            <CommandList>
+                              <CommandEmpty>No landlord or utility payment user found.</CommandEmpty>
+                              <CommandGroup>
+                                {selectableUsers.map((user) => (
+                                  <CommandItem
+                                    key={user.id}
+                                    value={`${user.fullName} ${user.email} ${user.systemRole?.name ?? ''}`}
+                                    onSelect={() => {
+                                      field.onChange(user.id.toString());
+                                      setUserPickerOpen(false);
+                                    }}
+                                    className="flex items-start gap-3 py-3"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        'mt-0.5 h-4 w-4',
+                                        field.value === user.id.toString() ? 'opacity-100' : 'opacity-0'
+                                      )}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate font-medium text-slate-900">{user.fullName}</p>
+                                      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {user.systemRole?.name ?? 'User'}
+                                        {user.verified ? ' • Verified' : ''}
+                                      </p>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormDescription>
-                        Only verified landlords are listed here.
+                        Search and select only landlord and utility payment users.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -291,7 +318,7 @@ const AddUtilityMeter = () => {
 
                 <div className="flex flex-col gap-3 border-t border-border/70 pt-6 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Review the landlord and meter identifiers before saving.
+                    Review the selected account and meter identifiers before saving.
                   </p>
                   <Button type="submit" disabled={isSubmitting} className="min-w-36">
                     {isSubmitting ? 'Adding...' : 'Add Meter'}
@@ -315,7 +342,7 @@ const AddUtilityMeter = () => {
                 <UserRound className="mt-0.5 h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium text-slate-900">Verified landlord</p>
-                  <p className="text-sm text-muted-foreground">Assign each meter to the right account owner.</p>
+                  <p className="text-sm text-muted-foreground">Assign each meter to the right user account owner.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
