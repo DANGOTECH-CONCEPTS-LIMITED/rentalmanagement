@@ -280,6 +280,11 @@ function getNavItems(role: number): NavItem[] {
         path: "/admin-dashboard/utility-payment-dashboard",
       },
       {
+        label: "Wallet Management",
+        icon: <CreditCard size={18} />,
+        path: "/admin-dashboard/wallet-management",
+      },
+      {
         label: "HTTP Logs",
         icon: <FileSearch size={18} />,
         path: "/admin-dashboard/http-logs",

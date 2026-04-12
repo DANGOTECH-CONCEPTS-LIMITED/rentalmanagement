@@ -13,6 +13,8 @@ namespace Application.Interfaces.PaymentService.WalletSvc
         Task<WalletBalanceDto> GetBalanceAsync(int landlordId);
         Task<IEnumerable<WalletTransactionDto>> GetStatementAsync(int landlordId);
         Task WithdrawAsync(WithdrawDto withdrawDto);
+        Task AdminDebitAsync(AdminWalletDebitDto debitDto);
+        Task TransferAsync(WalletTransferDto transferDto);
 
         Task AddWalletTransaction(WalletTransaction walletTransaction);
 

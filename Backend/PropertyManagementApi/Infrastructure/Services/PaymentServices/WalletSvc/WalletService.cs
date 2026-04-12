@@ -14,6 +14,10 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
 {
     public class WalletService : IWalletService
     {
+        private const int AdministratorRoleId = 1;
+        private const int LandlordRoleId = 2;
+        private const int UtilityPaymentRoleId = 4;
+
         private readonly AppDbContext _context;
         private readonly ILogger<WalletService> _logger; // Add logger
 
@@ -36,6 +40,36 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             await _context.SaveChangesAsync();
         }
 
+        public async Task AdminDebitAsync(AdminWalletDebitDto debitDto)
+        {
+            if (debitDto.Amount <= 0)
+                throw new Exception("Debit amount must be positive.");
+
+            if (string.IsNullOrWhiteSpace(debitDto.Reason))
+                throw new Exception("A reason is required for admin wallet debits.");
+
+            var sourceWallet = await GetRequiredWalletForSupportedUserAsync(debitDto.SourceUserId);
+
+            if (sourceWallet.Balance < debitDto.Amount)
+                throw new Exception("Insufficient funds in wallet.");
+
+            sourceWallet.Balance -= debitDto.Amount;
+
+            var transaction = new WalletTransaction
+            {
+                WalletId = sourceWallet.Id,
+                Amount = -debitDto.Amount,
+                Description = $"Admin debit: {debitDto.Reason.Trim()}",
+                TransactionDate = DateTime.UtcNow,
+                Status = "SUCCESSFUL",
+                TransactionId = Guid.NewGuid().ToString(),
+                ReasonAtTelecom = debitDto.Reason.Trim(),
+            };
+
+            _context.WalletTransactions.Add(transaction);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<Wallet> CreateWallet(int landlordid, decimal bal)
         {
             var wallet = new Wallet
@@ -50,12 +84,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
 
         public async Task<WalletBalanceDto> GetBalanceAsync(int landlordId)
         {
-            var wallet = await _context.Wallets
-                .AsNoTracking()
-                .FirstOrDefaultAsync(w => w.LandlordId == landlordId);
-
-            if (wallet == null)
-                throw new Exception("Wallet not found for this landlord.");
+            var wallet = await GetOrCreateWalletForSupportedUserAsync(landlordId, trackChanges: false);
 
             return new WalletBalanceDto
             {
@@ -65,12 +94,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
 
         public async Task<IEnumerable<WalletTransactionDto>> GetStatementAsync(int landlordId)
         {
-            var wallet = await _context.Wallets
-                .AsNoTracking()
-                .FirstOrDefaultAsync(w => w.LandlordId == landlordId);
-
-            if (wallet == null)
-                throw new Exception("Wallet not found for this landlord.");
+            var wallet = await GetOrCreateWalletForSupportedUserAsync(landlordId, trackChanges: false);
 
             return await _context.WalletTransactions
                 .AsNoTracking()
@@ -92,13 +116,76 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             return wallet;
         }
 
+        public async Task TransferAsync(WalletTransferDto transferDto)
+        {
+            if (transferDto.Amount <= 0)
+                throw new Exception("Transfer amount must be positive.");
+
+            if (transferDto.SourceUserId == transferDto.TargetUserId)
+                throw new Exception("Source and destination wallets must be different.");
+
+            if (string.IsNullOrWhiteSpace(transferDto.Reason))
+                throw new Exception("A reason is required for wallet transfers.");
+
+            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var sourceWallet = await GetRequiredWalletForSupportedUserAsync(transferDto.SourceUserId);
+                var targetWallet = await GetOrCreateWalletForSupportedUserAsync(transferDto.TargetUserId, trackChanges: true);
+
+                if (sourceWallet.Balance < transferDto.Amount)
+                    throw new Exception("Insufficient funds in source wallet.");
+
+                var sourceUser = await GetSupportedWalletOwnerAsync(transferDto.SourceUserId);
+                var targetUser = await GetSupportedWalletOwnerAsync(transferDto.TargetUserId);
+
+                sourceWallet.Balance -= transferDto.Amount;
+                targetWallet.Balance += transferDto.Amount;
+
+                var correlationId = Guid.NewGuid().ToString();
+                var reason = transferDto.Reason.Trim();
+
+                _context.WalletTransactions.Add(new WalletTransaction
+                {
+                    WalletId = sourceWallet.Id,
+                    Amount = -transferDto.Amount,
+                    Description = $"Admin transfer to {targetUser.FullName}: {reason}",
+                    TransactionDate = DateTime.UtcNow,
+                    Status = "SUCCESSFUL",
+                    TransactionId = correlationId,
+                    ReasonAtTelecom = reason,
+                    VendorTranId = targetWallet.Id.ToString(),
+                });
+
+                _context.WalletTransactions.Add(new WalletTransaction
+                {
+                    WalletId = targetWallet.Id,
+                    Amount = transferDto.Amount,
+                    Description = $"Admin transfer from {sourceUser.FullName}: {reason}",
+                    TransactionDate = DateTime.UtcNow,
+                    Status = "SUCCESSFUL",
+                    TransactionId = correlationId,
+                    ReasonAtTelecom = reason,
+                    VendorTranId = sourceWallet.Id.ToString(),
+                });
+
+                await _context.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+            }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task WithdrawAsync(WithdrawDto withdrawDto)
         {
             if (withdrawDto.amount <= 0)
                 throw new Exception("Withdrawal amount must be positive.");
 
-            var wallet = await _context.Wallets
-                .FirstOrDefaultAsync(w => w.LandlordId == withdrawDto.landlordid);
+            var wallet = await GetRequiredWalletForSupportedUserAsync(withdrawDto.landlordid);
 
             // check landlord email
             var users = await _context.Users
@@ -249,6 +336,68 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 throw new Exception($"Wallet not found for landlord linked to meter '{utilityMeterNumber}'.");
 
             return wallet;
+        }
+
+        private async Task<User> GetSupportedWalletOwnerAsync(int userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.SystemRole)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+                throw new Exception("User not found.");
+
+            if (!IsSupportedWalletOwnerRole(user.SystemRoleId))
+                throw new Exception("Wallet operations are only supported for landlords and utility payment users.");
+
+            return user;
+        }
+
+        private async Task<Wallet> GetOrCreateWalletForSupportedUserAsync(int userId, bool trackChanges)
+        {
+            var user = await GetSupportedWalletOwnerAsync(userId);
+
+            IQueryable<Wallet> walletQuery = _context.Wallets;
+            if (!trackChanges)
+            {
+                walletQuery = walletQuery.AsNoTracking();
+            }
+
+            var wallet = await walletQuery.FirstOrDefaultAsync(w => w.LandlordId == user.Id);
+            if (wallet != null)
+            {
+                return wallet;
+            }
+
+            if (!trackChanges)
+            {
+                wallet = await CreateWallet(user.Id, 0m);
+                return wallet;
+            }
+
+            wallet = new Wallet
+            {
+                LandlordId = user.Id,
+                Balance = 0m,
+            };
+
+            _context.Wallets.Add(wallet);
+            await _context.SaveChangesAsync();
+            return wallet;
+        }
+
+        private async Task<Wallet> GetRequiredWalletForSupportedUserAsync(int userId)
+        {
+            var wallet = await GetOrCreateWalletForSupportedUserAsync(userId, trackChanges: true);
+            if (wallet == null)
+                throw new Exception("Wallet not found.");
+
+            return wallet;
+        }
+
+        private static bool IsSupportedWalletOwnerRole(int systemRoleId)
+        {
+            return systemRoleId == LandlordRoleId || systemRoleId == UtilityPaymentRoleId;
         }
     }
 }

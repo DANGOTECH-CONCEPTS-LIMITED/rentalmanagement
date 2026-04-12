@@ -17,10 +17,12 @@ import {
 } from "recharts";
 import {
   ArrowUpDown,
+  Check,
   ChevronDown,
   ChevronUp,
   ChevronsLeft,
   ChevronsRight,
+  ChevronsUpDown,
   CircleDollarSign,
   Clock,
   Download,
@@ -40,8 +42,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -59,6 +70,7 @@ import {
 } from "@/components/ui/table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface UtilityMeter {
   id: number;
@@ -101,8 +113,39 @@ interface StoredUser {
   token?: string;
 }
 
+interface SystemRole {
+  id: number;
+  name?: string;
+}
+
+interface ApiUser {
+  id: string;
+  fullName: string;
+  email: string;
+  systemRoleId: number;
+  systemRole?: SystemRole;
+}
+
+type DetailViewKey =
+  | "totalMeters"
+  | "activeMeters"
+  | "inactiveMeters"
+  | "totalPayments"
+  | "successfulPayments"
+  | "pendingPayments"
+  | "failedPayments"
+  | "totalAmount"
+  | "totalCharges"
+  | "meterPayments"
+  | null;
+
 interface SortConfig {
   key: keyof AdminTransactionRow;
+  direction: "asc" | "desc";
+}
+
+interface DetailSortConfig {
+  key: string;
   direction: "asc" | "desc";
 }
 
@@ -156,17 +199,29 @@ const failedStatuses = new Set([
   "FAILED AT THE BANK",
 ]);
 
+const ALL_ACCOUNT_VALUE = "__all_accounts__";
 const rowsPerPage = 10;
+const detailRowsPerPage = 10;
 
 const AdminUtilityDashboard = () => {
+  const [selectableUsers, setSelectableUsers] = useState<ApiUser[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState(ALL_ACCOUNT_VALUE);
+  const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
   const [utilityPayments, setUtilityPayments] = useState<UtilityPayment[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [phoneFilter, setPhoneFilter] = useState("");
   const [meterFilter, setMeterFilter] = useState("");
+  const [activeDetailView, setActiveDetailView] = useState<DetailViewKey>(null);
+  const [detailSearchTerm, setDetailSearchTerm] = useState("");
+  const [currentDetailPage, setCurrentDetailPage] = useState(1);
+  const [detailSort, setDetailSort] = useState<DetailSortConfig | null>(null);
+  const [selectedMeterNumber, setSelectedMeterNumber] = useState("");
+  const [previousDetailView, setPreviousDetailView] = useState<DetailViewKey>(null);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
   const [vendorFilter, setVendorFilter] = useState("all");
   const [transactionIdFilter, setTransactionIdFilter] = useState("");
@@ -194,6 +249,41 @@ const AdminUtilityDashboard = () => {
   };
 
   const normalizeStatus = (value?: string | null) => (value ?? "").trim().toUpperCase();
+
+  const normalizeRoleName = (value?: string | null) =>
+    (value ?? "").trim().toLowerCase();
+
+  const isSelectableUser = (user: ApiUser) => {
+    const normalizedRole = normalizeRoleName(user.systemRole?.name);
+    return (
+      user.systemRoleId === 2 ||
+      user.systemRoleId === 4 ||
+      normalizedRole === "landlord" ||
+      normalizedRole === "utility payment" ||
+      normalizedRole === "utililty payment"
+    );
+  };
+
+  const getRoleLabel = (user: ApiUser) => {
+    if (user.systemRoleId === 2) {
+      return "Landlord";
+    }
+
+    if (user.systemRoleId === 4) {
+      return "Utility";
+    }
+
+    const normalizedRole = normalizeRoleName(user.systemRole?.name);
+    if (normalizedRole === "utility payment" || normalizedRole === "utililty payment") {
+      return "Utility";
+    }
+
+    if (normalizedRole === "landlord") {
+      return "Landlord";
+    }
+
+    return "User";
+  };
 
   const formatDate = (value?: string | null) => {
     if (!value) {
@@ -242,6 +332,100 @@ const AdminUtilityDashboard = () => {
     return true;
   };
 
+  const selectedAccount = useMemo(
+    () =>
+      selectedAccountId === ALL_ACCOUNT_VALUE
+        ? null
+        : selectableUsers.find((user) => String(user.id) === selectedAccountId) ?? null,
+    [selectableUsers, selectedAccountId]
+  );
+
+  const selectedScopeLabel = selectedAccount
+    ? `${selectedAccount.fullName} (${getRoleLabel(selectedAccount)})`
+    : "All landlord and utility accounts";
+
+  const fetchSelectableUsers = async (token: string) => {
+    setIsLoadingUsers(true);
+
+    try {
+      const response = await axios.get<ApiUser[]>(`${apiUrl}/GetAllUsers`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: "*/*",
+        },
+      });
+
+      const users = (response.data ?? [])
+        .filter(isSelectableUser)
+        .sort((left, right) => left.fullName.localeCompare(right.fullName));
+
+      setSelectableUsers(users);
+      setSelectedAccountId((currentSelection) => {
+        if (currentSelection === ALL_ACCOUNT_VALUE) {
+          return currentSelection;
+        }
+
+        const hasCurrentSelection = users.some(
+          (user) => String(user.id) === currentSelection
+        );
+
+        return hasCurrentSelection ? currentSelection : ALL_ACCOUNT_VALUE;
+      });
+    } catch (error) {
+      console.error("Failed to load selectable utility dashboard users", error);
+      toast({
+        title: "Error",
+        description: "Failed to load landlords and utility users.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const fetchDashboardData = async (token: string, accountId: string) => {
+    setIsLoading(true);
+
+    const loadAllRecords = accountId === ALL_ACCOUNT_VALUE;
+    const metersUrl = loadAllRecords
+      ? `${apiUrl}/GetAllUtilityMeters`
+      : `${apiUrl}/GetUtilityMetersByLandLordId/${accountId}`;
+    const paymentsUrl = loadAllRecords
+      ? `${apiUrl}/GetAllUtilityPayments`
+      : `${apiUrl}/GetUtilityPaymentsByLandlordIdAsync/${accountId}`;
+
+    try {
+      const [metersResponse, paymentsResponse] = await Promise.all([
+        axios.get<UtilityMeter[]>(metersUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            accept: "*/*",
+          },
+        }),
+        axios.get<UtilityPayment[]>(paymentsUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            accept: "*/*",
+          },
+        }),
+      ]);
+
+      setUtilityMeters(metersResponse.data ?? []);
+      setUtilityPayments(paymentsResponse.data ?? []);
+    } catch (error) {
+      console.error("Failed to load admin utility dashboard data", error);
+      toast({
+        title: "Error",
+        description: loadAllRecords
+          ? "Failed to load utility statistics for admin."
+          : "Failed to load utility statistics for the selected account.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const user = getStoredUser();
 
@@ -255,40 +439,38 @@ const AdminUtilityDashboard = () => {
       return;
     }
 
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        const [metersResponse, paymentsResponse] = await Promise.all([
-          axios.get<UtilityMeter[]>(`${apiUrl}/GetAllUtilityMeters`, {
-            headers: {
-              Authorization: `Bearer ${user.token}`,
-              accept: "*/*",
-            },
-          }),
-          axios.get<UtilityPayment[]>(`${apiUrl}/GetAllUtilityPayments`, {
-            headers: {
-              Authorization: `Bearer ${user.token}`,
-              accept: "*/*",
-            },
-          }),
-        ]);
-
-        setUtilityMeters(metersResponse.data ?? []);
-        setUtilityPayments(paymentsResponse.data ?? []);
-      } catch (error) {
-        console.error("Failed to load admin utility dashboard data", error);
-        toast({
-          title: "Error",
-          description: "Failed to load utility statistics for admin.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDashboardData();
+    fetchSelectableUsers(user.token);
   }, [apiUrl, toast]);
+
+  useEffect(() => {
+    const user = getStoredUser();
+
+    if (!user?.token) {
+      return;
+    }
+
+    fetchDashboardData(user.token, selectedAccountId);
+  }, [apiUrl, selectedAccountId, toast]);
+
+  useEffect(() => {
+    setActiveDetailView(null);
+    setDetailSearchTerm("");
+    setCurrentDetailPage(1);
+    setDetailSort(null);
+    setSelectedMeterNumber("");
+    setPreviousDetailView(null);
+    setAccountPickerOpen(false);
+  }, [selectedAccountId]);
+
+  useEffect(() => {
+    setDetailSearchTerm("");
+    setCurrentDetailPage(1);
+    setDetailSort(null);
+  }, [activeDetailView]);
+
+  useEffect(() => {
+    setCurrentDetailPage(1);
+  }, [detailSearchTerm]);
 
   const filteredMeters = useMemo(
     () => utilityMeters.filter((meter) => isWithinRange(meter.dateCreated)),
@@ -335,6 +517,11 @@ const AdminUtilityDashboard = () => {
     [activeMeterNumbers, filteredMeters]
   );
 
+  const inactiveMeters = useMemo(
+    () => filteredMeters.filter((meter) => !activeMeterNumbers.has(meter.meterNumber)),
+    [activeMeterNumbers, filteredMeters]
+  );
+
   const stats = useMemo(
     () => ({
       totalMeters: filteredMeters.length,
@@ -349,6 +536,332 @@ const AdminUtilityDashboard = () => {
     }),
     [activeMeters.length, failedPayments.length, filteredMeters.length, filteredPayments.length, pendingPayments.length, successfulPayments]
   );
+
+  const sortedPayments = useMemo(
+    () =>
+      [...filteredPayments].sort(
+        (left, right) =>
+          new Date(right.createdAt ?? 0).getTime() -
+          new Date(left.createdAt ?? 0).getTime()
+      ),
+    [filteredPayments]
+  );
+
+  const selectedMeterPayments = useMemo(
+    () =>
+      sortedPayments.filter(
+        (payment) => payment.meterNumber === selectedMeterNumber
+      ),
+    [selectedMeterNumber, sortedPayments]
+  );
+
+  const openMeterPayments = (meterNumber: string) => {
+    setPreviousDetailView(activeDetailView);
+    setSelectedMeterNumber(meterNumber);
+    setActiveDetailView("meterPayments");
+  };
+
+  const returnToPreviousView = () => {
+    setActiveDetailView(previousDetailView);
+    setSelectedMeterNumber("");
+    setPreviousDetailView(null);
+  };
+
+  const detailContent = useMemo(() => {
+    switch (activeDetailView) {
+      case "totalMeters":
+        return {
+          title: "All Meters",
+          description: "All utility meters in the selected scope and period.",
+          type: "meters" as const,
+          rows: filteredMeters,
+        };
+      case "activeMeters":
+        return {
+          title: "Active Meters",
+          description: "Meters that have at least one payment in the selected scope and period.",
+          type: "meters" as const,
+          rows: activeMeters,
+        };
+      case "inactiveMeters":
+        return {
+          title: "Inactive Meters",
+          description: "Meters with no payments in the selected scope and period.",
+          type: "meters" as const,
+          rows: inactiveMeters,
+        };
+      case "totalPayments":
+        return {
+          title: "All Payments",
+          description: "All utility payment transactions in the selected scope and period.",
+          type: "payments" as const,
+          rows: sortedPayments,
+        };
+      case "successfulPayments":
+        return {
+          title: "Successful Payments",
+          description: "Transactions counted toward total amount and charges.",
+          type: "payments" as const,
+          rows: successfulPayments,
+        };
+      case "pendingPayments":
+        return {
+          title: "Pending Payments",
+          description: "Transactions still waiting for final confirmation.",
+          type: "payments" as const,
+          rows: pendingPayments,
+        };
+      case "failedPayments":
+        return {
+          title: "Failed Payments",
+          description: "Transactions that failed in the selected scope and period.",
+          type: "payments" as const,
+          rows: failedPayments,
+        };
+      case "totalAmount":
+        return {
+          title: "Payments Contributing to Total Amount",
+          description: "Successful transactions included in the total amount figure.",
+          type: "payments" as const,
+          rows: successfulPayments,
+        };
+      case "totalCharges":
+        return {
+          title: "Payments Contributing to Total Charges",
+          description: "Successful transactions included in the total charges figure.",
+          type: "payments" as const,
+          rows: successfulPayments,
+        };
+      case "meterPayments":
+        return {
+          title: `Payments for Meter ${selectedMeterNumber}`,
+          description: "All transactions related to the selected meter in the active scope and period.",
+          type: "payments" as const,
+          rows: selectedMeterPayments,
+        };
+      default:
+        return null;
+    }
+  }, [
+    activeDetailView,
+    activeMeters,
+    failedPayments,
+    filteredMeters,
+    inactiveMeters,
+    pendingPayments,
+    selectedMeterNumber,
+    selectedMeterPayments,
+    sortedPayments,
+    successfulPayments,
+  ]);
+
+  const detailGetSortValue = (row: UtilityMeter | UtilityPayment, key: string) => {
+    const value = row[key as keyof typeof row];
+
+    if (typeof value === "number") {
+      return value;
+    }
+
+    if (key === "createdAt" || key === "dateCreated" || key === "vendorPaymentDate") {
+      if (!value) {
+        return 0;
+      }
+
+      const time = new Date(String(value)).getTime();
+      return Number.isNaN(time) ? 0 : time;
+    }
+
+    return String(value ?? "").toLowerCase();
+  };
+
+  const toggleDetailSort = (key: string) => {
+    setCurrentDetailPage(1);
+    setDetailSort((currentSort) => {
+      if (!currentSort || currentSort.key !== key) {
+        return { key, direction: "asc" };
+      }
+
+      if (currentSort.direction === "asc") {
+        return { key, direction: "desc" };
+      }
+
+      return null;
+    });
+  };
+
+  const renderDetailSortIcon = (key: string) => {
+    if (!detailSort || detailSort.key !== key) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+
+    return detailSort.direction === "asc" ? (
+      <ChevronUp className="h-4 w-4" />
+    ) : (
+      <ChevronDown className="h-4 w-4" />
+    );
+  };
+
+  const filteredDetailRows = useMemo(() => {
+    if (!detailContent) {
+      return [];
+    }
+
+    const normalizedSearch = detailSearchTerm.trim().toLowerCase();
+    if (!normalizedSearch) {
+      return detailContent.rows;
+    }
+
+    if (detailContent.type === "meters") {
+      return detailContent.rows.filter((meter) =>
+        [
+          meter.meterNumber,
+          meter.meterType,
+          meter.nwscAccount,
+          meter.locationOfNwscMeter,
+          meter.user?.fullName,
+          formatDate(meter.dateCreated),
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalizedSearch))
+      );
+    }
+
+    return detailContent.rows.filter((payment) =>
+      [
+        payment.status,
+        payment.meterNumber,
+        payment.phoneNumber,
+        payment.transactionID,
+        payment.vendorTranId,
+        payment.vendor,
+        payment.utilityType,
+        payment.description,
+        formatDate(payment.createdAt),
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearch))
+    );
+  }, [detailContent, detailSearchTerm]);
+
+  const sortedDetailRows = useMemo(() => {
+    if (!detailSort) {
+      return filteredDetailRows;
+    }
+
+    return [...filteredDetailRows].sort((left, right) => {
+      const leftValue = detailGetSortValue(left, detailSort.key);
+      const rightValue = detailGetSortValue(right, detailSort.key);
+
+      if (leftValue < rightValue) {
+        return detailSort.direction === "asc" ? -1 : 1;
+      }
+
+      if (leftValue > rightValue) {
+        return detailSort.direction === "asc" ? 1 : -1;
+      }
+
+      return 0;
+    });
+  }, [detailSort, filteredDetailRows]);
+
+  const totalDetailPages = Math.max(
+    1,
+    Math.ceil(sortedDetailRows.length / detailRowsPerPage)
+  );
+
+  const paginatedDetailRows = useMemo(() => {
+    const startIndex = (currentDetailPage - 1) * detailRowsPerPage;
+    return sortedDetailRows.slice(startIndex, startIndex + detailRowsPerPage);
+  }, [currentDetailPage, sortedDetailRows]);
+
+  const paginatedMeterRows =
+    detailContent?.type === "meters"
+      ? (paginatedDetailRows as UtilityMeter[])
+      : [];
+
+  const paginatedPaymentRows =
+    detailContent?.type === "payments"
+      ? (paginatedDetailRows as UtilityPayment[])
+      : [];
+
+  useEffect(() => {
+    if (currentDetailPage > totalDetailPages) {
+      setCurrentDetailPage(totalDetailPages);
+    }
+  }, [currentDetailPage, totalDetailPages]);
+
+  const exportDetailRows = () => {
+    if (!detailContent || filteredDetailRows.length === 0) {
+      return;
+    }
+
+    const fileName = `${detailContent.title.toLowerCase().replace(/\s+/g, "-")}.csv`;
+    let csvRows: string[] = [];
+
+    if (detailContent.type === "meters") {
+      csvRows = [
+        [
+          "Meter Number",
+          "Type",
+          "NWSC Account",
+          "Location",
+          "User",
+          "Created",
+        ].map(escapeCsvCell).join(","),
+        ...filteredDetailRows.map((meter) =>
+          [
+            meter.meterNumber,
+            meter.meterType || "",
+            meter.nwscAccount || "",
+            meter.locationOfNwscMeter || "",
+            meter.user?.fullName || "",
+            formatDate(meter.dateCreated),
+          ]
+            .map(escapeCsvCell)
+            .join(",")
+        ),
+      ];
+    } else {
+      csvRows = [
+        [
+          "Status",
+          "Amount",
+          "Charges",
+          "Meter",
+          "Phone",
+          "Transaction ID",
+          "Vendor Ref",
+          "Created",
+        ].map(escapeCsvCell).join(","),
+        ...filteredDetailRows.map((payment) =>
+          [
+            payment.status || "",
+            payment.amount || 0,
+            payment.charges || 0,
+            payment.meterNumber || "",
+            payment.phoneNumber || "",
+            payment.transactionID || "",
+            payment.vendorTranId || "",
+            formatDate(payment.createdAt),
+          ]
+            .map(escapeCsvCell)
+            .join(",")
+        ),
+      ];
+    }
+
+    const blob = new Blob([csvRows.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const monthlyTrendData = useMemo(() => {
     const grouped = new Map<string, { label: string; payments: number; amount: number; charges: number }>();
@@ -581,6 +1094,7 @@ const AdminUtilityDashboard = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [
+    selectedAccountId,
     endDate,
     meterFilter,
     paymentMethodFilter,
@@ -716,15 +1230,15 @@ const AdminUtilityDashboard = () => {
   };
 
   const cards = [
-    { title: "Total Meters", value: stats.totalMeters, icon: <Zap className="h-6 w-6" /> },
-    { title: "Active Meters", value: stats.activeMeters, icon: <CheckCircle className="h-6 w-6" /> },
-    { title: "Inactive Meters", value: stats.inactiveMeters, icon: <Clock className="h-6 w-6" /> },
-    { title: "Total Payments", value: stats.totalPayments, icon: <CircleDollarSign className="h-6 w-6" /> },
-    { title: "Successful Payments", value: stats.successfulPayments, icon: <CheckCircle className="h-6 w-6" /> },
-    { title: "Pending Payments", value: stats.pendingPayments, icon: <Clock className="h-6 w-6" /> },
-    { title: "Failed Payments", value: stats.failedPayments, icon: <XCircle className="h-6 w-6" /> },
-    { title: "Total Amount", value: formatCurrency(stats.totalAmount), icon: <TrendingUp className="h-6 w-6" /> },
-    { title: "Total Charges", value: formatCurrency(stats.totalCharges), icon: <CircleDollarSign className="h-6 w-6" /> },
+    { key: "totalMeters" as const, title: "Total Meters", value: stats.totalMeters, icon: <Zap className="h-6 w-6" /> },
+    { key: "activeMeters" as const, title: "Active Meters", value: stats.activeMeters, icon: <CheckCircle className="h-6 w-6" /> },
+    { key: "inactiveMeters" as const, title: "Inactive Meters", value: stats.inactiveMeters, icon: <Clock className="h-6 w-6" /> },
+    { key: "totalPayments" as const, title: "Total Payments", value: stats.totalPayments, icon: <CircleDollarSign className="h-6 w-6" /> },
+    { key: "successfulPayments" as const, title: "Successful Payments", value: stats.successfulPayments, icon: <CheckCircle className="h-6 w-6" /> },
+    { key: "pendingPayments" as const, title: "Pending Payments", value: stats.pendingPayments, icon: <Clock className="h-6 w-6" /> },
+    { key: "failedPayments" as const, title: "Failed Payments", value: stats.failedPayments, icon: <XCircle className="h-6 w-6" /> },
+    { key: "totalAmount" as const, title: "Total Amount", value: formatCurrency(stats.totalAmount), icon: <TrendingUp className="h-6 w-6" /> },
+    { key: "totalCharges" as const, title: "Total Charges", value: formatCurrency(stats.totalCharges), icon: <CircleDollarSign className="h-6 w-6" /> },
   ];
 
   return (
@@ -735,9 +1249,9 @@ const AdminUtilityDashboard = () => {
             Admin Utility Analytics
           </span>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Utility Dashboard</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Statistics Dashboard</h1>
             <p className="mt-2 text-sm text-muted-foreground md:text-base">
-              Monitor all utility payments across every meter, analyze payment patterns, and search the full transaction ledger from one admin-only view.
+              Review the same utility statistics experience available to other users, then narrow it to one landlord or utility account when needed.
             </p>
           </div>
         </div>
@@ -746,10 +1260,88 @@ const AdminUtilityDashboard = () => {
       <Card className="data-surface border-none shadow-none">
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Limit analytics and transaction results to a specific period.</CardDescription>
+          <CardDescription>Select an account scope, then limit analytics and transaction results to a specific period.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 xl:grid-cols-[repeat(2,minmax(0,0.8fr))_minmax(0,1.2fr)_auto]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))_minmax(0,1.2fr)_auto]">
+            <div className="space-y-2">
+              <Label htmlFor="admin-utility-account-filter">Landlord or utility user</Label>
+              <Popover open={accountPickerOpen} onOpenChange={setAccountPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="admin-utility-account-filter"
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    disabled={isLoadingUsers}
+                    className={cn(
+                      "h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm",
+                      !selectedAccountId && "text-muted-foreground"
+                    )}
+                  >
+                    <span className="truncate">
+                      {isLoadingUsers
+                        ? "Loading landlords and utility users..."
+                        : selectedScopeLabel}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search by name, email, or role" />
+                    <CommandList>
+                      <CommandEmpty>No landlord or utility user found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all landlord utility accounts"
+                          onSelect={() => {
+                            setSelectedAccountId(ALL_ACCOUNT_VALUE);
+                            setAccountPickerOpen(false);
+                          }}
+                          className="flex items-start gap-3 py-3"
+                        >
+                          <Check
+                            className={cn(
+                              "mt-0.5 h-4 w-4",
+                              selectedAccountId === ALL_ACCOUNT_VALUE ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-slate-900">All landlord and utility accounts</p>
+                            <p className="text-xs text-muted-foreground">Show statistics across the full admin scope</p>
+                          </div>
+                        </CommandItem>
+                        {selectableUsers.map((user) => (
+                          <CommandItem
+                            key={user.id}
+                            value={`${user.fullName} ${user.email} ${getRoleLabel(user)}`}
+                            onSelect={() => {
+                              setSelectedAccountId(String(user.id));
+                              setAccountPickerOpen(false);
+                            }}
+                            className="flex items-start gap-3 py-3"
+                          >
+                            <Check
+                              className={cn(
+                                "mt-0.5 h-4 w-4",
+                                selectedAccountId === String(user.id) ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium text-slate-900">{user.fullName}</p>
+                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="admin-utility-start-date">Start date</Label>
               <Input
@@ -874,12 +1466,16 @@ const AdminUtilityDashboard = () => {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
+            <Badge variant="secondary">Scope: {selectedScopeLabel}</Badge>
             <Badge variant="secondary">
               Period: {startDate || endDate ? `${startDate || "..."} to ${endDate || "..."}` : "All time"}
             </Badge>
             <Badge variant="outline">Meters: {filteredMeters.length}</Badge>
             <Badge variant="outline">Transactions: {filteredPayments.length}</Badge>
             <Badge variant="outline">Filtered rows: {filteredTransactionRows.length}</Badge>
+            {!isLoadingUsers && selectableUsers.length === 0 && (
+              <Badge variant="outline">No landlord or utility users found</Badge>
+            )}
             {statusFilter !== "all" && <Badge variant="outline">Status: {statusFilter}</Badge>}
             {phoneFilter && <Badge variant="outline">Phone: {phoneFilter}</Badge>}
             {meterFilter && <Badge variant="outline">Meter: {meterFilter}</Badge>}
@@ -898,9 +1494,272 @@ const AdminUtilityDashboard = () => {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => (
-              <StatCard key={card.title} title={card.title} value={card.value} icon={card.icon} />
+              <button
+                key={card.key}
+                type="button"
+                onClick={() => {
+                  setSelectedMeterNumber("");
+                  setPreviousDetailView(null);
+                  setActiveDetailView(card.key);
+                }}
+                className="w-full text-left"
+              >
+                <StatCard
+                  title={card.title}
+                  value={card.value}
+                  icon={card.icon}
+                  className={
+                    activeDetailView === card.key
+                      ? "cursor-pointer ring-2 ring-primary shadow-lg"
+                      : "cursor-pointer"
+                  }
+                />
+              </button>
             ))}
           </div>
+
+          <Card className="data-surface border-none shadow-none">
+            <CardContent className="pt-6">
+              {detailContent ? (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-semibold">{detailContent.title}</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {detailContent.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {activeDetailView === "meterPayments" && previousDetailView && (
+                        <Button variant="outline" onClick={returnToPreviousView}>
+                          Back to meters
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveDetailView(null);
+                          setSelectedMeterNumber("");
+                          setPreviousDetailView(null);
+                        }}
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <Input
+                      value={detailSearchTerm}
+                      onChange={(event) => setDetailSearchTerm(event.target.value)}
+                      placeholder={
+                        detailContent.type === "meters"
+                          ? "Search meters by number, type, location, or landlord"
+                          : "Search transactions by status, meter, phone, or reference"
+                      }
+                      className="md:max-w-md"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">Results: {sortedDetailRows.length}</Badge>
+                      <Badge variant="outline">
+                        Page: {currentDetailPage} / {totalDetailPages}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        onClick={exportDetailRows}
+                        disabled={filteredDetailRows.length === 0}
+                      >
+                        Export CSV
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    {detailContent.type === "meters" ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterNumber")}>
+                                Meter Number
+                                {renderDetailSortIcon("meterNumber")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterType")}>
+                                Type
+                                {renderDetailSortIcon("meterType")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("nwscAccount")}>
+                                NWSC Account
+                                {renderDetailSortIcon("nwscAccount")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("locationOfNwscMeter")}>
+                                Location
+                                {renderDetailSortIcon("locationOfNwscMeter")}
+                              </button>
+                            </TableHead>
+                            <TableHead>Landlord</TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("dateCreated")}>
+                                Created
+                                {renderDetailSortIcon("dateCreated")}
+                              </button>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sortedDetailRows.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                No meters found for this selection.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            paginatedMeterRows.map((meter) => (
+                              <TableRow key={meter.id}>
+                                <TableCell className="font-medium">
+                                  <button
+                                    type="button"
+                                    onClick={() => openMeterPayments(meter.meterNumber)}
+                                    className="text-primary underline-offset-4 hover:underline"
+                                  >
+                                    {meter.meterNumber}
+                                  </button>
+                                </TableCell>
+                                <TableCell>{meter.meterType || "-"}</TableCell>
+                                <TableCell>{meter.nwscAccount || "-"}</TableCell>
+                                <TableCell>{meter.locationOfNwscMeter || "-"}</TableCell>
+                                <TableCell>{meter.user?.fullName || "-"}</TableCell>
+                                <TableCell>{formatDate(meter.dateCreated)}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("status")}>
+                                Status
+                                {renderDetailSortIcon("status")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("amount")}>
+                                Amount
+                                {renderDetailSortIcon("amount")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("charges")}>
+                                Charges
+                                {renderDetailSortIcon("charges")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterNumber")}>
+                                Meter
+                                {renderDetailSortIcon("meterNumber")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("phoneNumber")}>
+                                Phone
+                                {renderDetailSortIcon("phoneNumber")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("transactionID")}>
+                                Transaction ID
+                                {renderDetailSortIcon("transactionID")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("vendorTranId")}>
+                                Vendor Ref
+                                {renderDetailSortIcon("vendorTranId")}
+                              </button>
+                            </TableHead>
+                            <TableHead>
+                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("createdAt")}>
+                                Created
+                                {renderDetailSortIcon("createdAt")}
+                              </button>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sortedDetailRows.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={8} className="text-center text-muted-foreground">
+                                No transactions found for this selection.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            paginatedPaymentRows.map((payment) => (
+                              <TableRow key={payment.id}>
+                                <TableCell>{payment.status || "-"}</TableCell>
+                                <TableCell>{formatCurrency(payment.amount || 0)}</TableCell>
+                                <TableCell>{formatCurrency(payment.charges || 0)}</TableCell>
+                                <TableCell>{payment.meterNumber || "-"}</TableCell>
+                                <TableCell>{payment.phoneNumber || "-"}</TableCell>
+                                <TableCell>{payment.transactionID || "-"}</TableCell>
+                                <TableCell>{payment.vendorTranId || "-"}</TableCell>
+                                <TableCell>{formatDate(payment.createdAt)}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+
+                  {sortedDetailRows.length > detailRowsPerPage && (
+                    <div className="flex justify-end">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setCurrentDetailPage((page) => Math.max(1, page - 1))
+                          }
+                          disabled={currentDetailPage === 1}
+                        >
+                          <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm">
+                          Page {currentDetailPage} of {totalDetailPages}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setCurrentDetailPage((page) =>
+                              Math.min(totalDetailPages, page + 1)
+                            )
+                          }
+                          disabled={currentDetailPage === totalDetailPages}
+                        >
+                          <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  Click a stat card to view the records behind that metric.
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid gap-6 xl:grid-cols-2">
             <Card className="data-surface border-none shadow-none">
@@ -1013,7 +1872,7 @@ const AdminUtilityDashboard = () => {
                 <div>
                   <CardTitle>All Meter Transactions</CardTitle>
                   <CardDescription>
-                    Search across every utility payment and inspect every transaction column in one place.
+                    Search across the current account scope and inspect every transaction column in one place.
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
