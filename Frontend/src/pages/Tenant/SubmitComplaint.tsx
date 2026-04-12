@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ComplaintsTable = () => {
   const { toast } = useToast();
@@ -372,16 +373,35 @@ const ComplaintsTable = () => {
   const totalPages = Math.ceil(complaints.length / itemsPerPage);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Complaints</h1>
-        <Button onClick={openModal}>
+    <div className="space-y-8">
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Tenant Support
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Complaints</h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Log issues, track their status, and update pending complaints.
+              </p>
+            </div>
+          </div>
+          <Button onClick={openModal}>
           <Plus className="mr-2 h-4 w-4" />
           New Complaint
         </Button>
-      </div>
+        </div>
+      </section>
 
-      <div className="rounded-md border">
+      <Card className="data-surface border-none shadow-none">
+        <CardHeader>
+          <CardTitle>Complaint log</CardTitle>
+          <CardDescription>
+            {complaints.length} complaint{complaints.length === 1 ? '' : 's'} recorded.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
@@ -490,10 +510,11 @@ const ComplaintsTable = () => {
             </div>
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-full md:max-w-6xl">
+        <DialogContent className="w-full md:max-w-4xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
           <DialogHeader>
             <DialogTitle>Submit a Complaint</DialogTitle>
           </DialogHeader>
@@ -514,7 +535,7 @@ const ComplaintsTable = () => {
               <Button onClick={closeModal}>Close</Button>
             </motion.div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Subject</label>
                 <Input
@@ -559,7 +580,7 @@ const ComplaintsTable = () => {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Attach Images (Optional)</label>
-                <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                <div className="border-2 border-dashed rounded-xl p-6 text-center transition-colors hover:border-primary">
                   <input
                     type="file"
                     accept="image/*"
@@ -623,7 +644,7 @@ const ComplaintsTable = () => {
 
       {/* Edit Complaint Dialog */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="w-full max-w-6xl">
+        <DialogContent className="w-full max-w-3xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
           <DialogHeader>
             <DialogTitle>Edit Complaint</DialogTitle>
           </DialogHeader>

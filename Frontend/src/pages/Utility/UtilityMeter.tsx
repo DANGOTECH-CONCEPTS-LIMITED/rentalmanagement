@@ -225,14 +225,19 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header with Add Button */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Utility Meters</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+    <div className="space-y-8">
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Utility Workspace
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Utility Meters</h1>
+              <p className="text-sm text-muted-foreground mt-1 md:text-base">
             Manage your utility meters
           </p>
+            </div>
         </div>
         
         <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
@@ -242,7 +247,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
               Add Utility Meter
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
             <DialogHeader>
               <DialogTitle>Add New Utility Meter</DialogTitle>
               <DialogDescription>
@@ -251,13 +256,14 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
             </DialogHeader>
             
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid gap-5 md:grid-cols-2">
                 {isAdmin && (
                   <FormField
                     control={form.control}
                     name="landLordId"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="md:col-span-2">
                         <FormLabel>Landlord</FormLabel>
                         <Select
                           value={selectedLandlordId}
@@ -336,8 +342,9 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                     </FormItem>
                   )}
                 />
+                </div>
 
-                <div className="flex justify-end gap-2 pt-4">
+                <div className="flex justify-end gap-2 border-t border-border/70 pt-5">
                   <Button
                     type="button"
                     variant="outline"
@@ -356,11 +363,12 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
+        </div>
+      </section>
 
       {/* View Utility Meters Section - Only for Utility Accounts */}
       {isUtilityAccount && (
-        <Card>
+        <Card className="data-surface border-none shadow-none">
           <CardHeader>
             <CardTitle>My Utility Meters</CardTitle>
           </CardHeader>

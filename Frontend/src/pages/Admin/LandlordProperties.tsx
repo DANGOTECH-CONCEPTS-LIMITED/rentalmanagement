@@ -392,21 +392,28 @@ const LandlordProperties = () => {
   );
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
-        <div className="mb-4 sm:mb-0">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Property Registry
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
             Landlord Properties
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
+              <p className="mt-2 text-sm sm:text-base text-muted-foreground">
             View and manage all properties registered in the system
           </p>
+            </div>
         </div>
         <Button onClick={handleNavigate} className="w-full sm:w-auto">
           Add New Property
         </Button>
-      </div>
+        </div>
+      </section>
 
-      <Card>
+      <Card className="data-surface border-none shadow-none">
         <CardContent className="pt-6">
           <div className="mb-6 flex items-center relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -438,7 +445,7 @@ const LandlordProperties = () => {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -506,7 +513,7 @@ const LandlordProperties = () => {
       {/* View Property Dialog */}
       {selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[28px] max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg sm:text-xl font-semibold">

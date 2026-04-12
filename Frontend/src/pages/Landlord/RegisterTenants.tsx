@@ -32,7 +32,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface Property {
   rentAmount: number;
@@ -302,7 +308,7 @@ const RegisterTenants = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -317,13 +323,21 @@ const RegisterTenants = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Register New Tenant
-        </h1>
-      </div>
+      <section className="page-hero">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Tenant Onboarding
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Register New Tenant</h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              Capture tenant details, assign a property, and upload identity documents in one guided flow.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <Card>
+      <Card className="form-shell border-none shadow-none">
         <CardHeader>
           <CardTitle className="flex items-center">
             <UserPlus className="mr-2 h-5 w-5" />
@@ -444,21 +458,27 @@ const RegisterTenants = () => {
                       Property
                     </span>
                   </label>
-                  <select
-                    name="PropertyId"
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                  <Select
                     value={formData.PropertyId}
-                    onChange={handleInputChange}
-                    required
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        PropertyId: value,
+                      }))
+                    }
                     disabled={isLoadingProperties}
                   >
-                    <option value="">Select a property</option>
-                    {properties.map((prop) => (
-                      <option key={prop.id} value={prop.id}>
-                        {prop.name} - {prop.address}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingProperties ? "Loading properties..." : "Select a property"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties.map((prop) => (
+                        <SelectItem key={prop.id} value={String(prop.id)}>
+                          {prop.name} - {prop.address}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {isLoadingProperties && (
                     <p className="text-sm text-gray-500">
                       Loading properties...
@@ -491,10 +511,10 @@ const RegisterTenants = () => {
                       <Camera size={16} className="mr-1" />
                       Passport Photo
                     </label>
-                    <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
+                    <div className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center h-40 bg-white/70 transition-colors hover:border-primary">
                       {passportPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl overflow-hidden">
                             {passportPhotoPreview && (
                               <img
                                 src={passportPhotoPreview}
@@ -539,10 +559,10 @@ const RegisterTenants = () => {
                       <CreditCard size={16} className="mr-1" />
                       ID Front Side
                     </label>
-                    <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
+                    <div className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center h-40 bg-white/70 transition-colors hover:border-primary">
                       {idFrontPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl overflow-hidden">
                             {idFrontPhotoPreview && (
                               <img
                                 src={idFrontPhotoPreview}
@@ -585,10 +605,10 @@ const RegisterTenants = () => {
                       <CreditCard size={16} className="mr-1" />
                       ID Back Side
                     </label>
-                    <div className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40">
+                    <div className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center h-40 bg-white/70 transition-colors hover:border-primary">
                       {idBackPhoto ? (
                         <div className="relative w-full h-full">
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl overflow-hidden">
                             {idBackPhotoPreview && (
                               <img
                                 src={idBackPhotoPreview}

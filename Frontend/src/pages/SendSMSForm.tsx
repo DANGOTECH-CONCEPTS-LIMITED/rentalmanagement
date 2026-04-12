@@ -83,79 +83,109 @@ const SendSMSForm = () => {
   };
 
   return (
-    <Card className="w-full mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Send className="w-5 h-5" />
-          Send SMS Message
-        </CardTitle>
-        <CardDescription>
-          Send a single SMS message to a phone number
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Phone className="w-4 h-4" />
-              Phone Number
-            </label>
-            <Input
-              name="phone"
-              type="tel"
-              placeholder="+250XXXXXXXX"
-              value={formData.phone}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Mail className="w-4 h-4" />
-              Message
-            </label>
-            <Textarea
-              name="message"
-              placeholder="Enter your message here..."
-              value={formData.message}
-              onChange={handleChange}
-              rows={4}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Maximum 160 characters
+    <div className="space-y-8">
+      <section className="page-hero max-w-5xl">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Messaging
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Send SMS Message</h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              Send a one-off tenant or customer notification with a clear reference and delivery target.
             </p>
           </div>
+        </div>
+      </section>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Reference (Optional)</label>
-            <Input
-              name="reference"
-              placeholder="e.g. Payment Reminder"
-              value={formData.reference}
-              onChange={handleChange}
-            />
-          </div>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.9fr)] max-w-6xl">
+        <Card className="form-shell border-none shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Compose message
+            </CardTitle>
+            <CardDescription>
+              Send a single SMS message to a phone number.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-slate-700">
+                  <Phone className="w-4 h-4" />
+                  Phone Number
+                </label>
+                <Input
+                  name="phone"
+                  type="tel"
+                  placeholder="+250XXXXXXXX"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send SMS
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-slate-700">
+                  <Mail className="w-4 h-4" />
+                  Message
+                </label>
+                <Textarea
+                  name="message"
+                  placeholder="Enter your message here..."
+                  value={formData.message}
+                  onChange={handleChange}
+                  rows={5}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum 160 characters
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Reference</label>
+                <Input
+                  name="reference"
+                  placeholder="e.g. Payment Reminder"
+                  value={formData.reference}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send SMS
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="data-surface border-none shadow-none">
+          <CardHeader>
+            <CardTitle>Message tips</CardTitle>
+            <CardDescription>Keep notifications short, specific, and easy to act on.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>Include the purpose of the message in the first sentence so the recipient understands it immediately.</p>
+            <p>Use the reference field to make the notification easier to trace in support or payment conversations.</p>
+            <p>For delivery clarity, prefer full international numbers in the expected gateway format.</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

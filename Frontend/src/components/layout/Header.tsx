@@ -4,7 +4,6 @@ import {
   Bell,
   Sun,
   Moon,
-  Search,
   User,
   Settings,
   Key,
@@ -28,6 +27,12 @@ const Header = () => {
   const [loading, setLoading] = useState(false);
 
   const { changePassword, logout, user } = useAuth();
+  const roleName = roles.find((role) => role.id === user?.systemRoleId)?.name;
+  const profileImage = user?.passportPhoto
+    ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${user.passportPhoto
+        ?.split(/[/\\]/)
+        .pop()}`
+    : "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0=";
 
   useEffect(() => {
     fetchRoles();
@@ -97,32 +102,28 @@ const Header = () => {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="h-16 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between px-6"
+      className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl md:px-6"
     >
-      <div className="flex items-center">
-        {/* <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search..."
-            className="pl-10 pr-4 py-2 text-sm bg-muted rounded-lg border border-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-transparent w-full md:w-72"
-          />
-        </div> */}
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+          Workspace
+        </p>
+        <h2 className="truncate text-lg font-semibold text-slate-950 md:text-xl">
+          {roleName || "Dashboard"}
+        </h2>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <button
           onClick={toggleDarkMode}
-          className="p-2 rounded-full hover:bg-muted transition-colors"
+          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-white/90 text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
           aria-label="Toggle dark mode"
         >
           {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         <button
-          className="p-2 rounded-full hover:bg-muted transition-colors relative"
+          className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-white/90 text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
           aria-label="Notifications"
         >
           <Bell size={18} />
@@ -141,49 +142,43 @@ const Header = () => {
           </div>
         </div> */}
         {/* Profile dropdown */}
-        <div className="relative ml-3" ref={userDropdownRef}>
-          {/* <button
-            type="button"
-            className="flex items-center space-x-2 focus:outline-none"
-            onClick={() => setShowUserDropdown(!showUserDropdown)}
-          >
-            <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center uppercase font-medium text-sm">
-              {user?.fullName?.charAt(0) || "U"}
-            </div>
-          </button> */}
+        <div className="relative ml-1" ref={userDropdownRef}>
           <div
             onClick={() => setShowUserDropdown(!showUserDropdown)}
-            className="bg-gray-200 rounded-full p-1 cursor-pointer"
+            className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border/70 bg-white/92 px-2 py-2 shadow-sm transition-colors hover:bg-slate-50"
           >
             <img
-              className="h-8 w-8 rounded-full"
-              src={
-                `${
-                  import.meta.env.VITE_API_BASE_URL
-                }/uploads/${user.passportPhoto?.split(/[/\\]/).pop()}` ||
-                "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0="
-              }
+              className="h-9 w-9 rounded-xl object-cover"
+              src={profileImage}
               alt="User profile"
             />
+            <div className="hidden text-left md:block">
+              <p className="max-w-40 truncate text-sm font-semibold text-slate-900">
+                {user?.fullName || "User"}
+              </p>
+              <p className="text-xs text-muted-foreground">{roleName || "Role"}</p>
+            </div>
           </div>
 
           {showUserDropdown && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 cursor-pointer">
-              <div className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            <div className="absolute right-0 mt-3 w-64 rounded-2xl border border-border/70 bg-white/96 p-2 shadow-[0_24px_60px_-24px_rgba(15,23,42,0.28)] z-50 cursor-pointer backdrop-blur">
+              <div className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-700 hover:bg-slate-50">
                 <User className="mr-2 h-4 w-4" />
-                {user?.fullName}
+                <div>
+                  <p className="font-medium text-slate-900">{user?.fullName}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
               </div>
-              <hr />
-              <div className="flex items-center px-4 py-2 text-sm text-gray-700 gap-2 hover:bg-gray-100">
+              <div className="my-2 h-px bg-border/80" />
+              <div className="flex items-center px-3 py-2 text-sm text-slate-700 gap-2 rounded-xl hover:bg-slate-50">
                 <p>Role:</p>
-                {roles.find((role) => role.id === user?.systemRoleId)?.name}
+                <span className="font-medium text-slate-900">{roleName}</span>
               </div>
-              <hr />
               <div
-                className="flex items-center px-4 py-2 text-sm text-gray-700 gap-2 hover:bg-gray-100"
+                className="flex items-center px-3 py-2 text-sm text-slate-700 gap-2 rounded-xl hover:bg-slate-50"
                 onClick={() => setShowPasswordModal(true)}
               >
-                <Settings />
+                <Settings className="h-4 w-4" />
                 Change Password
               </div>
             </div>
@@ -191,9 +186,9 @@ const Header = () => {
         </div>
 
         {showPasswordModal && (
-          <div className="absolute right-0 h-[85vh] top-[3.5rem] inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-md">
-              <div className="flex justify-between items-center p-4 border-b">
+          <div className="fixed inset-0 bg-slate-950/50 flex items-center justify-center z-50 p-4">
+            <div className="w-full max-w-md rounded-[28px] border border-white/70 bg-white p-0 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)]">
+              <div className="flex justify-between items-center p-5 border-b border-border/70">
                 <h3 className="text-lg font-semibold">Change Password</h3>
                 <button
                   onClick={() => setShowPasswordModal(false)}
@@ -219,7 +214,7 @@ const Header = () => {
                       <Lock size={16} className="text-gray-400" />
                     </div>
                     <input
-                      type="text"
+                      type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       className="pl-10 input-field"
@@ -237,7 +232,7 @@ const Header = () => {
                       <Key size={16} className="text-gray-400" />
                     </div>
                     <input
-                      type="text"
+                      type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="pl-10 input-field"
@@ -256,7 +251,7 @@ const Header = () => {
                       <Key size={16} className="text-gray-400" />
                     </div>
                     <input
-                      type="text"
+                      type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-10 input-field"

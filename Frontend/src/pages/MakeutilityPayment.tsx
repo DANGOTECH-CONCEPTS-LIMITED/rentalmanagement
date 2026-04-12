@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardDescription } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,14 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useForm } from 'react-hook-form';
 
 interface CustomerInfo {
@@ -42,6 +51,8 @@ interface PaymentRecord {
   phoneNumber: string;
   meterNumber: string;
   token: string;
+  units: number;
+  vendorTranId: string;
   reasonAtTelecom: string;
 }
 
@@ -103,7 +114,7 @@ const MakeUtilityPayment = () => {
   });
 
   // Handle meter validation
-  const validateMeter = async (data) => {
+  const validateMeter = async (data: { meterNumber: string }) => {
     setIsValidating(true);
 
     try {
@@ -219,7 +230,7 @@ const MakeUtilityPayment = () => {
     }
   };
 
-  const onSubmitPayment = async (data) => {
+  const onSubmitPayment = async (data: { phoneNumber: string; meterNumber: string; amount?: number }) => {
     setIsSubmitting(true);
 
     try {
@@ -260,7 +271,7 @@ const MakeUtilityPayment = () => {
     }
   };
 
-  const handleModalChange = (isOpen) => {
+  const handleModalChange = (isOpen: boolean) => {
     setPaymentModalOpen(isOpen);
     if (!isOpen) {
       setShowPreview(false);
@@ -280,14 +291,25 @@ const MakeUtilityPayment = () => {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Utility Payments</h1>
+    <div className="space-y-8">
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Utility Payments
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Utility Payments</h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Validate a meter, preview purchase details, and review the latest transactions for a specific meter.
+              </p>
+            </div>
+          </div>
 
-        <Dialog open={paymentModalOpen} onOpenChange={handleModalChange}>
-          <DialogTrigger asChild>
-            <Button>Make New Payment</Button>
-          </DialogTrigger>
+          <Dialog open={paymentModalOpen} onOpenChange={handleModalChange}>
+            <DialogTrigger asChild>
+              <Button>Make New Payment</Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle>
@@ -341,7 +363,7 @@ const MakeUtilityPayment = () => {
               // Payment Form
               <div className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
                 {customerInfo && (
-                  <Card className="bg-gray-50 shadow-sm">
+                  <Card className="bg-slate-50 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base">Customer Information</CardTitle>
                     </CardHeader>
@@ -419,7 +441,7 @@ const MakeUtilityPayment = () => {
                     </div>
 
                     {showPreview && previewData && (
-                      <Card className="bg-gray-50 shadow-sm">
+                      <Card className="bg-slate-50 shadow-sm">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base">Payment Preview</CardTitle>
                         </CardHeader>
@@ -487,15 +509,17 @@ const MakeUtilityPayment = () => {
               </div>
             )}
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>View Utility Payments by Meter Number</CardTitle>
+      <Card className="data-surface border-none shadow-none">
+        <CardHeader className="pb-4">
+          <CardTitle>Recent meter payments</CardTitle>
+          <CardDescription>Search a meter number to review the latest payment activity for that customer.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="space-y-5">
+          <div className="flex flex-col gap-4 sm:flex-row">
             <Input
               placeholder="Enter meter number"
               value={meterNumber}
@@ -511,37 +535,41 @@ const MakeUtilityPayment = () => {
             </Button>
           </div>
           {payments.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="p-2 text-left">Token</th>
-                    <th className="p-2 text-left">VendorTranId</th>
-                    <th className="p-2 text-left">Phone</th>
-                    <th className="p-2 text-left">Amount</th>
-                    <th className='p-2 text-left'>Units</th>
-                    <th className="p-2 text-left">Status</th>
-                    <th className="p-2 text-left">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5).map((payment) => (
-                    <tr key={payment.id} className="border-t">
-                      <td className="p-3">{payment.token}</td>
-                      <td className="p-2">{payment.vendorTranId}</td>
-                      <td className="p-2">{payment.phoneNumber}</td>
-                      <td className="p-2">{payment.amount}</td>
-                      <td className='p-2'>{payment.units}</td>
-                      <td className="p-2">{payment.status}</td>
-                      <td className="p-2">{new Date(payment.createdAt).toLocaleString()}</td>
-                    </tr>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Token</TableHead>
+                  <TableHead>VendorTranId</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Units</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 5)
+                  .map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.token || '-'}</TableCell>
+                      <TableCell>{payment.vendorTranId || '-'}</TableCell>
+                      <TableCell>{payment.phoneNumber || '-'}</TableCell>
+                      <TableCell>{payment.amount}</TableCell>
+                      <TableCell>{payment.units ?? '-'}</TableCell>
+                      <TableCell>{payment.status}</TableCell>
+                      <TableCell>{new Date(payment.createdAt).toLocaleString()}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-                
-              </table>
-            </div>
+              </TableBody>
+            </Table>
           ) : (
-            !isFetching && <p className="text-muted">No records found.</p>
+            !isFetching && (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
+                No records found.
+              </div>
+            )
           )}
         </CardContent>
       </Card>

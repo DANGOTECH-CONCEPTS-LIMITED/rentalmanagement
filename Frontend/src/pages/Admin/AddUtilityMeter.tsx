@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,7 +22,8 @@ import {
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Cable, MapPin, UserRound, Waves } from 'lucide-react';
 
 const meterSchema = z.object({
   meterType: z.string().min(1, { message: 'Meter type is required' }),
@@ -54,8 +56,6 @@ const AddUtilityMeter = () => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const { toast } = useToast();
-
-  console.log("users",users);
 
   let token = '';
   try {
@@ -95,7 +95,7 @@ const AddUtilityMeter = () => {
       .then((res) => {
         setRoles(res.data);
       })
-      .catch((err) => {
+      .catch(() => {
         toast({
           title: 'Error',
           description: 'Failed to fetch roles',
@@ -116,7 +116,7 @@ const AddUtilityMeter = () => {
       .then((res) => {
         setUsers(res.data);
       })
-      .catch((err) => {
+      .catch(() => {
         toast({
           title: 'Error',
           description: 'Failed to fetch users',
@@ -175,24 +175,38 @@ const AddUtilityMeter = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-2xl mx-auto">
-        <Card>
+    <div className="space-y-8">
+      <section className="page-hero">
+        <div className="max-w-3xl space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Utility Setup
+          </span>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+            Add a new utility meter
+          </h1>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+            Register a meter against the correct landlord with a cleaner, more balanced form layout.
+          </p>
+        </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="form-shell border-none shadow-none">
           <CardHeader>
             <CardTitle>Add New Utility Meter</CardTitle>
+            <CardDescription>
+              Fill in the details below to register and assign a utility meter.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-6">
-              Fill in the details to register a new utility meter for a landlord.
-            </p>
-
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid gap-5 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="landLordId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-2">
                       <FormLabel>User</FormLabel>
                       <Select
                         value={field.value}
@@ -203,13 +217,16 @@ const AddUtilityMeter = () => {
                           <SelectValue placeholder={isLoadingUsers ? 'Loading users...' : 'Select a user'} />
                         </SelectTrigger>
                         <SelectContent>
-                          {users.map((user) => (
+                          {landlordUsers.map((user) => (
                             <SelectItem key={user.id} value={user.id.toString()}>
                               {user.fullName} ({user.email})
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        Only verified landlords are listed here.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -261,7 +278,7 @@ const AddUtilityMeter = () => {
                   control={form.control}
                   name="locationOfNwscMeter"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-2">
                       <FormLabel>Location of NWSC Meter</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter location of NWSC meter" {...field} />
@@ -270,9 +287,13 @@ const AddUtilityMeter = () => {
                     </FormItem>
                   )}
                 />
+                </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isSubmitting}>
+                <div className="flex flex-col gap-3 border-t border-border/70 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Review the landlord and meter identifiers before saving.
+                  </p>
+                  <Button type="submit" disabled={isSubmitting} className="min-w-36">
                     {isSubmitting ? 'Adding...' : 'Add Meter'}
                   </Button>
                 </div>
@@ -280,6 +301,47 @@ const AddUtilityMeter = () => {
             </Form>
           </CardContent>
         </Card>
+
+        <div className="space-y-6">
+          <Card className="data-surface">
+            <CardHeader>
+              <CardTitle className="text-lg">What this captures</CardTitle>
+              <CardDescription>
+                Keep submissions clean and consistent across all utility records.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+                <UserRound className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-slate-900">Verified landlord</p>
+                  <p className="text-sm text-muted-foreground">Assign each meter to the right account owner.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+                <Cable className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-slate-900">Meter identity</p>
+                  <p className="text-sm text-muted-foreground">Store the meter type and meter number in a consistent format.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+                <Waves className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-slate-900">Billing reference</p>
+                  <p className="text-sm text-muted-foreground">The NWSC account makes reconciliation much easier later.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+                <MapPin className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-slate-900">Installation location</p>
+                  <p className="text-sm text-muted-foreground">Use a clear location label so support and admins can identify the unit fast.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

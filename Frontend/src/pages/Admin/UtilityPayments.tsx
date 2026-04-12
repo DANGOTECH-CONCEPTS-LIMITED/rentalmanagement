@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pencil } from "lucide-react";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
 
@@ -148,25 +149,51 @@ const UtilityPayments = () => {
   };
 
   return (
-    <div className="p-6">
-      <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">
-        Back
-      </Button>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">
-          Utility Payments for Landlord ID: {landlordId}
-        </h1>
-        <Input
-          type="text"
-          placeholder="Search by meter, phone, or status..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-64"
-        />
-      </div>
+    <div className="space-y-8">
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Utility Payments
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                Landlord payment activity
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Review, search, and update vendor details for utility payments linked to landlord ID {landlordId}.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Back
+            </Button>
+            <Input
+              type="text"
+              placeholder="Search by meter, phone, or status..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full sm:w-72"
+            />
+          </div>
+        </div>
+      </section>
+
+      <Card className="data-surface border-none shadow-none">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <CardTitle>Payment records</CardTitle>
+            <CardDescription>
+              {filteredPayments.length} matching payment record{filteredPayments.length === 1 ? "" : "s"}.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
       {loading ? (
         <div className="text-center py-8">Loading payments...</div>
       ) : error ? (
@@ -255,12 +282,14 @@ const UtilityPayments = () => {
           )}
         </div>
       )}
+        </CardContent>
+      </Card>
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-xl rounded-[28px] border border-border/70 bg-white p-0 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.4)]">
           <DialogHeader>
-            <DialogTitle>Edit Vendor Info</DialogTitle>
+            <DialogTitle className="px-6 pt-6">Edit Vendor Info</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-4">
+          <form onSubmit={handleEditSubmit} className="space-y-5 px-6 pb-6">
             <div>
               <label className="block text-sm font-medium mb-1">Vendor</label>
               <Input
@@ -292,7 +321,7 @@ const UtilityPayments = () => {
             {editError && (
               <div className="text-red-500 text-sm">{editError}</div>
             )}
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 border-t border-border/70 pt-5">
               <Button
                 type="button"
                 variant="outline"

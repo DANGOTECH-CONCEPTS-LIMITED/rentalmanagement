@@ -32,6 +32,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -258,7 +273,7 @@ const HandleComplaints = () => {
   }, [filterStatus, filterPriority, searchTerm]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -273,13 +288,21 @@ const HandleComplaints = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Tenant Complaints
-        </h1>
-      </div>
+      <section className="page-hero">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Landlord Support
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Tenant Complaints</h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              Review incoming complaints, filter by urgency, and inspect attachments without leaving the page.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <Card>
+      <Card className="data-surface border-none shadow-none">
         <CardHeader className="pb-3">
           <CardTitle>Manage Complaints</CardTitle>
           <CardDescription>
@@ -298,32 +321,34 @@ const HandleComplaints = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 min-w-[180px]">
                 <Filter className="h-4 w-4 text-gray-400" />
-                <select
-                  className="p-2 border border-gray-300 rounded-md text-sm"
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex items-center gap-2">
-                <select
-                  className="p-2 border border-gray-300 rounded-md text-sm"
-                  value={filterPriority}
-                  onChange={(e) => setFilterPriority(e.target.value)}
-                >
-                  <option value="all">All Priorities</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
+              <div className="flex items-center gap-2 min-w-[180px]">
+                <Select value={filterPriority} onValueChange={setFilterPriority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Priorities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
@@ -335,50 +360,46 @@ const HandleComplaints = () => {
               </div>
             ) : (
               <>
-                <table className="w-full">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left">ID</th>
-                      <th className="px-4 py-3 text-left">Property</th>
-                      <th className="px-4 py-3 text-left">Subject</th>
-                      <th className="px-4 py-3 text-left">Date</th>
-                      <th className="px-4 py-3 text-left">Priority</th>
-                      <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Property</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {currentRows.length > 0 ? (
                       currentRows.map((complaint) => (
-                        <motion.tr
+                        <TableRow
                           key={complaint.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.3 }}
-                          className="hover:bg-gray-50"
                         >
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <TableCell>
                             {complaint.id}
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell>
                             {complaint.property.name}
-                          </td>
-                          <td className="px-4 py-3">{complaint.subject}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell>{complaint.subject}</TableCell>
+                          <TableCell>
                             {formatDate(complaint.dateCreated)}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell>
                             {getPriorityBadge(complaint.priority)}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center">
                               {getStatusIcon(complaint.status)}
                               <span className="ml-2">
                                 {getStatusText(complaint.status)}
                               </span>
                             </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-right">
+                          </TableCell>
+                          <TableCell className="text-right">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -388,25 +409,25 @@ const HandleComplaints = () => {
                               <Eye className="h-4 w-4" />
                               <span className="ml-1">View</span>
                             </Button>
-                          </td>
-                        </motion.tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td
+                      <TableRow>
+                        <TableCell
                           colSpan={7}
-                          className="px-6 py-10 text-center text-gray-500"
+                          className="py-10 text-center text-gray-500"
                         >
                           <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                           <p>No complaints found</p>
                           <p className="text-sm mt-1">
                             Try adjusting your search criteria
                           </p>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
 
                 {/* Pagination controls */}
                 {filteredComplaints.length > rowsPerPage && (
@@ -460,7 +481,7 @@ const HandleComplaints = () => {
 
       {/* Complaint Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
           <DialogHeader>
             <DialogTitle>Complaint Details</DialogTitle>
             <DialogDescription>

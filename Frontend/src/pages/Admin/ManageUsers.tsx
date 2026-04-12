@@ -1037,27 +1037,36 @@ const ManageUsers = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Manage Users</h1>
-        <p className="text-muted-foreground">View and manage system users</p>
-      </div>
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              User Administration
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Manage Users</h1>
+              <p className="mt-2 text-muted-foreground">View, filter, and maintain system users.</p>
+            </div>
+          </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+            <div className="relative flex-1 sm:min-w-[320px]">
+              <Search className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button onClick={openModal}>Add New User</Button>
+          </div>
         </div>
-        <Button onClick={openModal}>Add New User</Button>
-      </div>
+      </section>
 
-      <Card>
-        <Tabs defaultValue="all" className="p-4">
-          <TabsList className="mb-4">
+      <Card className="data-surface border-none shadow-none">
+        <Tabs defaultValue="all" className="p-4 md:p-6">
+          <TabsList className="mb-6 h-auto flex-wrap justify-start gap-2 rounded-2xl bg-slate-50 p-2">
             <TabsTrigger value="all">
               All Users ({getFilteredUsers().length})
             </TabsTrigger>
@@ -1823,8 +1832,13 @@ const UserTable = ({
           ) : (
             users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-slate-900">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">ID: {user.id}</p>
+                  </div>
+                </TableCell>
+                <TableCell className="text-slate-600">{user.email}</TableCell>
                 <TableCell>
                   <Badge
                     variant={

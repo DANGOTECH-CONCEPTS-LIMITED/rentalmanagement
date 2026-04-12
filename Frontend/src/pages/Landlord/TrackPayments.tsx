@@ -376,7 +376,7 @@ const TrackPayments = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -389,20 +389,27 @@ const TrackPayments = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Payment Monitoring
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
             Payment Tracking
           </h1>
-          <p className="text-muted-foreground">
+              <p className="mt-2 text-muted-foreground">
             View and manage all payment transactions
           </p>
+            </div>
         </div>
-        <Button onClick={handleExport} className="flex items-center gap-2">
+          <Button onClick={handleExport} className="flex items-center gap-2">
           <Download className="h-4 w-4" />
           <span>Export</span>
         </Button>
-      </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -468,7 +475,7 @@ const TrackPayments = () => {
         </Card>
       </div>
 
-      <Card>
+      <Card className="data-surface border-none shadow-none">
         <CardHeader>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="relative w-full md:max-w-md">
@@ -485,7 +492,7 @@ const TrackPayments = () => {
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <select
-                  className="p-2 border rounded-md text-sm"
+                  className="input-field h-12 py-3 text-sm"
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                 >
@@ -497,7 +504,7 @@ const TrackPayments = () => {
               </div>
               <div className="flex items-center gap-2">
                 <select
-                  className="p-2 border rounded-md text-sm"
+                  className="input-field h-12 py-3 text-sm"
                   value={filterMethod}
                   onChange={(e) => setFilterMethod(e.target.value)}
                 >
@@ -512,7 +519,7 @@ const TrackPayments = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -620,7 +627,7 @@ const TrackPayments = () => {
             </Table>
             {/* Add pagination controls */}
             {sortedPayments.length > rowsPerPage && (
-              <div className="flex items-center justify-between w-full mt-4">
+              <div className="mt-4 flex items-center justify-between w-full gap-3 flex-wrap">
                 <div className="text-sm text-muted-foreground">
                   Showing {indexOfFirstRow + 1} to{" "}
                   {Math.min(indexOfLastRow, sortedPayments.length)} of{" "}

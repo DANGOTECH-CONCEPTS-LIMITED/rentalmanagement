@@ -76,7 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           initial={{ x: "-100%" }}
           animate={{ x: isMobileOpen ? 0 : "-100%" }}
           transition={{ duration: 0.3 }}
-          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar border-r border-sidebar-border overflow-y-auto"
+          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar/95 border-r border-sidebar-border shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] backdrop-blur overflow-y-auto"
         >
           <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
             <div className="flex items-center">
@@ -140,16 +140,16 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "h-screen fixed top-0 left-0 z-30 shadow-sm overflow-hidden transition-all duration-300 ease-in-out",
+        "h-screen fixed top-0 left-0 z-30 overflow-hidden transition-all duration-300 ease-in-out",
         sidebarWidth,
-        "bg-sidebar flex flex-col border-r border-sidebar-border"
+        "bg-sidebar/92 backdrop-blur flex flex-col border-r border-sidebar-border shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]"
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border/80">
         <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+          <div className="h-9 w-9 rounded-2xl bg-primary flex items-center justify-center shadow-[0_16px_32px_-18px_rgba(37,99,235,0.9)]">
             <House className="text-white" size={16} />
           </div>
           {(!isCollapsed || isHovering) && (
@@ -171,7 +171,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       </div>
 
       <nav className="flex-1 pt-5 pb-4 overflow-y-auto">
-        <ul className="space-y-1 px-3">
+        <ul className="space-y-1.5 px-3">
           {navItems.map((item, idx) => (
             <motion.li
               key={item.path}

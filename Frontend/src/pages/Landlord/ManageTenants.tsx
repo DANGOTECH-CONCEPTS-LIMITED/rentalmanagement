@@ -399,17 +399,26 @@ const ManageTenants = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb and header remain the same */}
+    <div className="space-y-8">
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Tenant Management
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                Manage tenants
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Review occupants, update records, and keep tenant information aligned with properties.
+              </p>
+            </div>
+          </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Manage Tenants
-          </h1>
-          <div className="flex justify-between items-center mt-4">
-            <div className="mb-6 flex items-center relative w-2/3">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+            <div className="relative flex-1 sm:min-w-[320px]">
+              <Search className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, email, or property..."
                 className="pl-10"
@@ -422,6 +431,19 @@ const ManageTenants = () => {
             >
               Add Tenant
             </Button>
+          </div>
+        </div>
+      </section>
+
+      <Card className="data-surface border-none shadow-none">
+        <CardContent className="pt-6">
+          <div className="mb-6 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-950">Tenant records</h2>
+              <p className="text-sm text-muted-foreground">
+                {filteredTenants.length} matching tenant{filteredTenants.length === 1 ? "" : "s"}.
+              </p>
+            </div>
           </div>
 
           {isLoading ? (
@@ -441,7 +463,7 @@ const ManageTenants = () => {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -579,7 +601,7 @@ const ManageTenants = () => {
 
       {selectedTenant && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[28px] max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Tenant Details</h2>
@@ -883,7 +905,7 @@ const ManageTenants = () => {
                       </label>
                       <select
                         name="PropertyId"
-                        className="w-full p-2 border border-gray-300 rounded-md"
+                        className="input-field"
                         value={formData.PropertyId}
                         onChange={handleInputChange}
                         required
@@ -947,7 +969,7 @@ const ManageTenants = () => {
                           Passport Photo
                         </label>
                         <div
-                          className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center h-40 cursor-pointer"
+                          className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center h-40 cursor-pointer hover:border-primary transition-colors"
                           onClick={() =>
                             document
                               .getElementById("passportPhotoInput")

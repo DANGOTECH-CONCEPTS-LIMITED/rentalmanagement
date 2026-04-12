@@ -4,6 +4,13 @@ import { CreditCard, DollarSign, Calendar, AlertCircle, CheckCircle2, Smartphone
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import axios from 'axios';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -218,7 +225,7 @@ const [description, setDescription] = useState('');
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -231,12 +238,22 @@ const [description, setDescription] = useState('');
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Make a Payment</h1>
-      </div>
+      <section className="page-hero">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Tenant Checkout
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Make a Payment</h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              Pay rent using card, mobile money, bank transfer, or record a cash transaction.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 data-surface border-none shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center">
               {paymentMethod === 'card' && <CreditCard className="mr-2 h-5 w-5" />}
@@ -265,7 +282,7 @@ const [description, setDescription] = useState('');
             ) : (
               <>
                 <Tabs value={paymentMethod} onValueChange={setPaymentMethod} className="mb-6">
-                  <TabsList className="grid grid-cols-4 mb-6">
+                  <TabsList className="grid grid-cols-2 gap-2 mb-6 h-auto md:grid-cols-4 bg-slate-50 p-2 rounded-2xl">
                     <TabsTrigger value="card" className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4" />
                       <span>Card</span>
@@ -374,7 +391,6 @@ const [description, setDescription] = useState('');
                   </TabsContent>
 
                   <TabsContent value="mobile_money">
-                  <TabsContent value="mobile_money">
   <form onSubmit={handleSubmitMobileMoney} className="space-y-6">
     <div className="space-y-2">
       <label className="text-sm font-medium" htmlFor="mobile-amount">
@@ -397,16 +413,15 @@ const [description, setDescription] = useState('');
       <label className="text-sm font-medium" htmlFor="provider">
         Mobile Money Provider
       </label>
-      <select
-        id="provider"
-        className="flex w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-        value={provider}
-        onChange={(e) => setProvider(e.target.value)}
-        required
-      >
-        <option value="mtn">MTN Mobile Money</option>
-        <option value="airtel">Airtel Money</option>
-      </select>
+      <Select value={provider} onValueChange={setProvider}>
+        <SelectTrigger id="provider">
+          <SelectValue placeholder="Select provider" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="mtn">MTN Mobile Money</SelectItem>
+          <SelectItem value="airtel">Airtel Money</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
 
     <div className="space-y-2">
@@ -464,8 +479,6 @@ const [description, setDescription] = useState('');
     </div>
   </form>
 </TabsContent>
-
-                  </TabsContent>
 
                   <TabsContent value="bank_transfer">
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -534,7 +547,7 @@ const [description, setDescription] = useState('');
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="data-surface border-none shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center">
               <CreditCard className="mr-2 h-5 w-5" />

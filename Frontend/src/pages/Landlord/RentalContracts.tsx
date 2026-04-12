@@ -5,6 +5,15 @@ import { FileText, Search, Plus, Edit, Trash2, Eye, Filter, Download, FilePlus }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import ContractGenerator from '@/components/contract/ContractGenerator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
@@ -94,7 +103,7 @@ const RentalContracts = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -107,8 +116,19 @@ const RentalContracts = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Rental Contracts</h1>
+      <section className="page-hero">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Contract Desk
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Rental Contracts</h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Search, review, and generate rental agreements in one place.
+              </p>
+            </div>
+          </div>
         <Button 
           className="flex items-center gap-2"
           onClick={() => setShowContractGenerator(true)}
@@ -116,9 +136,11 @@ const RentalContracts = () => {
           <FilePlus className="h-4 w-4" />
           <span>Add New Contract</span>
         </Button>
-      </div>
+        </div>
+      </section>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <Card className="data-surface border-none shadow-none">
+        <CardContent className="p-6 md:p-7">
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -133,7 +155,7 @@ const RentalContracts = () => {
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
             <select 
-              className="p-2 border border-gray-300 rounded-md text-sm"
+              className="input-field h-12 py-3 text-sm"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
@@ -146,19 +168,19 @@ const RentalContracts = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left">Contract ID</th>
-                <th className="px-6 py-3 text-left">Tenant</th>
-                <th className="px-6 py-3 text-left">Property</th>
-                <th className="px-6 py-3 text-left">Period</th>
-                <th className="px-6 py-3 text-left">Rent</th>
-                <th className="px-6 py-3 text-left">Status</th>
-                <th className="px-6 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Contract ID</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>Property</TableHead>
+                <TableHead>Period</TableHead>
+                <TableHead>Rent</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredContracts.length > 0 ? (
                 filteredContracts.map((contract) => (
                   <motion.tr 
@@ -168,17 +190,17 @@ const RentalContracts = () => {
                     transition={{ duration: 0.3 }}
                     className="hover:bg-gray-50"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">{contract.id}</td>
-                    <td className="px-6 py-4">{contract.tenant}</td>
-                    <td className="px-6 py-4">{contract.property}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <TableCell className="font-medium">{contract.id}</TableCell>
+                    <TableCell>{contract.tenant}</TableCell>
+                    <TableCell>{contract.property}</TableCell>
+                    <TableCell>
                       {contract.startDate} to {contract.endDate}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">${contract.rentAmount}/mo</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="font-medium">${contract.rentAmount}/mo</TableCell>
+                    <TableCell>
                       {getStatusBadge(contract.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
                         <Button variant="ghost" size="sm" className="text-blue-600">
                           <Eye className="h-4 w-4" />
@@ -193,26 +215,27 @@ const RentalContracts = () => {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </td>
+                    </TableCell>
                   </motion.tr>
                 ))
               ) : (
-                <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No contracts found</p>
                     <p className="text-sm mt-1">Try adjusting your search criteria</p>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Contract Generator Dialog */}
       <Dialog open={showContractGenerator} onOpenChange={setShowContractGenerator}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
           <ContractGenerator onClose={() => setShowContractGenerator(false)} />
         </DialogContent>
       </Dialog>

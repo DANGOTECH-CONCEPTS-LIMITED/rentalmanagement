@@ -13,6 +13,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -431,7 +440,7 @@ const PaymentHistory = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -444,42 +453,60 @@ const PaymentHistory = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Payment History
-        </h1>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search by transaction ID, property or tenant"
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      <section className="page-hero">
+        <div className="space-y-3">
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Tenant Payments
+          </span>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+              Payment History
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              Review your completed and pending rent payments and open a receipt when needed.
+            </p>
           </div>
         </div>
+      </section>
+
+      <Card className="data-surface border-none shadow-none">
+        <CardHeader>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <CardTitle>Transaction records</CardTitle>
+              <CardDescription>
+                {filteredPayments.length} matching payment record{filteredPayments.length === 1 ? "" : "s"}.
+              </CardDescription>
+            </div>
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search by transaction ID, property or tenant"
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full" ref={tableRef}>
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left">Transaction ID</th>
-                <th className="px-6 py-3 text-left">Date</th>
-                <th className="px-6 py-3 text-left">Tenant</th>
-                <th className="px-6 py-3 text-left">Property</th>
-                <th className="px-6 py-3 text-left">Amount</th>
-                <th className="px-6 py-3 text-left">Method</th>
-                <th className="px-6 py-3 text-left">Type</th>
-                <th className="px-6 py-3 text-left">Status</th>
-                {/* <th className="px-6 py-3 text-left">Reason</th> */}
-                <th className="px-6 py-3 text-left">Receipt</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Transaction ID</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>Property</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Receipt</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {currentItems.length > 0 ? (
                 currentItems.map((payment) => (
                   <motion.tr
@@ -489,39 +516,35 @@ const PaymentHistory = () => {
                     transition={{ duration: 0.3 }}
                     className="hover:bg-gray-50"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <TableCell className="font-medium">
                       {payment.transactionId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       {formatDate(payment.paymentDate)}
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell>
                       {payment.propertyTenant.fullName}
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell>
                       {payment.propertyTenant.property.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">
+                    </TableCell>
+                    <TableCell className="font-medium">
                       {payment.amount}{" "}
                       {payment.propertyTenant.property.currency}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       {payment.paymentMethod}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       {payment.paymentType}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center">
-                        {/* {getStatusIcon(payment.paymentStatus)}
-                        <span className="ml-2">
-                          {getStatusText(payment.paymentStatus)}
-                        </span> */}
                         {payment.paymentStatus}
                       </div>
-                    </td>
+                    </TableCell>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <TableCell>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -534,29 +557,29 @@ const PaymentHistory = () => {
                         <FileText className="h-4 w-4" />
                         <span>View Receipt</span>
                       </Button>
-                    </td>
+                    </TableCell>
                   </motion.tr>
                 ))
               ) : (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={9}
-                    className="px-6 py-10 text-center text-gray-500"
+                    className="py-10 text-center text-gray-500"
                   >
                     <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No payment records found</p>
                     <p className="text-sm mt-1">
                       Try adjusting your search criteria
                     </p>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {filteredPayments.length > itemsPerPage && (
-          <div className="flex items-center justify-between mt-6">
+          <div className="mt-6 flex items-center justify-between gap-3 flex-wrap">
             <div className="text-sm text-gray-500">
               Showing {indexOfFirstItem + 1} to{" "}
               {Math.min(indexOfLastItem, filteredPayments.length)} of{" "}
@@ -586,11 +609,12 @@ const PaymentHistory = () => {
             </div>
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
       {showReceiptModal && selectedPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-8">
-          <div className="relative bg-white rounded-lg max-w-2xl w-full shadow-xl">
+          <div className="relative max-w-2xl w-full rounded-[28px] shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
             <StyledReceipt
               payment={selectedPayment}
               setShowReceiptModal={setShowReceiptModal}

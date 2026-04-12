@@ -21,7 +21,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ role }) => {
       <Sidebar role={effectiveRole} />
 
       <div
-        className={`flex-1 flex flex-col ${isMobile ? "pl-0" : "pl-64"} w-full`}
+        className={`flex min-w-0 flex-1 flex-col ${isMobile ? "pl-0" : "pl-64"} w-full`}
       >
         <Header />
 
@@ -32,8 +32,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ role }) => {
           className="flex-1 overflow-auto"
         >
           <div
-            className={`mx-auto p-2 sm:p-4 md:p-6 ${
-              isMobile ? "max-w-full" : "container"
+            className={`mx-auto w-full p-4 sm:p-5 md:p-6 xl:p-8 ${
+              isMobile ? "max-w-full" : "max-w-[1680px]"
             }`}
           >
             <Outlet />
