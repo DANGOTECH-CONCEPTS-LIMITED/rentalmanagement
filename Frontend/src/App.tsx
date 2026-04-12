@@ -99,6 +99,10 @@ const App = () => (
                   path="manage-utility-meters"
                   element={<ManageUtilityMeters />}
                 />
+                <Route
+                  path="utility-payment-dashboard"
+                  element={<UtilityPaymentDashboard />}
+                />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />
                 <Route
                   path="utility-payments/:landlordId"
