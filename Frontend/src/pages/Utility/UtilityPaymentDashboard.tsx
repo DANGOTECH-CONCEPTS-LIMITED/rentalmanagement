@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateDmy, formatDateTimeDmy } from "@/lib/date-time";
 import {
   Zap,
   CheckCircle,
@@ -30,6 +31,7 @@ import {
   XCircle,
   CircleDollarSign,
   TrendingUp,
+  AlertTriangle,
   ChevronsLeft,
   ChevronsRight,
   ArrowUpDown,
@@ -101,6 +103,7 @@ interface UtilityStats {
 type DetailViewKey =
   | "totalMeters"
   | "activeMeters"
+  | "overdueMeters"
   | "totalPayments"
   | "successfulPayments"
   | "pendingPayments"
@@ -201,23 +204,6 @@ const UtilityPaymentDashboard = () => {
     }
 
     return true;
-  };
-
-  const formatDate = (dateValue?: string) => {
-    if (!dateValue) {
-      return "-";
-    }
-
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) {
-      return "-";
-    }
-
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-
-    return `${day}/${month}/${year}`;
   };
 
   const escapeCsvCell = (value: string | number) => {
@@ -438,6 +424,33 @@ const UtilityPaymentDashboard = () => {
     [activeMeterNumbers, filteredMeters]
   );
 
+  const overdueMeters = useMemo(() => {
+    const latestSuccessfulPaymentByMeter = new Map<string, number>();
+
+    utilityPayments.forEach((payment) => {
+      if (!payment.meterNumber || !successfulStatuses.has(normalizeStatus(payment.status))) {
+        return;
+      }
+
+      const timestamp = payment.createdAt ? new Date(payment.createdAt).getTime() : Number.NaN;
+      if (Number.isNaN(timestamp)) {
+        return;
+      }
+
+      const currentLatest = latestSuccessfulPaymentByMeter.get(payment.meterNumber) ?? 0;
+      if (timestamp > currentLatest) {
+        latestSuccessfulPaymentByMeter.set(payment.meterNumber, timestamp);
+      }
+    });
+
+    const overdueThreshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+    return filteredMeters.filter((meter) => {
+      const latestPaymentTimestamp = latestSuccessfulPaymentByMeter.get(meter.meterNumber);
+      return !latestPaymentTimestamp || latestPaymentTimestamp < overdueThreshold;
+    });
+  }, [filteredMeters, utilityPayments]);
+
   const stats = useMemo<UtilityStats>(
     () => ({
       totalMeters: filteredMeters.length,
@@ -512,6 +525,13 @@ const UtilityPaymentDashboard = () => {
           type: "meters" as const,
           rows: activeMeters,
         };
+      case "overdueMeters":
+        return {
+          title: "Meters Over 30 Days Without Payment",
+          description: "Meters with no successful payment recorded in the last 30 days.",
+          type: "meters" as const,
+          rows: overdueMeters,
+        };
       case "totalPayments":
         return {
           title: "All Payments",
@@ -569,6 +589,7 @@ const UtilityPaymentDashboard = () => {
     activeMeters,
     failedPayments,
     filteredMeters,
+    overdueMeters,
     pendingPayments,
     selectedMeterNumber,
     selectedMeterPayments,
@@ -594,7 +615,7 @@ const UtilityPaymentDashboard = () => {
           meter.nwscAccount,
           meter.locationOfNwscMeter,
           meter.user?.fullName,
-          formatDate(meter.dateCreated),
+          formatDateDmy(meter.dateCreated),
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(searchTerm))
@@ -611,7 +632,7 @@ const UtilityPaymentDashboard = () => {
         payment.vendor,
         payment.utilityType,
         payment.description,
-        formatDate(payment.createdAt),
+        formatDateTimeDmy(payment.createdAt),
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(searchTerm))
@@ -690,7 +711,7 @@ const UtilityPaymentDashboard = () => {
             meter.nwscAccount || "",
             meter.locationOfNwscMeter || "",
             meter.user?.fullName || "",
-            formatDate(meter.dateCreated),
+            formatDateDmy(meter.dateCreated),
           ]
             .map(escapeCsvCell)
             .join(",")
@@ -717,7 +738,7 @@ const UtilityPaymentDashboard = () => {
             payment.phoneNumber || "",
             payment.transactionID || "",
             payment.vendorTranId || "",
-            formatDate(payment.createdAt),
+            formatDateTimeDmy(payment.createdAt),
           ]
             .map(escapeCsvCell)
             .join(",")
@@ -755,6 +776,12 @@ const UtilityPaymentDashboard = () => {
       title: "Active Meters",
       value: stats.activeMeters,
       icon: <CheckCircle className="h-6 w-6" />,
+    },
+    {
+      key: "overdueMeters" as const,
+      title: "30+ Days Without Payment",
+      value: overdueMeters.length,
+      icon: <AlertTriangle className="h-6 w-6" />,
     },
     {
       key: "totalPayments" as const,
@@ -1015,7 +1042,7 @@ const UtilityPaymentDashboard = () => {
                               <TableCell>{meter.nwscAccount || "-"}</TableCell>
                               <TableCell>{meter.locationOfNwscMeter || "-"}</TableCell>
                               <TableCell>{meter.user?.fullName || "-"}</TableCell>
-                              <TableCell>{formatDate(meter.dateCreated)}</TableCell>
+                              <TableCell>{formatDateDmy(meter.dateCreated)}</TableCell>
                             </TableRow>
                           ))
                         )}
@@ -1092,7 +1119,7 @@ const UtilityPaymentDashboard = () => {
                               <TableCell>{payment.phoneNumber || "-"}</TableCell>
                               <TableCell>{payment.transactionID || "-"}</TableCell>
                               <TableCell>{payment.vendorTranId || "-"}</TableCell>
-                              <TableCell>{formatDate(payment.createdAt)}</TableCell>
+                              <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
                             </TableRow>
                           ))
                         )}

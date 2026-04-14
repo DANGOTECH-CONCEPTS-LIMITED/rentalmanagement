@@ -15,6 +15,7 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
@@ -335,6 +336,21 @@ const LandlordDashboard = () => {
     [transactions, balance]
   );
 
+  const overdueUtilityMeters = useMemo(() => {
+    const overdueThreshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+    return (
+      utilityStats?.meters.filter((meter) => {
+        if (!meter.lastPaymentAt) {
+          return true;
+        }
+
+        const lastPaymentTimestamp = new Date(meter.lastPaymentAt).getTime();
+        return Number.isNaN(lastPaymentTimestamp) || lastPaymentTimestamp < overdueThreshold;
+      }).length ?? 0
+    );
+  }, [utilityStats]);
+
   const exportStatement = () => {
     exportWalletStatementCsv(statementRows, {
       fileNamePrefix: "landlord-wallet-statement",
@@ -624,6 +640,11 @@ const LandlordDashboard = () => {
             title="Active Meters"
             value={utilityStats?.activeMeters || 0}
             icon={<CheckCircle className="h-6 w-6" />}
+          />
+          <StatCard
+            title="30+ Days Without Payment"
+            value={overdueUtilityMeters}
+            icon={<AlertTriangle className="h-6 w-6" />}
           />
           <StatCard
             title="Total Payments"

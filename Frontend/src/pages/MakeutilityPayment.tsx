@@ -31,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useForm } from 'react-hook-form';
+import { formatDateTimeDmy } from '@/lib/date-time';
 
 interface CustomerInfo {
   customer_name: string;
@@ -559,7 +560,7 @@ const MakeUtilityPayment = () => {
                       <TableCell>{payment.amount}</TableCell>
                       <TableCell>{payment.units ?? '-'}</TableCell>
                       <TableCell>{payment.status}</TableCell>
-                      <TableCell>{new Date(payment.createdAt).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
                     </TableRow>
                   ))}
               </TableBody>

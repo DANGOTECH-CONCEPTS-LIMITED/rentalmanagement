@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pencil } from "lucide-react";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { formatDateTimeDmy } from "@/lib/date-time";
 
 const UtilityPayments = () => {
   const { landlordId } = useParams<{ landlordId: string }>();
@@ -226,9 +227,7 @@ const UtilityPayments = () => {
                   <TableCell>{payment.status || "-"}</TableCell>
                   <TableCell>{payment.amount || "-"}</TableCell>
                   <TableCell>{payment.charges || "-"}</TableCell>
-                  <TableCell>
-                    {payment.createdAt ? payment.createdAt.split("T")[0] : "-"}
-                  </TableCell>
+                  <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
                   <TableCell>{payment.phoneNumber || "-"}</TableCell>
                   <TableCell>{payment.meterNumber || "-"}</TableCell>
                   <TableCell>{payment.units || "-"}</TableCell>
@@ -237,7 +236,7 @@ const UtilityPayments = () => {
                   <TableCell>
                     {payment.vendorPaymentDate &&
                     payment.vendorPaymentDate !== "0001-01-01T00:00:00"
-                      ? payment.vendorPaymentDate.split("T")[0]
+                      ? formatDateTimeDmy(payment.vendorPaymentDate)
                       : "-"}
                   </TableCell>
                   <TableCell>

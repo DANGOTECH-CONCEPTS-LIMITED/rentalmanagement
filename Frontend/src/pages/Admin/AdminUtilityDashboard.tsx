@@ -31,6 +31,7 @@ import {
   XCircle,
   Zap,
   CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 import StatCard from "@/components/common/StatCard";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +71,7 @@ import {
 } from "@/components/ui/table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateDmy, formatDateTimeDmy } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
 
 interface UtilityMeter {
@@ -130,6 +132,7 @@ type DetailViewKey =
   | "totalMeters"
   | "activeMeters"
   | "inactiveMeters"
+  | "overdueMeters"
   | "totalPayments"
   | "successfulPayments"
   | "pendingPayments"
@@ -283,22 +286,6 @@ const AdminUtilityDashboard = () => {
     }
 
     return "User";
-  };
-
-  const formatDate = (value?: string | null) => {
-    if (!value) {
-      return "-";
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return "-";
-    }
-
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
   };
 
   const escapeCsvCell = (value: string | number | boolean) =>
@@ -522,6 +509,33 @@ const AdminUtilityDashboard = () => {
     [activeMeterNumbers, filteredMeters]
   );
 
+  const overdueMeters = useMemo(() => {
+    const latestSuccessfulPaymentByMeter = new Map<string, number>();
+
+    utilityPayments.forEach((payment) => {
+      if (!payment.meterNumber || !successfulStatuses.has(normalizeStatus(payment.status))) {
+        return;
+      }
+
+      const timestamp = payment.createdAt ? new Date(payment.createdAt).getTime() : Number.NaN;
+      if (Number.isNaN(timestamp)) {
+        return;
+      }
+
+      const currentLatest = latestSuccessfulPaymentByMeter.get(payment.meterNumber) ?? 0;
+      if (timestamp > currentLatest) {
+        latestSuccessfulPaymentByMeter.set(payment.meterNumber, timestamp);
+      }
+    });
+
+    const overdueThreshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+    return filteredMeters.filter((meter) => {
+      const latestPaymentTimestamp = latestSuccessfulPaymentByMeter.get(meter.meterNumber);
+      return !latestPaymentTimestamp || latestPaymentTimestamp < overdueThreshold;
+    });
+  }, [filteredMeters, utilityPayments]);
+
   const stats = useMemo(
     () => ({
       totalMeters: filteredMeters.length,
@@ -590,6 +604,13 @@ const AdminUtilityDashboard = () => {
           type: "meters" as const,
           rows: inactiveMeters,
         };
+      case "overdueMeters":
+        return {
+          title: "Meters Over 30 Days Without Payment",
+          description: "Meters with no successful payment recorded in the last 30 days.",
+          type: "meters" as const,
+          rows: overdueMeters,
+        };
       case "totalPayments":
         return {
           title: "All Payments",
@@ -648,6 +669,7 @@ const AdminUtilityDashboard = () => {
     failedPayments,
     filteredMeters,
     inactiveMeters,
+    overdueMeters,
     pendingPayments,
     selectedMeterNumber,
     selectedMeterPayments,
@@ -719,7 +741,7 @@ const AdminUtilityDashboard = () => {
           meter.nwscAccount,
           meter.locationOfNwscMeter,
           meter.user?.fullName,
-          formatDate(meter.dateCreated),
+          formatDateDmy(meter.dateCreated),
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(normalizedSearch))
@@ -736,7 +758,7 @@ const AdminUtilityDashboard = () => {
         payment.vendor,
         payment.utilityType,
         payment.description,
-        formatDate(payment.createdAt),
+        formatDateTimeDmy(payment.createdAt),
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedSearch))
@@ -815,7 +837,7 @@ const AdminUtilityDashboard = () => {
             meter.nwscAccount || "",
             meter.locationOfNwscMeter || "",
             meter.user?.fullName || "",
-            formatDate(meter.dateCreated),
+            formatDateDmy(meter.dateCreated),
           ]
             .map(escapeCsvCell)
             .join(",")
@@ -842,7 +864,7 @@ const AdminUtilityDashboard = () => {
             payment.phoneNumber || "",
             payment.transactionID || "",
             payment.vendorTranId || "",
-            formatDate(payment.createdAt),
+            formatDateTimeDmy(payment.createdAt),
           ]
             .map(escapeCsvCell)
             .join(",")
@@ -1197,14 +1219,14 @@ const AdminUtilityDashboard = () => {
           row.vendorTranId,
           row.amount,
           row.charges,
-          formatDate(row.createdAt),
+          formatDateTimeDmy(row.createdAt),
           row.phoneNumber,
           row.meterNumber,
           row.isTokenGenerated,
           row.token,
           row.units,
           row.vendor,
-          formatDate(row.vendorPaymentDate),
+          formatDateTimeDmy(row.vendorPaymentDate),
           row.utilityAccountNumber,
           row.isSmsSent,
           row.meterType,
@@ -1233,6 +1255,7 @@ const AdminUtilityDashboard = () => {
     { key: "totalMeters" as const, title: "Total Meters", value: stats.totalMeters, icon: <Zap className="h-6 w-6" /> },
     { key: "activeMeters" as const, title: "Active Meters", value: stats.activeMeters, icon: <CheckCircle className="h-6 w-6" /> },
     { key: "inactiveMeters" as const, title: "Inactive Meters", value: stats.inactiveMeters, icon: <Clock className="h-6 w-6" /> },
+    { key: "overdueMeters" as const, title: "30+ Days Without Payment", value: overdueMeters.length, icon: <AlertTriangle className="h-6 w-6" /> },
     { key: "totalPayments" as const, title: "Total Payments", value: stats.totalPayments, icon: <CircleDollarSign className="h-6 w-6" /> },
     { key: "successfulPayments" as const, title: "Successful Payments", value: stats.successfulPayments, icon: <CheckCircle className="h-6 w-6" /> },
     { key: "pendingPayments" as const, title: "Pending Payments", value: stats.pendingPayments, icon: <Clock className="h-6 w-6" /> },
@@ -1635,7 +1658,7 @@ const AdminUtilityDashboard = () => {
                                 <TableCell>{meter.nwscAccount || "-"}</TableCell>
                                 <TableCell>{meter.locationOfNwscMeter || "-"}</TableCell>
                                 <TableCell>{meter.user?.fullName || "-"}</TableCell>
-                                <TableCell>{formatDate(meter.dateCreated)}</TableCell>
+                                <TableCell>{formatDateDmy(meter.dateCreated)}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -1712,7 +1735,7 @@ const AdminUtilityDashboard = () => {
                                 <TableCell>{payment.phoneNumber || "-"}</TableCell>
                                 <TableCell>{payment.transactionID || "-"}</TableCell>
                                 <TableCell>{payment.vendorTranId || "-"}</TableCell>
-                                <TableCell>{formatDate(payment.createdAt)}</TableCell>
+                                <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -1962,8 +1985,8 @@ const AdminUtilityDashboard = () => {
                           <TableCell>{row.utilityAccountNumber || "-"}</TableCell>
                           <TableCell>{row.isTokenGenerated ? "Yes" : "No"}</TableCell>
                           <TableCell>{row.isSmsSent ? "Yes" : "No"}</TableCell>
-                          <TableCell>{formatDate(row.createdAt)}</TableCell>
-                          <TableCell>{formatDate(row.vendorPaymentDate)}</TableCell>
+                          <TableCell>{formatDateTimeDmy(row.createdAt)}</TableCell>
+                          <TableCell>{formatDateTimeDmy(row.vendorPaymentDate)}</TableCell>
                           <TableCell>{row.landlordName || "-"}</TableCell>
                           <TableCell>{row.landlordEmail || "-"}</TableCell>
                         </TableRow>
