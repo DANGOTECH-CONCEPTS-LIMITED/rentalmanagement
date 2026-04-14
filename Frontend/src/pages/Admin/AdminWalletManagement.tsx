@@ -200,6 +200,7 @@ const AdminWalletManagement = () => {
   const [transferAmount, setTransferAmount] = useState("");
   const [transferReason, setTransferReason] = useState("");
   const [transferTargetUserId, setTransferTargetUserId] = useState("");
+  const [transferTargetSearchTerm, setTransferTargetSearchTerm] = useState("");
   const [isSubmittingDebit, setIsSubmittingDebit] = useState(false);
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
 
@@ -667,6 +668,20 @@ const AdminWalletManagement = () => {
 
   const selectedRoleFilter = roleFilter === "all" ? "All wallet roles" : roleFilter;
   const transferTargets = selectableUsers.filter((user) => String(user.id) !== selectedUserId);
+  const filteredTransferTargets = useMemo(() => {
+    const normalizedSearch = transferTargetSearchTerm.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return transferTargets;
+    }
+
+    return transferTargets.filter((user) =>
+      [user.fullName, user.email, getRoleLabel(user)]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch)
+    );
+  }, [transferTargetSearchTerm, transferTargets]);
 
   return (
     <div className="space-y-8">
@@ -1143,28 +1158,86 @@ const AdminWalletManagement = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Destination wallet</Label>
-              <Select
-                value={transferTargetUserId}
-                onValueChange={setTransferTargetUserId}
-                disabled={transferTargets.length === 0}
+              <Popover
+                open={transferTargetOpen}
+                onOpenChange={(open) => {
+                  setTransferTargetOpen(open);
+                  if (!open) {
+                    setTransferTargetSearchTerm("");
+                  }
+                }}
               >
-                <SelectTrigger className="h-12 w-full rounded-xl border-input/90 bg-white/95 px-4 py-3 shadow-sm">
-                  <SelectValue placeholder="Select destination wallet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {transferTargets.length === 0 ? (
-                    <SelectItem value="__no_destination_wallet__" disabled>
-                      No destination wallet found
-                    </SelectItem>
-                  ) : (
-                    transferTargets.map((user) => (
-                      <SelectItem key={user.id} value={String(user.id)}>
-                        {user.fullName} ({getRoleLabel(user)})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    disabled={transferTargets.length === 0}
+                    className="h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm"
+                  >
+                    <span className="truncate text-left">
+                      {transferTargetUserId
+                        ? (() => {
+                            const target = transferTargets.find(
+                              (user) => String(user.id) === transferTargetUserId
+                            );
+
+                            return target
+                              ? `${target.fullName} (${getRoleLabel(target)})`
+                              : "Search destination wallet";
+                          })()
+                        : transferTargets.length > 0
+                          ? "Search destination wallet"
+                          : "No destination wallets available"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-3" align="start">
+                  <div className="space-y-3">
+                    <Input
+                      value={transferTargetSearchTerm}
+                      onChange={(event) => setTransferTargetSearchTerm(event.target.value)}
+                      placeholder="Search by name, email, or role"
+                    />
+                    <div className="max-h-64 space-y-1 overflow-y-auto">
+                      {filteredTransferTargets.length === 0 ? (
+                        <div className="rounded-lg px-3 py-6 text-center text-sm text-muted-foreground">
+                          No destination wallet found.
+                        </div>
+                      ) : (
+                        filteredTransferTargets.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              setTransferTargetUserId(String(user.id));
+                              setTransferTargetOpen(false);
+                              setTransferTargetSearchTerm("");
+                            }}
+                            className={cn(
+                              "flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground",
+                              transferTargetUserId === String(user.id) && "bg-accent text-accent-foreground"
+                            )}
+                          >
+                            <Check
+                              className={cn(
+                                "mt-0.5 h-4 w-4 shrink-0",
+                                transferTargetUserId === String(user.id) ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">{user.fullName}</p>
+                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
