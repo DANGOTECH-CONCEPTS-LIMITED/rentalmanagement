@@ -1143,63 +1143,28 @@ const AdminWalletManagement = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Destination wallet</Label>
-              <Popover open={transferTargetOpen} onOpenChange={setTransferTargetOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    className="h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm"
-                  >
-                    <span className="truncate">
-                      {transferTargetUserId
-                        ? (() => {
-                            const target = selectableUsers.find(
-                              (user) => String(user.id) === transferTargetUserId
-                            );
-                            return target
-                              ? `${target.fullName} (${getRoleLabel(target)})`
-                              : "Search destination wallet";
-                          })()
-                        : "Search destination wallet"}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search by name, email, or role" />
-                    <CommandList>
-                      <CommandEmpty>No destination wallet found.</CommandEmpty>
-                      <CommandGroup>
-                        {transferTargets.map((user) => (
-                          <CommandItem
-                            key={user.id}
-                            value={`${user.fullName} ${user.email} ${getRoleLabel(user)}`}
-                            onSelect={() => {
-                              setTransferTargetUserId(String(user.id));
-                              setTransferTargetOpen(false);
-                            }}
-                            className="flex items-start gap-3 py-3"
-                          >
-                            <Check
-                              className={cn(
-                                "mt-0.5 h-4 w-4",
-                                transferTargetUserId === String(user.id) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-slate-900">{user.fullName}</p>
-                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Select
+                value={transferTargetUserId}
+                onValueChange={setTransferTargetUserId}
+                disabled={transferTargets.length === 0}
+              >
+                <SelectTrigger className="h-12 w-full rounded-xl border-input/90 bg-white/95 px-4 py-3 shadow-sm">
+                  <SelectValue placeholder="Select destination wallet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transferTargets.length === 0 ? (
+                    <SelectItem value="__no_destination_wallet__" disabled>
+                      No destination wallet found
+                    </SelectItem>
+                  ) : (
+                    transferTargets.map((user) => (
+                      <SelectItem key={user.id} value={String(user.id)}>
+                        {user.fullName} ({getRoleLabel(user)})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
