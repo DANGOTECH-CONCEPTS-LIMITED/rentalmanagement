@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Loader2,
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
   ChevronDown,
+  Download,
+  FileText,
 } from "lucide-react";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,11 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  exportWalletStatementCsv,
+  exportWalletStatementPdf,
+} from "@/lib/wallet-statement-export";
+import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -308,7 +315,38 @@ const UtilityDashboard = () => {
     }
   };
 
-  const recentTransactions = transactions.slice(0, 6);
+  const statementRows = useMemo(
+    () => buildRunningBalanceStatement(transactions, balance),
+    [transactions, balance]
+  );
+
+  const recentTransactions = statementRows.slice(0, 6);
+
+  const exportStatement = () => {
+    exportWalletStatementCsv(statementRows, {
+      fileNamePrefix: "utility-wallet-statement",
+      accountName: userData?.fullName,
+    });
+
+    toast({
+      title: "Export Successful",
+      description: "Wallet statement exported to CSV.",
+    });
+  };
+
+  const exportStatementPdf = () => {
+    exportWalletStatementPdf(statementRows, {
+      title: "Utility Wallet Statement",
+      fileNamePrefix: "utility-wallet-statement",
+      accountName: userData?.fullName,
+      formatAmount: formatCurrency,
+    });
+
+    toast({
+      title: "Export Successful",
+      description: "Wallet statement exported to PDF.",
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -364,17 +402,29 @@ const UtilityDashboard = () => {
                             No transactions found
                           </div>
                         ) : (
-                          <div className="overflow-x-auto max-h-[60vh]">
+                          <div className="space-y-4">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" size="sm" onClick={exportStatement}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Export CSV
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={exportStatementPdf}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Export PDF
+                              </Button>
+                            </div>
+                            <div className="overflow-x-auto max-h-[60vh]">
                             <Table>
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Date</TableHead>
                                   <TableHead>Description</TableHead>
                                   <TableHead className="text-right">Amount</TableHead>
+                                  <TableHead className="text-right">Running balance</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {transactions.map((tx, i) => (
+                                {statementRows.map((tx, i) => (
                                   <TableRow key={i}>
                                     <TableCell>{new Date(tx.transactionDate).toLocaleDateString()}</TableCell>
                                     <TableCell className="flex items-center gap-2">
@@ -389,10 +439,16 @@ const UtilityDashboard = () => {
                                       {tx.amount > 0 ? "+" : ""}
                                       {formatCurrency(tx.amount)}
                                     </TableCell>
+                                    <TableCell className="text-right font-medium text-slate-950">
+                                      {tx.runningBalance !== null
+                                        ? formatCurrency(tx.runningBalance)
+                                        : "--"}
+                                    </TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
                             </Table>
+                            </div>
                           </div>
                         )}
                       </DialogContent>
@@ -560,6 +616,7 @@ const UtilityDashboard = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Running balance</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -577,6 +634,11 @@ const UtilityDashboard = () => {
                     <TableCell className={`text-right font-medium ${tx.amount > 0 ? "text-green-500" : "text-red-500"}`}>
                       {tx.amount > 0 ? "+" : ""}
                       {formatCurrency(tx.amount)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-slate-950">
+                      {tx.runningBalance !== null
+                        ? formatCurrency(tx.runningBalance)
+                        : "--"}
                     </TableCell>
                   </TableRow>
                 ))}

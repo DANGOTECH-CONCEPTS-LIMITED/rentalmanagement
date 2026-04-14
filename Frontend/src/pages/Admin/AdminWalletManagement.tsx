@@ -6,6 +6,8 @@ import {
   ArrowUpRight,
   Check,
   ChevronsUpDown,
+  Download,
+  FileText,
   Loader2,
   RefreshCw,
   Search,
@@ -58,6 +60,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
+import {
+  exportWalletStatementCsv,
+  exportWalletStatementPdf,
+} from "@/lib/wallet-statement-export";
+import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import { cn } from "@/lib/utils";
 
 interface StoredUser {
@@ -256,25 +263,25 @@ const AdminWalletManagement = () => {
     });
   }, [walletBalances, listSearchTerm, roleFilter]);
 
+  const statementRows = useMemo(
+    () => buildRunningBalanceStatement(statementEntries, selectedBalanceRecord?.balance ?? null),
+    [statementEntries, selectedBalanceRecord?.balance]
+  );
+
   const filteredStatementEntries = useMemo(() => {
     const normalizedSearch = statementSearchTerm.trim().toLowerCase();
 
-    const sortedEntries = [...statementEntries].sort(
-      (left, right) =>
-        new Date(right.transactionDate).getTime() - new Date(left.transactionDate).getTime()
-    );
-
     if (!normalizedSearch) {
-      return sortedEntries;
+      return statementRows;
     }
 
-    return sortedEntries.filter((entry) => {
+    return statementRows.filter((entry) => {
       const amountText = String(entry.amount);
       const dateText = new Date(entry.transactionDate).toLocaleString().toLowerCase();
       const descriptionText = (entry.description || "").toLowerCase();
       return `${descriptionText} ${amountText} ${dateText}`.includes(normalizedSearch);
     });
-  }, [statementEntries, statementSearchTerm]);
+  }, [statementRows, statementSearchTerm]);
 
   const statementCredits = useMemo(
     () => filteredStatementEntries.filter((entry) => entry.amount > 0),
@@ -290,6 +297,42 @@ const AdminWalletManagement = () => {
     () => walletBalances.reduce((sum, record) => sum + (record.balance || 0), 0),
     [walletBalances]
   );
+
+  const exportStatement = () => {
+    if (!selectedUser || filteredStatementEntries.length === 0) {
+      return;
+    }
+
+    exportWalletStatementCsv(filteredStatementEntries, {
+      fileNamePrefix: "admin-wallet-statement",
+      accountName: selectedUser.fullName,
+      includeFlow: true,
+    });
+
+    toast({
+      title: "Export Successful",
+      description: `Statement for ${selectedUser.fullName} exported to CSV.`,
+    });
+  };
+
+  const exportStatementPdf = () => {
+    if (!selectedUser || filteredStatementEntries.length === 0) {
+      return;
+    }
+
+    exportWalletStatementPdf(filteredStatementEntries, {
+      title: "Wallet Statement",
+      fileNamePrefix: "admin-wallet-statement",
+      accountName: selectedUser.fullName,
+      includeFlow: true,
+      formatAmount: formatCurrency,
+    });
+
+    toast({
+      title: "Export Successful",
+      description: `Statement for ${selectedUser.fullName} exported to PDF.`,
+    });
+  };
 
   const fetchSelectableUsers = async () => {
     setIsLoadingUsers(true);
@@ -936,15 +979,35 @@ const AdminWalletManagement = () => {
               </div>
             </div>
           </div>
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={statementSearchTerm}
-              onChange={(event) => setStatementSearchTerm(event.target.value)}
-              placeholder="Search statement description, amount, or date"
-              className="pl-10"
-              disabled={!selectedUser}
-            />
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative max-w-md flex-1">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={statementSearchTerm}
+                onChange={(event) => setStatementSearchTerm(event.target.value)}
+                placeholder="Search statement description, amount, or date"
+                className="pl-10"
+                disabled={!selectedUser}
+              />
+            </div>
+            <div className="flex gap-2 md:self-start">
+              <Button
+                variant="outline"
+                onClick={exportStatement}
+                disabled={!selectedUser || filteredStatementEntries.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                onClick={exportStatementPdf}
+                disabled={!selectedUser || filteredStatementEntries.length === 0}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Export PDF
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -971,6 +1034,7 @@ const AdminWalletManagement = () => {
                     <TableHead>Description</TableHead>
                     <TableHead>Flow</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Running balance</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1003,6 +1067,11 @@ const AdminWalletManagement = () => {
                         >
                           {entry.amount > 0 ? "+" : ""}
                           {formatCurrency(entry.amount)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-slate-950">
+                          {entry.runningBalance !== null
+                            ? formatCurrency(entry.runningBalance)
+                            : "--"}
                         </TableCell>
                       </TableRow>
                     );

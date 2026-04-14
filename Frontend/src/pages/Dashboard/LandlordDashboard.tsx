@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Loader2,
   Home,
@@ -9,6 +9,8 @@ import {
   ArrowDownLeft,
   ChevronDown,
   CircleDollarSign,
+  Download,
+  FileText,
   Zap,
   CheckCircle,
   Clock,
@@ -35,6 +37,11 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  exportWalletStatementCsv,
+  exportWalletStatementPdf,
+} from "@/lib/wallet-statement-export";
+import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -323,6 +330,37 @@ const LandlordDashboard = () => {
     }
   };
 
+  const statementRows = useMemo(
+    () => buildRunningBalanceStatement(transactions, balance),
+    [transactions, balance]
+  );
+
+  const exportStatement = () => {
+    exportWalletStatementCsv(statementRows, {
+      fileNamePrefix: "landlord-wallet-statement",
+      accountName: userData?.fullName,
+    });
+
+    toast({
+      title: "Export Successful",
+      description: "Wallet statement exported to CSV.",
+    });
+  };
+
+  const exportStatementPdf = () => {
+    exportWalletStatementPdf(statementRows, {
+      title: "Landlord Wallet Statement",
+      fileNamePrefix: "landlord-wallet-statement",
+      accountName: userData?.fullName,
+      formatAmount: formatCurrency,
+    });
+
+    toast({
+      title: "Export Successful",
+      description: "Wallet statement exported to PDF.",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -363,7 +401,18 @@ const LandlordDashboard = () => {
                         No transactions found
                       </div>
                     ) : (
-                      <div className="overflow-x-auto max-h-[60vh]">
+                      <div className="space-y-4">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={exportStatement}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export CSV
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={exportStatementPdf}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Export PDF
+                          </Button>
+                        </div>
+                        <div className="overflow-x-auto max-h-[60vh]">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -372,10 +421,13 @@ const LandlordDashboard = () => {
                               <TableHead className="text-right">
                                 Amount
                               </TableHead>
+                              <TableHead className="text-right">
+                                Running balance
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {transactions.map((tx, i) => (
+                            {statementRows.map((tx, i) => (
                               <TableRow key={i}>
                                 <TableCell>
                                   {new Date(
@@ -400,10 +452,16 @@ const LandlordDashboard = () => {
                                   {tx.amount > 0 ? "+" : ""}
                                   {formatCurrency(tx.amount)}
                                 </TableCell>
+                                <TableCell className="text-right font-medium text-slate-950">
+                                  {tx.runningBalance !== null
+                                    ? formatCurrency(tx.runningBalance)
+                                    : "--"}
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
+                        </div>
                       </div>
                     )}
                   </DialogContent>
