@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Home,
@@ -10,16 +10,22 @@ import {
   Wallet,
 } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
+import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { toast } from "@/hooks/use-toast";
 import axios from "axios";
+import {
+  exportDashboardPdf,
+  exportDashboardWorkbook,
+} from "@/lib/dashboard-export";
 
 const TenantDashboard = () => {
   const navigate = useNavigate();
   const formatCurrency = useCurrencyFormatter();
+  const dashboardRef = useRef<HTMLDivElement>(null);
   const [tenant, setTenant] = useState<any>([]);
   const user = localStorage.getItem("user");
 
@@ -60,12 +66,94 @@ const TenantDashboard = () => {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!dashboardRef.current) {
+      return;
+    }
+
+    try {
+      await exportDashboardPdf(dashboardRef.current, {
+        fileNamePrefix: "tenant-dashboard-overview",
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to PDF.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      await exportDashboardWorkbook({
+        title: "Tenant Dashboard",
+        fileNamePrefix: "tenant-dashboard-overview",
+        metadata: [
+          { label: "Tenant Name", value: tenant?.fullName || userData?.fullName || "N/A" },
+          { label: "Property Name", value: tenant?.property?.propertyName || tenant?.property?.name || "N/A" },
+          { label: "Next Payment Date", value: tenant?.nextPaymentDate?.split("T")[0] || "N/A" },
+        ],
+        summary: [
+          { label: "Current Property", value: 1 },
+          { label: "Monthly Rent", value: tenant?.property?.price ?? 0 },
+          { label: "Documents", value: 5 },
+        ],
+        sections: [
+          {
+            sheetName: "Tenant Details",
+            columns: ["Field", "Value"],
+            rows: [
+              ["Tenant ID", tenant?.id || userData?.id || "N/A"],
+              ["Name", tenant?.fullName || userData?.fullName || "N/A"],
+              ["Email", tenant?.email || userData?.email || "N/A"],
+              ["Phone", tenant?.phoneNumber || "N/A"],
+              ["Property", tenant?.property?.propertyName || tenant?.property?.name || "N/A"],
+              ["Monthly Rent", tenant?.property?.price ?? 0],
+              ["Currency", tenant?.property?.currency || "N/A"],
+              ["Next Payment Date", tenant?.nextPaymentDate?.split("T")[0] || "N/A"],
+            ],
+          },
+          {
+            sheetName: "Payment Methods",
+            columns: ["Method", "Route"],
+            rows: [
+              ["Credit/Debit Card", "/tenant-dashboard/make-payment?method=card"],
+              ["Mobile Money", "/tenant-dashboard/make-payment?method=mobile_money"],
+              ["Bank Transfer", "/tenant-dashboard/make-payment?method=bank_transfer"],
+            ],
+          },
+        ],
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to Excel.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div ref={dashboardRef} className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">
           Tenant Dashboard
         </h1>
+        <DashboardExportToolbar
+          onExportExcel={handleExportExcel}
+          onExportPdf={handleExportPdf}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

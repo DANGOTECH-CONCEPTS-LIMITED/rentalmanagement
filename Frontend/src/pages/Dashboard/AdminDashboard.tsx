@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Home, Wallet, TrendingUp } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
 import Button from "../../components/ui/button/Button";
+import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "@/hooks/use-toast";
@@ -15,6 +16,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  exportDashboardPdf,
+  exportDashboardWorkbook,
+} from "@/lib/dashboard-export";
 
 interface Stats {
   totalProperties: number;
@@ -46,6 +51,7 @@ interface SimpleBalance {
 }
 
 const AdminDashboard = () => {
+  const dashboardRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<Stats>({
     totalProperties: 0,
     totalLandlords: 0,
@@ -297,12 +303,77 @@ const AdminDashboard = () => {
     },
   ];
 
+  const handleExportPdf = async () => {
+    if (!dashboardRef.current) {
+      return;
+    }
+
+    try {
+      await exportDashboardPdf(dashboardRef.current, {
+        fileNamePrefix: "admin-dashboard-overview",
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to PDF.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      await exportDashboardWorkbook({
+        title: "Admin Dashboard Overview",
+        fileNamePrefix: "admin-dashboard-overview",
+        metadata: [
+          { label: "Selected Balance Type", value: balanceType || "Not selected" },
+          { label: "Balance Message", value: balance?.message || "N/A" },
+          { label: "Balance Error", value: balanceError || "None" },
+        ],
+        summary: [
+          { label: "Total Cars", value: properties.length },
+          { label: "Total Dealers", value: landlords.length },
+          { label: "Total Revenue", value: stats.totalRevenue },
+          { label: "Occupancy Rate", value: `${stats.occupancyRate}%` },
+        ],
+        sections: [
+          {
+            sheetName: "Quick Actions",
+            columns: ["Title", "Description", "Path"],
+            rows: quickActions.map((action) => [action.title, action.description, action.path]),
+          },
+        ],
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to Excel.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div ref={dashboardRef} className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">
           Dashboard Overview
         </h1>
+        <DashboardExportToolbar
+          onExportExcel={handleExportExcel}
+          onExportPdf={handleExportPdf}
+        />
       </div>
 
       <div className="flex gap-4 mb-6">

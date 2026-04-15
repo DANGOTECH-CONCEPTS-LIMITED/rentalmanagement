@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import StatCard from "../../components/common/StatCard";
+import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,10 @@ import {
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateDmy, formatDateTimeDmy } from "@/lib/date-time";
+import {
+  exportDashboardPdf,
+  exportDashboardWorkbook,
+} from "@/lib/dashboard-export";
 import {
   Zap,
   CheckCircle,
@@ -140,6 +145,7 @@ const failedStatuses = new Set([
 ]);
 
 const UtilityPaymentDashboard = () => {
+  const dashboardRef = useRef<HTMLDivElement>(null);
   const [utilityUsers, setUtilityUsers] = useState<ApiUser[]>([]);
   const [selectedUtilityUserId, setSelectedUtilityUserId] = useState("");
   const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
@@ -174,6 +180,10 @@ const UtilityPaymentDashboard = () => {
 
   const currentUser = getStoredUser();
   const isAdmin = currentUser?.systemRoleId === 1;
+  const selectedUtilityUser = useMemo(
+    () => utilityUsers.find((user) => user.id === selectedUtilityUserId) ?? null,
+    [selectedUtilityUserId, utilityUsers]
+  );
 
   const normalizeStatus = (status?: string | null) =>
     (status ?? "").trim().toUpperCase();
@@ -821,13 +831,137 @@ const UtilityPaymentDashboard = () => {
     },
   ];
 
+  const handleExportPdf = async () => {
+    if (!dashboardRef.current) {
+      return;
+    }
+
+    try {
+      await exportDashboardPdf(dashboardRef.current, {
+        fileNamePrefix: "utility-payment-dashboard",
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to PDF.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const detailSection = detailContent
+        ? {
+            sheetName: detailContent.title,
+            columns:
+              detailContent.type === "meters"
+                ? ["Meter Number", "Type", "NWSC Account", "Location", "User", "Created"]
+                : ["Status", "Amount", "Charges", "Meter", "Phone", "Transaction ID", "Vendor Ref", "Created"],
+            rows:
+              detailContent.type === "meters"
+                ? filteredDetailRows.map((meter) => [
+                    meter.meterNumber,
+                    meter.meterType || "",
+                    meter.nwscAccount || "",
+                    meter.locationOfNwscMeter || "",
+                    meter.user?.fullName || "",
+                    formatDateDmy(meter.dateCreated),
+                  ])
+                : filteredDetailRows.map((payment) => [
+                    payment.status || "",
+                    payment.amount || 0,
+                    payment.charges || 0,
+                    payment.meterNumber || "",
+                    payment.phoneNumber || "",
+                    payment.transactionID || "",
+                    payment.vendorTranId || "",
+                    formatDateTimeDmy(payment.createdAt),
+                  ]),
+          }
+        : null;
+
+      await exportDashboardWorkbook({
+        title: "Utility Payment Dashboard",
+        fileNamePrefix: "utility-payment-dashboard",
+        metadata: [
+          { label: "Utility User", value: selectedUtilityUser?.fullName || selectedUtilityUserId || "Current user" },
+          { label: "Date Range", value: startDate || endDate ? `${startDate || "..."} to ${endDate || "..."}` : "All time" },
+          { label: "Detail View", value: detailContent?.title || "None" },
+        ],
+        summary: [
+          { label: "Total Meters", value: stats.totalMeters },
+          { label: "Active Meters", value: stats.activeMeters },
+          { label: "Overdue Meters", value: overdueMeters.length },
+          { label: "Total Payments", value: stats.totalUtilityPayments },
+          { label: "Successful Payments", value: stats.successfulPayments },
+          { label: "Pending Payments", value: stats.pendingPayments },
+          { label: "Failed Payments", value: stats.failedPayments },
+          { label: "Total Amount", value: stats.totalUtilityAmount },
+          { label: "Total Charges", value: stats.totalUtilityCharges },
+        ],
+        sections: [
+          {
+            sheetName: "Meters",
+            columns: ["Meter Number", "Type", "NWSC Account", "Location", "User", "Created"],
+            rows: filteredMeters.map((meter) => [
+              meter.meterNumber,
+              meter.meterType || "",
+              meter.nwscAccount || "",
+              meter.locationOfNwscMeter || "",
+              meter.user?.fullName || "",
+              formatDateDmy(meter.dateCreated),
+            ]),
+          },
+          {
+            sheetName: "Payments",
+            columns: ["Status", "Amount", "Charges", "Meter", "Phone", "Transaction ID", "Vendor Ref", "Created"],
+            rows: sortedPayments.map((payment) => [
+              payment.status || "",
+              payment.amount || 0,
+              payment.charges || 0,
+              payment.meterNumber || "",
+              payment.phoneNumber || "",
+              payment.transactionID || "",
+              payment.vendorTranId || "",
+              formatDateTimeDmy(payment.createdAt),
+            ]),
+          },
+          ...(detailSection ? [detailSection] : []),
+        ],
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to Excel.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Statistics Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Select a utility user and date range, then click any stat card to inspect the underlying records.
-        </p>
+    <div ref={dashboardRef} className="container mx-auto py-8 space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold">Statistics Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Select a utility user and date range, then click any stat card to inspect the underlying records.
+          </p>
+        </div>
+        <DashboardExportToolbar
+          onExportExcel={handleExportExcel}
+          onExportPdf={handleExportPdf}
+        />
       </div>
 
       <Card className="p-4">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2,
   Wallet,
@@ -9,6 +9,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
+import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,6 +40,10 @@ import {
   exportWalletStatementCsv,
   exportWalletStatementPdf,
 } from "@/lib/wallet-statement-export";
+import {
+  exportDashboardPdf,
+  exportDashboardWorkbook,
+} from "@/lib/dashboard-export";
 import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import {
   DropdownMenu,
@@ -66,6 +71,7 @@ interface UtilityMeter {
 const UtilityDashboard = () => {
   const formatCurrency = useCurrencyFormatter();
   const { toast } = useToast();
+  const dashboardRef = useRef<HTMLDivElement>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -348,19 +354,110 @@ const UtilityDashboard = () => {
     });
   };
 
+  const handleExportPdf = async () => {
+    if (!dashboardRef.current) {
+      return;
+    }
+
+    try {
+      await exportDashboardPdf(dashboardRef.current, {
+        fileNamePrefix: "utility-dashboard-overview",
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to PDF.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      await exportDashboardWorkbook({
+        title: "Utility Dashboard",
+        fileNamePrefix: "utility-dashboard-overview",
+        metadata: [
+          { label: "Account", value: userData?.fullName || "N/A" },
+          { label: "Available Balance", value: balance !== null ? formatCurrency(balance) : "--" },
+        ],
+        summary: [
+          { label: "Properties", value: properties.length },
+          { label: "Tenants", value: tenants.length },
+          { label: "Utility Meters", value: utilityMeters.length },
+          { label: "Wallet Transactions", value: statementRows.length },
+        ],
+        sections: [
+          {
+            sheetName: "Wallet Statement",
+            columns: ["Date", "Description", "Amount", "Running Balance"],
+            rows: statementRows.map((row) => [
+              new Date(row.transactionDate).toLocaleString(),
+              row.description || "Wallet transaction",
+              row.amount,
+              row.runningBalance ?? "",
+            ]),
+          },
+          {
+            sheetName: "Utility Meters",
+            columns: ["Meter Number", "Type", "NWSC Account", "Location"],
+            rows: utilityMeters.map((meter) => [
+              meter.meterNumber,
+              meter.meterType,
+              meter.nwscAccount,
+              meter.locationOfNwscMeter,
+            ]),
+          },
+          {
+            sheetName: "Recent Wallet Activity",
+            columns: ["Date", "Description", "Amount", "Running Balance"],
+            rows: recentTransactions.map((row) => [
+              new Date(row.transactionDate).toLocaleString(),
+              row.description || "Wallet transaction",
+              row.amount,
+              row.runningBalance ?? "",
+            ]),
+          },
+        ],
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to Excel.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div ref={dashboardRef} className="space-y-8">
       <section className="page-hero">
-        <div className="space-y-3">
-          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            Utility Overview
-          </span>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Utility Dashboard</h1>
-            <p className="mt-2 text-sm text-muted-foreground md:text-base">
-              Track wallet balance, linked meters, and recent wallet activity from one place.
-            </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Utility Overview
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Utility Dashboard</h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Track wallet balance, linked meters, and recent wallet activity from one place.
+              </p>
+            </div>
           </div>
+          <DashboardExportToolbar
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+          />
         </div>
       </section>
 

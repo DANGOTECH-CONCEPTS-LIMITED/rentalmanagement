@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
   Bar,
@@ -34,6 +34,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import StatCard from "@/components/common/StatCard";
+import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +73,10 @@ import {
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateDmy, formatDateTimeDmy } from "@/lib/date-time";
+import {
+  exportDashboardPdf,
+  exportDashboardWorkbook,
+} from "@/lib/dashboard-export";
 import { cn } from "@/lib/utils";
 
 interface UtilityMeter {
@@ -207,6 +212,11 @@ const rowsPerPage = 10;
 const detailRowsPerPage = 10;
 
 const AdminUtilityDashboard = () => {
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const paymentTrendChartRef = useRef<HTMLDivElement>(null);
+  const statusBreakdownChartRef = useRef<HTMLDivElement>(null);
+  const paymentMethodsChartRef = useRef<HTMLDivElement>(null);
+  const topMeterActivityChartRef = useRef<HTMLDivElement>(null);
   const [selectableUsers, setSelectableUsers] = useState<ApiUser[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState(ALL_ACCOUNT_VALUE);
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
@@ -1264,19 +1274,224 @@ const AdminUtilityDashboard = () => {
     { key: "totalCharges" as const, title: "Total Charges", value: formatCurrency(stats.totalCharges), icon: <CircleDollarSign className="h-6 w-6" /> },
   ];
 
+  const handleExportPdf = async () => {
+    if (!dashboardRef.current) {
+      return;
+    }
+
+    try {
+      await exportDashboardPdf(dashboardRef.current, {
+        fileNamePrefix: "admin-utility-dashboard",
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to PDF.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const detailSection = detailContent
+        ? {
+            sheetName: detailContent.title,
+            columns:
+              detailContent.type === "meters"
+                ? ["Meter Number", "Type", "NWSC Account", "Location", "Landlord", "Created"]
+                : ["Status", "Amount", "Charges", "Meter", "Phone", "Transaction ID", "Vendor Ref", "Created"],
+            rows:
+              detailContent.type === "meters"
+                ? filteredDetailRows.map((meter) => [
+                    meter.meterNumber,
+                    meter.meterType || "",
+                    meter.nwscAccount || "",
+                    meter.locationOfNwscMeter || "",
+                    meter.user?.fullName || "",
+                    formatDateDmy(meter.dateCreated),
+                  ])
+                : filteredDetailRows.map((payment) => [
+                    payment.status || "",
+                    payment.amount || 0,
+                    payment.charges || 0,
+                    payment.meterNumber || "",
+                    payment.phoneNumber || "",
+                    payment.transactionID || "",
+                    payment.vendorTranId || "",
+                    formatDateTimeDmy(payment.createdAt),
+                  ]),
+          }
+        : null;
+
+      await exportDashboardWorkbook({
+        title: "Admin Utility Dashboard",
+        fileNamePrefix: "admin-utility-dashboard",
+        metadata: [
+          { label: "Scope", value: selectedScopeLabel },
+          { label: "Date Range", value: startDate || endDate ? `${startDate || "..."} to ${endDate || "..."}` : "All time" },
+          { label: "Status Filter", value: statusFilter },
+          { label: "Payment Method Filter", value: paymentMethodFilter },
+          { label: "Vendor Filter", value: vendorFilter },
+        ],
+        summary: [
+          { label: "Total Meters", value: stats.totalMeters },
+          { label: "Active Meters", value: stats.activeMeters },
+          { label: "Inactive Meters", value: stats.inactiveMeters },
+          { label: "Overdue Meters", value: overdueMeters.length },
+          { label: "Total Payments", value: stats.totalPayments },
+          { label: "Successful Payments", value: stats.successfulPayments },
+          { label: "Pending Payments", value: stats.pendingPayments },
+          { label: "Failed Payments", value: stats.failedPayments },
+          { label: "Total Amount", value: stats.totalAmount },
+          { label: "Total Charges", value: stats.totalCharges },
+        ],
+        sections: [
+          {
+            sheetName: "Trend",
+            columns: ["Month", "Payments", "Amount", "Charges"],
+            rows: monthlyTrendData.map((item) => [item.label, item.payments, item.amount, item.charges]),
+          },
+          {
+            sheetName: "Status Breakdown",
+            columns: ["Status", "Count"],
+            rows: statusChartData.map((item) => [item.name, item.value]),
+          },
+          {
+            sheetName: "Payment Methods",
+            columns: ["Payment Method", "Count"],
+            rows: paymentMethodChartData.map((item) => [item.name, item.value]),
+          },
+          {
+            sheetName: "Top Meters",
+            columns: ["Meter Number", "Payments", "Amount"],
+            rows: topMetersData.map((item) => [item.meterNumber, item.payments, item.amount]),
+          },
+          {
+            sheetName: "Meters",
+            columns: ["Meter Number", "Type", "NWSC Account", "Location", "Landlord", "Email", "Created"],
+            rows: filteredMeters.map((meter) => [
+              meter.meterNumber,
+              meter.meterType || "",
+              meter.nwscAccount || "",
+              meter.locationOfNwscMeter || "",
+              meter.user?.fullName || "",
+              meter.user?.email || "",
+              formatDateDmy(meter.dateCreated),
+            ]),
+          },
+          {
+            sheetName: "Transactions",
+            columns: [
+              "ID",
+              "Status",
+              "Amount",
+              "Charges",
+              "Meter Number",
+              "Meter Type",
+              "NWSC Account",
+              "Phone Number",
+              "Payment Method",
+              "Utility Type",
+              "Transaction ID",
+              "Vendor Ref",
+              "Vendor",
+              "Description",
+              "Created",
+              "Landlord",
+              "Landlord Email",
+            ],
+            rows: sortedTransactionRows.map((row) => [
+              row.id,
+              row.status,
+              row.amount,
+              row.charges,
+              row.meterNumber,
+              row.meterType,
+              row.nwscAccount,
+              row.phoneNumber,
+              row.paymentMethod,
+              row.utilityType,
+              row.transactionID,
+              row.vendorTranId,
+              row.vendor,
+              row.description,
+              formatDateTimeDmy(row.createdAt),
+              row.landlordName,
+              row.landlordEmail,
+            ]),
+          },
+          ...(detailSection ? [detailSection] : []),
+        ],
+        images: [
+          paymentTrendChartRef.current
+            ? {
+                title: "Payment Trend",
+                element: paymentTrendChartRef.current,
+                sheetName: "Graphs",
+              }
+            : null,
+          statusBreakdownChartRef.current
+            ? {
+                title: "Status Breakdown",
+                element: statusBreakdownChartRef.current,
+                sheetName: "Graphs",
+              }
+            : null,
+          paymentMethodsChartRef.current
+            ? {
+                title: "Payment Methods",
+                element: paymentMethodsChartRef.current,
+                sheetName: "Graphs",
+              }
+            : null,
+          topMeterActivityChartRef.current
+            ? {
+                title: "Top Meter Activity",
+                element: topMeterActivityChartRef.current,
+                sheetName: "Graphs",
+              }
+            : null,
+        ].filter((image): image is NonNullable<typeof image> => Boolean(image)),
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to Excel.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div ref={dashboardRef} className="space-y-8">
       <section className="page-hero">
-        <div className="space-y-3">
-          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            Admin Utility Analytics
-          </span>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Statistics Dashboard</h1>
-            <p className="mt-2 text-sm text-muted-foreground md:text-base">
-              Review the same utility statistics experience available to other users, then narrow it to one landlord or utility account when needed.
-            </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Admin Utility Analytics
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Statistics Dashboard</h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Review the same utility statistics experience available to other users, then narrow it to one landlord or utility account when needed.
+              </p>
+            </div>
           </div>
+          <DashboardExportToolbar
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+          />
         </div>
       </section>
 
@@ -1785,7 +2000,7 @@ const AdminUtilityDashboard = () => {
           </Card>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Card className="data-surface border-none shadow-none">
+            <Card ref={paymentTrendChartRef} className="data-surface border-none shadow-none">
               <CardHeader>
                 <CardTitle>Payment Trend</CardTitle>
                 <CardDescription>Monthly transaction volume and successful amount collected.</CardDescription>
@@ -1808,7 +2023,7 @@ const AdminUtilityDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="data-surface border-none shadow-none">
+            <Card ref={statusBreakdownChartRef} className="data-surface border-none shadow-none">
               <CardHeader>
                 <CardTitle>Status Breakdown</CardTitle>
                 <CardDescription>Distribution of payment states in the active period.</CardDescription>
@@ -1838,7 +2053,7 @@ const AdminUtilityDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="data-surface border-none shadow-none">
+            <Card ref={paymentMethodsChartRef} className="data-surface border-none shadow-none">
               <CardHeader>
                 <CardTitle>Payment Methods</CardTitle>
                 <CardDescription>Share of transactions by payment method.</CardDescription>
@@ -1868,7 +2083,7 @@ const AdminUtilityDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="data-surface border-none shadow-none">
+            <Card ref={topMeterActivityChartRef} className="data-surface border-none shadow-none">
               <CardHeader>
                 <CardTitle>Top Meter Activity</CardTitle>
                 <CardDescription>Most active meters by transaction count.</CardDescription>

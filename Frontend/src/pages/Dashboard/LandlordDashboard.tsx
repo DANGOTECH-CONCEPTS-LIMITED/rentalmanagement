@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2,
   Home,
@@ -18,6 +18,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
+import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,10 @@ import {
   exportWalletStatementCsv,
   exportWalletStatementPdf,
 } from "@/lib/wallet-statement-export";
+import {
+  exportDashboardPdf,
+  exportDashboardWorkbook,
+} from "@/lib/dashboard-export";
 import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import {
   DropdownMenu,
@@ -82,6 +87,7 @@ interface UtilityStats {
 const LandlordDashboard = () => {
   const formatCurrency = useCurrencyFormatter();
   const { toast } = useToast();
+  const dashboardRef = useRef<HTMLDivElement>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -377,12 +383,94 @@ const LandlordDashboard = () => {
     });
   };
 
+  const handleExportPdf = async () => {
+    if (!dashboardRef.current) {
+      return;
+    }
+
+    try {
+      await exportDashboardPdf(dashboardRef.current, {
+        fileNamePrefix: "landlord-dashboard-overview",
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to PDF.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      await exportDashboardWorkbook({
+        title: "Landlord Dashboard",
+        fileNamePrefix: "landlord-dashboard-overview",
+        metadata: [
+          { label: "Account", value: userData?.fullName || "N/A" },
+          { label: "Available Balance", value: balance !== null ? formatCurrency(balance) : "--" },
+        ],
+        summary: [
+          { label: "Properties", value: properties.length },
+          { label: "Tenants", value: tenants.length },
+          { label: "Wallet Transactions", value: statementRows.length },
+          { label: "Utility Meters", value: utilityStats?.totalMeters ?? 0 },
+          { label: "Utility Payments", value: utilityStats?.totalUtilityPayments ?? 0 },
+          { label: "Utility Amount", value: utilityStats?.totalUtilityAmount ?? 0 },
+        ],
+        sections: [
+          {
+            sheetName: "Wallet Statement",
+            columns: ["Date", "Description", "Amount", "Running Balance"],
+            rows: statementRows.map((row) => [
+              new Date(row.transactionDate).toLocaleString(),
+              row.description || "Wallet transaction",
+              row.amount,
+              row.runningBalance ?? "",
+            ]),
+          },
+          {
+            sheetName: "Utility Meters",
+            columns: ["Meter Number", "Payments", "Amount", "Charges", "Last Payment"],
+            rows: (utilityStats?.meters ?? []).map((meter) => [
+              meter.meterNumber,
+              meter.payments,
+              meter.amount,
+              meter.charges,
+              meter.lastPaymentAt ? new Date(meter.lastPaymentAt).toLocaleString() : "N/A",
+            ]),
+          },
+        ],
+      });
+
+      toast({
+        title: "Export Successful",
+        description: "Dashboard exported to Excel.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div ref={dashboardRef} className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
           Landlord Dashboard
         </h1>
+        <DashboardExportToolbar
+          onExportExcel={handleExportExcel}
+          onExportPdf={handleExportPdf}
+        />
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
