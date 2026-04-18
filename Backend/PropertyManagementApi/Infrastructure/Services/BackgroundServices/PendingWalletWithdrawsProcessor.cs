@@ -173,6 +173,17 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
+                bool disablebanknetwork = true; //get this value from config or database to allow dynamic enabling/disabling of bank payouts without code changes
+
+                if (disablebanknetwork) 
+                {
+                    walletTransaction.Status = FailedStatus;
+                    walletTransaction.Description = "Bank network unreachable";
+                    await wallet.ReverseWalletTransaction(walletTransaction);
+                    return;
+                }
+                
+
                 if (walletTransaction.Wallet?.Landlord == null)
                 {
                     _logger.LogError("Wallet or Landlord data is null for transaction {TransactionId}", walletTransaction.TransactionId);
