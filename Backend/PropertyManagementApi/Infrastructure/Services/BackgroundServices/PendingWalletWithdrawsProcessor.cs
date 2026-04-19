@@ -173,7 +173,7 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
-                bool disablebanknetwork = true; //get this value from config or database to allow dynamic enabling/disabling of bank payouts without code changes
+                bool disablebanknetwork = false; //get this value from config or database to allow dynamic enabling/disabling of bank payouts without code changes
 
                 if (disablebanknetwork) 
                 {
