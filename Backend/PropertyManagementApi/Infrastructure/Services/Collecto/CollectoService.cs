@@ -1,30 +1,37 @@
-﻿using System;
+﻿using Application.Interfaces.Collecto;
+using Application.Interfaces.SMS;
+using Domain.Dtos.Collecto;
+using Domain.Entities.External;
+using Dtos.Collecto;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using System.Threading.Tasks;
-using Application.Interfaces.Collecto;
-using Domain.Dtos.Collecto;
-using Dtos.Collecto;
-using Microsoft.Extensions.Configuration;
-using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Infrastructure.Services.Collecto
 {
     public class CollectoService : ICollectoApiClient
     {
         private readonly HttpClient _http;
+        private readonly ISmsProcessor _smsprocessor;
         private readonly string _username;
         private readonly string _apiKey;
         private readonly string _baseUrl;
-        public CollectoService(HttpClient http, IConfiguration config)
+ 
+        public CollectoService(HttpClient http, IConfiguration config,ISmsProcessor smsProcessor)
         {
             _http = http;
             _username = config["Collecto:Username"];
             _apiKey = config["Collecto:ApiKey"];
             _baseUrl = config["Collecto:BaseUrl"];
+            _smsprocessor = smsProcessor;
+            
         }
 
         private void SetHeaders()
@@ -68,12 +75,28 @@ namespace Infrastructure.Services.Collecto
             return await res.Content.ReadAsStringAsync();
         }
 
+
         public async Task<string> SendSingleSmsAsync(SendSingleSmsRequestDto request)
         {
-            SetHeaders();
-            var res = await _http.PostAsJsonAsync($"{_username}/sendSingleSms", request);
-            res.EnsureSuccessStatusCode();
-            return await res.Content.ReadAsStringAsync();
+            var africatalkngsms = new AfricasTalkingSmsRequest
+            {
+                message = request.Message,
+                phoneNumbers = new List<string>
+        {
+            request.Phone
+        }
+            };
+
+            var isSent = await _smsprocessor.SendAfricaTalkingSms(africatalkngsms);
+
+            //var isSent = await _smsprocessor.SendAsync(request.Phone, request.Message);
+
+            if (isSent)
+            {
+                return "Message sent successfully";
+            }
+
+            return "Failed to send message";
         }
 
         public async Task<string> GetCurrentBalanceAsync(CurrentBalanceRequestDto request)
@@ -168,5 +191,7 @@ namespace Infrastructure.Services.Collecto
                 };
             }
         }
+
+        
     }
 }

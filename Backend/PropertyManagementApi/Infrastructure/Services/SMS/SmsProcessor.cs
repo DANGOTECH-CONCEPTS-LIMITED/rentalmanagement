@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces.SMS;
+using Domain.Entities.External;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using static System.Net.WebRequestMethods;
 
 namespace Infrastructure.Services.SMS
 {
@@ -15,6 +17,10 @@ namespace Infrastructure.Services.SMS
         private readonly HttpClient _httpClient;
         private readonly ILogger<SmsProcessor> _logger;
         private readonly SmsApiSettings _settings;
+        private readonly string _africatalkingbaseurl;
+        private readonly string _africatalkingapiKey;
+        private readonly string _africatalkingusername;
+        private readonly string _africatalkingsenderid;
 
         public SmsProcessor(HttpClient httpClient, IConfiguration config, ILogger<SmsProcessor> logger)
         {
@@ -28,6 +34,10 @@ namespace Infrastructure.Services.SMS
                 SenderId = config["SmsApi:senderId"] ?? throw new ArgumentNullException("SmsApi:senderId"),
                 BaseUrl = config["SmsApi:BaseUrl"] ?? throw new ArgumentNullException("SmsApi:BaseUrl")
             };
+            _africatalkingbaseurl = config["AfricaTalkingSmsApi:BaseUrl"];
+            _africatalkingapiKey = config["AfricaTalkingSmsApi:_apiKey"];
+            _africatalkingusername = config["AfricaTalkingSmsApi:_username"];
+            _africatalkingsenderid = config["AfricaTalkingSmsApi:_senderId"];
         }
 
         public async Task<bool> SendAsync(string phoneNumber, string message)
@@ -76,6 +86,29 @@ namespace Infrastructure.Services.SMS
                 _logger.LogError(ex, "Error sending SMS to {PhoneNumber}", phoneNumber);
                 return false;
             }
+        }
+
+        public async Task<bool> SendAfricaTalkingSms(AfricasTalkingSmsRequest africasTalkingrq)
+        {
+            africasTalkingrq.username = _africatalkingusername;
+            var json = JsonSerializer.Serialize(africasTalkingrq);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, _africatalkingbaseurl);
+            request.Headers.Add("Accept", "application/json");
+            request.Headers.Add("apiKey", _africatalkingapiKey);
+
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            using var response = await _httpClient.SendAsync(request);
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;//throw new Exception($"Africa's Talking SMS failed. Status: {response.StatusCode}, Response: {responseContent}");
+            }
+
+            return true;
         }
 
         private class SmsApiSettings

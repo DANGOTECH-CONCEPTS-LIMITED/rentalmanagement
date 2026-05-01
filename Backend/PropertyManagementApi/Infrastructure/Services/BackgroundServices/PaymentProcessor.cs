@@ -12,6 +12,7 @@ using Application.Interfaces.PaymentService.WalletSvc;
 using Application.Interfaces.ServiceLogs;
 using Application.Interfaces.SMS;
 using Domain.Dtos.Collecto;
+using Domain.Entities.External;
 using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -168,7 +169,9 @@ namespace Infrastructure.Services.BackgroundServices
             var smsservice = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
             var paymentSvc = scope.ServiceProvider.GetRequiredService<IPaymentService>();
             string msg = $"Your payment of {pymt.Amount} to meter number {pymt.MeterNumber} has been received Successfully. Your token is {pymt.Token}";
-            bool messagesent = await smsservice.SendAsync(pymt.PhoneNumber, msg);
+
+            var africareq = new AfricasTalkingSmsRequest { message = msg,phoneNumbers = new List<string> {pymt.PhoneNumber } };
+            bool messagesent = await smsservice.SendAfricaTalkingSms(africareq); //await smsservice.SendAsync(pymt.PhoneNumber, msg);
             if (messagesent)
             {
                 await paymentSvc.UpdateUtilityPaymentSmsSent(pymt);

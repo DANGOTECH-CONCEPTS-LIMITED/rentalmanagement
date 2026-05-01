@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Domain.Entities.External;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,5 +10,6 @@ namespace Application.Interfaces.SMS
     public interface ISmsProcessor
     {
         Task<bool> SendAsync(string phoneNumber, string message);
+        Task<bool> SendAfricaTalkingSms(AfricasTalkingSmsRequest africasTalkingrq);
     }
 }

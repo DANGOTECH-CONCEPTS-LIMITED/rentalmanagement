@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Domain.Dtos.Collecto;
+using Domain.Entities.External;
+using Dtos.Collecto;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Domain.Dtos.Collecto;
-using Dtos.Collecto;
 
 namespace Application.Interfaces.Collecto
 {
@@ -23,5 +24,6 @@ namespace Application.Interfaces.Collecto
         Task<string> InitiateBankPayoutAsync(InitiatePayoutBankRequestDto request);
         Task<string> WithdrawToCollectoApi(CollectoWithdrawRequest collectoWithdrawRequest);
         Task<CollectoWalletWithdrawalExecutionResultDto> WithdrawFromCollectoWallet(WithdrawFromCollectoWalletDto walletDto);
+        
     }
 }
