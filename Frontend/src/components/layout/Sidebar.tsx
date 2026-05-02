@@ -285,6 +285,16 @@ function getNavItems(role: number): NavItem[] {
         path: "/admin-dashboard/wallet-management",
       },
       {
+        label: "Update Transaction",
+        icon: <FileText size={18} />,
+        path: "/admin-dashboard/update-transaction",
+      },
+      {
+        label: "Audit Trail",
+        icon: <FileText size={18} />,
+        path: "/admin-dashboard/audit-trail",
+      },
+      {
         label: "Collecto Withdraw Logs",
         icon: <FileSearch size={18} />,
         path: "/admin-dashboard/collecto-withdraw-logs",
@@ -293,11 +303,6 @@ function getNavItems(role: number): NavItem[] {
         label: "HTTP Logs",
         icon: <FileSearch size={18} />,
         path: "/admin-dashboard/http-logs",
-      },
-      {
-        label: "Audit Trail",
-        icon: <FileText size={18} />,
-        path: "/admin-dashboard/audit-trail",
       },
       {
         label: "Add Utility Meter",

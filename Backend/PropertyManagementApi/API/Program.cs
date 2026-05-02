@@ -216,6 +216,24 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
     };
+    // Ensure role claims from different identity providers are recognized
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            var identity = context.Principal?.Identity as ClaimsIdentity;
+            if (identity != null && !identity.HasClaim(c => c.Type == ClaimTypes.Role))
+            {
+                // Try common role claim names used by JWT providers
+                var roleClaim = identity.FindFirst("roles") ?? identity.FindFirst("role") ?? identity.FindFirst(ClaimTypes.Role);
+                if (roleClaim != null)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
+                }
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 // --- End Option 2 ---
 
