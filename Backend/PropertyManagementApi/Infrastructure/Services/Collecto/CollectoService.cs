@@ -87,9 +87,9 @@ namespace Infrastructure.Services.Collecto
         }
             };
 
-            var isSent = await _smsprocessor.SendAfricaTalkingSms(africatalkngsms);
+            //var isSent = await _smsprocessor.SendAfricaTalkingSms(africatalkngsms);
 
-            //var isSent = await _smsprocessor.SendAsync(request.Phone, request.Message);
+            var isSent = await _smsprocessor.SendAsync(request.Phone, request.Message);
 
             if (isSent)
             {

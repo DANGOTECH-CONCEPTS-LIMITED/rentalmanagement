@@ -171,7 +171,8 @@ namespace Infrastructure.Services.BackgroundServices
             string msg = $"Your payment of {pymt.Amount} to meter number {pymt.MeterNumber} has been received Successfully. Your token is {pymt.Token}";
 
             var africareq = new AfricasTalkingSmsRequest { message = msg,phoneNumbers = new List<string> {pymt.PhoneNumber } };
-            bool messagesent = await smsservice.SendAfricaTalkingSms(africareq); //await smsservice.SendAsync(pymt.PhoneNumber, msg);
+            //bool messagesent = await smsservice.SendAfricaTalkingSms(africareq); 
+            bool messagesent = await smsservice.SendAsync(pymt.PhoneNumber, msg);
             if (messagesent)
             {
                 await paymentSvc.UpdateUtilityPaymentSmsSent(pymt);
