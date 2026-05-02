@@ -54,6 +54,7 @@ import ManageUtilityMeters from "./pages/Admin/ManageUtilityMeters";
 import AddUtilityMeter from "./pages/Admin/AddUtilityMeter";
 import UtilityPayments from "./pages/Admin/UtilityPayments";
 import HttpLogs from "./pages/Admin/HttpLogs";
+import AuditTrail from "./pages/Admin/AuditTrail";
 import AdminUtilityDashboard from "./pages/Admin/AdminUtilityDashboard";
 import AdminWalletManagement from "./pages/Admin/AdminWalletManagement";
 import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
@@ -116,6 +117,7 @@ const App = () => (
                   element={<CollectoWithdrawLogs />}
                 />
                 <Route path="http-logs" element={<HttpLogs />} />
+                <Route path="audit-trail" element={<AuditTrail />} />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />
                 <Route
                   path="utility-payments/:landlordId"

@@ -1,5 +1,6 @@
 ﻿using Domain.Entities.PropertyMgt;
 using Domain.Entities.ServiceLogs;
+using Domain.Entities.AuditTrail;
 using Domain.Entities.USSD;
 using Domain.Entities.External;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,7 @@ namespace Infrastructure.Data
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
         public DbSet<CollectoWalletWithdrawalHistory> CollectoWalletWithdrawalHistories { get; set; } = null!;
         public DbSet<ServiceLogs> ServiceLogs { get; set; } = null!;
+        public DbSet<AuditTrailEntry> AuditTrailEntries { get; set; } = null!;
         public DbSet<MpesaCallbackAudit> MpesaCallbackAudits { get; set; } = null!;
         public DbSet<MeterToken> MeterTokens { get; set; }
 
@@ -198,6 +200,13 @@ namespace Infrastructure.Data
             modelBuilder.Entity<ServiceLogs>()
                 .HasIndex(x => x.EventHash)
                 .IsUnique();
+
+            modelBuilder.Entity<AuditTrailEntry>(e =>
+            {
+                e.Property(x => x.RequestData).HasColumnType("longtext");
+                e.HasIndex(x => x.CreatedAt);
+                e.HasIndex(x => x.UserId);
+            });
 
             // Ensure the accounting partial hook is invoked exactly once:
             OnModelCreatingAccounting(modelBuilder);

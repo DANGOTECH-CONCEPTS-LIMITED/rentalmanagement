@@ -36,6 +36,7 @@ const UtilityPayments = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editVendorPaymentDate, setEditVendorPaymentDate] = useState("");
+  const [editStatus, setEditStatus] = useState<string>("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
@@ -80,6 +81,7 @@ const UtilityPayments = () => {
     setEditPayment(payment);
     setEditVendor(payment.vendor || "");
     setEditVendorRef(payment.vendorref || "");
+    setEditStatus(payment.status || "");
     setEditVendorPaymentDate(
       payment.vendorPaymentDate &&
         payment.vendorPaymentDate !== "0001-01-01T00:00:00"
@@ -126,6 +128,30 @@ const UtilityPayments = () => {
         setEditError(data.title || "Failed to update payment");
         setEditLoading(false);
         return;
+      }
+      // update status via admin endpoint (best-effort)
+      try {
+        const statusPayload = {
+          transactionId: editPayment.transactionID || editPayment.transactionId || editPayment.id,
+          status: editStatus,
+          reasonAtTelecom: "",
+          vendorTranRef: editVendorRef,
+          tranType: "UTILITY",
+        };
+        const statusRes = await fetch(`${apiUrl}/Admin/UpdatePaymentStatus`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(statusPayload),
+        });
+        if (!statusRes.ok) {
+          const errText = await statusRes.text().catch(() => null);
+          console.warn("UpdatePaymentStatus failed:", errText);
+        }
+      } catch (err) {
+        console.warn("UpdatePaymentStatus error", err);
       }
       setEditDialogOpen(false);
       setEditPayment(null);
@@ -296,6 +322,22 @@ const UtilityPayments = () => {
                 onChange={(e) => setEditVendor(e.target.value)}
                 required
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                className="block w-full rounded-md border px-3 py-2"
+                required
+              >
+                <option value="PENDING">PENDING</option>
+                <option value="PENDING AT TELCOM">PENDING AT TELCOM</option>
+                <option value="SUCCESSFUL">SUCCESSFUL</option>
+                <option value="SUCCESSFUL AT TELCOM">SUCCESSFUL AT TELCOM</option>
+                <option value="FAILED">FAILED</option>
+                <option value="REVERSED">REVERSED</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">

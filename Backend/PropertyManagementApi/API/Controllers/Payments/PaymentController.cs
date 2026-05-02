@@ -382,5 +382,21 @@ namespace API.Controllers.Payments
                     return BadRequest(new { error = $"Error updating utility payment: {ex.Message}" });
                 }
             }
+
+        [HttpPut("/Admin/UpdatePaymentStatus")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdatePaymentStatus([FromBody] UpdatePaymentStatusDto dto)
+        {
+            try
+            {
+                if (dto == null) return BadRequest(new { error = "Invalid payload" });
+                await _paymentService.UpdatePaymentStatus(dto.Status, dto.TransactionId, dto.ReasonAtTelecom ?? string.Empty, dto.VendorTranRef ?? string.Empty, dto.TranType ?? "UTILITY");
+                return Ok(new { message = "Payment status updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = $"Error updating payment status: {ex.Message}" });
+            }
+        }
     }
 }

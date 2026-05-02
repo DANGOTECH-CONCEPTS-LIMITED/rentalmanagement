@@ -133,6 +133,60 @@ namespace Infrastructure.Migrations
                     b.ToTable("JournalLines");
                 });
 
+            modelBuilder.Entity("Domain.Entities.AuditTrail.AuditTrailEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("HttpMethod")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RequestData")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ResultStatus")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SourceIp")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UserRole")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AuditTrailEntries");
+                });
+
             modelBuilder.Entity("Domain.Entities.External.MpesaCallbackAudit", b =>
                 {
                     b.Property<int>("Id")

@@ -38,11 +38,14 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Application.Interfaces.Accounting;
 using Infrastructure.Services.Accounting;
+using Application.Interfaces.AuditTrail;
+using Infrastructure.Services.AuditTrail;
 using Application.Interfaces.External;
 using Infrastructure.Services.External;
 using System.Security.Claims;
 using Serilog;
 using Application.Interfaces.STSVending;
+using API.Filters;
 using API.Logging;
 using Infrastructure.Services.STSVending;
 
@@ -80,6 +83,8 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISmsProcessor, SmsProcessor>();
 builder.Services.AddScoped<IServiceLogsRepository, ServiceLogsRepository>();
+builder.Services.AddScoped<IAuditTrailRepository, AuditTrailRepository>();
+builder.Services.AddScoped<AuditTrailFilter>();
 builder.Services.AddScoped<IExternalPayments, ExternalPayments>();
 builder.Services.AddScoped<ICollectoWalletWithdrawalHistoryService, CollectoWalletWithdrawalHistoryService>();
 
@@ -136,7 +141,10 @@ builder.Services.AddHostedService<ProcessMpesaPayments>();
 builder.Services.AddHostedService<MeterTokenGeneratorService>();
 
 
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        options.Filters.AddService<AuditTrailFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles; // EF Core 5.0+ way

@@ -295,6 +295,11 @@ function getNavItems(role: number): NavItem[] {
         path: "/admin-dashboard/http-logs",
       },
       {
+        label: "Audit Trail",
+        icon: <FileText size={18} />,
+        path: "/admin-dashboard/audit-trail",
+      },
+      {
         label: "Add Utility Meter",
         icon: <Plus size={18} />,
         path: "/admin-dashboard/add-utility-meter",

@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Infrastructure.Infrastructure.Migrations
+namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251208105625_AdditionOfNyumbaYoId")]
-    partial class AdditionOfNyumbaYoId
+    [Migration("20260502114623_AddAuditTrail")]
+    partial class AddAuditTrail
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -136,6 +136,60 @@ namespace Infrastructure.Infrastructure.Migrations
                     b.ToTable("JournalLines");
                 });
 
+            modelBuilder.Entity("Domain.Entities.AuditTrail.AuditTrailEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("HttpMethod")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RequestData")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ResultStatus")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SourceIp")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UserRole")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AuditTrailEntries");
+                });
+
             modelBuilder.Entity("Domain.Entities.External.MpesaCallbackAudit", b =>
                 {
                     b.Property<int>("Id")
@@ -221,6 +275,87 @@ namespace Infrastructure.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("VendorPayments");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.CollectoWalletWithdrawalHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int>("CollectoHttpStatusCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CollectoRequestPayload")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CollectoRequestUrl")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CollectoResponsePayload")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CollectoStatus")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EndpointRequestPayload")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EndpointRequestUrl")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EndpointResponsePayload")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EndpointStatus")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("RequestedByEmail")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RequestedByRole")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("WithdrawTo")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Reference");
+
+                    b.ToTable("CollectoWalletWithdrawalHistories");
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.Complaint", b =>
@@ -358,6 +493,43 @@ namespace Infrastructure.Infrastructure.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("LandLordProperties");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("MeterName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("MeterNumber")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("Units")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MeterTokens");
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.PropertyTenant", b =>
@@ -602,6 +774,18 @@ namespace Infrastructure.Infrastructure.Migrations
                     b.Property<string>("Token")
                         .HasColumnType("longtext");
 
+                    b.Property<double?>("UtilityChargeFlatFee")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("UtilityChargePercentage")
+                        .HasColumnType("double");
+
+                    b.Property<string>("UtilityChargeTiersJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UtilityChargeType")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("Verified")
                         .HasColumnType("tinyint(1)");
 
@@ -801,6 +985,9 @@ namespace Infrastructure.Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("EventHash")
+                        .HasColumnType("varchar(255)");
+
                     b.Property<string>("Exception")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -816,11 +1003,25 @@ namespace Infrastructure.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("RawContent")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ServiceName")
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("SourceIdentifier")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SourceType")
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("EventHash")
+                        .IsUnique();
+
+                    b.HasIndex("LogDate");
 
                     b.ToTable("ServiceLogs");
                 });
