@@ -235,7 +235,7 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 _logger.LogError("Empty response from Collecto");
                 await paymentService.UpdatePaymentStatus(
-                    Failed,
+                    PendingTelcom,
                     transactionId,
                     "Empty response from Collecto",
                     string.Empty,
@@ -270,7 +270,7 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 _logger.LogError("MOMO request failed");
                 await paymentService.UpdatePaymentStatus(
-                    Failed,
+                    PendingTelcom,
                     transactionId,
                     resp?.data?.message ?? "Unknown error",
                     string.Empty,

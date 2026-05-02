@@ -196,7 +196,7 @@ namespace Infrastructure.Services.BackgroundServices
                     {
                         responseJson = await collectoApi.GetRequestToPayStatusAsync(new RequestToPayStatusRequestDto
                         {
-                            TransactionId = vendorTranId
+                            TransactionId = transactionId//vendorTranId
                         });
                     }
 
