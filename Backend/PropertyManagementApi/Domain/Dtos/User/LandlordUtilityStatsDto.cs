@@ -2,6 +2,7 @@ namespace Domain.Dtos.User
 {
     public class LandlordUtilityStatsDto
     {
+        public string LandlordName { get; set; } = string.Empty;
         public int LandlordId { get; set; }
         public int TotalMeters { get; set; }
         public int ActiveMeters { get; set; }

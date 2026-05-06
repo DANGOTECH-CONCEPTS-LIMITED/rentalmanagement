@@ -418,13 +418,15 @@ namespace Infrastructure.Services.UserServices
         public async Task<IEnumerable<UtilityMeter>> GetAllUtilityMetersAsync()
         {
             // Validate utility meter existence
-            var meter = await _context.UtilityMeters
+            var meters = await _context.UtilityMeters
                 .AsNoTracking()
+                .Include(m => m.User) // include landlord details
                 .ToListAsync();
-            if (meter == null || meter.Count == 0)
+
+            if (meters == null || meters.Count == 0)
                 throw new Exception("No utility meters found.");
-            // Return the found utility meters
-            return meter;
+
+            return meters;
         }
 
         public async Task UpdateUtilityMeterAsync(UtilityMeterDto utilityMeter, int id)

@@ -183,15 +183,17 @@ const ManageUtilityMeters = () => {
   const filteredMeters = useMemo(() => {
     if (!search.trim()) return meters;
     const s = search.trim().toLowerCase();
-    return meters.filter(
-      (meter) =>
+    return meters.filter((meter) => {
+      const userName = meter.user?.fullName || "";
+      return (
         (meter.meterType && meter.meterType.toLowerCase().includes(s)) ||
         (meter.meterNumber && meter.meterNumber.toLowerCase().includes(s)) ||
         (meter.nwscAccount && meter.nwscAccount.toLowerCase().includes(s)) ||
         (meter.locationOfNwscMeter &&
           meter.locationOfNwscMeter.toLowerCase().includes(s)) ||
-        (meter.user.fullName && meter.user.fullName.toLowerCase().includes(s))
-    );
+        userName.toLowerCase().includes(s)
+      );
+    });
   }, [meters, search]);
 
   const totalPages = Math.ceil(filteredMeters.length / rowsPerPage);
@@ -324,7 +326,7 @@ const ManageUtilityMeters = () => {
                 <TableCell>{meter.meterNumber}</TableCell>
                 <TableCell>{meter.nwscAccount}</TableCell>
                 <TableCell>{meter.locationOfNwscMeter}</TableCell>
-                <TableCell>{meter.user.fullName}</TableCell>
+                <TableCell>{meter.user?.fullName ?? "-"}</TableCell>
                 <TableCell>
                   <Button
                     variant="outline"

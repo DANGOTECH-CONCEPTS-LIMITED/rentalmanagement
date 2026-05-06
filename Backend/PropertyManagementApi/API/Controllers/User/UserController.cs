@@ -524,9 +524,16 @@ namespace API.Controllers.UserControllers
                     .OrderByDescending(x => x.Payments)
                     .ToListAsync();
 
+                // Fetch landlord name and include in DTO
+                var landlord = await _db.Users.AsNoTracking()
+                    .Where(u => u.Id == landlordId)
+                    .Select(u => new { u.Id, u.FullName })
+                    .FirstOrDefaultAsync();
+
                 var dto = new LandlordUtilityStatsDto
                 {
                     LandlordId = landlordId,
+                    LandlordName = landlord?.FullName ?? string.Empty,
                     TotalMeters = totalMeters,
                     ActiveMeters = metersStats.Count,
                     InactiveMeters = Math.Max(0, totalMeters - metersStats.Count),
