@@ -140,14 +140,19 @@ namespace Infrastructure.Services.UserServices
 
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
+            // Use AsNoTracking for read-only queries to improve performance
             return await _context.Users
+                .AsNoTracking()
                 .Include(u => u.SystemRole)
                 .ToListAsync();
         }
 
         public async Task<IEnumerable<SystemRole>> GetAllRolesAsync()
         {
-            return await _context.SystemRoles.ToListAsync();
+            // Roles are read-only in this flow; use AsNoTracking to improve perf
+            return await _context.SystemRoles
+                .AsNoTracking()
+                .ToListAsync();
         }
 
         public async Task ChangeUserPassword(ChangePasswordDto changePassword)
@@ -178,7 +183,9 @@ namespace Infrastructure.Services.UserServices
         public async Task<User> AuthenticateUser(AuthenticateDto login)
         {
             // Validate user existence and password
+            // Use AsNoTracking for read-only authentication query to reduce change-tracking overhead
             var user = await _context.Users
+                .AsNoTracking()
                 .Include(u => u.SystemRole) // Include SystemRole if needed
                 .FirstOrDefaultAsync(u => u.Email == login.UserName);
             if (user == null || _passwordHasher.VerifyHashedPassword(user, user.Password, login.Password) == PasswordVerificationResult.Failed)
@@ -238,7 +245,9 @@ namespace Infrastructure.Services.UserServices
                 throw new Exception("System role not found.");
 
             // Check for duplicate user
-            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+            var existingUser = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Email == user.Email);
             if (existingUser != null)
                 throw new Exception("User with this email already exists.");
 
@@ -264,6 +273,7 @@ namespace Infrastructure.Services.UserServices
         public async Task<User> GetUserByIdAsync(int id)
         {
             var user = await _context.Users
+                .AsNoTracking()
                 .Include(u => u.SystemRole)
                 .FirstOrDefaultAsync(u => u.Id == id);
             if (user == null)
@@ -327,9 +337,22 @@ namespace Infrastructure.Services.UserServices
 
         public async Task<IEnumerable<User>> GetLandlordsAsync()
         {
+            // Resolve the role id first to avoid joining SystemRoles for every user
+            var landlordRoleId = await _context.SystemRoles
+                .AsNoTracking()
+                .Where(r => r.Name == "Landlord")
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (landlordRoleId == 0)
+            {
+                return Enumerable.Empty<User>();
+            }
+
             return await _context.Users
+                .AsNoTracking()
+                .Where(u => u.SystemRoleId == landlordRoleId)
                 .Include(u => u.SystemRole)
-                .Where(u => u.SystemRole.Name == "Landlord")
                 .ToListAsync();
         }
 
@@ -380,12 +403,14 @@ namespace Infrastructure.Services.UserServices
         public async Task<IEnumerable<UtilityMeter>> GetUtilityMetersByLandLordIdAsync(int landlordId)
         {
             // Validate landlord existence
-            var landlord = await _context.Users.FirstOrDefaultAsync(u => u.Id == landlordId);
+            var landlord = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == landlordId);
             if (landlord == null)
                 throw new Exception("Landlord not found.");
             // Retrieve utility meters for the specified landlord
             return await _context.UtilityMeters
-                .Include(m => m.User) // Include the User navigation property if needed
+                .AsNoTracking()
                 .Where(m => m.LandLordId == landlordId)
                 .ToListAsync();
         }
@@ -394,11 +419,11 @@ namespace Infrastructure.Services.UserServices
         {
             // Validate utility meter existence
             var meter = await _context.UtilityMeters
-                .Include(m => m.User)
+                .AsNoTracking()
                 .ToListAsync();
-            if (meter == null)
-                throw new Exception("Utility meter not found.");
-            // Return the found utility meter
+            if (meter == null || meter.Count == 0)
+                throw new Exception("No utility meters found.");
+            // Return the found utility meters
             return meter;
         }
 
@@ -434,8 +459,17 @@ namespace Infrastructure.Services.UserServices
         {
             // Validate utility meter existence
             var utilityMeter = await _context.UtilityMeters
-                .Include(m => m.User)
-                .FirstOrDefaultAsync(m => m.MeterNumber == meter);
+                .AsNoTracking()
+                .Where(m => m.MeterNumber == meter)
+                .Select(m => new UtilityMeter
+                {
+                    Id = m.Id,
+                    MeterNumber = m.MeterNumber,
+                    MeterType = m.MeterType,
+                    LandLordId = m.LandLordId,
+                    User = new User { Id = m.User.Id, FullName = m.User.FullName, Email = m.User.Email }
+                })
+                .FirstOrDefaultAsync();
             if (utilityMeter == null)
                 throw new Exception("Utility meter not found.");
             // Return the associated user

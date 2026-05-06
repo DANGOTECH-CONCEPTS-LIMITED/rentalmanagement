@@ -251,13 +251,13 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
 
         public async Task<IEnumerable<WalletTransaction>> GetTransactionsByStatus(string status)
         {
-            var transactions = await _context.WalletTransactions
-                .Include(x => x.Wallet)
-                .ThenInclude(x => x.Landlord)
+            // Query projections to reduce data transfer; only include necessary fields
+            return await _context.WalletTransactions
                 .AsNoTracking()
                 .Where(t => t.Status == status)
+                .Include(t => t.Wallet)
+                .ThenInclude(w => w.Landlord)
                 .ToListAsync();
-            return transactions;
         }
 
         public async Task UpdateWalletTransaction(WalletTransaction walletTransaction)

@@ -217,6 +217,19 @@ namespace Infrastructure.Data
                 e.Property(x => x.Headers).HasColumnType("longtext");
                 e.HasIndex(x => x.TransId);
             });
+
+            // Indexes to improve utility payments/meters lookups and aggregations
+            modelBuilder.Entity<UtilityPayment>()
+                .HasIndex(p => p.MeterNumber);
+
+            modelBuilder.Entity<UtilityPayment>()
+                .HasIndex(p => p.CreatedAt);
+
+            modelBuilder.Entity<UtilityMeter>()
+                .HasIndex(m => m.MeterNumber);
+
+            modelBuilder.Entity<UtilityMeter>()
+                .HasIndex(m => m.LandLordId);
         }
 
         // Declaration of the partial hook used by AppDbContext.Accounting.cs

@@ -468,68 +468,78 @@ namespace API.Controllers.UserControllers
         {
             try
             {
-                var metersQuery = _db.UtilityMeters.AsNoTracking().Where(m => m.LandLordId == landlordId);
-                var meters = await metersQuery.Select(m => new { m.MeterNumber }).ToListAsync();
+                // Ensure landlord exists
+                var landlordExists = await _db.Users.AsNoTracking().AnyAsync(u => u.Id == landlordId);
+                if (!landlordExists)
+                    return NotFound("Landlord not found.");
 
-                var meterNumbers = meters.Select(m => m.MeterNumber).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+                // Prepare status buckets as arrays (EF can translate .Contains on arrays to SQL IN)
+                var successfulStatuses = new[] { "SUCCESSFUL", "SUCCESSFUL AT TELECOM", "SUCCESSFUL AT THE BANK", "SUCCESSFUL AT TELCOM" };
+                var pendingStatuses = new[] { "PENDING", "PENDING AT TELCOM", "PENDING AT THE BANK" };
+                var failedStatuses = new[] { "FAILED", "FAILED AT TELECOM", "FAILED AT THE BANK" };
 
-                var paymentsQuery = _db.UtilityPayments.AsNoTracking().Where(p => meterNumbers.Contains(p.MeterNumber));
+                // Count distinct meters for landlord (non-empty meter numbers)
+                var totalMeters = await _db.UtilityMeters
+                    .AsNoTracking()
+                    .Where(m => m.LandLordId == landlordId && !string.IsNullOrWhiteSpace(m.MeterNumber))
+                    .Select(m => m.MeterNumber)
+                    .Distinct()
+                    .CountAsync();
 
-                var payments = await paymentsQuery
-                    .Select(p => new { p.MeterNumber, p.Amount, p.Charges, p.Status, p.CreatedAt })
-                    .ToListAsync();
+                // Build a query of payments that belong to meters of this landlord by joining on MeterNumber
+                // Note: use LINQ method syntax for EF parameterization
+                var paymentsQuery = _db.UtilityPayments.AsNoTracking()
+                    .Where(p => p.MeterNumber != null && p.MeterNumber != "")
+                    .Join(_db.UtilityMeters.AsNoTracking().Where(m => m.LandLordId == landlordId && !string.IsNullOrWhiteSpace(m.MeterNumber)),
+                        p => p.MeterNumber,
+                        m => m.MeterNumber,
+                        (p, m) => new { p.MeterNumber, p.Amount, p.Charges, p.Status, p.CreatedAt });
 
-                var successfulStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                var totalUtilityPayments = await paymentsQuery.CountAsync();
+                var totalUtilityAmount = await paymentsQuery.Where(p => successfulStatuses.Contains(p.Status)).SumAsync(p => (decimal?)p.Amount) ?? 0m;
+                var totalUtilityCharges = await paymentsQuery.Where(p => successfulStatuses.Contains(p.Status)).SumAsync(p => (decimal?)p.Charges) ?? 0m;
+
+                var successfulPayments = await paymentsQuery.CountAsync(p => successfulStatuses.Contains(p.Status));
+                var pendingPayments = await paymentsQuery.CountAsync(p => pendingStatuses.Contains(p.Status));
+                var failedPayments = await paymentsQuery.CountAsync(p => failedStatuses.Contains(p.Status));
+
+                DateTime? firstPaymentAt = null;
+                DateTime? lastPaymentAt = null;
+                if (totalUtilityPayments > 0)
                 {
-                    "SUCCESSFUL",
-                    "SUCCESSFUL AT TELECOM",
-                    "SUCCESSFUL AT THE BANK",
-                    "SUCCESSFUL AT TELCOM"
-                };
+                    firstPaymentAt = await paymentsQuery.MinAsync(p => p.CreatedAt);
+                    lastPaymentAt = await paymentsQuery.MaxAsync(p => p.CreatedAt);
+                }
 
-                var pendingStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "PENDING",
-                    "PENDING AT TELCOM",
-                    "PENDING AT THE BANK"
-                };
-
-                var failedStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "FAILED",
-                    "FAILED AT TELECOM",
-                    "FAILED AT THE BANK"
-                };
-
-                var dto = new LandlordUtilityStatsDto
-                {
-                    LandlordId = landlordId,
-                    TotalMeters = meters.Count,
-                    ActiveMeters = 0,
-                    InactiveMeters = 0,
-                    TotalUtilityPayments = payments.Count,
-                    TotalUtilityAmount = payments.Where(p => p.Status != null && successfulStatuses.Contains(p.Status)).Sum(p => p.Amount),
-                    TotalUtilityCharges = payments.Where(p => p.Status != null && successfulStatuses.Contains(p.Status)).Sum(p => p.Charges),
-                    SuccessfulPayments = payments.Count(p => p.Status != null && successfulStatuses.Contains(p.Status)),
-                    PendingPayments = payments.Count(p => p.Status != null && pendingStatuses.Contains(p.Status)),
-                    FailedPayments = payments.Count(p => p.Status != null && failedStatuses.Contains(p.Status)),
-                    FirstPaymentAt = payments.Count == 0 ? null : payments.Min(p => (DateTime?)p.CreatedAt),
-                    LastPaymentAt = payments.Count == 0 ? null : payments.Max(p => (DateTime?)p.CreatedAt)
-                };
-
-                dto.Meters = payments
-                    .GroupBy(p => p.MeterNumber ?? string.Empty)
-                    .Where(g => !string.IsNullOrWhiteSpace(g.Key))
+                var metersStats = await paymentsQuery
+                    .GroupBy(p => p.MeterNumber)
+                    .Where(g => g.Key != null && g.Key != string.Empty)
                     .Select(g => new MeterPaymentStatsDto
                     {
                         MeterNumber = g.Key,
                         Payments = g.Count(),
                         Amount = g.Sum(x => x.Amount),
-                        //Charges = g.Sum(x => x.Charges),
                         LastPaymentAt = g.Max(x => (DateTime?)x.CreatedAt)
                     })
                     .OrderByDescending(x => x.Payments)
-                    .ToList();
+                    .ToListAsync();
+
+                var dto = new LandlordUtilityStatsDto
+                {
+                    LandlordId = landlordId,
+                    TotalMeters = totalMeters,
+                    ActiveMeters = metersStats.Count,
+                    InactiveMeters = Math.Max(0, totalMeters - metersStats.Count),
+                    TotalUtilityPayments = totalUtilityPayments,
+                    TotalUtilityAmount = (double)totalUtilityAmount,
+                    TotalUtilityCharges = (double)totalUtilityCharges,
+                    SuccessfulPayments = successfulPayments,
+                    PendingPayments = pendingPayments,
+                    FailedPayments = failedPayments,
+                    FirstPaymentAt = firstPaymentAt,
+                    LastPaymentAt = lastPaymentAt,
+                    Meters = metersStats
+                };
 
                 return Ok(dto);
             }
