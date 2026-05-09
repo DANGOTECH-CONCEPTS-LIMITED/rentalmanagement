@@ -1,0 +1,129 @@
+name: Deploy ERP API .NET API to AWS EC2 Windows (IIS)
+
+on:
+  push:
+    branches: [ test ]  # Trigger deployment on push to main branch
+  # workflow_call:        # Allow other workflows to invoke this (reusable)
+  workflow_dispatch:    # Allow manual triggering from GitHub UI
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. Set up .NET SDK
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.x'
+
+      # 3. Restore dependencies
+      - name: Restore Dependencies
+        run: dotnet restore Backend/PropertyManagementApi/PropertyManagementApi.sln
+
+      # 4. Build the solution in Release mode
+      - name: Build Solution
+        run: dotnet build Backend/PropertyManagementApi/PropertyManagementApi.sln --configuration Release --no-restore
+
+      # 5. Publish the API project into the ./publish folder
+      - name: Publish API
+        run: dotnet publish Backend/PropertyManagementApi/API/API.csproj --configuration Release --output ./publish --no-build
+
+      # 6. Zip only the contents of ./publish (not the folder itself)
+      - name: Zip Published Files
+        run: |
+          cd ./publish
+          zip -r ../publish.zip .   # Zip contents, not the folder
+          cd ..
+
+      # 7. Stop the IIS application pool
+      - name: Stop IIS App Pool
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Import-Module WebAdministration; Stop-WebAppPool -Name 'PropertyManagementApi' -ErrorAction SilentlyContinue; exit 0"
+
+      # 8. Stop IIS Service
+      - name: Stop IIS Service
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Stop-Service W3SVC -ErrorAction SilentlyContinue; exit 0"
+
+      # 9. Clear target folder
+      - name: Clear Target Folder
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "if (Test-Path 'C:\inetpub\wwwroot\TestPropertyApi') { Get-ChildItem 'C:\inetpub\wwwroot\TestPropertyApi\*' -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } else { New-Item -ItemType Directory -Path 'C:\inetpub\wwwroot\TestPropertyApi' -Force }; exit 0"
+
+      # 10. Install sshpass
+      - name: Install sshpass
+        run: |
+          sudo apt-get update
+          sudo apt-get install sshpass -y
+
+      # 11. Copy the zip file
+      - name: Copy Zip File to EC2
+        run: |
+          sshpass -p "${{ secrets.EC2_PASSWORD }}" scp -o StrictHostKeyChecking=no publish.zip ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:"C:\\inetpub\\wwwroot\\TestPropertyApi"
+
+      # 12. Unzip directly into target folder
+      - name: Unzip on EC2
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Expand-Archive -Path 'C:\inetpub\wwwroot\TestPropertyApi\publish.zip' -DestinationPath 'C:\inetpub\wwwroot\TestPropertyApi' -Force; exit 0"
+
+      # 13. Remove zip file
+      - name: Remove Zip File
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Remove-Item 'C:\inetpub\wwwroot\TestPropertyApi\publish.zip' -Force; exit 0"
+
+      # 14. Start IIS Service
+      - name: Start IIS Service
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Start-Service W3SVC; exit 0"
+
+      # 15. Start IIS App Pool
+      - name: Start IIS App Pool
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          password: ${{ secrets.EC2_PASSWORD }}
+          port: 22
+          script: |
+            powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'TestPropertyApi'; exit 0"

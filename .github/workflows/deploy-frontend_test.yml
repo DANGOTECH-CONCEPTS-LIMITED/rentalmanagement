@@ -1,0 +1,73 @@
+name: Deploy Frontend to cPanel
+
+on:
+  push:
+    branches: [ test ]
+#   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: Frontend
+        run: |
+          # Install without --frozen-lockfile to allow lock updates on CI
+          bun install
+          # Optional: show diff if lockfile changed (non-fatal)
+          if git diff --quiet bun.lockb; then
+            echo "Lockfile unchanged"
+          else
+            echo "Lockfile updated during CI (consider committing new bun.lockb)"
+          fi
+
+      - name: Build
+        working-directory: Frontend
+        run: bun run build
+
+      - name: Upload build artifact (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: Frontend/build
+
+      - name: Deploy via FTP Action
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.CPANEL_FTP_HOST }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          server-dir: ${{ secrets.CPANEL_FTP_SERVERDIR_TEST }}
+          local-dir: Frontend/build/
+          exclude: |
+            **/.git*
+            **/node_modules/**
+            Backup/**
+            uploads/**
+            .well-known/**
+            cgi-bin/**
+            # Removed assets/** so Vite build assets deploy; previously blocked JS/CSS bundles
+          timeout: 600
+          log-level: standard
+          dangerous-clean-slate: true
+
+  # deploy-api:
+  #   needs: build-and-deploy
+  #   uses: ./.github/workflows/deploy_api_to_server.yml
+  #   secrets: inherit
