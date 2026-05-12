@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, ArrowRight, Key } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -23,7 +24,6 @@ const ResetPassword = () => {
     }
 
     try {
-      //   await resetPassword(token, newPassword);
       await resetPassword(currentPassword, newPassword);
       setMessage("Password reset successfully");
       setError("");
@@ -54,29 +54,33 @@ const ResetPassword = () => {
               <p className="text-gray-600">Enter your new password</p>
             </div>
 
-            {message && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-sm text-green-600 mt-2"
-              >
-                {message}
-              </motion.p>
-            )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {message && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-green-600 p-3 bg-green-50 rounded-lg border border-green-100"
+                >
+                  {message}
+                </motion.p>
+              )}
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {error && (
-                <div className="text-red-500 text-sm p-2 bg-red-50 rounded">
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-red-600 p-3 bg-red-50 rounded-lg border border-red-100"
+                >
                   {error}
-                </div>
+                </motion.p>
               )}
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Email sent token
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reset Token (from email)
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock size={16} className="text-gray-400" />
                   </div>
                   <input
@@ -84,17 +88,18 @@ const ResetPassword = () => {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     className="pl-10 input-field"
+                    placeholder="Paste token from email"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   New Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Key size={16} className="text-gray-400" />
                   </div>
                   <input
@@ -102,18 +107,20 @@ const ResetPassword = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="pl-10 input-field"
+                    placeholder="Enter new password"
                     required
                     minLength={4}
+                    autoComplete="new-password"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Confirm New Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Key size={16} className="text-gray-400" />
                   </div>
                   <input
@@ -121,7 +128,9 @@ const ResetPassword = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-10 input-field"
+                    placeholder="Confirm new password"
                     required
+                    autoComplete="new-password"
                   />
                 </div>
               </div>
@@ -135,6 +144,16 @@ const ResetPassword = () => {
                 Reset Password
               </Button>
             </form>
+
+            <p className="mt-6 text-center text-sm text-gray-600">
+              Remember your password?{" "}
+              <Link
+                to="/"
+                className="font-medium text-primary hover:text-primary/80"
+              >
+                Sign in
+              </Link>
+            </p>
           </div>
         </div>
       </motion.div>
