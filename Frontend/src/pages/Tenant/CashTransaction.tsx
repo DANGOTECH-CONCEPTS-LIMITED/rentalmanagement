@@ -347,15 +347,8 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
                 >
                   Clear Form
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Submit Payment"
-                  )}
+                <Button type="submit" isLoading={isSubmitting}>
+                  Submit Payment
                 </Button>
               </div>
             </form>

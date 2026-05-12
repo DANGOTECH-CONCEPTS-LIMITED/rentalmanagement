@@ -352,10 +352,10 @@ const MakeUtilityPayment = () => {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isValidating}
+                      isLoading={isValidating}
                       className="w-full sm:w-auto"
                     >
-                      {isValidating ? 'Validating...' : 'Validate'}
+                      Validate
                     </Button>
                   </div>
                 </form>
@@ -434,10 +434,10 @@ const MakeUtilityPayment = () => {
                         type="button"
                         variant="outline"
                         onClick={fetchPreview}
-                        disabled={isPreviewing}
+                        isLoading={isPreviewing}
                         className="w-full md:w-auto"
                       >
-                        {isPreviewing ? 'Loading...' : 'Preview Payment'}
+                        Preview Payment
                       </Button>
                     </div>
 
@@ -498,10 +498,11 @@ const MakeUtilityPayment = () => {
                         </Button>
                         <Button
                           type="submit"
-                          disabled={isSubmitting || !showPreview}
+                          isLoading={isSubmitting}
+                          disabled={!showPreview}
                           className="w-full sm:w-auto"
                         >
-                          {isSubmitting ? 'Processing...' : 'Confirm Payment'}
+                          Confirm Payment
                         </Button>
                       </div>
                     </div>
@@ -529,10 +530,10 @@ const MakeUtilityPayment = () => {
             />
             <Button
               onClick={fetchPayments}
-              disabled={isFetching}
+              isLoading={isFetching}
               className="w-full sm:w-auto"
             >
-              {isFetching ? 'Fetching...' : 'Fetch Payments'}
+              Fetch Payments
             </Button>
           </div>
           {payments.length > 0 ? (

@@ -402,6 +402,7 @@ const ManageUsers = () => {
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState<LandlordFormData>({
     FullName: "",
     PhoneNumber: "",
@@ -795,8 +796,7 @@ const ManageUsers = () => {
         console.error("Error submitting form:", error);
         toast({
           title: "Error",
-
-          description: error.response.data,
+          description: error instanceof Error ? error.message : "An error occurred while registering the user.",
           variant: "destructive",
         });
       }
@@ -824,6 +824,7 @@ const ManageUsers = () => {
       }
 
       try {
+        setIsUpdating(true);
         // Create FormData to handle multipart/form-data
         const formData = new FormData();
         formData.append("Id", editFormData.id);
@@ -892,6 +893,8 @@ const ManageUsers = () => {
           description: error.response.data,
           variant: "destructive",
         });
+      } finally {
+        setIsUpdating(false);
       }
     }
   };
@@ -1171,9 +1174,10 @@ const ManageUsers = () => {
               onClick={handleSubmit}
               type="submit"
               form="userForm"
-              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition disabled:opacity-70 disabled:pointer-events-none"
             >
-              Add user
+              {isSubmitting ? "Submitting..." : "Add user"}
             </button>
           </div>
         }
@@ -1465,9 +1469,10 @@ const ManageUsers = () => {
             <button
               type="submit"
               form="editUserForm"
-              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
+              disabled={isUpdating}
+              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition disabled:opacity-70 disabled:pointer-events-none"
             >
-              Update user
+              {isUpdating ? "Submitting..." : "Update user"}
             </button>
           </div>
         }

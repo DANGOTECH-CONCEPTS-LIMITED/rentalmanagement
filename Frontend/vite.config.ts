@@ -10,6 +10,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "localhost",
     port: 8080,
+    proxy: {
+      "/dev-api": {
+        target: "https://api.dangotechconcepts.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/dev-api/, ""),
+      },
+    },
   },
   build: {
     outDir: "build",  // Ensure the build output is in dist/

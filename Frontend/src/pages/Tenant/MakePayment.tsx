@@ -378,8 +378,8 @@ const [description, setDescription] = useState('');
                       </div>
 
                       <div className="pt-4">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                          {isLoading ? "Processing..." : "Pay Now"}
+                        <Button type="submit" className="w-full" isLoading={isLoading}>
+                          Pay Now
                         </Button>
                       </div>
                     </form>
@@ -466,8 +466,8 @@ const [description, setDescription] = useState('');
     </div>
 
     <div className="pt-4">
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Processing..." : "Proceed to Payment"}
+      <Button type="submit" className="w-full" isLoading={isLoading}>
+        Proceed to Payment
       </Button>
     </div>
 
@@ -528,8 +528,8 @@ const [description, setDescription] = useState('');
                       </div>
 
                       <div className="pt-4">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                          {isLoading ? "Processing..." : "Complete Transfer"}
+                        <Button type="submit" className="w-full" isLoading={isLoading}>
+                          Complete Transfer
                         </Button>
                       </div>
 

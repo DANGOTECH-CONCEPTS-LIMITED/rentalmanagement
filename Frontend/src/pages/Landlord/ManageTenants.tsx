@@ -779,9 +779,9 @@ const ManageTenants = () => {
             <Button
               type="submit"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              isLoading={isSubmitting}
             >
-              {isSubmitting ? "Updating..." : "Update Tenant"}
+              Update Tenant
             </Button>
           </div>
         }

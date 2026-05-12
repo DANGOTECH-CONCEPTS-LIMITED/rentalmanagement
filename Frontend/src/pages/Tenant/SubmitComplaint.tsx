@@ -625,15 +625,9 @@ const ComplaintsTable = () => {
                 <Button type="button" variant="outline" onClick={closeModal}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <span>Submitting...</span>
-                  ) : (
-                    <span className="flex items-center">
-                      <Send className="mr-2 h-4 w-4" />
-                      Submit Complaint
-                    </span>
-                  )}
+                <Button type="submit" isLoading={isSubmitting}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit Complaint
                 </Button>
               </DialogFooter>
             </form>
@@ -696,15 +690,9 @@ const ComplaintsTable = () => {
               <Button type="button" variant="outline" onClick={closeModal}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <span>Updating...</span>
-                ) : (
-                  <span className="flex items-center">
-                    <Send className="mr-2 h-4 w-4" />
-                    Update Complaint
-                  </span>
-                )}
+              <Button type="submit" isLoading={isSubmitting}>
+                <Send className="mr-2 h-4 w-4" />
+                Update Complaint
               </Button>
             </DialogFooter>
           </form>

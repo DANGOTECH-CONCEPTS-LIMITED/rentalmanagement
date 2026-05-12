@@ -32,8 +32,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ role, fallback }) => {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  console.log("showPasswordModal && ", !user?.verified);
-  // Show password change modal if needed
   if (!user?.verified) {
     return <PasswordChangeModalWrapper />;
   }

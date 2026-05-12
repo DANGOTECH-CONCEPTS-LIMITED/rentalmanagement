@@ -501,8 +501,8 @@ const RegisterLandlord = () => {
             <Button type="button" variant="secondary">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Registering..." : "Register Landlord"}
+            <Button type="submit" isLoading={isSubmitting}>
+              Register Landlord
             </Button>
           </div>
         </form>

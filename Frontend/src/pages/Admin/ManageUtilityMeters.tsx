@@ -383,7 +383,7 @@ const ManageUtilityMeters = () => {
                             onClick={handleDelete}
                             disabled={isDeleting}
                           >
-                            {isDeleting ? "Deleting..." : "Delete"}
+                            {isDeleting ? "Submitting..." : "Delete"}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

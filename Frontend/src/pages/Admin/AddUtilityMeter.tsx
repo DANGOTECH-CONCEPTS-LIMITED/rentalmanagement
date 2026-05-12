@@ -320,8 +320,8 @@ const AddUtilityMeter = () => {
                   <p className="text-sm text-muted-foreground">
                     Review the selected account and meter identifiers before saving.
                   </p>
-                  <Button type="submit" disabled={isSubmitting} className="min-w-36">
-                    {isSubmitting ? 'Adding...' : 'Add Meter'}
+                  <Button type="submit" isLoading={isSubmitting} className="min-w-36">
+                    Add Meter
                   </Button>
                 </div>
               </form>

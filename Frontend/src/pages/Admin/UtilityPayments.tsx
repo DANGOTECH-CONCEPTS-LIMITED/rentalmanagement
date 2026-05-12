@@ -371,8 +371,8 @@ const UtilityPayments = () => {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={editLoading}>
-                {editLoading ? "Saving..." : "Save"}
+              <Button type="submit" isLoading={editLoading}>
+                Save
               </Button>
             </div>
           </form>

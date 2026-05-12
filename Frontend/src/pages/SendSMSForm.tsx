@@ -155,18 +155,9 @@ const SendSMSForm = () => {
               </div>
 
               <div className="flex justify-end">
-                <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send SMS
-                    </>
-                  )}
+                <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
+                  <Send className="mr-2 h-4 w-4" />
+                  Send SMS
                 </Button>
               </div>
             </form>

@@ -28,11 +28,12 @@ const Header = () => {
 
   const { changePassword, logout, user } = useAuth();
   const roleName = roles.find((role) => role.id === user?.systemRoleId)?.name;
+  const FALLBACK_AVATAR = "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0=";
   const profileImage = user?.passportPhoto
     ? `${import.meta.env.VITE_API_BASE_URL}/uploads/${user.passportPhoto
         ?.split(/[/\\]/)
         .pop()}`
-    : "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0=";
+    : FALLBACK_AVATAR;
 
   useEffect(() => {
     fetchRoles();
@@ -151,6 +152,7 @@ const Header = () => {
               className="h-9 w-9 rounded-xl object-cover"
               src={profileImage}
               alt="User profile"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).src = FALLBACK_AVATAR; }}
             />
             <div className="hidden text-left md:block">
               <p className="max-w-40 truncate text-sm font-semibold text-slate-900">

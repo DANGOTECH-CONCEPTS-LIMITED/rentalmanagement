@@ -240,7 +240,7 @@ const UpdateTransaction = () => {
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+              <Button type="submit" isLoading={saving}>Save</Button>
             </div>
           </form>
         </DialogContent>
