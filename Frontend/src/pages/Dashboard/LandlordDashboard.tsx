@@ -16,6 +16,9 @@ import {
   Clock,
   XCircle,
   AlertTriangle,
+  DoorOpen,
+  DoorClosed,
+  ShieldCheck,
 } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
 import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
@@ -97,6 +100,18 @@ const LandlordDashboard = () => {
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [utilityStats, setUtilityStats] = useState<UtilityStats | null>(null);
+
+  // Dummy financial & room stats (replace with API calls when ready)
+  const dummyStats = {
+    totalRevenueExpected: 2450000,
+    incomeCollected: 1850000,
+    uncollectedIncome: 600000,
+    securityDeposits: 750000,
+    utilityCollected: 120000,
+    totalRooms: 24,
+    occupiedRooms: 20,
+    vacantRooms: 4,
+  };
 
   const user = localStorage.getItem("user");
 
@@ -710,6 +725,66 @@ const LandlordDashboard = () => {
             value="95%"
             icon={<TrendingUp className="h-6 w-6" />}
             change={{ value: 5, type: "increase" }}
+          />
+        </div>
+      </div>
+
+      {/* Financial Overview */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold mb-4">Financial Overview — Current Month</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StatCard
+            title="Total Revenue Expected"
+            value={formatCurrency(dummyStats.totalRevenueExpected)}
+            icon={<TrendingUp className="h-6 w-6" />}
+            change={{ value: 5, type: "increase" }}
+          />
+          <StatCard
+            title="Income Collected"
+            value={formatCurrency(dummyStats.incomeCollected)}
+            icon={<CheckCircle className="h-6 w-6" />}
+            change={{ value: 8, type: "increase" }}
+          />
+          <StatCard
+            title="Uncollected Income"
+            value={formatCurrency(dummyStats.uncollectedIncome)}
+            icon={<Clock className="h-6 w-6" />}
+            change={{ value: 3, type: "decrease" }}
+          />
+          <StatCard
+            title="Security Deposits Held"
+            value={formatCurrency(dummyStats.securityDeposits)}
+            icon={<ShieldCheck className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Utility Collected"
+            value={formatCurrency(dummyStats.utilityCollected)}
+            icon={<Zap className="h-6 w-6" />}
+            change={{ value: 2, type: "increase" }}
+          />
+        </div>
+      </div>
+
+      {/* Room Occupancy */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold mb-4">Room Occupancy</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            title="Total Rooms"
+            value={dummyStats.totalRooms}
+            icon={<Home className="h-6 w-6" />}
+          />
+          <StatCard
+            title="Occupied Rooms"
+            value={dummyStats.occupiedRooms}
+            icon={<DoorClosed className="h-6 w-6" />}
+            change={{ value: 5, type: "increase" }}
+          />
+          <StatCard
+            title="Vacant Rooms"
+            value={dummyStats.vacantRooms}
+            icon={<DoorOpen className="h-6 w-6" />}
+            change={{ value: 2, type: "decrease" }}
           />
         </div>
       </div>

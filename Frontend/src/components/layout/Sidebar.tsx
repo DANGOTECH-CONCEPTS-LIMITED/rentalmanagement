@@ -18,6 +18,9 @@ import {
   Plus,
   X,
   FileSearch,
+  DoorOpen,
+  Receipt,
+  TrendingDown,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -347,9 +350,29 @@ function getNavItems(role: number): NavItem[] {
         path: "/landlord-dashboard/manage-tenants",
       },
       {
+        label: "Units / Rooms",
+        icon: <DoorOpen size={18} />,
+        path: "/landlord-dashboard/units",
+      },
+      {
+        label: "Invoices",
+        icon: <Receipt size={18} />,
+        path: "/landlord-dashboard/invoices",
+      },
+      {
         label: "Track Payments",
         icon: <CreditCard size={18} />,
         path: "/landlord-dashboard/payments",
+      },
+      {
+        label: "Expenses",
+        icon: <TrendingDown size={18} />,
+        path: "/landlord-dashboard/expenses",
+      },
+      {
+        label: "Reports",
+        icon: <BarChart3 size={18} />,
+        path: "/landlord-dashboard/reports",
       },
       {
         label: "Send SMS",

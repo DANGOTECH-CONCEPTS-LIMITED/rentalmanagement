@@ -110,6 +110,13 @@ const ManageTenants = () => {
     idFront: "",
     idBack: "",
     passportPhoto: "",
+    // New fields
+    UnitId: "",
+    WaterMeterNo: "",
+    TenantStatus: "active",
+    Occupation: "",
+    NextOfKinName: "",
+    NextOfKinPhone: "",
   });
 
   const navigate = useNavigate();
@@ -538,6 +545,12 @@ const ManageTenants = () => {
                                 idFront: tenant.idFront,
                                 idBack: tenant.idBack,
                                 passportPhoto: tenant.passportPhoto,
+                                UnitId: "",
+                                WaterMeterNo: "",
+                                TenantStatus: tenant.active ? "active" : "left",
+                                Occupation: "",
+                                NextOfKinName: "",
+                                NextOfKinPhone: "",
                               });
                             }}
                           >
@@ -563,6 +576,12 @@ const ManageTenants = () => {
                                 idFront: tenant.idFront || "",
                                 idBack: tenant.idBack || "",
                                 passportPhoto: tenant.passportPhoto || "",
+                                UnitId: "",
+                                WaterMeterNo: "",
+                                TenantStatus: tenant.active ? "active" : "left",
+                                Occupation: "",
+                                NextOfKinName: "",
+                                NextOfKinPhone: "",
                               });
                               setPassportPhotoPreview(
                                 getImageUrl(tenant.passportPhoto)
@@ -923,6 +942,79 @@ const ManageTenants = () => {
                           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
                         </div>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Additional Fields */}
+                  <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-4">Tenancy Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Unit / Room</label>
+                        <select
+                          name="UnitId"
+                          className="input-field"
+                          value={formData.UnitId}
+                          onChange={handleInputChange}
+                        >
+                          <option value="">Select unit</option>
+                          {["A1", "A2", "B1", "B2", "C1", "C2"].map((u) => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Water Meter No.</label>
+                        <Input
+                          name="WaterMeterNo"
+                          value={formData.WaterMeterNo}
+                          onChange={handleInputChange}
+                          placeholder="e.g. WM-00123"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Tenant Status</label>
+                        <select
+                          name="TenantStatus"
+                          className="input-field"
+                          value={formData.TenantStatus}
+                          onChange={handleInputChange}
+                        >
+                          <option value="active">Active</option>
+                          <option value="left">Left</option>
+                          <option value="pending payment">Pending Payment</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Occupation</label>
+                        <Input
+                          name="Occupation"
+                          value={formData.Occupation}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Teacher, Engineer..."
+                        />
+                      </div>
+                    </div>
+                    <h3 className="font-medium mt-4 mb-3">Next of Kin</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Next of Kin Name</label>
+                        <Input
+                          name="NextOfKinName"
+                          value={formData.NextOfKinName}
+                          onChange={handleInputChange}
+                          placeholder="Full name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Next of Kin Contact</label>
+                        <Input
+                          name="NextOfKinPhone"
+                          value={formData.NextOfKinPhone}
+                          onChange={handleInputChange}
+                          placeholder="Phone number"
+                        />
+                      </div>
                     </div>
                   </div>
 

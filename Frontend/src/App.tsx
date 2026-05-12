@@ -38,6 +38,10 @@ import ManageTenants from "./pages/Landlord/ManageTenants";
 import RentalContracts from "./pages/Landlord/RentalContracts";
 import HandleComplaints from "./pages/Landlord/HandleComplaints";
 import TrackPayments from "./pages/Landlord/TrackPayments";
+import UnitsManagement from "./pages/Landlord/UnitsManagement";
+import InvoiceManagement from "./pages/Landlord/InvoiceManagement";
+import ExpenseManagement from "./pages/Landlord/ExpenseManagement";
+import LandlordReports from "./pages/Landlord/LandlordReports";
 import Index from "./pages/Index";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
@@ -144,6 +148,10 @@ const App = () => (
                 <Route path="send-sms" element={<SendSMSForm />} />
                 <Route path="utility-report" element={<UtilityReport />} />
                 <Route path="utility-payment-dashboard" element={<UtilityPaymentDashboard />} />
+                <Route path="units" element={<UnitsManagement />} />
+                <Route path="invoices" element={<InvoiceManagement />} />
+                <Route path="expenses" element={<ExpenseManagement />} />
+                <Route path="reports" element={<LandlordReports />} />
               </Route>
             </Route>
 
