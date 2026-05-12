@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getImageUrl } from "@/lib/imageUrl";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -386,10 +387,6 @@ const LandlordProperties = () => {
       return { ...prev, [name]: value };
     });
   };
-  console.log(
-    "url",
-    `${selectedProperty?.imageUrl.split(/[/\\]/).pop() || ""}`
-  );
   return (
     <div className="space-y-6">
       <section className="page-hero">
@@ -584,9 +581,7 @@ const LandlordProperties = () => {
                     Property Image
                   </h3>
                   <img
-                    src={`${apiUrl}/uploads/${
-                      selectedProperty.imageUrl.split(/[/\\]/).pop() || ""
-                    }`}
+                    src={getImageUrl(selectedProperty.imageUrl)}
                     alt={selectedProperty.name}
                     className="rounded-md w-full h-64 object-cover"
                   />

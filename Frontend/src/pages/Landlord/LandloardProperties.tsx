@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getImageUrl } from "@/lib/imageUrl";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -310,16 +311,21 @@ const Properties = () => {
         }
       );
 
+      if (response.status === 400) {
+        // API returns 400 when the landlord has no properties yet
+        setProperties([]);
+        setError(null);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("Properties data:", data);
       setProperties(data);
-      setError(null); // Clear any previous errors
+      setError(null);
     } catch (err) {
-      console.error("Error fetching properties:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch properties");
     } finally {
       setIsLoading(false);
@@ -895,9 +901,7 @@ const Properties = () => {
                     Property Image
                   </h3>
                   <img
-                    src={`${apiUrl}/uploads/${
-                      selectedProperty.imageUrl.split(/[/\\]/).pop() || ""
-                    }`}
+                    src={getImageUrl(selectedProperty.imageUrl)}
                     alt={selectedProperty.name}
                     className="rounded-md w-full h-64 object-cover"
                   />
@@ -1402,9 +1406,7 @@ const Properties = () => {
                   {editingProperty.imageUrl && (
                     <div className="relative h-40 border rounded-md overflow-hidden">
                       <img
-                        src={`${apiUrl}/uploads/${
-                          editingProperty.imageUrl.split(/[/\\]/).pop() || ""
-                        }`}
+                        src={getImageUrl(editingProperty.imageUrl)}
                         alt={editingProperty.name}
                         className="w-full h-full object-cover"
                       />

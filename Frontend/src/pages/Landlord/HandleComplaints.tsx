@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getImageUrl } from "@/lib/imageUrl";
 import { motion } from "framer-motion";
 import {
   MessageSquare,
@@ -584,9 +585,7 @@ const HandleComplaints = () => {
                           </span>
                         </div>
                         <img
-                          src={`${apiUrl}/uploads/${selectedComplaint.attachement
-                            .split("\\")
-                            .pop()}`}
+                          src={getImageUrl(selectedComplaint.attachement)}
                           alt="Attachment"
                           className="ml-2 w-full rounded-md object-cover"
                         />

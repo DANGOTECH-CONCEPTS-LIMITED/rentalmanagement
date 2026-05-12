@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getImageUrl as buildImageUrl } from "@/lib/imageUrl";
 import {
   Card,
   CardContent,
@@ -396,14 +397,7 @@ const ManageTenants = () => {
     return `${apiUrl}/${relativePath}${token ? `?token=${token}` : ""}`;
   };
 
-  const getImageUrl2 = (fullPath?: string): string => {
-    if (!fullPath || typeof fullPath !== "string") return "";
-
-    const fileName = fullPath.split(/[/\\]/).pop()?.trim();
-    if (!fileName) return "";
-
-    return `${apiUrl}/uploads/${fileName}`;
-  };
+  const getImageUrl2 = buildImageUrl;
 
   return (
     <div className="space-y-8">
@@ -1027,28 +1021,22 @@ const ManageTenants = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <img
-                          src={`${apiUrl}/uploads/${
-                            formData?.passportPhoto.split(/[/\\]/).pop() || ""
-                          }`}
+                          src={buildImageUrl(formData?.passportPhoto)}
                           alt="Passport Photo"
                           className="w-full h-40 object-cover rounded-md"
                         />
                       </div>
                       <div className="space-y-2">
                         <img
-                          src={`${apiUrl}/uploads/${
-                            formData?.idFront.split(/[/\\]/).pop() || ""
-                          }`}
-                          alt="Passport Photo"
+                          src={buildImageUrl(formData?.idFront)}
+                          alt="ID Front"
                           className="w-full h-40 object-cover rounded-md"
                         />
                       </div>
                       <div className="space-y-2">
                         <img
-                          src={`${apiUrl}/uploads/${
-                            formData?.idBack.split(/[/\\]/).pop() || ""
-                          }`}
-                          alt="Passport Photo"
+                          src={buildImageUrl(formData?.idBack)}
+                          alt="ID Back"
                           className="w-full h-40 object-cover rounded-md"
                         />
                       </div>

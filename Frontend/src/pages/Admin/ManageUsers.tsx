@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getImageUrl } from "@/lib/imageUrl";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -158,9 +159,7 @@ const UserDetails = ({
       <div className="flex items-center space-x-4">
         <div className="w-60 h-60 bg-gray-200 p-2 rounded-full overflow-hidden">
           <img
-            src={`${
-              import.meta.env.VITE_API_BASE_URL
-            }/uploads/${user.passportPhoto?.split(/[/\\]/).pop()}`}
+            src={getImageUrl(user.passportPhoto)}
             alt={user.name}
             className="h-full w-full  rounded-full"
             onError={(e) => {
@@ -479,22 +478,21 @@ const ManageUsers = () => {
       const { data } = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/GetAllRoles`
       );
-
       setRoles(data);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.response.data,
+        description: error instanceof Error ? error.message : "Failed to load roles",
         variant: "destructive",
       });
     }
   };
+
   const fetchUsers = async () => {
     try {
       const { data } = await axios.get<ApiUser[]>(
         `${import.meta.env.VITE_API_BASE_URL}/GetAllUsers`
       );
-
       const formattedUsers: User[] = data.map((item) => ({
         id: item.id,
         name: item.fullName,
@@ -504,12 +502,11 @@ const ManageUsers = () => {
         verified: item.verified,
         passportPhoto: item.passportPhoto,
       }));
-
       setUsers(formattedUsers);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.response.data,
+        description: error instanceof Error ? error.message : "Failed to load users",
         variant: "destructive",
       });
     }
@@ -571,12 +568,8 @@ const ManageUsers = () => {
 
   const closeEditModal = () => {
     setIsEditModalOpen(false);
-    setEditErrors({
-      fullName: "",
-      email: "",
-      systemRoleId: "",
-      phoneNumber: "",
-    });
+    setEditErrors({ fullName: "", email: "", systemRoleId: "", phoneNumber: "" });
+    setPreviewUrls({ PassportPhoto: null, IdFront: null, IdBack: null });
   };
 
   const handleChange = (e: any) => {
@@ -1622,16 +1615,23 @@ const ManageUsers = () => {
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "PassportPhoto")}
                 >
-                  {previewUrls.PassportPhoto ? (
+                  {(previewUrls.PassportPhoto || editFormData.currentPassportPhoto) ? (
                     <div className="relative w-full h-full">
                       <img
-                        src={previewUrls.PassportPhoto}
+                        src={
+                          previewUrls.PassportPhoto ||
+                          getImageUrl(editFormData.currentPassportPhoto)
+                        }
                         alt="Passport Preview"
                         className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0="; }}
                       />
                       <button
                         type="button"
-                        onClick={() => removeFile("PassportPhoto")}
+                        onClick={() => {
+                          setPreviewUrls(prev => ({ ...prev, PassportPhoto: null }));
+                          setEditFormData(prev => ({ ...prev, PassportPhoto: null, currentPassportPhoto: "" }));
+                        }}
                         className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                       >
                         <X size={14} />
@@ -1675,16 +1675,23 @@ const ManageUsers = () => {
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "IdFront")}
                 >
-                  {previewUrls.IdFront ? (
+                  {(previewUrls.IdFront || editFormData.currentIdFront) ? (
                     <div className="relative w-full h-full">
                       <img
-                        src={previewUrls.IdFront}
+                        src={
+                          previewUrls.IdFront ||
+                          getImageUrl(editFormData.currentIdFront)
+                        }
                         alt="ID Front Preview"
                         className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "https://placehold.co/400x250?text=ID+Front"; }}
                       />
                       <button
                         type="button"
-                        onClick={() => removeFile("IdFront")}
+                        onClick={() => {
+                          setPreviewUrls(prev => ({ ...prev, IdFront: null }));
+                          setEditFormData(prev => ({ ...prev, IdFront: null, currentIdFront: "" }));
+                        }}
                         className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                       >
                         <X size={14} />
@@ -1721,16 +1728,23 @@ const ManageUsers = () => {
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "IdBack")}
                 >
-                  {previewUrls.IdBack ? (
+                  {(previewUrls.IdBack || editFormData.currentIdBack) ? (
                     <div className="relative w-full h-full">
                       <img
-                        src={previewUrls.IdBack}
+                        src={
+                          previewUrls.IdBack ||
+                          getImageUrl(editFormData.currentIdBack)
+                        }
                         alt="ID Back Preview"
                         className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "https://placehold.co/400x250?text=ID+Back"; }}
                       />
                       <button
                         type="button"
-                        onClick={() => removeFile("IdBack")}
+                        onClick={() => {
+                          setPreviewUrls(prev => ({ ...prev, IdBack: null }));
+                          setEditFormData(prev => ({ ...prev, IdBack: null, currentIdBack: "" }));
+                        }}
                         className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                       >
                         <X size={14} />

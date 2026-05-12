@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getImageUrl } from "@/lib/imageUrl";
 import { Home, MapPin, Phone, Mail, User, Calendar } from "lucide-react";
 import {
   Card,
@@ -120,9 +121,7 @@ const PropertyDetails = () => {
               {property.imageUrl ? (
                 <img
                   // src={`${apiUrl}/${property.imageUrl}`}
-                  src={`${apiUrl}/uploads/${property.imageUrl
-                    .split(/[/\\]/)
-                    .pop()}`}
+                  src={getImageUrl(property.imageUrl)}
                   alt={property.name}
                   className="object-cover w-full h-full"
                   onError={(e) => {
