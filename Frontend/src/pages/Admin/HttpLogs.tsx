@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Eye, FileText } from "lucide-react";
+import { Download, Eye, FileText, Copy, Check } from "lucide-react";
 
 interface HttpLogEntry {
   id: number;
@@ -68,6 +68,35 @@ const toInputDate = (date: Date) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+const prettyJson = (raw?: string | null): string => {
+  if (!raw) return "";
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
+  }
+};
+
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+  return (
+    <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={handleCopy}>
+      {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+      {copied ? "Copied" : "Copy"}
+    </Button>
+  );
 };
 
 const HttpLogs = () => {
@@ -464,38 +493,53 @@ const HttpLogs = () => {
       </Tabs>
 
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>HTTP Request / Response Log</DialogTitle>
+            <DialogTitle>Log Details</DialogTitle>
           </DialogHeader>
           {selectedLog && (
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card className="p-4">
-                  <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Date:</span> {formatDate(selectedLog.createdAt)}</p>
-                    <p><span className="font-medium">Method:</span> {selectedLog.requestType || "-"}</p>
-                    <p><span className="font-medium">Status:</span> {selectedLog.status || "-"}</p>
-                    <p><span className="font-medium">URL:</span> {selectedLog.requestUrl || "-"}</p>
-                    <p><span className="font-medium">Error:</span> {selectedLog.errorMessage || "-"}</p>
+            <div className="space-y-5">
+              {/* Metadata strip */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                {[
+                  { label: "Date", value: formatDate(selectedLog.createdAt) },
+                  { label: "Method", value: selectedLog.requestType || "—" },
+                  { label: "Status", value: selectedLog.status || "—" },
+                  { label: "Error", value: selectedLog.errorMessage || "None" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-lg border bg-muted/40 px-3 py-2">
+                    <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+                    <p className="font-medium truncate text-slate-800">{value}</p>
                   </div>
-                </Card>
+                ))}
+              </div>
+              {/* URL row */}
+              <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+                <p className="text-xs text-muted-foreground mb-0.5">Request URL</p>
+                <p className="font-mono text-slate-800 break-all">{selectedLog.requestUrl || "—"}</p>
               </div>
 
+              {/* Request & Response */}
               <div className="grid gap-4 lg:grid-cols-2">
-                <Card className="p-4 space-y-2">
-                  <h3 className="font-semibold">Request</h3>
-                  <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
-                    {selectedLog.request || "No request payload recorded."}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-700">Request Body</h3>
+                    {selectedLog.request && <CopyButton text={prettyJson(selectedLog.request)} />}
+                  </div>
+                  <pre className="max-h-[380px] overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-950 p-4 text-xs text-slate-50 leading-relaxed">
+                    {prettyJson(selectedLog.request) || <span className="text-slate-500 italic">No request payload recorded.</span>}
                   </pre>
-                </Card>
+                </div>
 
-                <Card className="p-4 space-y-2">
-                  <h3 className="font-semibold">Response</h3>
-                  <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
-                    {selectedLog.response || "No response payload recorded."}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-700">Response Body</h3>
+                    {selectedLog.response && <CopyButton text={prettyJson(selectedLog.response)} />}
+                  </div>
+                  <pre className="max-h-[380px] overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-950 p-4 text-xs text-slate-50 leading-relaxed">
+                    {prettyJson(selectedLog.response) || <span className="text-slate-500 italic">No response payload recorded.</span>}
                   </pre>
-                </Card>
+                </div>
               </div>
             </div>
           )}
