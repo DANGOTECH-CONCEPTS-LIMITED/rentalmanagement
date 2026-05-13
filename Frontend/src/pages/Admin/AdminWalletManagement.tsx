@@ -10,7 +10,6 @@ import {
   FileText,
   Loader2,
   RefreshCw,
-  Search,
   SendHorizontal,
   Wallet,
 } from "lucide-react";
@@ -48,16 +47,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -760,90 +751,86 @@ const AdminWalletManagement = () => {
                 Refresh balances
               </Button>
             </div>
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={listSearchTerm}
-                  onChange={(event) => setListSearchTerm(event.target.value)}
-                  placeholder="Search by name, email, or role"
-                  className="pl-10"
-                />
-              </div>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="landlord">Landlords</SelectItem>
-                  <SelectItem value="utility payment">Utility payment</SelectItem>
-                  <SelectItem value="utililty payment">Utililty payment</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardHeader>
           <CardContent>
-            {isLoadingUsers || isLoadingBalances ? (
-              <div className="space-y-3">
-                {[...Array(6)].map((_, index) => (
-                  <Skeleton key={index} className="h-14 w-full rounded-xl" />
-                ))}
-              </div>
-            ) : filteredBalanceRecords.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
-                No wallet records match the current filters.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Account</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Statement rows</TableHead>
-                      <TableHead>Last activity</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBalanceRecords.map((record) => (
-                      <TableRow
-                        key={record.user.id}
-                        className={cn(
-                          "cursor-pointer transition-colors hover:bg-slate-50/90",
-                          selectedUserId === String(record.user.id) && "bg-primary/5"
-                        )}
-                        onClick={() => setSelectedUserId(String(record.user.id))}
-                      >
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-medium text-slate-950">{record.user.fullName}</p>
-                            <p className="text-xs text-muted-foreground">{record.user.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{getRoleLabel(record.user)}</Badge>
-                        </TableCell>
-                        <TableCell>{record.statementCount ?? "--"}</TableCell>
-                        <TableCell>
-                          {record.lastStatementAt
-                            ? new Date(record.lastStatementAt).toLocaleString()
-                            : "--"}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-slate-950">
-                          {record.error ? (
-                            <span className="text-sm font-medium text-red-600">Unavailable</span>
-                          ) : (
-                            record.balanceLabel
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            {(() => {
+              const walletBalanceColumns: Column<WalletBalanceRecord>[] = [
+                {
+                  key: "account",
+                  header: "Account",
+                  cell: (record) => (
+                    <div
+                      className={cn(
+                        "cursor-pointer space-y-1",
+                        selectedUserId === String(record.user.id) && "text-primary"
+                      )}
+                      onClick={() => setSelectedUserId(String(record.user.id))}
+                    >
+                      <p className="font-medium text-slate-950">{record.user.fullName}</p>
+                      <p className="text-xs text-muted-foreground">{record.user.email}</p>
+                    </div>
+                  ),
+                },
+                {
+                  key: "role",
+                  header: "Role",
+                  cell: (record) => (
+                    <Badge variant="secondary">{getRoleLabel(record.user)}</Badge>
+                  ),
+                },
+                {
+                  key: "statementCount",
+                  header: "Statement rows",
+                  cell: (record) => record.statementCount ?? "--",
+                },
+                {
+                  key: "lastActivity",
+                  header: "Last activity",
+                  cell: (record) =>
+                    record.lastStatementAt
+                      ? new Date(record.lastStatementAt).toLocaleString()
+                      : "--",
+                },
+                {
+                  key: "balance",
+                  header: "Balance",
+                  headerClassName: "text-right",
+                  className: "text-right font-semibold text-slate-950",
+                  cell: (record) =>
+                    record.error ? (
+                      <span className="text-sm font-medium text-red-600">Unavailable</span>
+                    ) : (
+                      record.balanceLabel
+                    ),
+                },
+              ];
+
+              return (
+                <DataTable
+                  data={filteredBalanceRecords}
+                  columns={walletBalanceColumns}
+                  loading={isLoadingUsers || isLoadingBalances}
+                  searchValue={listSearchTerm}
+                  onSearchChange={setListSearchTerm}
+                  searchPlaceholder="Search by name, email, or role"
+                  label="wallet"
+                  emptyMessage="No wallet records match the current filters."
+                  headerRight={
+                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All roles</SelectItem>
+                        <SelectItem value="landlord">Landlords</SelectItem>
+                        <SelectItem value="utility payment">Utility payment</SelectItem>
+                        <SelectItem value="utililty payment">Utililty payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  }
+                />
+              );
+            })()}
           </CardContent>
         </Card>
 
@@ -994,35 +981,23 @@ const AdminWalletManagement = () => {
               </div>
             </div>
           </div>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative max-w-md flex-1">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={statementSearchTerm}
-                onChange={(event) => setStatementSearchTerm(event.target.value)}
-                placeholder="Search statement description, amount, or date"
-                className="pl-10"
-                disabled={!selectedUser}
-              />
-            </div>
-            <div className="flex gap-2 md:self-start">
-              <Button
-                variant="outline"
-                onClick={exportStatement}
-                disabled={!selectedUser || filteredStatementEntries.length === 0}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-              <Button
-                variant="outline"
-                onClick={exportStatementPdf}
-                disabled={!selectedUser || filteredStatementEntries.length === 0}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Export PDF
-              </Button>
-            </div>
+          <div className="flex gap-2 md:self-start">
+            <Button
+              variant="outline"
+              onClick={exportStatement}
+              disabled={!selectedUser || filteredStatementEntries.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              onClick={exportStatementPdf}
+              disabled={!selectedUser || filteredStatementEntries.length === 0}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Export PDF
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -1030,70 +1005,88 @@ const AdminWalletManagement = () => {
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
               Choose a wallet first to load its statement.
             </div>
-          ) : isLoadingStatement ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, index) => (
-                <Skeleton key={index} className="h-14 w-full rounded-xl" />
-              ))}
-            </div>
-          ) : filteredStatementEntries.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
-              No statement entries match the current filters.
-            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Flow</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Running balance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStatementEntries.map((entry, index) => {
+            (() => {
+              const statementColumns: Column<typeof filteredStatementEntries[0]>[] = [
+                {
+                  key: "transactionDate",
+                  header: "Date",
+                  cell: (entry) => new Date(entry.transactionDate).toLocaleString(),
+                },
+                {
+                  key: "description",
+                  header: "Description",
+                  className: "min-w-[280px]",
+                  cell: (entry) => (
+                    <div className="font-medium text-slate-950">
+                      {entry.description || "Wallet transaction"}
+                    </div>
+                  ),
+                },
+                {
+                  key: "flow",
+                  header: "Flow",
+                  cell: (entry) => {
                     const flow = getStatementSign(entry);
                     return (
-                      <TableRow key={`${entry.transactionDate}-${entry.amount}-${index}`}>
-                        <TableCell>{new Date(entry.transactionDate).toLocaleString()}</TableCell>
-                        <TableCell className="min-w-[280px]">
-                          <div className="font-medium text-slate-950">{entry.description || "Wallet transaction"}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {flow === "credit" ? (
-                              <ArrowDownLeft className="h-4 w-4 text-green-600" />
-                            ) : flow === "debit" ? (
-                              <ArrowUpRight className="h-4 w-4 text-red-600" />
-                            ) : (
-                              <SendHorizontal className="h-4 w-4 text-slate-500" />
-                            )}
-                            <span className="capitalize">{flow}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            "text-right font-semibold",
-                            flow === "credit" && "text-green-600",
-                            flow === "debit" && "text-red-600"
-                          )}
-                        >
-                          {entry.amount > 0 ? "+" : ""}
-                          {formatCurrency(entry.amount)}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-slate-950">
-                          {entry.runningBalance !== null
-                            ? formatCurrency(entry.runningBalance)
-                            : "--"}
-                        </TableCell>
-                      </TableRow>
+                      <div className="flex items-center gap-2">
+                        {flow === "credit" ? (
+                          <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                        ) : flow === "debit" ? (
+                          <ArrowUpRight className="h-4 w-4 text-red-600" />
+                        ) : (
+                          <SendHorizontal className="h-4 w-4 text-slate-500" />
+                        )}
+                        <span className="capitalize">{flow}</span>
+                      </div>
                     );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                  },
+                },
+                {
+                  key: "amount",
+                  header: "Amount",
+                  headerClassName: "text-right",
+                  cell: (entry) => {
+                    const flow = getStatementSign(entry);
+                    return (
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          flow === "credit" && "text-green-600",
+                          flow === "debit" && "text-red-600"
+                        )}
+                      >
+                        {entry.amount > 0 ? "+" : ""}
+                        {formatCurrency(entry.amount)}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: "runningBalance",
+                  header: "Running balance",
+                  headerClassName: "text-right",
+                  className: "text-right font-semibold text-slate-950",
+                  cell: (entry) =>
+                    (entry as any).runningBalance !== null && (entry as any).runningBalance !== undefined
+                      ? formatCurrency((entry as any).runningBalance)
+                      : "--",
+                },
+              ];
+
+              return (
+                <DataTable
+                  data={filteredStatementEntries}
+                  columns={statementColumns}
+                  loading={isLoadingStatement}
+                  searchValue={statementSearchTerm}
+                  onSearchChange={setStatementSearchTerm}
+                  searchPlaceholder="Search statement description, amount, or date"
+                  label="entry"
+                  emptyMessage="No statement entries match the current filters."
+                />
+              );
+            })()
           )}
         </CardContent>
       </Card>

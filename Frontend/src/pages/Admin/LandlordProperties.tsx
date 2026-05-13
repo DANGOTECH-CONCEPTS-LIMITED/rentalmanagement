@@ -3,27 +3,18 @@
 import { useState, useEffect } from "react";
 import { getImageUrl } from "@/lib/imageUrl";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   House,
-  Search,
   Eye,
   Edit,
   Trash,
   X,
   ImageIcon,
-  Upload,
   XIcon,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -134,6 +125,7 @@ const LandlordProperties = () => {
   }, []);
 
   const fetchProperties = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(`${apiUrl}/GetAllProperties`, {
         method: "GET",
@@ -412,97 +404,81 @@ const LandlordProperties = () => {
 
       <Card className="data-surface border-none shadow-none">
         <CardContent className="pt-6">
-          <div className="mb-6 flex items-center relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by property name, address, or landlord..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
           {error ? (
             <div className="py-8 text-center text-red-500">
               <p className="font-medium">Error retrieving properties</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
-          ) : isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredProperties.length === 0 ? (
-            <div className="py-8 flex flex-col items-center justify-center text-center">
-              <House className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No properties found</h3>
-              <p className="text-muted-foreground mt-1">
-                {searchTerm
-                  ? "Try adjusting your search query"
-                  : "Start by adding a new property"}
-              </p>
-            </div>
           ) : (
-            <div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Property Name</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Address
-                    </TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Rooms
-                    </TableHead>
-                    <TableHead>Landlord</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProperties.map((property) => (
-                    <TableRow key={property.id}>
-                      <TableCell className="font-medium">
-                        {property.name}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {property.address}
-                      </TableCell>
-                      <TableCell>{property.type}</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {property.numberOfRooms}
-                      </TableCell>
-                      <TableCell>{property.owner.fullName}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedProperty(property)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEditProperty(property)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-500"
-                            onClick={() => handleDeleteProperty(property.id)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              data={filteredProperties}
+              columns={[
+                {
+                  key: "name",
+                  header: "Property Name",
+                  cell: (row) => <span className="font-medium">{row.name}</span>,
+                },
+                {
+                  key: "address",
+                  header: "Address",
+                  cell: (row) => row.address,
+                },
+                {
+                  key: "type",
+                  header: "Type",
+                  cell: (row) => row.type,
+                },
+                {
+                  key: "numberOfRooms",
+                  header: "Rooms",
+                  cell: (row) => row.numberOfRooms,
+                },
+                {
+                  key: "landlord",
+                  header: "Landlord",
+                  cell: (row) => row.owner.fullName,
+                },
+                {
+                  key: "actions",
+                  header: "Actions",
+                  headerClassName: "text-right",
+                  className: "text-right",
+                  cell: (row) => (
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setSelectedProperty(row)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEditProperty(row)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-red-500"
+                        onClick={() => handleDeleteProperty(row.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              loading={isLoading}
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Search by property name, address, or landlord..."
+              label="property"
+              emptyMessage={searchTerm ? "Try adjusting your search query" : "Start by adding a new property"}
+              emptyIcon={<House className="h-12 w-12" />}
+            />
           )}
         </CardContent>
       </Card>

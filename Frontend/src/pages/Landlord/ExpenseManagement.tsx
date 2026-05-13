@@ -69,6 +69,7 @@ const emptyForm = {
 
 const ExpenseManagement = () => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [expenses, setExpenses] = useState<Expense[]>(dummyExpenses);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
@@ -268,6 +269,7 @@ const ExpenseManagement = () => {
         <DataTable
           data={filtered}
           columns={expenseColumns}
+          loading={isLoading}
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search description, property..."

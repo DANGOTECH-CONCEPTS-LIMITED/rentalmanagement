@@ -35,6 +35,7 @@ const emptyForm: Omit<Contract, 'id'> = {
 };
 
 const RentalContracts = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showContractGenerator, setShowContractGenerator] = useState(false);
@@ -198,6 +199,7 @@ const RentalContracts = () => {
           <DataTable
             data={filteredContracts}
             columns={contractColumns}
+            loading={isLoading}
             searchValue={searchTerm}
             onSearchChange={setSearchTerm}
             searchPlaceholder="Search by tenant, property, or contract ID"

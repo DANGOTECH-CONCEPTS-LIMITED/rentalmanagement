@@ -72,6 +72,7 @@ const statusBadge = (s: InvoiceStatus) => {
 
 const InvoiceManagement = () => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>(dummyInvoices);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
@@ -200,6 +201,7 @@ const InvoiceManagement = () => {
             <DataTable
               data={filtered}
               columns={invoiceCols}
+              loading={isLoading}
               searchValue={search}
               onSearchChange={setSearch}
               searchPlaceholder="Search invoice, tenant..."

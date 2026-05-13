@@ -2,14 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 
 type UtilityTransaction = {
   id: number;
@@ -30,58 +23,98 @@ type UtilityTransaction = {
   units: string | null;
 };
 
-const ITEMS_PER_PAGE = 20;
-
 const UtilityReport: React.FC = () => {
   const [meterNumber, setMeterNumber] = useState("0292000010788");
   const [data, setData] = useState<UtilityTransaction[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const fetchData = async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const response = await axios.get<UtilityTransaction[]>(
         `${apiUrl}/GetUtilityPaymentByMeterNumber/${meterNumber}`
       );
       setData(response.data);
-      setCurrentPage(1);
     } catch (error) {
       console.error("Fetch error:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-const handleExportPDF = () => {
-  const doc = new jsPDF();
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
 
-  doc.setFontSize(16);
-  doc.text("Utility Payment Report", 14, 20);
+    doc.setFontSize(16);
+    doc.text("Utility Payment Report", 14, 20);
 
-  autoTable(doc, {
-    startY: 30,
-    head: [["Date", "Status", "Amount","Meter Number", "Charges", "Token", "Units", "Reason"]],
-    body: data.map((item) => [
-      new Date(item.createdAt).toLocaleDateString(),
-      item.status,
-      item.amount,
-      item.meterNumber,
-      item.charges,
-      item.isTokenGenerated ? item.token || "N/A" : "N/A",
-      item.units || "N/A",
-      item.reasonAtTelecom,
-    ]),
-  });
+    autoTable(doc, {
+      startY: 30,
+      head: [["Date", "Status", "Amount", "Meter Number", "Charges", "Token", "Units", "Reason"]],
+      body: data.map((item) => [
+        new Date(item.createdAt).toLocaleDateString(),
+        item.status,
+        item.amount,
+        item.meterNumber,
+        item.charges,
+        item.isTokenGenerated ? item.token || "N/A" : "N/A",
+        item.units || "N/A",
+        item.reasonAtTelecom,
+      ]),
+    });
 
-  doc.save("utility-report.pdf");
-};
+    doc.save("utility-report.pdf");
+  };
 
-  const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedData = data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const columns: Column<UtilityTransaction>[] = [
+    {
+      key: "date",
+      header: "Date",
+      cell: (item) => new Date(item.createdAt).toLocaleDateString(),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (item) => (
+        <span className={item.status.includes("FAILED") ? "text-red-600" : "text-green-600"}>
+          {item.status}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      cell: (item) => item.amount,
+    },
+    {
+      key: "meterNumber",
+      header: "Meter Number",
+      cell: (item) => item.meterNumber,
+    },
+    {
+      key: "charges",
+      header: "Charges",
+      cell: (item) => item.charges,
+    },
+    {
+      key: "token",
+      header: "Token",
+      cell: (item) => (item.isTokenGenerated ? item.token || "N/A" : "N/A"),
+    },
+    {
+      key: "units",
+      header: "Units",
+      cell: (item) => item.units || "N/A",
+    },
+    {
+      key: "reason",
+      header: "Reason",
+      className: "text-sm",
+      cell: (item) => item.reasonAtTelecom,
+    },
+  ];
 
   return (
     <div className="p-6">
@@ -101,10 +134,10 @@ const handleExportPDF = () => {
         </div>
         <button
           onClick={fetchData}
-          disabled={loading}
+          disabled={isLoading}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-70 disabled:pointer-events-none"
         >
-          {loading ? "Submitting..." : "Fetch Data"}
+          {isLoading ? "Submitting..." : "Fetch Data"}
         </button>
         {data.length > 0 && (
           <button
@@ -116,75 +149,13 @@ const handleExportPDF = () => {
         )}
       </div>
 
-      {data.length > 0 ? (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Meter Number</TableHead>
-                <TableHead>Charges</TableHead>
-                <TableHead>Token</TableHead>
-                <TableHead>Units</TableHead>
-                <TableHead>Reason</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell
-                    className={
-                      item.status.includes("FAILED")
-                        ? "text-red-600"
-                        : "text-green-600"
-                    }
-                  >
-                    {item.status}
-                  </TableCell>
-                  <TableCell>{item.amount}</TableCell>
-                  <TableCell>{item.meterNumber}</TableCell>
-                  <TableCell>{item.charges}</TableCell>
-                  <TableCell>
-                    {item.isTokenGenerated ? item.token || "N/A" : "N/A"}
-                  </TableCell>
-                  <TableCell>{item.units || "N/A"}</TableCell>
-                  <TableCell className="text-sm">{item.reasonAtTelecom}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Pagination Controls */}
-          <div className="mt-4 flex justify-between items-center">
-            <p className="text-sm text-gray-500">
-              Page {currentPage} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-              >
-                Prev
-              </button>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </>
-      ) : (
-        !loading && <p className="text-gray-500">No data found.</p>
-      )}
+      <DataTable
+        data={data}
+        columns={columns}
+        loading={isLoading}
+        label="transaction"
+        emptyMessage="No data found."
+      />
     </div>
   );
 };

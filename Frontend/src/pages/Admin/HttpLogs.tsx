@@ -10,14 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Select,
   SelectContent,
@@ -27,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronsLeft, ChevronsRight, Download, Eye, FileText } from "lucide-react";
+import { Download, Eye, FileText } from "lucide-react";
 
 interface HttpLogEntry {
   id: number;
@@ -95,10 +88,8 @@ const HttpLogs = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSerilogFiles, setIsLoadingSerilogFiles] = useState(false);
   const [isLoadingSerilogContent, setIsLoadingSerilogContent] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const rowsPerPage = 10;
 
   const getToken = () => {
     const storedUser = localStorage.getItem("user");
@@ -275,23 +266,6 @@ const HttpLogs = () => {
     });
   }, [logs, methodFilter, searchTerm, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / rowsPerPage));
-
-  const paginatedLogs = useMemo(() => {
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    return filteredLogs.slice(startIndex, startIndex + rowsPerPage);
-  }, [currentPage, filteredLogs]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [methodFilter, searchTerm, statusFilter]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
   const exportLogsCsv = () => {
     if (filteredLogs.length === 0) {
       return;
@@ -407,15 +381,6 @@ const HttpLogs = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="log-search">Search logs</Label>
-                <Input
-                  id="log-search"
-                  placeholder="Search by URL, method, status, or content"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                />
-              </div>
               <div className="flex items-end gap-2">
                 <Button onClick={fetchLogs} className="w-full md:w-auto">
                   Retrieve Logs
@@ -433,92 +398,31 @@ const HttpLogs = () => {
           </Card>
 
           <Card className="p-4">
-            {isLoading ? (
-              <div className="py-8 text-center text-muted-foreground">Loading logs...</div>
-            ) : filteredLogs.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                No request/response logs found for the selected criteria.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {filteredLogs.length} matching log entries.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
-                  </p>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Method</TableHead>
-                        <TableHead>Request URL</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Error</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedLogs.map((log) => (
-                        <TableRow key={log.id}>
-                          <TableCell>{formatDate(log.createdAt)}</TableCell>
-                          <TableCell>{log.requestType || "-"}</TableCell>
-                          <TableCell className="max-w-[360px] truncate">
-                            {log.requestUrl || "-"}
-                          </TableCell>
-                          <TableCell>{log.status || "-"}</TableCell>
-                          <TableCell className="max-w-[240px] truncate">
-                            {log.errorMessage || "-"}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedLog(log)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="flex justify-end">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronsLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setCurrentPage((page) => Math.min(totalPages, page + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                      >
-                        <ChevronsRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <DataTable
+              data={filteredLogs}
+              columns={[
+                { key: "date", header: "Date", cell: (l) => formatDate(l.createdAt) },
+                { key: "method", header: "Method", cell: (l) => l.requestType || "-" },
+                { key: "url", header: "Request URL", className: "max-w-[360px] truncate", cell: (l) => l.requestUrl || "-" },
+                { key: "status", header: "Status", cell: (l) => l.status || "-" },
+                { key: "error", header: "Error", className: "max-w-[240px] truncate", cell: (l) => l.errorMessage || "-" },
+                {
+                  key: "actions", header: "Actions",
+                  cell: (l) => (
+                    <Button variant="outline" size="sm" onClick={() => setSelectedLog(l)}>
+                      <Eye className="mr-2 h-4 w-4" />View
+                    </Button>
+                  ),
+                },
+              ]}
+              loading={isLoading}
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Search by URL, method, status, or content"
+              label="log"
+              emptyMessage="No request/response logs found for the selected criteria"
+              minWidth="860px"
+            />
           </Card>
         </TabsContent>
 
@@ -536,45 +440,25 @@ const HttpLogs = () => {
               </Button>
             </div>
 
-            {isLoadingSerilogFiles ? (
-              <div className="py-8 text-center text-muted-foreground">Loading file logs...</div>
-            ) : serilogFiles.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                No raw Serilog log files were found.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>File Name</TableHead>
-                      <TableHead>Last Modified</TableHead>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {serilogFiles.map((file) => (
-                      <TableRow key={file.fileName}>
-                        <TableCell>{file.fileName}</TableCell>
-                        <TableCell>{formatDate(file.lastModified)}</TableCell>
-                        <TableCell>{formatSize(file.sizeBytes)}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fetchSerilogFileContent(file.fileName)}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Open
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <DataTable
+              data={serilogFiles}
+              columns={[
+                { key: "name", header: "File Name", cell: (f) => f.fileName },
+                { key: "modified", header: "Last Modified", cell: (f) => formatDate(f.lastModified) },
+                { key: "size", header: "Size", cell: (f) => formatSize(f.sizeBytes) },
+                {
+                  key: "actions", header: "Actions",
+                  cell: (f) => (
+                    <Button variant="outline" size="sm" onClick={() => fetchSerilogFileContent(f.fileName)}>
+                      <FileText className="mr-2 h-4 w-4" />Open
+                    </Button>
+                  ),
+                },
+              ]}
+              loading={isLoadingSerilogFiles}
+              label="file"
+              emptyMessage="No raw Serilog log files were found"
+            />
           </Card>
         </TabsContent>
       </Tabs>

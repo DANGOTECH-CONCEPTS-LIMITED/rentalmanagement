@@ -4,20 +4,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -37,14 +28,7 @@ import {
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Edit,
-  Trash2,
-  Plus,
-  Eye,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
+import { Edit, Trash2, Eye } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -57,6 +41,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
+import { DataTable, Column } from "@/components/ui/data-table";
 
 interface Landlord {
   id: number;
@@ -98,7 +83,7 @@ const meterSchema = z.object({
 const ManageUtilityMeters = () => {
   const [meters, setMeters] = useState<UtilityMeter[]>([]);
   const [allUsers, setAllUsers] = useState<Landlord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [editingMeter, setEditingMeter] = useState<UtilityMeter | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -107,9 +92,6 @@ const ManageUtilityMeters = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Search and pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
   const [search, setSearch] = useState("");
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -126,7 +108,7 @@ const ManageUtilityMeters = () => {
   });
 
   const fetchMeters = async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/GetAllUtilityMeters`, {
         headers: {
@@ -142,7 +124,7 @@ const ManageUtilityMeters = () => {
         description: "Failed to fetch utility meters",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -166,9 +148,9 @@ const ManageUtilityMeters = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      setIsLoading(true);
       await Promise.all([fetchMeters(), fetchAllUsers()]);
-      setLoading(false);
+      setIsLoading(false);
     };
     fetchData();
   }, []);
@@ -179,7 +161,7 @@ const ManageUtilityMeters = () => {
     fullName: user.fullName,
   }));
 
-  // Filtered and paginated meters
+  // Filtered meters
   const filteredMeters = useMemo(() => {
     if (!search.trim()) return meters;
     const s = search.trim().toLowerCase();
@@ -195,12 +177,6 @@ const ManageUtilityMeters = () => {
       );
     });
   }, [meters, search]);
-
-  const totalPages = Math.ceil(filteredMeters.length / rowsPerPage);
-  const paginatedMeters = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return filteredMeters.slice(start, start + rowsPerPage);
-  }, [filteredMeters, currentPage]);
 
   const handleEdit = (meter: UtilityMeter) => {
     setEditingMeter(meter);
@@ -280,149 +256,127 @@ const ManageUtilityMeters = () => {
     navigate(`/admin-dashboard/utility-payments/${landLordId}`);
   };
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="text-center">Loading utility meters...</div>
-      </div>
-    );
-  }
+  const columns: Column<UtilityMeter>[] = [
+    {
+      key: "id",
+      header: "ID",
+      cell: (row) => row.id,
+    },
+    {
+      key: "meterType",
+      header: "Meter Type",
+      cell: (row) => row.meterType,
+    },
+    {
+      key: "meterNumber",
+      header: "Meter Number",
+      cell: (row) => row.meterNumber,
+    },
+    {
+      key: "nwscAccount",
+      header: "NWSC Account",
+      cell: (row) => row.nwscAccount,
+    },
+    {
+      key: "locationOfNwscMeter",
+      header: "Location",
+      cell: (row) => row.locationOfNwscMeter,
+    },
+    {
+      key: "landlordName",
+      header: "Landlord Name",
+      cell: (row) => row.user?.fullName ?? "-",
+    },
+    {
+      key: "utilityPayments",
+      header: "Utility Payments",
+      cell: (row) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleViewPayments(row.landLordId)}
+        >
+          <Eye className="h-4 w-4 mr-1" /> View
+        </Button>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (row) => (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleEdit(row)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <AlertDialog
+            open={deleteDialogOpen && meterToDelete?.id === row.id}
+            onOpenChange={(open) => {
+              if (!open) {
+                setDeleteDialogOpen(false);
+                setMeterToDelete(null);
+              }
+            }}
+          >
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setMeterToDelete(row);
+                  setDeleteDialogOpen(true);
+                }}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete Utility Meter
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this utility meter?
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Submitting..." : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Utility Meters</h1>
-        <Input
-          type="text"
-          placeholder="Search by meter type, number, account, location, or landlord..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-64"
-        />
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Meter Type</TableHead>
-              <TableHead>Meter Number</TableHead>
-              <TableHead>NWSC Account</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Landlord Name</TableHead>
-              <TableHead>Utility Payments</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedMeters.map((meter) => (
-              <TableRow key={meter.id}>
-                <TableCell>{meter.id}</TableCell>
-                <TableCell>{meter.meterType}</TableCell>
-                <TableCell>{meter.meterNumber}</TableCell>
-                <TableCell>{meter.nwscAccount}</TableCell>
-                <TableCell>{meter.locationOfNwscMeter}</TableCell>
-                <TableCell>{meter.user?.fullName ?? "-"}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewPayments(meter.landLordId)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" /> View
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(meter)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog
-                      open={deleteDialogOpen && meterToDelete?.id === meter.id}
-                      onOpenChange={(open) => {
-                        if (!open) {
-                          setDeleteDialogOpen(false);
-                          setMeterToDelete(null);
-                        }
-                      }}
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setMeterToDelete(meter);
-                            setDeleteDialogOpen(true);
-                          }}
-                          disabled={isDeleting}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Delete Utility Meter
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this utility meter?
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                          >
-                            {isDeleting ? "Submitting..." : "Delete"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex justify-end mt-4 p-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+      <div className="bg-white rounded-lg shadow p-4">
+        <DataTable
+          data={filteredMeters}
+          columns={columns}
+          loading={isLoading}
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search by meter type, number, account, location, or landlord..."
+          label="meter"
+          emptyMessage="No utility meters found."
+        />
       </div>
 
       {/* Edit Dialog */}

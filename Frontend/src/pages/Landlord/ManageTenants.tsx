@@ -148,28 +148,29 @@ const ManageTenants = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchTenants = async () => {
-      try {
-        const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
-        const filteredData = data.filter(
-          (tenant: any) => tenant?.property?.ownerId === userData.id
-        );
-        setTenants(filteredData);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description:
-            error.status === 401 ? error.statusText : error.response.data,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchTenants = async () => {
+    setIsLoading(true);
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
+      const filteredData = data.filter(
+        (tenant: any) => tenant?.property?.ownerId === userData.id
+      );
+      setTenants(filteredData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error.status === 401 ? error.statusText : error.response.data,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTenants();
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -377,12 +378,12 @@ const ManageTenants = () => {
         },
       });
       if (response.ok) {
-        setTenants(tenants.filter((tenant) => tenant.id !== tenantId));
         setSelectedTenant(null);
         toast({
           title: "Success",
           description: "Tenant deleted successfully",
         });
+        fetchTenants();
       } else {
         throw new Error("Failed to delete tenant");
       }

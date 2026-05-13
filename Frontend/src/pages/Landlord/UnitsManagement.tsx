@@ -50,6 +50,7 @@ const emptyForm = {
 
 const UnitsManagement = () => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [units, setUnits] = useState<Unit[]>(dummyUnits);
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -219,6 +220,7 @@ const UnitsManagement = () => {
         <DataTable
           data={filtered}
           columns={unitColumns}
+          loading={isLoading}
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search room, property, tenant..."

@@ -1,12 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,7 +18,7 @@ const STATUS_OPTIONS = [
 
 const UpdateTransaction = () => {
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Filters
@@ -45,7 +38,7 @@ const UpdateTransaction = () => {
   }, []);
 
   const fetchTransactions = async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     try {
       const user = localStorage.getItem("user");
@@ -59,7 +52,7 @@ const UpdateTransaction = () => {
     } catch (err: any) {
       setError(err.message || "Error fetching transactions");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -150,6 +143,63 @@ const UpdateTransaction = () => {
     });
   }, [transactions, statusFilter, searchFilter, startDate, endDate]);
 
+  const columns: Column<any>[] = [
+    {
+      key: "tranId",
+      header: "TranID",
+      cell: (t) => t.transactionID || t.transactionId || t.id,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (t) => t.status || "-",
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      cell: (t) => t.amount,
+    },
+    {
+      key: "meter",
+      header: "Meter",
+      cell: (t) => t.meterNumber || "-",
+    },
+    {
+      key: "phone",
+      header: "Phone",
+      cell: (t) => t.phoneNumber || "-",
+    },
+    {
+      key: "created",
+      header: "Created",
+      cell: (t) => formatDateTimeDmy(t.createdAt),
+    },
+    {
+      key: "action",
+      header: "Action",
+      cell: (t) => (
+        <Button size="icon" variant="ghost" onClick={() => openEdit(t)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
+
+  const headerRight = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <select className="rounded border px-2 py-1" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <option value="">All statuses</option>
+        {STATUS_OPTIONS.map((s) => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
+      <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-36" />
+      <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-36" />
+      <Button variant="outline" onClick={() => { setSearchFilter(""); setStatusFilter(""); setStartDate(""); setEndDate(""); }}>Clear</Button>
+      <Button onClick={fetchTransactions} variant="outline">Refresh</Button>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -157,67 +207,22 @@ const UpdateTransaction = () => {
           <h1 className="text-2xl font-semibold">Update Utility Transaction</h1>
           <p className="text-sm text-muted-foreground">Select a transaction and change its status.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Input
-            placeholder="Search TranID / Meter / Phone"
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="w-64"
-          />
-          <select className="rounded border px-2 py-1" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          <Button variant="outline" onClick={() => { setSearchFilter(""); setStatusFilter(""); setStartDate(""); setEndDate(""); }}>Clear</Button>
-          <Button onClick={fetchTransactions} variant="outline">Refresh</Button>
-        </div>
       </div>
 
+      {error && <div className="p-4 text-red-500">{error}</div>}
+
       <div className="card">
-        {loading ? (
-          <div className="p-6">Loading...</div>
-        ) : error ? (
-          <div className="p-6 text-red-500">{error}</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-6 text-muted-foreground">No transactions found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>TranID</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Meter</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((t) => (
-                  <TableRow key={t.id || t.transactionID}>
-                    <TableCell>{t.transactionID || t.transactionId || t.id}</TableCell>
-                    <TableCell>{t.status || "-"}</TableCell>
-                    <TableCell>{t.amount}</TableCell>
-                    <TableCell>{t.meterNumber || "-"}</TableCell>
-                    <TableCell>{t.phoneNumber || "-"}</TableCell>
-                    <TableCell>{formatDateTimeDmy(t.createdAt)}</TableCell>
-                    <TableCell>
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(t)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <DataTable
+          data={filtered}
+          columns={columns}
+          loading={isLoading}
+          searchValue={searchFilter}
+          onSearchChange={setSearchFilter}
+          searchPlaceholder="Search TranID / Meter / Phone"
+          label="transaction"
+          emptyMessage="No transactions found."
+          headerRight={headerRight}
+        />
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
