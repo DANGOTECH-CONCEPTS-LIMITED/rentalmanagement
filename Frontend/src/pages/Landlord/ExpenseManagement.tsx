@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, Search, Receipt, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Receipt, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -131,6 +129,71 @@ const ExpenseManagement = () => {
 
   const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
 
+  const expenseColumns: Column<Expense>[] = [
+    {
+      key: 'date',
+      header: 'Date',
+      cell: (e) => new Date(e.date).toLocaleDateString(),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      cell: (e) => (
+        <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryColors[e.category]}`}>{e.category}</span>
+      ),
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      className: 'max-w-[180px] truncate',
+      cell: (e) => e.description,
+    },
+    {
+      key: 'property',
+      header: 'Property',
+      cell: (e) => e.property,
+    },
+    {
+      key: 'unit',
+      header: 'Unit',
+      cell: (e) => e.unit,
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      cell: (e) => <span className="font-medium">{formatUGX(e.amount)}</span>,
+    },
+    {
+      key: 'paidBy',
+      header: 'Paid By',
+      cell: (e) => e.paidBy,
+    },
+    {
+      key: 'receipt',
+      header: 'Receipt',
+      cell: (e) =>
+        e.receipt ? (
+          <span className="flex items-center gap-1 text-xs text-blue-600">
+            <Receipt className="h-3 w-3" />{e.receipt}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">None</span>
+        ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (e) => (
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={() => openEdit(e)}><Pencil className="h-4 w-4" /></Button>
+          <Button size="sm" variant="outline" onClick={() => setDeleteExpense(e)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+        </div>
+      ),
+    },
+  ];
+
   const byCategory = categories.map((cat) => ({
     cat,
     total: expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
@@ -138,28 +201,43 @@ const ExpenseManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Expense Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Track and manage property expenses with receipts</p>
-        </div>
-        <Button onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" />Add Expense
-        </Button>
-      </div>
 
-      {/* Summary */}
+      {/* Page header */}
+      <section className="page-hero">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="space-y-3">
+            <span className="inline-flex w-fit items-center rounded-full bg-danger/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-danger">
+              Expenses
+            </span>
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Expense Management</h1>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">
+                Track and manage property expenses with receipts.
+              </p>
+            </div>
+          </div>
+          <Button onClick={openAdd}>
+            <Plus className="mr-2 h-4 w-4" />Add Expense
+          </Button>
+        </div>
+      </section>
+
+      {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-xl p-4 col-span-2 sm:col-span-1">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          className="data-surface p-5 col-span-2 sm:col-span-1">
           <p className="text-xs text-muted-foreground">Total Expenses (All)</p>
-          <p className="text-xl font-bold text-red-600 mt-1">{formatUGX(totalAll)}</p>
+          <p className="text-xl font-bold text-danger mt-1">{formatUGX(totalAll)}</p>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="glass-card rounded-xl p-4 col-span-2 sm:col-span-1">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          className="data-surface p-5 col-span-2 sm:col-span-1">
           <p className="text-xs text-muted-foreground">Filtered Period</p>
-          <p className="text-xl font-bold text-orange-600 mt-1">{formatUGX(totalFiltered)}</p>
+          <p className="text-xl font-bold text-warning mt-1">{formatUGX(totalFiltered)}</p>
         </motion.div>
         {byCategory.slice(0, 2).map(({ cat, total }, i) => (
-          <motion.div key={cat} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }} className="glass-card rounded-xl p-4">
+          <motion.div key={cat} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 + i * 0.05 }}
+            className="data-surface p-5">
             <p className="text-xs text-muted-foreground">{cat}</p>
             <p className="text-lg font-bold mt-1">{formatUGX(total)}</p>
           </motion.div>
@@ -167,8 +245,11 @@ const ExpenseManagement = () => {
       </div>
 
       {/* Category breakdown */}
-      <div className="glass-card rounded-xl p-4">
-        <h2 className="font-medium mb-3">By Category</h2>
+      <div className="data-surface p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="h-4 w-1 rounded-full bg-warning" />
+          <h2 className="text-base font-semibold text-slate-950">By Category</h2>
+        </div>
         <div className="flex flex-wrap gap-2">
           {byCategory.map(({ cat, total }) => (
             <div key={cat} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${categoryColors[cat]}`}>
@@ -178,85 +259,48 @@ const ExpenseManagement = () => {
         </div>
       </div>
 
-      <div className="glass-card rounded-xl p-4 space-y-4">
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search description, property..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Categories</SelectItem>
-                {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground whitespace-nowrap">From</Label>
-            <Input type="date" className="w-36" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} />
-          </div>
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground whitespace-nowrap">To</Label>
-            <Input type="date" className="w-36" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} />
-          </div>
+      {/* Table */}
+      <div className="data-surface p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="h-4 w-1 rounded-full bg-danger" />
+          <h2 className="text-base font-semibold text-slate-950">Expense Records</h2>
         </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Paid By</TableHead>
-                <TableHead>Receipt</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No expenses found</TableCell></TableRow>
-              ) : (
-                filtered.map((exp) => (
-                  <TableRow key={exp.id}>
-                    <TableCell>{new Date(exp.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryColors[exp.category]}`}>{exp.category}</span>
-                    </TableCell>
-                    <TableCell className="max-w-[180px] truncate">{exp.description}</TableCell>
-                    <TableCell>{exp.property}</TableCell>
-                    <TableCell>{exp.unit}</TableCell>
-                    <TableCell className="font-medium">{formatUGX(exp.amount)}</TableCell>
-                    <TableCell>{exp.paidBy}</TableCell>
-                    <TableCell>
-                      {exp.receipt ? (
-                        <span className="flex items-center gap-1 text-xs text-blue-600">
-                          <Receipt className="h-3 w-3" />{exp.receipt}
-                        </span>
-                      ) : <span className="text-muted-foreground text-xs">None</span>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(exp)}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="outline" onClick={() => setDeleteExpense(exp)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          data={filtered}
+          columns={expenseColumns}
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search description, property..."
+          label="expense"
+          pageSize={10}
+          emptyMessage="No expenses found"
+          emptyIcon={<Receipt className="h-12 w-12" />}
+          headerRight={
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Categories</SelectItem>
+                    {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">From</Label>
+                <Input type="date" className="w-36 h-9" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">To</Label>
+                <Input type="date" className="w-36 h-9" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} />
+              </div>
+            </div>
+          }
+        />
         {filtered.length > 0 && (
-          <div className="text-right text-sm font-medium border-t pt-2">
-            Period Total: <span className="text-red-600">{formatUGX(totalFiltered)}</span>
+          <div className="text-right text-sm font-medium border-t pt-3 mt-3">
+            Period Total: <span className="text-danger font-bold">{formatUGX(totalFiltered)}</span>
           </div>
         )}
       </div>

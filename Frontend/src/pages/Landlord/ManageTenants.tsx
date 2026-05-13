@@ -7,15 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import {
   Users,
@@ -37,6 +30,7 @@ import {
   User,
   UserPlus,
   X,
+  Banknote,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { set } from "date-fns";
@@ -63,6 +57,11 @@ interface Tenant {
   arrears: number;
   nextPaymentDate: string;
   dateMovedIn: string;
+  unitId?: string;
+  waterMeterNo?: string;
+  occupation?: string;
+  nextOfKinName?: string;
+  nextOfKinPhone?: string;
   property: {
     id: number;
     name: string;
@@ -98,6 +97,16 @@ const ManageTenants = () => {
   const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(
     null
   );
+
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    paymentDate: new Date().toISOString().split("T")[0],
+    paymentMethod: "Cash",
+    referenceNo: "",
+    notes: "",
+  });
   const [formData, setFormData] = useState({
     id: 0, // Added id property
     FullName: "",
@@ -387,6 +396,52 @@ const ManageTenants = () => {
     }
   };
 
+  const handleRecordPayment = async () => {
+    if (!paymentForm.amount || Number(paymentForm.amount) <= 0) {
+      toast({ title: "Validation Error", description: "Please enter a valid amount.", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingPayment(true);
+    try {
+      const body = {
+        tenantId: selectedTenant?.id,
+        amount: Number(paymentForm.amount),
+        paymentDate: paymentForm.paymentDate,
+        paymentMethod: paymentForm.paymentMethod,
+        referenceNo: paymentForm.referenceNo,
+        notes: paymentForm.notes,
+      };
+      const response = await fetch(`${apiUrl}/RecordPayment`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "application/json",
+          Accept: "*/*",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
+
+      setTenants((prev) =>
+        prev.map((t) =>
+          t.id === selectedTenant?.id
+            ? { ...t, balanceDue: Math.max(0, t.balanceDue - Number(paymentForm.amount)) }
+            : t
+        )
+      );
+      if (selectedTenant) {
+        setSelectedTenant({ ...selectedTenant, balanceDue: Math.max(0, selectedTenant.balanceDue - Number(paymentForm.amount)) });
+      }
+      toast({ title: "Payment Recorded", description: `Payment of ${formatCurrency(Number(paymentForm.amount), selectedTenant?.property.currency)} recorded successfully.` });
+      setPaymentModalOpen(false);
+      setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split("T")[0], paymentMethod: "Cash", referenceNo: "", notes: "" });
+    } catch (err) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to record payment.", variant: "destructive" });
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
+
   const PLACEHOLDER_IMAGE = "https://placehold.co/150?text=No+Image";
 
   const getImageUrl = (relativePath: string) => {
@@ -417,198 +472,102 @@ const ManageTenants = () => {
             </div>
           </div>
 
-          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-            <div className="relative flex-1 sm:min-w-[320px]">
-              <Search className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, email, or property..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={() => navigate("/landlord-dashboard/register-tenants")}
-            >
-              Add Tenant
-            </Button>
-          </div>
         </div>
       </section>
 
       <Card className="data-surface border-none shadow-none">
         <CardContent className="pt-6">
-          <div className="mb-6 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-950">Tenant records</h2>
-              <p className="text-sm text-muted-foreground">
-                {filteredTenants.length} matching tenant{filteredTenants.length === 1 ? "" : "s"}.
-              </p>
-            </div>
-          </div>
+          <h2 className="text-xl font-semibold text-slate-950 mb-6">Tenant records</h2>
 
-          {isLoading ? (
-            <div className="py-8 text-center">
-              <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            </div>
-          ) : filteredTenants.length === 0 ? (
-            <div className="py-8 flex flex-col items-center justify-center text-center">
-              <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No tenants found</h3>
-              <p className="text-muted-foreground mt-1">
-                {searchTerm
-                  ? "Try adjusting your search query"
-                  : "Start by adding a new tenant"}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tenant</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Property
-                    </TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      Move-in Date
-                    </TableHead>
-                    <TableHead>Rent</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTenants.map((tenant) => (
-                    <TableRow key={tenant.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <div className="font-medium">{tenant.fullName}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {tenant.email}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {tenant.property.name}
-                        <div className="text-sm text-muted-foreground">
-                          {tenant.property.type}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {formatDate(tenant.dateMovedIn)}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(
-                          tenant.property.price,
-                          tenant.property.currency
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(
-                            tenant.active
-                          )}`}
-                        >
-                          {tenant.active ? "Active" : "Inactive"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedTenant(tenant);
-                              setFormData({
-                                id: tenant.id,
-                                FullName: tenant.fullName,
-                                Name: tenant.fullName,
-                                Email: tenant.email,
-                                PhoneNumber: tenant.phoneNumber,
-                                NationalIdNumber: tenant.nationalIdNumber,
-                                DateMovedIn: new Date(tenant.dateMovedIn)
-                                  .toISOString()
-                                  .split("T")[0],
-                                PropertyId: tenant.propertyId,
-                                Active: String(tenant.active),
-                                idFront: tenant.idFront,
-                                idBack: tenant.idBack,
-                                passportPhoto: tenant.passportPhoto,
-                                UnitId: "",
-                                WaterMeterNo: "",
-                                TenantStatus: tenant.active ? "active" : "left",
-                                Occupation: "",
-                                NextOfKinName: "",
-                                NextOfKinPhone: "",
-                              });
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              console.log("edit tenant", tenant);
-                              setFormData({
-                                id: tenant.id,
-                                FullName: tenant.fullName,
-                                Name: tenant.fullName,
-                                Email: tenant.email,
-                                PhoneNumber: tenant.phoneNumber,
-                                NationalIdNumber: tenant.nationalIdNumber,
-                                DateMovedIn: new Date(tenant.dateMovedIn)
-                                  .toISOString()
-                                  .split("T")[0],
-                                PropertyId: tenant.propertyId,
-                                Active: String(tenant.active),
-                                idFront: tenant.idFront || "",
-                                idBack: tenant.idBack || "",
-                                passportPhoto: tenant.passportPhoto || "",
-                                UnitId: "",
-                                WaterMeterNo: "",
-                                TenantStatus: tenant.active ? "active" : "left",
-                                Occupation: "",
-                                NextOfKinName: "",
-                                NextOfKinPhone: "",
-                              });
-                              setPassportPhotoPreview(
-                                getImageUrl(tenant.passportPhoto)
-                              );
-                              setIdFrontPhotoPreview(
-                                getImageUrl(tenant.idFront)
-                              );
-                              setIdBackPhotoPreview(getImageUrl(tenant.idBack));
-
-                              setIsEdit(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-500"
-                            onClick={() => {
-                              setDeleteTenant(tenant);
-                              setIsDeleteModalOpen(true);
-                            }}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          {(() => {
+            const tenantColumns: Column<Tenant>[] = [
+              {
+                key: "tenant", header: "Tenant",
+                cell: (t) => (
+                  <div>
+                    <div className="font-medium">{t.fullName}</div>
+                    <div className="text-sm text-muted-foreground">{t.email}</div>
+                  </div>
+                ),
+              },
+              {
+                key: "property", header: "Property",
+                cell: (t) => (
+                  <div>
+                    <div>{t.property.name}</div>
+                    <div className="text-sm text-muted-foreground">{t.property.type}</div>
+                  </div>
+                ),
+              },
+              { key: "unit", header: "Unit", cell: (t) => t.unitId || <span className="text-muted-foreground">—</span> },
+              { key: "water", header: "Water Meter", cell: (t) => t.waterMeterNo || <span className="text-muted-foreground">—</span> },
+              { key: "occupation", header: "Occupation", cell: (t) => t.occupation || <span className="text-muted-foreground">—</span> },
+              {
+                key: "kin", header: "Next of Kin",
+                cell: (t) => t.nextOfKinName ? (
+                  <div>
+                    <div>{t.nextOfKinName}</div>
+                    <div className="text-sm text-muted-foreground">{t.nextOfKinPhone}</div>
+                  </div>
+                ) : <span className="text-muted-foreground">—</span>,
+              },
+              { key: "movein", header: "Move-in Date", cell: (t) => formatDate(t.dateMovedIn) },
+              { key: "rent", header: "Rent", cell: (t) => formatCurrency(t.property.price, t.property.currency) },
+              {
+                key: "status", header: "Status",
+                cell: (t) => (
+                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(t.active)}`}>
+                    {t.active ? "Active" : "Inactive"}
+                  </span>
+                ),
+              },
+              {
+                key: "actions", header: "Actions", headerClassName: "text-right",
+                cell: (t) => (
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" size="icon" onClick={() => {
+                      setSelectedTenant(t);
+                      setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront, idBack: t.idBack, passportPhoto: t.passportPhoto, UnitId: t.unitId || "", WaterMeterNo: t.waterMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
+                    }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => {
+                      setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront || "", idBack: t.idBack || "", passportPhoto: t.passportPhoto || "", UnitId: t.unitId || "", WaterMeterNo: t.waterMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
+                      setPassportPhotoPreview(getImageUrl(t.passportPhoto));
+                      setIdFrontPhotoPreview(getImageUrl(t.idFront));
+                      setIdBackPhotoPreview(getImageUrl(t.idBack));
+                      setIsEdit(true);
+                    }}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="text-red-500" onClick={() => { setDeleteTenant(t); setIsDeleteModalOpen(true); }}>
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ),
+              },
+            ];
+            return (
+              <DataTable
+                data={filteredTenants}
+                columns={tenantColumns}
+                loading={isLoading}
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+                searchPlaceholder="Search by name, email, or property..."
+                label="tenant"
+                pageSize={10}
+                minWidth="1100px"
+                emptyIcon={<Users className="h-10 w-10" />}
+                emptyMessage={searchTerm ? "No tenants match your search" : "Start by adding a new tenant"}
+                headerRight={
+                  <Button onClick={() => navigate("/landlord-dashboard/register-tenants")}>
+                    Add Tenant
+                  </Button>
+                }
+              />
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -752,10 +711,55 @@ const ManageTenants = () => {
                     </div>
                   </div>
 
+                  <div className="mt-6 border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Tenancy Details</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Unit / Room</span>
+                          <p>{selectedTenant.unitId || <span className="text-muted-foreground">Not set</span>}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Water Meter No.</span>
+                          <p>{selectedTenant.waterMeterNo || <span className="text-muted-foreground">Not set</span>}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Occupation</span>
+                          <p>{selectedTenant.occupation || <span className="text-muted-foreground">Not set</span>}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Next of Kin</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Name</span>
+                          <p>{selectedTenant.nextOfKinName || <span className="text-muted-foreground">Not set</span>}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Contact</span>
+                          <p className="flex items-center">
+                            {selectedTenant.nextOfKinPhone ? (
+                              <><PhoneIcon size={14} className="mr-1" />{selectedTenant.nextOfKinPhone}</>
+                            ) : (
+                              <span className="text-muted-foreground">Not set</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="mt-6 border-t pt-6">
                     <h4 className="text-sm font-medium mb-3">Actions</h4>
                     <div className="flex space-x-3">
-                      <Button>Record Payment</Button>
+                      <Button onClick={() => {
+                        setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split("T")[0], paymentMethod: "Cash", referenceNo: "", notes: "" });
+                        setPaymentModalOpen(true);
+                      }}>
+                        <Banknote size={14} className="mr-1" />
+                        Record Payment
+                      </Button>
                       <Button variant="outline" onClick={() => setIsEdit(true)}>
                         Update Information
                       </Button>
@@ -1216,6 +1220,86 @@ const ManageTenants = () => {
           </Card>
         </div>
       </Modal>
+
+      {paymentModalOpen && selectedTenant && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[28px] w-full max-w-md shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-lg font-semibold">Record Payment</h2>
+                  <p className="text-sm text-muted-foreground">{selectedTenant.fullName} — Balance: {formatCurrency(selectedTenant.balanceDue, selectedTenant.property.currency)}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setPaymentModalOpen(false)}>
+                  <XIcon className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Amount ({selectedTenant.property.currency}) *</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 350000"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Payment Date *</label>
+                    <Input
+                      type="date"
+                      value={paymentForm.paymentDate}
+                      onChange={(e) => setPaymentForm((p) => ({ ...p, paymentDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Payment Method</label>
+                    <select
+                      className="input-field"
+                      value={paymentForm.paymentMethod}
+                      onChange={(e) => setPaymentForm((p) => ({ ...p, paymentMethod: e.target.value }))}
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="Mobile Money">Mobile Money</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Reference / Receipt No.</label>
+                  <Input
+                    placeholder="Optional transaction reference"
+                    value={paymentForm.referenceNo}
+                    onChange={(e) => setPaymentForm((p) => ({ ...p, referenceNo: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Notes</label>
+                  <Input
+                    placeholder="Optional notes"
+                    value={paymentForm.notes}
+                    onChange={(e) => setPaymentForm((p) => ({ ...p, notes: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button variant="outline" onClick={() => setPaymentModalOpen(false)}>Cancel</Button>
+                <Button isLoading={isSubmittingPayment} onClick={handleRecordPayment}>
+                  <Banknote size={14} className="mr-1" />
+                  Record Payment
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDeleteModal
         title="Delete Tenant"

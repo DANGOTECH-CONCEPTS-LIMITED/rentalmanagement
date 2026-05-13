@@ -63,6 +63,12 @@ const RegisterTenants = () => {
     PropertyId: "",
     Password: "",
     Active: "true",
+    UnitId: "",
+    WaterMeterNo: "",
+    TenantStatus: "active",
+    Occupation: "",
+    NextOfKinName: "",
+    NextOfKinPhone: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -229,6 +235,12 @@ const RegisterTenants = () => {
       form.append("PropertyId", formData.PropertyId);
       form.append("Password", formData.Password);
       form.append("Active", formData.Active);
+      form.append("UnitId", formData.UnitId);
+      form.append("WaterMeterNo", formData.WaterMeterNo);
+      form.append("TenantStatus", formData.TenantStatus);
+      form.append("Occupation", formData.Occupation);
+      form.append("NextOfKinName", formData.NextOfKinName);
+      form.append("NextOfKinPhone", formData.NextOfKinPhone);
 
       form.append("PassportPhoto", passportPhoto);
       form.append("IdFront", idFrontPhoto);
@@ -289,6 +301,12 @@ const RegisterTenants = () => {
           PropertyId: "",
           Password: "",
           Active: "true",
+          UnitId: "",
+          WaterMeterNo: "",
+          TenantStatus: "active",
+          Occupation: "",
+          NextOfKinName: "",
+          NextOfKinPhone: "",
         });
         clearFile("PassportPhoto");
         clearFile("IdFront");
@@ -501,8 +519,85 @@ const RegisterTenants = () => {
                 </div> */}
               </div>
 
+              {/* Tenancy Details */}
+              <div className="pt-4 border-t">
+                <h3 className="font-medium mb-4">Tenancy Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Unit / Room</label>
+                    <select
+                      name="UnitId"
+                      className="input-field"
+                      value={formData.UnitId}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select unit</option>
+                      {["A1", "A2", "B1", "B2", "C1", "C2"].map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Water Meter No.</label>
+                    <Input
+                      name="WaterMeterNo"
+                      value={formData.WaterMeterNo}
+                      onChange={handleInputChange}
+                      placeholder="e.g. WM-00123"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Tenant Status</label>
+                    <select
+                      name="TenantStatus"
+                      className="input-field"
+                      value={formData.TenantStatus}
+                      onChange={handleInputChange}
+                    >
+                      <option value="active">Active</option>
+                      <option value="left">Left</option>
+                      <option value="pending payment">Pending Payment</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Occupation</label>
+                    <Input
+                      name="Occupation"
+                      value={formData.Occupation}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Teacher, Engineer..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Next of Kin */}
+              <div className="pt-4 border-t">
+                <h3 className="font-medium mb-4">Next of Kin</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Next of Kin Name</label>
+                    <Input
+                      name="NextOfKinName"
+                      value={formData.NextOfKinName}
+                      onChange={handleInputChange}
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Next of Kin Contact</label>
+                    <Input
+                      name="NextOfKinPhone"
+                      value={formData.NextOfKinPhone}
+                      onChange={handleInputChange}
+                      placeholder="Phone number"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Document Upload Section */}
-              <div className="pt-4">
+              <div className="pt-4 border-t">
                 <h3 className="font-medium mb-4">Identification Documents</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Passport Photo */}
