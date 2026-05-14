@@ -17,8 +17,10 @@ namespace Infrastructure.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         public DbSet<User> Users { get; set; }
         public DbSet<LandLordProperty> LandLordProperties { get; set; }
+        public DbSet<PropertyUnit> PropertyUnits { get; set; } = null!;
         public DbSet<PropertyTenant> Tenants { get; set; }
         public DbSet<TenantPayment> TenantPayments { get; set; }
+        public DbSet<TenantInvoice> TenantInvoices { get; set; } = null!;
         public DbSet<Complaint> TenantComplaints { get; set; }
         public DbSet<Wallet> Wallets { get; set; } = null!;
         public DbSet<WalletTransaction> WalletTransactions { get; set; } = null!;
@@ -27,6 +29,7 @@ namespace Infrastructure.Data
 
         public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
+        public DbSet<PropertyExpense> PropertyExpenses { get; set; } = null!;
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
         public DbSet<CollectoWalletWithdrawalHistory> CollectoWalletWithdrawalHistories { get; set; } = null!;
         public DbSet<ServiceLogs> ServiceLogs { get; set; } = null!;
@@ -70,6 +73,31 @@ namespace Infrastructure.Data
                 Code = "waterpay",
                 Title = "Welcome to WaterPay",
                 RootNodeId = rootId
+            });
+
+            modelBuilder.Entity<PropertyExpense>(e =>
+            {
+                e.HasIndex(x => x.OwnerId);
+                e.HasIndex(x => x.Date);
+                e.HasIndex(x => x.Category);
+                e.HasIndex(x => x.PropertyId);
+                e.HasIndex(x => x.PropertyUnitId);
+                e.HasIndex(x => x.CreatedAt);
+
+                e.HasOne(x => x.Owner)
+                    .WithMany()
+                    .HasForeignKey(x => x.OwnerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Property)
+                    .WithMany()
+                    .HasForeignKey(x => x.PropertyId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                e.HasOne(x => x.Unit)
+                    .WithMany()
+                    .HasForeignKey(x => x.PropertyUnitId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             modelBuilder.Entity<UssdNode>().HasData(
@@ -216,6 +244,54 @@ namespace Infrastructure.Data
                 e.Property(x => x.Payload).HasColumnType("longtext");
                 e.Property(x => x.Headers).HasColumnType("longtext");
                 e.HasIndex(x => x.TransId);
+            });
+
+            modelBuilder.Entity<PropertyUnit>(e =>
+            {
+                e.HasIndex(x => new { x.PropertyId, x.UnitNumber }).IsUnique();
+                e.HasIndex(x => x.PropertyId);
+                e.HasIndex(x => x.Status);
+            });
+
+            modelBuilder.Entity<PropertyTenant>(e =>
+            {
+                e.HasIndex(x => x.PropertyUnitId);
+                e.HasOne(x => x.Unit)
+                    .WithMany()
+                    .HasForeignKey(x => x.PropertyUnitId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<TenantInvoice>(e =>
+            {
+                e.HasIndex(x => x.InvoiceNumber).IsUnique();
+                e.HasIndex(x => x.TenantId);
+                e.HasIndex(x => x.PropertyId);
+                e.HasIndex(x => x.PropertyUnitId);
+                e.HasIndex(x => x.CreatedByUserId);
+                e.HasIndex(x => x.Status);
+                e.HasIndex(x => x.DueDate);
+                e.HasIndex(x => x.CreatedAt);
+
+                e.HasOne(x => x.Tenant)
+                    .WithMany()
+                    .HasForeignKey(x => x.TenantId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.Property)
+                    .WithMany()
+                    .HasForeignKey(x => x.PropertyId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.Unit)
+                    .WithMany()
+                    .HasForeignKey(x => x.PropertyUnitId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                e.HasOne(x => x.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Indexes to improve utility payments/meters lookups and aggregations

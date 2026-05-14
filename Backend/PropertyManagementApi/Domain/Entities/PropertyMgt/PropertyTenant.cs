@@ -26,10 +26,15 @@ namespace Domain.Entities.PropertyMgt
         [ForeignKey("Property")]
         public int PropertyId { get; set; }
 
+        [ForeignKey("Unit")]
+        public int? PropertyUnitId { get; set; }
+
         [ForeignKey("User")]
         public int? UserId { get; set; }
         public User? User { get; set; }
 
         public LandLordProperty? Property { get; set; } = new LandLordProperty();
+
+        public PropertyUnit? Unit { get; set; }
     }
 }
