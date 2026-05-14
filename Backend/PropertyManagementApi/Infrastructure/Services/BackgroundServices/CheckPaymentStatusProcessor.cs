@@ -63,6 +63,7 @@ namespace Infrastructure.Services.BackgroundServices
 
         private async Task ProcessAllPendingAsync(CancellationToken ct)
         {
+
             List<TenantPayment> tenantPayments;
             List<UtilityPayment> utilityPayments;
             List<WalletTransaction> walletTransactions;
