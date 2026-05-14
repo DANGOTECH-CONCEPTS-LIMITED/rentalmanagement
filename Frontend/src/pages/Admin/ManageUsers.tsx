@@ -12,15 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -123,6 +116,9 @@ interface UserTableProps {
   onViewDetails: (user: User) => void;
   onEditUser: (user: User) => void;
   onDeleteSuccess?: () => void;
+  loading?: boolean;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }
 
 const UserDetails = ({
@@ -282,41 +278,20 @@ const UserDetails = ({
       {user.role === "Landlord" && ownedProperties.length > 0 && (
         <div className="mt-6">
           <h3 className="text-md font-semibold mb-3 flex items-center">
-            <Home className="mr-2 h-4 w-4" /> Owned Properties (
-            {ownedProperties.length})
+            <Home className="mr-2 h-4 w-4" /> Owned Properties ({ownedProperties.length})
           </h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Rent Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ownedProperties.map((property) => (
-                <TableRow key={property.id}>
-                  <TableCell className="font-medium">{property.name}</TableCell>
-                  <TableCell>{property.type}</TableCell>
-                  <TableCell>{property.address}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        property.status === "available"
-                          ? "secondary"
-                          : "secondary"
-                      }
-                    >
-                      {property.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatCurrency(property.rentAmount)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataTable
+            data={ownedProperties}
+            columns={[
+              { key: "name", header: "Name", cell: (p) => <span className="font-medium">{p.name}</span> },
+              { key: "type", header: "Type", cell: (p) => p.type },
+              { key: "address", header: "Address", cell: (p) => p.address },
+              { key: "status", header: "Status", cell: (p) => <Badge variant="secondary">{p.status}</Badge> },
+              { key: "rent", header: "Rent Amount", cell: (p) => formatCurrency(p.rentAmount) },
+            ]}
+            pageSize={5}
+            label="property"
+          />
         </div>
       )}
 
@@ -325,52 +300,27 @@ const UserDetails = ({
           <h3 className="text-md font-semibold mb-3 flex items-center">
             <Users className="mr-2 h-4 w-4" /> Tenants ({tenants.length})
           </h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Monthly Rent</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tenants.map((tenant) => {
-                const tenantProperty = tenant.propertyId
-                  ? properties.find((p) => p.id === tenant.propertyId)
-                  : null;
-
-                return (
-                  <TableRow key={tenant.id}>
-                    <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell>{tenant.email}</TableCell>
-                    <TableCell>
-                      {tenantProperty ? tenantProperty.name : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {tenant.rentAmount
-                        ? formatCurrency(tenant.rentAmount)
-                        : tenantProperty
-                        ? formatCurrency(tenantProperty.rentAmount)
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {tenant.status === "active" ? (
-                        <span className="flex items-center gap-1 text-green-600">
-                          <CheckCircle className="h-3 w-3" /> Active
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-red-600">
-                          <XCircle className="h-3 w-3" /> Inactive
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <DataTable
+            data={tenants}
+            columns={[
+              { key: "name", header: "Name", cell: (t) => <span className="font-medium">{t.name}</span> },
+              { key: "email", header: "Email", cell: (t) => t.email },
+              { key: "property", header: "Property", cell: (t) => {
+                const prop = t.propertyId ? properties.find((p) => p.id === t.propertyId) : null;
+                return prop ? prop.name : "N/A";
+              }},
+              { key: "rent", header: "Monthly Rent", cell: (t) => {
+                const prop = t.propertyId ? properties.find((p) => p.id === t.propertyId) : null;
+                return t.rentAmount ? formatCurrency(t.rentAmount) : prop ? formatCurrency(prop.rentAmount) : "N/A";
+              }},
+              { key: "status", header: "Status", cell: (t) => t.status === "active"
+                ? <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" /> Active</span>
+                : <span className="flex items-center gap-1 text-red-600"><XCircle className="h-3 w-3" /> Inactive</span>
+              },
+            ]}
+            pageSize={5}
+            label="tenant"
+          />
         </div>
       )}
 
@@ -400,6 +350,7 @@ const ManageUsers = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState<LandlordFormData>({
@@ -489,6 +440,7 @@ const ManageUsers = () => {
   };
 
   const fetchUsers = async () => {
+    setIsLoading(true);
     try {
       const { data } = await axios.get<ApiUser[]>(
         `${import.meta.env.VITE_API_BASE_URL}/GetAllUsers`
@@ -509,6 +461,8 @@ const ManageUsers = () => {
         description: error instanceof Error ? error.message : "Failed to load users",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   const openModal = () => setIsModalOpen(true);
@@ -1019,15 +973,8 @@ const ManageUsers = () => {
 
   const getFilteredUsers = (role: string | null = null) => {
     return users.filter((user) => {
-      const matchesSearch =
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      if (role) {
-        return matchesSearch && user.role === role; // Exact match
-      }
-
-      return matchesSearch;
+      if (role) return user.role === role;
+      return true;
     });
   };
 
@@ -1046,15 +993,6 @@ const ManageUsers = () => {
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-            <div className="relative flex-1 sm:min-w-[320px]">
-              <Search className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
             <Button onClick={openModal}>Add New User</Button>
           </div>
         </div>
@@ -1086,6 +1024,7 @@ const ManageUsers = () => {
               onViewDetails={(user) => setSelectedUser(user)}
               onEditUser={openEditModal}
               onDeleteSuccess={fetchUsers}
+              loading={isLoading}
             />
           </TabsContent>
 
@@ -1095,6 +1034,7 @@ const ManageUsers = () => {
               onViewDetails={(user) => setSelectedUser(user)}
               onEditUser={openEditModal}
               onDeleteSuccess={fetchUsers}
+              loading={isLoading}
             />
           </TabsContent>
 
@@ -1104,6 +1044,7 @@ const ManageUsers = () => {
               onViewDetails={(user) => setSelectedUser(user)}
               onEditUser={openEditModal}
               onDeleteSuccess={fetchUsers}
+              loading={isLoading}
             />
           </TabsContent>
 
@@ -1113,6 +1054,7 @@ const ManageUsers = () => {
               onViewDetails={(user) => setSelectedUser(user)}
               onEditUser={openEditModal}
               onDeleteSuccess={fetchUsers}
+              loading={isLoading}
             />
           </TabsContent>
           <TabsContent value="utility">
@@ -1121,6 +1063,7 @@ const ManageUsers = () => {
               onViewDetails={(user) => setSelectedUser(user)}
               onEditUser={openEditModal}
               onDeleteSuccess={fetchUsers}
+              loading={isLoading}
             />
           </TabsContent>
         </Tabs>
@@ -1782,13 +1725,13 @@ const UserTable = ({
   onViewDetails,
   onEditUser,
   onDeleteSuccess,
+  loading,
 }: UserTableProps) => {
-  const formatCurrency = useCurrencyFormatter();
-
   const user = localStorage.getItem("user") || null;
   const token = user ? JSON.parse(user).token : null;
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletedUser, setDeletedUser] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const deleteUser = async (userId: string) => {
     if (!token) {
@@ -1826,100 +1769,107 @@ const UserTable = ({
     }
   };
 
+  const userColumns: Column<User>[] = [
+    {
+      key: "name",
+      header: "Name",
+      cell: (u) => (
+        <div className="space-y-1">
+          <p className="font-semibold text-slate-900">{u.name}</p>
+          <p className="text-xs text-muted-foreground">ID: {u.id}</p>
+        </div>
+      ),
+    },
+    {
+      key: "email",
+      header: "Email",
+      className: "text-slate-600",
+      cell: (u) => u.email,
+    },
+    {
+      key: "role",
+      header: "Role",
+      cell: (u) => (
+        <Badge
+          variant={
+            u.role === "Administrator"
+              ? "destructive"
+              : u.role === "Landlord"
+              ? "default"
+              : "secondary"
+          }
+        >
+          {u.role?.charAt(0).toUpperCase() + u.role?.slice(1)}
+        </Badge>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (u) =>
+        u.status === "active" ? (
+          <span className="flex items-center gap-1 text-green-600">
+            <CheckCircle className="h-4 w-4" /> Active
+          </span>
+        ) : u.status === "inactive" ? (
+          <span className="flex items-center gap-1 text-yellow-600">
+            <XCircle className="h-4 w-4" /> Inactive
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-gray-600">
+            <Clock className="h-4 w-4" /> Pending Verification
+          </span>
+        ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (u) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => onViewDetails(u)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => onEditUser(u)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setDeletedUser(u);
+              setIsDeleteModalOpen(true);
+            }}
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={5}
-                className="text-center py-8 text-muted-foreground"
-              >
-                No users found
-              </TableCell>
-            </TableRow>
-          ) : (
-            users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-slate-900">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">ID: {user.id}</p>
-                  </div>
-                </TableCell>
-                <TableCell className="text-slate-600">{user.email}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      user.role === "Administrator"
-                        ? "destructive"
-                        : user.role === "Landlord"
-                        ? "default"
-                        : "secondary"
-                    }
-                  >
-                    {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {user.status === "active" ? (
-                    <span className="flex items-center gap-1 text-green-600">
-                      <CheckCircle className="h-4 w-4" /> Active
-                    </span>
-                  ) : user.status === "inactive" ? (
-                    <span className="flex items-center gap-1 text-yellow-600">
-                      <XCircle className="h-4 w-4" /> Inactive
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-gray-600">
-                      <Clock className="h-4 w-4" /> Pending Verification
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => onViewDetails(user)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => onEditUser(user)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        setDeletedUser(user);
-                        setIsDeleteModalOpen(true);
-                      }}
-                      // onClick={() => deleteUser(user.id)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+      <DataTable
+        data={users}
+        columns={userColumns}
+        loading={loading}
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search by name or email..."
+        label="user"
+        emptyMessage="No users found"
+        emptyIcon={<Users className="h-12 w-12" />}
+      />
       <ConfirmDeleteModal
         title="Delete User"
         isOpen={isDeleteModalOpen}

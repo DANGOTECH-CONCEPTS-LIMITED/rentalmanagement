@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Eye, Search, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Eye, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable, Column } from "@/components/ui/data-table";
 
 type InvoiceStatus = "Paid" | "Pending" | "Overdue";
 type InvoiceType = "Invoice" | "Manual Invoice" | "Manual Payment";
@@ -48,11 +46,22 @@ const dummyTenants = ["John Mwangi", "Sarah Nakato", "Peter Otieno", "Mary Auma"
 const dummyProperties = ["Sunset Apartments", "Greenview Estate", "Palm Court"];
 const dummyUnits = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
+const getLoggedInName = (): string => {
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw) return "Unknown";
+    const u = JSON.parse(raw);
+    return u.fullName || u.name || u.email || "Unknown";
+  } catch {
+    return "Unknown";
+  }
+};
+
 const emptyForm = {
   tenant: "", property: "", unit: "", amount: "",
   type: "Invoice" as InvoiceType, status: "Pending" as InvoiceStatus,
   dueDate: "", generatedDate: new Date().toISOString().split("T")[0],
-  createdBy: "Admin", notes: "",
+  createdBy: getLoggedInName(), notes: "",
 };
 
 const statusBadge = (s: InvoiceStatus) => {
@@ -63,6 +72,7 @@ const statusBadge = (s: InvoiceStatus) => {
 
 const InvoiceManagement = () => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>(dummyInvoices);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
@@ -157,63 +167,51 @@ const InvoiceManagement = () => {
       </div>
 
       <div className="glass-card rounded-xl p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="paid">Paid</TabsTrigger>
-              <TabsTrigger value="overdue">Overdue</TabsTrigger>
-              <TabsTrigger value="manual">Manual</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="relative max-w-xs w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search invoice, tenant..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-        </div>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="paid">Paid</TabsTrigger>
+            <TabsTrigger value="overdue">Overdue</TabsTrigger>
+            <TabsTrigger value="manual">Manual</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice No.</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No invoices found</TableCell></TableRow>
-              ) : (
-                filtered.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{inv.type}</Badge></TableCell>
-                    <TableCell>{inv.tenant}</TableCell>
-                    <TableCell>{inv.unit} — {inv.property}</TableCell>
-                    <TableCell className="font-medium">{formatUGX(inv.amount)}</TableCell>
-                    <TableCell>{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{statusBadge(inv.status)}</TableCell>
-                    <TableCell>{inv.createdBy}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setViewInvoice(inv)}><Eye className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="outline" onClick={() => openEdit(inv)}><Pencil className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {(() => {
+          const invoiceCols: Column<Invoice>[] = [
+            { key: "no", header: "Invoice No.", cell: (i) => <span className="font-medium">{i.invoiceNo}</span> },
+            { key: "type", header: "Type", cell: (i) => <Badge variant="outline" className="text-xs">{i.type}</Badge> },
+            { key: "tenant", header: "Tenant", cell: (i) => i.tenant },
+            { key: "unit", header: "Unit", cell: (i) => `${i.unit} — ${i.property}` },
+            { key: "amount", header: "Amount", cell: (i) => <span className="font-medium">{formatUGX(i.amount)}</span> },
+            { key: "due", header: "Due Date", cell: (i) => new Date(i.dueDate).toLocaleDateString() },
+            { key: "status", header: "Status", cell: (i) => statusBadge(i.status) },
+            { key: "by", header: "Created By", cell: (i) => i.createdBy },
+            {
+              key: "actions", header: "Actions", headerClassName: "text-right",
+              cell: (i) => (
+                <div className="flex items-center justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setViewInvoice(i)}><Eye className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" onClick={() => openEdit(i)}><Pencil className="h-4 w-4" /></Button>
+                </div>
+              ),
+            },
+          ];
+          return (
+            <DataTable
+              data={filtered}
+              columns={invoiceCols}
+              loading={isLoading}
+              searchValue={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search invoice, tenant..."
+              label="invoice"
+              pageSize={10}
+              emptyIcon={<FileText className="h-10 w-10" />}
+              emptyMessage="No invoices found"
+            />
+          );
+        })()}
       </div>
 
       {/* Add/Edit Dialog */}
@@ -288,7 +286,7 @@ const InvoiceManagement = () => {
             </div>
             <div className="space-y-1">
               <Label>Created By</Label>
-              <Input value={form.createdBy} onChange={(e) => setForm({ ...form, createdBy: e.target.value })} />
+              <Input value={form.createdBy} readOnly className="bg-muted/50 cursor-not-allowed" />
             </div>
             <div className="space-y-1">
               <Label>Notes (optional)</Label>

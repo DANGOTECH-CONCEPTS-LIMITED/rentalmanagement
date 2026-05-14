@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  FileText, Search, Edit, Trash2, Eye, Filter, Download, FilePlus,
+  FileText, Edit, Trash2, Eye, Filter, Download, FilePlus,
   X, Calendar, User, Home, DollarSign, AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+import { DataTable, Column } from '@/components/ui/data-table';
 import ContractGenerator from '@/components/contract/ContractGenerator';
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
@@ -37,6 +35,7 @@ const emptyForm: Omit<Contract, 'id'> = {
 };
 
 const RentalContracts = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showContractGenerator, setShowContractGenerator] = useState(false);
@@ -106,6 +105,61 @@ const RentalContracts = () => {
     </div>
   );
 
+  const contractColumns: Column<Contract>[] = [
+    {
+      key: 'id',
+      header: 'Contract ID',
+      cell: (c) => <span className="font-medium">{c.id}</span>,
+    },
+    {
+      key: 'tenant',
+      header: 'Tenant',
+      cell: (c) => c.tenant,
+    },
+    {
+      key: 'property',
+      header: 'Property',
+      cell: (c) => c.property,
+    },
+    {
+      key: 'period',
+      header: 'Period',
+      cell: (c) => `${c.startDate} to ${c.endDate}`,
+    },
+    {
+      key: 'rent',
+      header: 'Rent',
+      cell: (c) => <span className="font-medium">${c.rentAmount}/mo</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (c) => getStatusBadge(c.status),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (c) => (
+        <div className="flex justify-end space-x-1">
+          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => setViewContract(c)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => openEdit(c)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteContract(c)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <Breadcrumb>
@@ -142,91 +196,33 @@ const RentalContracts = () => {
 
       <Card className="data-surface border-none shadow-none">
         <CardContent className="p-6 md:p-7">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search by tenant, property, or contract ID"
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-400" />
-              <select
-                className="input-field h-12 py-3 text-sm"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="expired">Expired</option>
-                <option value="pending">Pending</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Contract ID</TableHead>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Rent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredContracts.length > 0 ? (
-                  filteredContracts.map((contract) => (
-                    <motion.tr
-                      key={contract.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="hover:bg-gray-50"
-                    >
-                      <TableCell className="font-medium">{contract.id}</TableCell>
-                      <TableCell>{contract.tenant}</TableCell>
-                      <TableCell>{contract.property}</TableCell>
-                      <TableCell>{contract.startDate} to {contract.endDate}</TableCell>
-                      <TableCell className="font-medium">${contract.rentAmount}/mo</TableCell>
-                      <TableCell>{getStatusBadge(contract.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-1">
-                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => setViewContract(contract)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => openEdit(contract)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteContract(contract)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </motion.tr>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-gray-500">
-                      <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No contracts found</p>
-                      <p className="text-sm mt-1">Try adjusting your search criteria</p>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            data={filteredContracts}
+            columns={contractColumns}
+            loading={isLoading}
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search by tenant, property, or contract ID"
+            label="contract"
+            pageSize={10}
+            emptyMessage="No contracts found"
+            emptyIcon={<FileText className="h-12 w-12" />}
+            headerRight={
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-400" />
+                <select
+                  className="input-field h-12 py-3 text-sm"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="expired">Expired</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+            }
+          />
         </CardContent>
       </Card>
 

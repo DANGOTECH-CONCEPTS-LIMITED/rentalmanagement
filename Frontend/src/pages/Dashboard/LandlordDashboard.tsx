@@ -13,12 +13,7 @@ import {
   FileText,
   Zap,
   CheckCircle,
-  Clock,
-  XCircle,
   AlertTriangle,
-  DoorOpen,
-  DoorClosed,
-  ShieldCheck,
 } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
 import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
@@ -57,6 +52,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import axios from "axios";
+import {
+  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
 
 interface Transaction {
   amount: number;
@@ -478,369 +478,324 @@ const LandlordDashboard = () => {
 
   return (
     <div ref={dashboardRef} className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-          Landlord Dashboard
-        </h1>
-        <DashboardExportToolbar
-          onExportExcel={handleExportExcel}
-          onExportPdf={handleExportPdf}
-        />
-      </div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Wallet Balance</h2>
+
+      {/* Page header */}
+      <section className="page-hero">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="space-y-1">
+            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Landlord
+            </span>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Dashboard
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Welcome back, {userData?.fullName}
+            </p>
+          </div>
+          <DashboardExportToolbar
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+          />
+        </div>
+      </section>
+
+      {/* Wallet Balance card */}
+      <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-primary to-primary-hover p-6 text-white shadow-[0_20px_60px_-16px_rgba(37,99,235,0.45)]">
+        {/* decorative circles */}
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-8 -right-4 h-28 w-28 rounded-full bg-white/10" />
+
+        <div className="relative flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-primary" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[300px] p-0">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" className="w-full justify-start">
-                      View Transaction History
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Transaction History</DialogTitle>
-                    </DialogHeader>
-                    {isLoading ? (
-                      <div className="space-y-4">
-                        {[...Array(3)].map((_, i) => (
-                          <Skeleton key={i} className="h-12 w-full" />
-                        ))}
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+              <Wallet className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-sm font-medium text-white/80">Wallet Balance</span>
+          </div>
+
+          {/* Transaction history dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white hover:bg-white/20">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[300px] p-0">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start">
+                    View Transaction History
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Transaction History</DialogTitle>
+                  </DialogHeader>
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <Skeleton key={i} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : transactions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">No transactions found</div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={exportStatement}>
+                          <Download className="mr-2 h-4 w-4" />Export CSV
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={exportStatementPdf}>
+                          <FileText className="mr-2 h-4 w-4" />Export PDF
+                        </Button>
                       </div>
-                    ) : transactions.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No transactions found
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={exportStatement}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Export CSV
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={exportStatementPdf}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Export PDF
-                          </Button>
-                        </div>
-                        <div className="overflow-x-auto max-h-[60vh]">
+                      <div className="overflow-x-auto max-h-[60vh]">
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>Date</TableHead>
                               <TableHead>Description</TableHead>
-                              <TableHead className="text-right">
-                                Amount
-                              </TableHead>
-                              <TableHead className="text-right">
-                                Running balance
-                              </TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                              <TableHead className="text-right">Running Balance</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {statementRows.map((tx, i) => (
                               <TableRow key={i}>
-                                <TableCell>
-                                  {new Date(
-                                    tx.transactionDate
-                                  ).toLocaleDateString()}
-                                </TableCell>
+                                <TableCell>{new Date(tx.transactionDate).toLocaleDateString()}</TableCell>
                                 <TableCell className="flex items-center gap-2">
-                                  {tx.amount > 0 ? (
-                                    <ArrowDownLeft className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <ArrowUpRight className="h-4 w-4 text-red-500" />
-                                  )}
+                                  {tx.amount > 0
+                                    ? <ArrowDownLeft className="h-4 w-4 text-success" />
+                                    : <ArrowUpRight className="h-4 w-4 text-danger" />}
                                   {tx.description || "Transaction"}
                                 </TableCell>
-                                <TableCell
-                                  className={`text-right font-medium ${
-                                    tx.amount > 0
-                                      ? "text-green-500"
-                                      : "text-red-500"
-                                  }`}
-                                >
-                                  {tx.amount > 0 ? "+" : ""}
-                                  {formatCurrency(tx.amount)}
+                                <TableCell className={`text-right font-medium ${tx.amount > 0 ? "text-success" : "text-danger"}`}>
+                                  {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-slate-950">
-                                  {tx.runningBalance !== null
-                                    ? formatCurrency(tx.runningBalance)
-                                    : "--"}
+                                  {tx.runningBalance !== null ? formatCurrency(tx.runningBalance) : "--"}
                                 </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
-                        </div>
                       </div>
-                    )}
-                  </DialogContent>
-                </Dialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-8 w-24" />
-          </div>
-        ) : (
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-2xl font-bold">
-                {balance !== null ? formatCurrency(balance) : "--"}
-              </p>
-              <p className="text-sm text-muted-foreground">Available balance</p>
-            </div>
-
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm">Withdraw</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Withdraw Funds</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Available: {formatCurrency(balance || 0)}
-                  </p>
-                  <Input
-                    type="number"
-                    placeholder="Enter amount to withdraw"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setWithdrawAmount("");
-                        const dialogTrigger = document.querySelector(
-                          '[data-state="open"]'
-                        ) as HTMLButtonElement;
-                        if (dialogTrigger) {
-                          dialogTrigger.click();
-                        }
-                      }}
-                      className="w-full"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (validateWithdrawal()) {
-                          setShowConfirmation(true);
-                        }
-                      }}
-                      className="w-full"
-                    >
-                      Continue
-                    </Button>
+        <div className="relative mt-5 flex items-end justify-between">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-9 w-36 bg-white/30" />
+              <Skeleton className="h-9 w-24 bg-white/30" />
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="text-3xl font-bold tracking-tight">
+                  {balance !== null ? formatCurrency(balance) : "--"}
+                </p>
+                <p className="mt-1 text-sm text-white/70">Available balance</p>
+              </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-white text-primary hover:bg-white/90 font-semibold shadow-none">
+                    Withdraw
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Withdraw Funds</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">Available: {formatCurrency(balance || 0)}</p>
+                    <Input type="number" placeholder="Enter amount to withdraw" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setWithdrawAmount("")} className="w-full">Cancel</Button>
+                      <Button onClick={() => { if (validateWithdrawal()) setShowConfirmation(true); }} className="w-full">Continue</Button>
+                    </div>
                   </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+        </div>
       </div>
 
+      {/* Confirm withdrawal dialog */}
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Withdrawal</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Confirm Withdrawal</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm">
-              Are you sure you want to withdraw{" "}
-              {formatCurrency(Number(withdrawAmount))}?
-            </p>
+            <p className="text-sm">Are you sure you want to withdraw {formatCurrency(Number(withdrawAmount))}?</p>
             <p className="text-xs text-muted-foreground">
-              This action cannot be undone. The funds will be transferred to
-              your registered bank account or mobile money number.
+              This action cannot be undone. The funds will be transferred to your registered bank account or mobile money number.
             </p>
             <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowConfirmation(false)}
-                className="w-full"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleWithdraw}
-                disabled={isWithdrawing}
-                className="w-full"
-              >
-                {isWithdrawing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Confirm Withdrawal"
-                )}
+              <Button variant="outline" onClick={() => setShowConfirmation(false)} className="w-full">Cancel</Button>
+              <Button onClick={handleWithdraw} disabled={isWithdrawing} className="w-full">
+                {isWithdrawing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : "Confirm Withdrawal"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 lg:col-span-2">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Quick Stats</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <StatCard
-            title="Total Properties"
-            value={properties.length}
-            icon={<Home className="h-6 w-6" />}
-            change={{ value: 1, type: "increase" }}
-          />
-          <StatCard
-            title="Total Tenants"
-            value={tenants.length}
-            icon={<Users className="h-6 w-6" />}
-            change={{ value: 2, type: "increase" }}
-          />
-          <StatCard
-            title="Monthly Revenue"
-            value={formatCurrency(15000)}
-            icon={<CircleDollarSign className="h-6 w-6" />}
-            change={{ value: 8, type: "increase" }}
-          />
-          <StatCard
-            title="Occupancy Rate"
-            value="95%"
-            icon={<TrendingUp className="h-6 w-6" />}
-            change={{ value: 5, type: "increase" }}
-          />
-        </div>
-      </div>
-
-      {/* Financial Overview */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Financial Overview — Current Month</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard
-            title="Total Revenue Expected"
-            value={formatCurrency(dummyStats.totalRevenueExpected)}
-            icon={<TrendingUp className="h-6 w-6" />}
-            change={{ value: 5, type: "increase" }}
-          />
-          <StatCard
-            title="Income Collected"
-            value={formatCurrency(dummyStats.incomeCollected)}
-            icon={<CheckCircle className="h-6 w-6" />}
-            change={{ value: 8, type: "increase" }}
-          />
-          <StatCard
-            title="Uncollected Income"
-            value={formatCurrency(dummyStats.uncollectedIncome)}
-            icon={<Clock className="h-6 w-6" />}
-            change={{ value: 3, type: "decrease" }}
-          />
-          <StatCard
-            title="Security Deposits Held"
-            value={formatCurrency(dummyStats.securityDeposits)}
-            icon={<ShieldCheck className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Utility Collected"
-            value={formatCurrency(dummyStats.utilityCollected)}
-            icon={<Zap className="h-6 w-6" />}
-            change={{ value: 2, type: "increase" }}
-          />
-        </div>
-      </div>
-
-      {/* Room Occupancy */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Room Occupancy</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard
-            title="Total Rooms"
-            value={dummyStats.totalRooms}
-            icon={<Home className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Occupied Rooms"
-            value={dummyStats.occupiedRooms}
-            icon={<DoorClosed className="h-6 w-6" />}
-            change={{ value: 5, type: "increase" }}
-          />
-          <StatCard
-            title="Vacant Rooms"
-            value={dummyStats.vacantRooms}
-            icon={<DoorOpen className="h-6 w-6" />}
-            change={{ value: 2, type: "decrease" }}
-          />
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 lg:col-span-2">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Utility Statistics</h2>
+      {/* Quick Stats */}
+      <div className="data-surface p-6">
+        <div className="mb-5 flex items-center gap-2">
+          <span className="h-4 w-1 rounded-full bg-primary" />
+          <h2 className="text-base font-semibold text-slate-950">Quick Stats</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Meters"
-            value={utilityStats?.totalMeters || 0}
-            icon={<Zap className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Active Meters"
-            value={utilityStats?.activeMeters || 0}
-            icon={<CheckCircle className="h-6 w-6" />}
-          />
-          <StatCard
-            title="30+ Days Without Payment"
-            value={overdueUtilityMeters}
-            icon={<AlertTriangle className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Total Payments"
-            value={utilityStats?.totalUtilityPayments || 0}
-            icon={<CircleDollarSign className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Successful Payments"
-            value={utilityStats?.successfulPayments || 0}
-            icon={<CheckCircle className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Pending Payments"
-            value={utilityStats?.pendingPayments || 0}
-            icon={<Clock className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Failed Payments"
-            value={utilityStats?.failedPayments || 0}
-            icon={<XCircle className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Total Amount"
-            value={formatCurrency(utilityStats?.totalUtilityAmount || 0)}
-            icon={<TrendingUp className="h-6 w-6" />}
-          />
-          <StatCard
-            title="Total Charges"
-            value={formatCurrency(utilityStats?.totalUtilityCharges || 0)}
-            icon={<CircleDollarSign className="h-6 w-6" />}
-          />
+          <StatCard title="Total Properties" value={properties.length} icon={<Home className="h-6 w-6" />} change={{ value: 1, type: "increase" }} />
+          <StatCard title="Total Tenants" value={tenants.length} icon={<Users className="h-6 w-6" />} change={{ value: 2, type: "increase" }} />
+          <StatCard title="Monthly Revenue" value={formatCurrency(15000)} icon={<CircleDollarSign className="h-6 w-6" />} change={{ value: 8, type: "increase" }} />
+          <StatCard title="Occupancy Rate" value="95%" icon={<TrendingUp className="h-6 w-6" />} change={{ value: 5, type: "increase" }} />
         </div>
       </div>
+
+      {/* Row 1: Financial Overview (2/3) + Utility Statistics (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Financial Overview — bar chart, spans 2 cols */}
+        <div className="data-surface p-6 lg:col-span-2">
+          <div className="mb-5 flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-accent" />
+            <h2 className="text-base font-semibold text-slate-950">Financial Overview — Current Month</h2>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart
+              data={[
+                { name: "Expected", amount: dummyStats.totalRevenueExpected },
+                { name: "Collected", amount: dummyStats.incomeCollected },
+                { name: "Uncollected", amount: dummyStats.uncollectedIncome },
+                { name: "Deposits", amount: dummyStats.securityDeposits },
+                { name: "Utility", amount: dummyStats.utilityCollected },
+              ]}
+              margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+              barSize={38}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
+                width={42}
+              />
+              <Tooltip
+                formatter={(v: number) => [formatCurrency(v), "Amount"]}
+                contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 24px -4px rgba(15,23,42,0.15)", fontSize: 13 }}
+              />
+              <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                {["#2563EB", "#10B981", "#EF4444", "#8B5CF6", "#F59E0B"].map((color, i) => (
+                  <Cell key={i} fill={color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Utility Statistics — 4 stat cards */}
+        <div className="data-surface p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-warning" />
+            <h2 className="text-base font-semibold text-slate-950">Utility Statistics</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard title="Total Meters" value={utilityStats?.totalMeters || 0} icon={<Zap className="h-6 w-6" />} />
+            <StatCard title="Active Meters" value={utilityStats?.activeMeters || 0} icon={<CheckCircle className="h-6 w-6" />} />
+            <StatCard title="Overdue (30+ days)" value={overdueUtilityMeters} icon={<AlertTriangle className="h-6 w-6" />} />
+            <StatCard title="Total Payments" value={utilityStats?.totalUtilityPayments || 0} icon={<CircleDollarSign className="h-6 w-6" />} />
+          </div>
+        </div>
+
+      </div>
+
+      {/* Row 2: Room Occupancy + Payment Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Room Occupancy */}
+        <div className="data-surface p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-primary" />
+            <h2 className="text-base font-semibold text-slate-950">Room Occupancy</h2>
+          </div>
+          <div className="relative flex items-center justify-center" style={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: "Occupied", value: dummyStats.occupiedRooms },
+                    { name: "Vacant", value: dummyStats.vacantRooms },
+                  ]}
+                  cx="50%" cy="44%"
+                  innerRadius={65} outerRadius={96}
+                  paddingAngle={3}
+                  dataKey="value"
+                  startAngle={90} endAngle={-270}
+                >
+                  <Cell fill="#2563EB" />
+                  <Cell fill="#EF4444" />
+                </Pie>
+                <Tooltip
+                  formatter={(v: number) => [`${v} rooms`]}
+                  contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 24px -4px rgba(15,23,42,0.15)", fontSize: 13 }}
+                />
+                <Legend iconType="circle" iconSize={8}
+                  formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center" style={{ marginBottom: 28 }}>
+              <span className="text-2xl font-bold text-slate-950">{dummyStats.totalRooms}</span>
+              <span className="text-xs text-muted-foreground">Total Rooms</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Status */}
+        <div className="data-surface p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-success" />
+            <h2 className="text-base font-semibold text-slate-950">Payment Status</h2>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={[
+                  { name: "Successful", value: utilityStats?.successfulPayments || 0 },
+                  { name: "Pending", value: utilityStats?.pendingPayments || 0 },
+                  { name: "Failed", value: utilityStats?.failedPayments || 0 },
+                ]}
+                cx="50%" cy="44%"
+                innerRadius={65} outerRadius={96}
+                paddingAngle={3}
+                dataKey="value"
+              >
+                <Cell fill="#10B981" />
+                <Cell fill="#F59E0B" />
+                <Cell fill="#EF4444" />
+              </Pie>
+              <Tooltip
+                formatter={(v: number) => [`${v} payments`]}
+                contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 24px -4px rgba(15,23,42,0.15)", fontSize: 13 }}
+              />
+              <Legend iconType="circle" iconSize={8}
+                formatter={(value) => <span className="text-xs text-slate-600">{value}</span>}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+      </div>
+
     </div>
   );
 };

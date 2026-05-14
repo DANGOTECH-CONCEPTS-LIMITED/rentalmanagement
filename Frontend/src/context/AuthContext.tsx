@@ -139,11 +139,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         requiresPasswordChange: !userData.verified,
       };
     } catch (err) {
-      setError(
-        axios.isAxiosError(err) && err.response?.status >= 400
-          ? err.response.data
-          : "Login failed. Please try again."
-      );
+      let message = "Login failed. Please try again.";
+      if (axios.isAxiosError(err)) {
+        if (!err.response) {
+          message = "Unable to connect to the server. Please check your internet connection.";
+        } else {
+          const { status, data } = err.response;
+          const isHtml = typeof data === "string" && data.trim().startsWith("<");
+          if (status === 503 || status === 502 || status === 504) {
+            message = "The service is temporarily unavailable. Please try again later.";
+          } else if (status === 401 || status === 403) {
+            message = "Invalid email or password.";
+          } else if (status >= 500) {
+            message = "A server error occurred. Please try again later.";
+          } else if (!isHtml && typeof data === "string" && data.length < 200) {
+            message = data;
+          } else if (!isHtml && typeof data?.message === "string") {
+            message = data.message;
+          }
+        }
+      }
+      setError(message);
       throw err;
     } finally {
       setLoading(false);

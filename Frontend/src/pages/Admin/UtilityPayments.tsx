@@ -1,13 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,12 +11,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pencil } from "lucide-react";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { formatDateTimeDmy } from "@/lib/date-time";
 
 const UtilityPayments = () => {
   const { landlordId } = useParams<{ landlordId: string }>();
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -38,9 +30,8 @@ const UtilityPayments = () => {
   const [editVendorPaymentDate, setEditVendorPaymentDate] = useState("");
   const [editStatus, setEditStatus] = useState<string>("");
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
   const [search, setSearch] = useState("");
+
   const filteredPayments = useMemo(() => {
     if (!search.trim()) return payments;
     const s = search.trim().toLowerCase();
@@ -51,17 +42,12 @@ const UtilityPayments = () => {
         (p.status && p.status.toLowerCase().includes(s))
     );
   }, [payments, search]);
-  const totalPages = Math.ceil(filteredPayments.length / rowsPerPage);
-  const paginatedPayments = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return filteredPayments.slice(start, start + rowsPerPage);
-  }, [filteredPayments, currentPage]);
 
   console.log("Payments", payments);
 
   useEffect(() => {
     if (!landlordId) return;
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     const user = localStorage.getItem("user");
     const token = user ? JSON.parse(user).token : null;
@@ -74,7 +60,7 @@ const UtilityPayments = () => {
       })
       .then((data) => setPayments(data))
       .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   }, [landlordId]);
 
   const handleEditClick = (payment: any) => {
@@ -159,7 +145,7 @@ const UtilityPayments = () => {
       setEditVendorRef("");
       setEditVendorPaymentDate("");
       // Refresh payments
-      setLoading(true);
+      setIsLoading(true);
       const refreshed = await fetch(
         `${apiUrl}/GetUtilityPaymentsByLandlordIdAsync/${landlordId}`,
         {
@@ -171,9 +157,78 @@ const UtilityPayments = () => {
       setEditError(err.message);
     } finally {
       setEditLoading(false);
-      setLoading(false);
+      setIsLoading(false);
     }
   };
+
+  const columns: Column<any>[] = [
+    {
+      key: "status",
+      header: "Status",
+      cell: (p) => p.status || "-",
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      cell: (p) => p.amount || "-",
+    },
+    {
+      key: "charges",
+      header: "Charges",
+      cell: (p) => p.charges || "-",
+    },
+    {
+      key: "createdAt",
+      header: "Created At",
+      cell: (p) => formatDateTimeDmy(p.createdAt),
+    },
+    {
+      key: "phoneNumber",
+      header: "Phone Number",
+      cell: (p) => p.phoneNumber || "-",
+    },
+    {
+      key: "meterNumber",
+      header: "Meter Number",
+      cell: (p) => p.meterNumber || "-",
+    },
+    {
+      key: "units",
+      header: "Units",
+      cell: (p) => p.units || "-",
+    },
+    {
+      key: "vendor",
+      header: "Vendor",
+      cell: (p) => p.vendor || "-",
+    },
+    {
+      key: "vendorRef",
+      header: "Vendor Ref",
+      cell: (p) => p.vendorTranId || "-",
+    },
+    {
+      key: "vendorPaymentDate",
+      header: "Vendor Payment Date",
+      cell: (p) =>
+        p.vendorPaymentDate && p.vendorPaymentDate !== "0001-01-01T00:00:00"
+          ? formatDateTimeDmy(p.vendorPaymentDate)
+          : "-",
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (p) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleEditClick(p)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -197,16 +252,6 @@ const UtilityPayments = () => {
             <Button variant="outline" onClick={() => navigate(-1)}>
               Back
             </Button>
-            <Input
-              type="text"
-              placeholder="Search by meter, phone, or status..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full sm:w-72"
-            />
           </div>
         </div>
       </section>
@@ -221,94 +266,23 @@ const UtilityPayments = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-      {loading ? (
-        <div className="text-center py-8">Loading payments...</div>
-      ) : error ? (
-        <div className="text-center py-8 text-red-500">{error}</div>
-      ) : payments.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          No payments found.
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Charges</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>Phone Number</TableHead>
-                <TableHead>Meter Number</TableHead>
-                <TableHead>Units</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Vendor Ref</TableHead>
-                <TableHead>Vendor Payment Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedPayments.map((payment) => (
-                <TableRow key={payment.id}>
-                  <TableCell>{payment.status || "-"}</TableCell>
-                  <TableCell>{payment.amount || "-"}</TableCell>
-                  <TableCell>{payment.charges || "-"}</TableCell>
-                  <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
-                  <TableCell>{payment.phoneNumber || "-"}</TableCell>
-                  <TableCell>{payment.meterNumber || "-"}</TableCell>
-                  <TableCell>{payment.units || "-"}</TableCell>
-                  <TableCell>{payment.vendor || "-"}</TableCell>
-                  <TableCell>{payment.vendorTranId || "-"}</TableCell>
-                  <TableCell>
-                    {payment.vendorPaymentDate &&
-                    payment.vendorPaymentDate !== "0001-01-01T00:00:00"
-                      ? formatDateTimeDmy(payment.vendorPaymentDate)
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditClick(payment)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {totalPages > 1 && (
-            <div className="flex justify-end mt-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+          {error ? (
+            <div className="text-center py-8 text-red-500">{error}</div>
+          ) : (
+            <DataTable
+              data={filteredPayments}
+              columns={columns}
+              loading={isLoading}
+              searchValue={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search by meter, phone, or status..."
+              label="payment"
+              emptyMessage="No payments found."
+            />
           )}
-        </div>
-      )}
         </CardContent>
       </Card>
+
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-xl rounded-[28px] border border-border/70 bg-white p-0 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.4)]">
           <DialogHeader>

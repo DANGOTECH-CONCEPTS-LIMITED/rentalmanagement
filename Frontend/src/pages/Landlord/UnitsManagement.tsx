@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, DoorOpen, DoorClosed, FileText, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, DoorOpen, DoorClosed, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -52,6 +50,7 @@ const emptyForm = {
 
 const UnitsManagement = () => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [units, setUnits] = useState<Unit[]>(dummyUnits);
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -129,6 +128,65 @@ const UnitsManagement = () => {
 
   const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
 
+  const unitColumns: Column<Unit>[] = [
+    {
+      key: 'roomNumber',
+      header: 'Room No.',
+      cell: (u) => <span className="font-medium">{u.roomNumber}</span>,
+    },
+    {
+      key: 'property',
+      header: 'Property',
+      cell: (u) => u.property,
+    },
+    {
+      key: 'securityDeposit',
+      header: 'Security Deposit',
+      cell: (u) => formatUGX(u.securityDeposit),
+    },
+    {
+      key: 'monthlyAmount',
+      header: 'Monthly Amount',
+      cell: (u) => formatUGX(u.monthlyAmount),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (u) => (
+        <Badge variant={u.status === "Occupied" ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
+          {u.status === "Occupied" ? <DoorClosed className="h-3 w-3" /> : <DoorOpen className="h-3 w-3" />}
+          {u.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'tenant',
+      header: 'Tenant',
+      cell: (u) => u.tenant || <span className="text-muted-foreground text-sm">—</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (u) => (
+        <div className="flex items-center justify-end gap-2">
+          {u.status === "Occupied" && (
+            <Button size="sm" variant="outline" onClick={() => setInvoiceUnit(u)}>
+              <FileText className="h-4 w-4 mr-1" />Invoice
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => openEdit(u)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setDeleteUnit(u)}>
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -158,63 +216,19 @@ const UnitsManagement = () => {
         ))}
       </div>
 
-      <div className="glass-card rounded-xl p-4 space-y-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search room, property, tenant..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Room No.</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Security Deposit</TableHead>
-                <TableHead>Monthly Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No units found</TableCell></TableRow>
-              ) : (
-                filtered.map((unit) => (
-                  <TableRow key={unit.id}>
-                    <TableCell className="font-medium">{unit.roomNumber}</TableCell>
-                    <TableCell>{unit.property}</TableCell>
-                    <TableCell>{formatUGX(unit.securityDeposit)}</TableCell>
-                    <TableCell>{formatUGX(unit.monthlyAmount)}</TableCell>
-                    <TableCell>
-                      <Badge variant={unit.status === "Occupied" ? "default" : "secondary"} className="flex items-center gap-1 w-fit">
-                        {unit.status === "Occupied" ? <DoorClosed className="h-3 w-3" /> : <DoorOpen className="h-3 w-3" />}
-                        {unit.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{unit.tenant || <span className="text-muted-foreground text-sm">—</span>}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {unit.status === "Occupied" && (
-                          <Button size="sm" variant="outline" onClick={() => setInvoiceUnit(unit)}>
-                            <FileText className="h-4 w-4 mr-1" />Invoice
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" onClick={() => openEdit(unit)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setDeleteUnit(unit)}>
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      <div className="glass-card rounded-xl p-4">
+        <DataTable
+          data={filtered}
+          columns={unitColumns}
+          loading={isLoading}
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search room, property, tenant..."
+          label="unit"
+          pageSize={10}
+          emptyMessage="No units found"
+          emptyIcon={<DoorOpen className="h-12 w-12" />}
+        />
       </div>
 
       {/* Add / Edit Dialog */}

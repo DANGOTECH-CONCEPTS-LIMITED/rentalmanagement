@@ -18,17 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
-import { ChevronsLeft, ChevronsRight, Download, Eye } from "lucide-react";
+import { Download, Eye } from "lucide-react";
+import { DataTable, Column } from "@/components/ui/data-table";
 
 interface CollectoWithdrawHistoryEntry {
   id: number;
@@ -87,9 +80,6 @@ const CollectoWithdrawLogs = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<CollectoWithdrawHistoryEntry | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const rowsPerPage = 10;
 
   const getToken = () => {
     const storedUser = localStorage.getItem("user");
@@ -126,7 +116,6 @@ const CollectoWithdrawLogs = () => {
       );
 
       setEntries(response.data ?? []);
-      setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching Collecto withdrawal history:", error);
       toast({
@@ -172,23 +161,6 @@ const CollectoWithdrawLogs = () => {
       return matchesDestination && matchesStatus && matchesQuery;
     });
   }, [destinationFilter, entries, searchTerm, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage));
-
-  const paginatedEntries = useMemo(() => {
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    return filteredEntries.slice(startIndex, startIndex + rowsPerPage);
-  }, [currentPage, filteredEntries]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [destinationFilter, searchTerm, statusFilter]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
 
   const exportCsv = () => {
     if (filteredEntries.length === 0) {
@@ -239,6 +211,73 @@ const CollectoWithdrawLogs = () => {
     URL.revokeObjectURL(url);
   };
 
+  const columns: Column<CollectoWithdrawHistoryEntry>[] = [
+    {
+      key: "createdAt",
+      header: "Date",
+      cell: (row) => formatDate(row.createdAt),
+    },
+    {
+      key: "reference",
+      header: "Reference",
+      cell: (row) => row.reference,
+    },
+    {
+      key: "withdrawTo",
+      header: "Withdraw To",
+      cell: (row) => <Badge variant="secondary">{row.withdrawTo}</Badge>,
+    },
+    {
+      key: "requestedByEmail",
+      header: "Requested By",
+      cell: (row) => (
+        <span className="max-w-[240px] truncate block">{row.requestedByEmail}</span>
+      ),
+    },
+    {
+      key: "endpointStatus",
+      header: "Endpoint",
+      cell: (row) => (
+        <Badge variant={row.endpointStatus === "SUCCESS" ? "secondary" : "destructive"}>
+          {row.endpointStatus}
+        </Badge>
+      ),
+    },
+    {
+      key: "collectoStatus",
+      header: "Collecto",
+      cell: (row) => (
+        <Badge variant={row.isSuccess ? "secondary" : "destructive"}>
+          {row.collectoStatus}
+        </Badge>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      headerClassName: "text-right",
+      className: "text-right font-medium",
+      cell: (row) => formatCurrency(row.amount),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (row) => (
+        <Button variant="outline" size="sm" onClick={() => setSelectedEntry(row)}>
+          <Eye className="mr-2 h-4 w-4" />
+          View
+        </Button>
+      ),
+    },
+  ];
+
+  const filterControls = (
+    <Button variant="outline" onClick={exportCsv} disabled={filteredEntries.length === 0}>
+      <Download className="mr-2 h-4 w-4" />
+      Export CSV
+    </Button>
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -249,7 +288,7 @@ const CollectoWithdrawLogs = () => {
       </div>
 
       <Card className="p-4 space-y-4">
-        <div className="grid gap-4 md:grid-cols-[repeat(2,minmax(0,180px))_repeat(2,minmax(0,180px))_minmax(0,1fr)_auto]">
+        <div className="grid gap-4 md:grid-cols-[repeat(2,minmax(0,180px))_repeat(2,minmax(0,180px))_auto]">
           <div className="space-y-2">
             <Label htmlFor="collecto-start-date">Start date</Label>
             <Input
@@ -297,118 +336,27 @@ const CollectoWithdrawLogs = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="collecto-log-search">Search</Label>
-            <Input
-              id="collecto-log-search"
-              placeholder="Search by reference, payload, user, or error"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
-          </div>
           <div className="flex items-end gap-2">
             <Button onClick={fetchHistory} className="w-full md:w-auto">
               Retrieve Logs
-            </Button>
-            <Button variant="outline" onClick={exportCsv} disabled={filteredEntries.length === 0}>
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
             </Button>
           </div>
         </div>
       </Card>
 
       <Card className="p-4">
-        {isLoading ? (
-          <div className="py-8 text-center text-muted-foreground">Loading withdrawal history...</div>
-        ) : filteredEntries.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">
-            No withdrawal history found for the selected criteria.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Showing {filteredEntries.length} matching withdrawal records.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Withdraw To</TableHead>
-                    <TableHead>Requested By</TableHead>
-                    <TableHead>Endpoint</TableHead>
-                    <TableHead>Collecto</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedEntries.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>{formatDate(entry.createdAt)}</TableCell>
-                      <TableCell>{entry.reference}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{entry.withdrawTo}</Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[240px] truncate">{entry.requestedByEmail}</TableCell>
-                      <TableCell>
-                        <Badge variant={entry.endpointStatus === "SUCCESS" ? "secondary" : "destructive"}>
-                          {entry.endpointStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={entry.isSuccess ? "secondary" : "destructive"}>
-                          {entry.collectoStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(entry.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedEntry(entry)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex justify-end">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm">Page {currentPage} of {totalPages}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <DataTable
+          data={filteredEntries}
+          columns={columns}
+          loading={isLoading}
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search by reference, payload, user, or error"
+          label="withdrawal record"
+          emptyMessage="No withdrawal history found for the selected criteria."
+          headerRight={filterControls}
+          minWidth="900px"
+        />
       </Card>
 
       <Dialog open={!!selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)}>

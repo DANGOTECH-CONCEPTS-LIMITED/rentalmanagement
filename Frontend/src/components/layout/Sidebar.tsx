@@ -21,6 +21,7 @@ import {
   DoorOpen,
   Receipt,
   TrendingDown,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -416,14 +417,20 @@ function getNavItems(role: number): NavItem[] {
         path: "/tenant-dashboard/submit-complaint",
       },
       {
+        label: "My Invoices",
+        icon: <Receipt size={18} />,
+        path: "/tenant-dashboard/invoices",
+      },
+      {
+        label: "My Profile",
+        icon: <UserCircle size={18} />,
+        path: "/tenant-dashboard/my-profile",
+      },
+      {
         label: "Send SMS",
         icon: <MessageSquare size={18} />,
         path: "/tenant-dashboard/send-sms",
       },
-
-
-
-
     ];
   }
 

@@ -26,14 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -488,19 +481,56 @@ const UtilityDashboard = () => {
                         <DialogHeader>
                           <DialogTitle>Transaction History</DialogTitle>
                         </DialogHeader>
-                        {isLoading ? (
-                          <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => (
-                              <Skeleton key={i} className="h-12 w-full" />
-                            ))}
-                          </div>
-                        ) : transactions.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            No transactions found
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="flex justify-end gap-2">
+                        <DataTable
+                          data={statementRows}
+                          columns={[
+                            {
+                              key: "date",
+                              header: "Date",
+                              cell: (row) => new Date(row.transactionDate).toLocaleDateString(),
+                            },
+                            {
+                              key: "description",
+                              header: "Description",
+                              cell: (row) => (
+                                <span className="flex items-center gap-2">
+                                  {row.amount > 0 ? (
+                                    <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <ArrowUpRight className="h-4 w-4 text-red-500" />
+                                  )}
+                                  {row.description || "Transaction"}
+                                </span>
+                              ),
+                            },
+                            {
+                              key: "amount",
+                              header: "Amount",
+                              headerClassName: "text-right",
+                              className: "text-right font-medium",
+                              cell: (row) => (
+                                <span className={row.amount > 0 ? "text-green-500" : "text-red-500"}>
+                                  {row.amount > 0 ? "+" : ""}
+                                  {formatCurrency(row.amount)}
+                                </span>
+                              ),
+                            },
+                            {
+                              key: "runningBalance",
+                              header: "Running balance",
+                              headerClassName: "text-right",
+                              className: "text-right font-medium text-slate-950",
+                              cell: (row) =>
+                                row.runningBalance !== null
+                                  ? formatCurrency(row.runningBalance)
+                                  : "--",
+                            },
+                          ]}
+                          loading={isLoading}
+                          label="transaction"
+                          emptyMessage="No transactions found"
+                          headerRight={
+                            <div className="flex gap-2">
                               <Button variant="outline" size="sm" onClick={exportStatement}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Export CSV
@@ -510,44 +540,8 @@ const UtilityDashboard = () => {
                                 Export PDF
                               </Button>
                             </div>
-                            <div className="overflow-x-auto max-h-[60vh]">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Date</TableHead>
-                                  <TableHead>Description</TableHead>
-                                  <TableHead className="text-right">Amount</TableHead>
-                                  <TableHead className="text-right">Running balance</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {statementRows.map((tx, i) => (
-                                  <TableRow key={i}>
-                                    <TableCell>{new Date(tx.transactionDate).toLocaleDateString()}</TableCell>
-                                    <TableCell className="flex items-center gap-2">
-                                      {tx.amount > 0 ? (
-                                        <ArrowDownLeft className="h-4 w-4 text-green-500" />
-                                      ) : (
-                                        <ArrowUpRight className="h-4 w-4 text-red-500" />
-                                      )}
-                                      {tx.description || "Transaction"}
-                                    </TableCell>
-                                    <TableCell className={`text-right font-medium ${tx.amount > 0 ? "text-green-500" : "text-red-500"}`}>
-                                      {tx.amount > 0 ? "+" : ""}
-                                      {formatCurrency(tx.amount)}
-                                    </TableCell>
-                                    <TableCell className="text-right font-medium text-slate-950">
-                                      {tx.runningBalance !== null
-                                        ? formatCurrency(tx.runningBalance)
-                                        : "--"}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                            </div>
-                          </div>
-                        )}
+                          }
+                        />
                       </DialogContent>
                     </Dialog>
                   </DropdownMenuContent>
@@ -648,45 +642,39 @@ const UtilityDashboard = () => {
           <CardDescription>View all utility meters associated with your account.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoadingMeters ? (
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-            </div>
-          ) : utilityMeters.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Meter Type</TableHead>
-                    <TableHead>Meter Number</TableHead>
-                    <TableHead>NWSC Account</TableHead>
-                    <TableHead>Location</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {utilityMeters.map((meter) => (
-                    <TableRow key={meter.id}>
-                      <TableCell>{meter.id}</TableCell>
-                      <TableCell>{meter.meterType}</TableCell>
-                      <TableCell>{meter.meterNumber}</TableCell>
-                      <TableCell>{meter.nwscAccount}</TableCell>
-                      <TableCell>{meter.locationOfNwscMeter}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No utility meters found</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Contact your administrator to add utility meters
-              </p>
-            </div>
-          )}
+          <DataTable
+            data={utilityMeters}
+            columns={[
+              {
+                key: "id",
+                header: "ID",
+                cell: (row) => row.id,
+              },
+              {
+                key: "meterType",
+                header: "Meter Type",
+                cell: (row) => row.meterType,
+              },
+              {
+                key: "meterNumber",
+                header: "Meter Number",
+                cell: (row) => row.meterNumber,
+              },
+              {
+                key: "nwscAccount",
+                header: "NWSC Account",
+                cell: (row) => row.nwscAccount,
+              },
+              {
+                key: "location",
+                header: "Location",
+                cell: (row) => row.locationOfNwscMeter,
+              },
+            ]}
+            loading={isLoadingMeters}
+            label="meter"
+            emptyMessage="No utility meters found. Contact your administrator to add utility meters."
+          />
         </CardContent>
       </Card>
 
@@ -696,52 +684,55 @@ const UtilityDashboard = () => {
           <CardDescription>The latest deposits and withdrawals on your wallet.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : recentTransactions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
-              No transactions found.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Running balance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentTransactions.map((tx, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{new Date(tx.transactionDate).toLocaleDateString()}</TableCell>
-                    <TableCell className="flex items-center gap-2">
-                      {tx.amount > 0 ? (
-                        <ArrowDownLeft className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowUpRight className="h-4 w-4 text-red-500" />
-                      )}
-                      {tx.description || "Transaction"}
-                    </TableCell>
-                    <TableCell className={`text-right font-medium ${tx.amount > 0 ? "text-green-500" : "text-red-500"}`}>
-                      {tx.amount > 0 ? "+" : ""}
-                      {formatCurrency(tx.amount)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-slate-950">
-                      {tx.runningBalance !== null
-                        ? formatCurrency(tx.runningBalance)
-                        : "--"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <DataTable
+            data={recentTransactions}
+            columns={[
+              {
+                key: "date",
+                header: "Date",
+                cell: (row) => new Date(row.transactionDate).toLocaleDateString(),
+              },
+              {
+                key: "description",
+                header: "Description",
+                cell: (row) => (
+                  <span className="flex items-center gap-2">
+                    {row.amount > 0 ? (
+                      <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <ArrowUpRight className="h-4 w-4 text-red-500" />
+                    )}
+                    {row.description || "Transaction"}
+                  </span>
+                ),
+              },
+              {
+                key: "amount",
+                header: "Amount",
+                headerClassName: "text-right",
+                className: `text-right font-medium`,
+                cell: (row) => (
+                  <span className={row.amount > 0 ? "text-green-500" : "text-red-500"}>
+                    {row.amount > 0 ? "+" : ""}
+                    {formatCurrency(row.amount)}
+                  </span>
+                ),
+              },
+              {
+                key: "runningBalance",
+                header: "Running balance",
+                headerClassName: "text-right",
+                className: "text-right font-medium text-slate-950",
+                cell: (row) =>
+                  row.runningBalance !== null
+                    ? formatCurrency(row.runningBalance)
+                    : "--",
+              },
+            ]}
+            loading={isLoading}
+            label="transaction"
+            emptyMessage="No transactions found."
+          />
         </CardContent>
       </Card>
 

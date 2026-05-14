@@ -22,16 +22,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useForm } from 'react-hook-form';
 import { formatDateTimeDmy } from '@/lib/date-time';
+import { DataTable, Column } from '@/components/ui/data-table';
 
 interface CustomerInfo {
   customer_name: string;
@@ -89,7 +82,7 @@ const MakeUtilityPayment = () => {
   const [meterNumber, setMeterNumber] = useState('');
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [previewData, setPreviewData] = useState<PaymentPreview | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -111,7 +104,7 @@ const MakeUtilityPayment = () => {
       amount: undefined,
     },
     // Note: We'd use zodResolver here if available
-    // resolver: zodResolver(paymentSchema), 
+    // resolver: zodResolver(paymentSchema),
   });
 
   // Handle meter validation
@@ -174,7 +167,7 @@ const MakeUtilityPayment = () => {
       return;
     }
 
-    setIsFetching(true);
+    setIsLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/GetUtilityPaymentByMeterNumber/${meterNumber}`);
       setPayments(response.data);
@@ -186,7 +179,7 @@ const MakeUtilityPayment = () => {
         description: error.response?.data?.message || error.message,
       });
     } finally {
-      setIsFetching(false);
+      setIsLoading(false);
     }
   };
 
@@ -290,6 +283,48 @@ const MakeUtilityPayment = () => {
     setShowPreview(false);
     setPreviewData(null);
   };
+
+  const sortedPayments = [...payments].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const paymentColumns: Column<PaymentRecord>[] = [
+    {
+      key: "token",
+      header: "Token",
+      cell: (row) => <span className="font-medium">{row.token || '-'}</span>,
+    },
+    {
+      key: "vendorTranId",
+      header: "VendorTranId",
+      cell: (row) => row.vendorTranId || '-',
+    },
+    {
+      key: "phoneNumber",
+      header: "Phone",
+      cell: (row) => row.phoneNumber || '-',
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      cell: (row) => row.amount,
+    },
+    {
+      key: "units",
+      header: "Units",
+      cell: (row) => row.units ?? '-',
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (row) => row.status,
+    },
+    {
+      key: "createdAt",
+      header: "Date",
+      cell: (row) => formatDateTimeDmy(row.createdAt),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -530,49 +565,20 @@ const MakeUtilityPayment = () => {
             />
             <Button
               onClick={fetchPayments}
-              isLoading={isFetching}
+              isLoading={isLoading}
               className="w-full sm:w-auto"
             >
               Fetch Payments
             </Button>
           </div>
-          {payments.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Token</TableHead>
-                  <TableHead>VendorTranId</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Units</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .slice(0, 5)
-                  .map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">{payment.token || '-'}</TableCell>
-                      <TableCell>{payment.vendorTranId || '-'}</TableCell>
-                      <TableCell>{payment.phoneNumber || '-'}</TableCell>
-                      <TableCell>{payment.amount}</TableCell>
-                      <TableCell>{payment.units ?? '-'}</TableCell>
-                      <TableCell>{payment.status}</TableCell>
-                      <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          ) : (
-            !isFetching && (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
-                No records found.
-              </div>
-            )
-          )}
+          <DataTable
+            data={sortedPayments}
+            columns={paymentColumns}
+            loading={isLoading}
+            pageSize={5}
+            label="payment"
+            emptyMessage="No records found."
+          />
         </CardContent>
       </Card>
     </div>

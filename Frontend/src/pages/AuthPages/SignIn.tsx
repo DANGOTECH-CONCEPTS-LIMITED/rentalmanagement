@@ -27,7 +27,7 @@ const SignIn = () => {
         case 3: // Tenant
           navigate("/tenant-dashboard");
           break;
-        case 4: // Tenant
+        case 4: // Utility
           navigate("/utility-dashboard");
           break;
         default:
@@ -44,21 +44,73 @@ const SignIn = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="w-full max-w-5xl"
       >
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-8">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 grid-rows-[1fr] min-h-[600px]">
+          {/* Left Side - House Image */}
+          <div className="relative hidden lg:block row-span-1 h-full">
+            <img
+              src="/uploads/studioroom.jpg"
+              alt="Property"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+              >
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Welcome to Nyumba Yo
+                </h2>
+                <p className="text-white/80 text-sm">
+                  Your one-stop property management solution. Manage properties,
+                  tenants, and payments all in one place.
+                </p>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Right Side - Login Form */}
+          <div className="p-8 lg:p-12 flex flex-col justify-center">
             <div className="mb-8 text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                NYUMBA YO
-              </h1>
-              <p className="text-gray-600">
-                Your one stop property management solution
-              </p>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+              >
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-primary"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"
+                    />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  NYUMBA YO
+                </h1>
+                <p className="text-gray-600">
+                  Your one stop property management solution
+                </p>
+              </motion.div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Email
@@ -109,7 +161,7 @@ const SignIn = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {authError && (
                 <motion.p
@@ -121,31 +173,53 @@ const SignIn = () => {
                 </motion.p>
               )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                isLoading={authLoading}
-                rightIcon={<ArrowRight size={18} />}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
               >
-                Sign In
-              </Button>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  isLoading={authLoading}
+                  rightIcon={<ArrowRight size={18} />}
+                >
+                  Sign In
+                </Button>
+              </motion.div>
             </form>
 
-            <Link
-              to="/forgot-password"
-              className="text-sm font-medium text-primary hover:text-primary/80"
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="mt-6 space-y-4"
             >
-              Forgot password?
-            </Link>
-            <p className="mt-6 text-center text-sm text-gray-600">
-              Don't have an account?{" "}
               <Link
-                to="/signup"
-                className="font-medium text-primary hover:text-primary/80"
+                to="/forgot-password"
+                className="text-sm font-medium text-primary hover:text-primary/80 block text-center"
               >
-                contact Admin
+                Forgot password?
               </Link>
-            </p>
+              <p className="text-center text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link
+                  to="/signup"
+                  className="font-medium text-primary hover:text-primary/80"
+                >
+                  Contact Admin
+                </Link>
+              </p>
+            </motion.div>
+
+            {/* Mobile image preview */}
+            <div className="lg:hidden mt-8 rounded-xl overflow-hidden">
+              <img
+                src="/uploads/studioroom.jpg"
+                alt="Property"
+                className="w-full h-48 object-cover"
+              />
+            </div>
           </div>
         </div>
       </motion.div>

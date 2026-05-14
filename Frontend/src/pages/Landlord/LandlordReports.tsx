@@ -4,9 +4,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -64,12 +62,101 @@ const statusColors: Record<string, string> = {
   "Pending Payment": "destructive",
 };
 
+type IncomeRow = typeof incomeData[0] & { total?: number };
+type ProfitRow = typeof profitData[0] & { margin?: string };
+type TenantRow = typeof tenantHistory[0];
+
 const LandlordReports = () => {
   const [period, setPeriod] = useState("2025");
 
   const totalIncome = profitData.reduce((s, d) => s + d.income, 0);
   const totalExpense = profitData.reduce((s, d) => s + d.expense, 0);
   const netProfit = totalIncome - totalExpense;
+
+  const incomeColumns: Column<IncomeRow>[] = [
+    { key: "month", header: "Month", cell: (r) => r.month },
+    { key: "rent", header: "Rent", cell: (r) => formatUGX(r.rent) },
+    { key: "utility", header: "Utility", cell: (r) => formatUGX(r.utility) },
+    { key: "other", header: "Other", cell: (r) => formatUGX(r.other) },
+    {
+      key: "total",
+      header: "Total",
+      headerClassName: "font-semibold",
+      cell: (r) => (
+        <span className="font-semibold text-green-600">
+          {formatUGX(r.rent + r.utility + r.other)}
+        </span>
+      ),
+    },
+  ];
+
+  const incomeTotalsRow: IncomeRow = {
+    month: "Total",
+    rent: incomeData.reduce((s, r) => s + r.rent, 0),
+    utility: incomeData.reduce((s, r) => s + r.utility, 0),
+    other: incomeData.reduce((s, r) => s + r.other, 0),
+  };
+  const incomeTableData: IncomeRow[] = [...incomeData, incomeTotalsRow];
+
+  const pnlColumns: Column<ProfitRow>[] = [
+    { key: "month", header: "Month", cell: (r) => r.month },
+    { key: "income", header: "Income", cell: (r) => <span className="text-green-600">{formatUGX(r.income)}</span> },
+    { key: "expense", header: "Expenses", cell: (r) => <span className="text-red-600">{formatUGX(r.expense)}</span> },
+    {
+      key: "profit",
+      header: "Net Profit",
+      cell: (r) => (
+        <span className={r.profit >= 0 ? "text-blue-600 font-semibold" : "text-red-700 font-semibold"}>
+          {formatUGX(r.profit)}
+        </span>
+      ),
+    },
+    {
+      key: "margin",
+      header: "Margin",
+      cell: (r) => (r.income > 0 ? `${((r.profit / r.income) * 100).toFixed(1)}%` : "—"),
+    },
+  ];
+
+  const pnlTotalsRow: ProfitRow = {
+    month: "Total",
+    income: totalIncome,
+    expense: totalExpense,
+    profit: netProfit,
+  };
+  const pnlTableData: ProfitRow[] = [...profitData, pnlTotalsRow];
+
+  const tenantColumns: Column<TenantRow>[] = [
+    { key: "name", header: "Tenant", className: "font-medium", cell: (t) => t.name },
+    { key: "property", header: "Property / Unit", cell: (t) => `${t.property} — ${t.unit}` },
+    { key: "occupation", header: "Occupation", cell: (t) => t.occupation },
+    { key: "moveIn", header: "Move In", cell: (t) => new Date(t.moveIn).toLocaleDateString() },
+    {
+      key: "moveOut",
+      header: "Move Out",
+      cell: (t) => t.moveOut
+        ? new Date(t.moveOut).toLocaleDateString()
+        : <span className="text-muted-foreground">Current</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (t) => <Badge variant={statusColors[t.status] as any}>{t.status}</Badge>,
+    },
+    {
+      key: "rentPaid",
+      header: "Rent Paid",
+      className: "text-green-600 font-medium",
+      cell: (t) => t.rentPaid,
+    },
+    {
+      key: "rentMissed",
+      header: "Missed",
+      cell: (t) => (
+        <span className={t.rentMissed > 0 ? "text-red-600 font-medium" : ""}>{t.rentMissed}</span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -132,32 +219,13 @@ const LandlordReports = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="glass-card rounded-xl p-4 overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Month</TableHead><TableHead>Rent</TableHead><TableHead>Utility</TableHead><TableHead>Other</TableHead><TableHead className="font-semibold">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {incomeData.map((r) => (
-                  <TableRow key={r.month}>
-                    <TableCell>{r.month}</TableCell>
-                    <TableCell>{formatUGX(r.rent)}</TableCell>
-                    <TableCell>{formatUGX(r.utility)}</TableCell>
-                    <TableCell>{formatUGX(r.other)}</TableCell>
-                    <TableCell className="font-semibold text-green-600">{formatUGX(r.rent + r.utility + r.other)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-slate-50 font-semibold">
-                  <TableCell>Total</TableCell>
-                  <TableCell>{formatUGX(incomeData.reduce((s, r) => s + r.rent, 0))}</TableCell>
-                  <TableCell>{formatUGX(incomeData.reduce((s, r) => s + r.utility, 0))}</TableCell>
-                  <TableCell>{formatUGX(incomeData.reduce((s, r) => s + r.other, 0))}</TableCell>
-                  <TableCell className="text-green-700">{formatUGX(totalIncome)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <div className="glass-card rounded-xl p-4">
+            <DataTable
+              data={incomeTableData}
+              columns={incomeColumns}
+              label="month"
+              emptyMessage="No income data available."
+            />
           </div>
         </TabsContent>
 
@@ -210,69 +278,26 @@ const LandlordReports = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div className="glass-card rounded-xl p-4 overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Month</TableHead><TableHead>Income</TableHead><TableHead>Expenses</TableHead><TableHead>Net Profit</TableHead><TableHead>Margin</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {profitData.map((r) => (
-                  <TableRow key={r.month}>
-                    <TableCell>{r.month}</TableCell>
-                    <TableCell className="text-green-600">{formatUGX(r.income)}</TableCell>
-                    <TableCell className="text-red-600">{formatUGX(r.expense)}</TableCell>
-                    <TableCell className={r.profit >= 0 ? "text-blue-600 font-semibold" : "text-red-700 font-semibold"}>{formatUGX(r.profit)}</TableCell>
-                    <TableCell>{r.income > 0 ? `${((r.profit / r.income) * 100).toFixed(1)}%` : "—"}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-slate-50 font-semibold">
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-green-700">{formatUGX(totalIncome)}</TableCell>
-                  <TableCell className="text-red-700">{formatUGX(totalExpense)}</TableCell>
-                  <TableCell className={netProfit >= 0 ? "text-blue-700" : "text-red-800"}>{formatUGX(netProfit)}</TableCell>
-                  <TableCell>{((netProfit / totalIncome) * 100).toFixed(1)}%</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <div className="glass-card rounded-xl p-4">
+            <DataTable
+              data={pnlTableData}
+              columns={pnlColumns}
+              label="month"
+              emptyMessage="No profit & loss data available."
+            />
           </div>
         </TabsContent>
 
         {/* TENANT HISTORY TAB */}
         <TabsContent value="tenants" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-4 overflow-x-auto">
+          <div className="glass-card rounded-xl p-4">
             <h2 className="font-medium mb-4">Tenant History</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Property / Unit</TableHead>
-                  <TableHead>Occupation</TableHead>
-                  <TableHead>Move In</TableHead>
-                  <TableHead>Move Out</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Rent Paid</TableHead>
-                  <TableHead>Missed</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tenantHistory.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.name}</TableCell>
-                    <TableCell>{t.property} — {t.unit}</TableCell>
-                    <TableCell>{t.occupation}</TableCell>
-                    <TableCell>{new Date(t.moveIn).toLocaleDateString()}</TableCell>
-                    <TableCell>{t.moveOut ? new Date(t.moveOut).toLocaleDateString() : <span className="text-muted-foreground">Current</span>}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusColors[t.status] as any}>{t.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-green-600 font-medium">{t.rentPaid}</TableCell>
-                    <TableCell className={t.rentMissed > 0 ? "text-red-600 font-medium" : ""}>{t.rentMissed}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              data={tenantHistory}
+              columns={tenantColumns}
+              label="tenant"
+              emptyMessage="No tenant history available."
+            />
           </div>
         </TabsContent>
       </Tabs>

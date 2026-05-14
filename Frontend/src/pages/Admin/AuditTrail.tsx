@@ -5,9 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronsLeft, ChevronsRight, Eye, Download } from "lucide-react";
+import { Eye, Download } from "lucide-react";
 
 interface AuditTrailEntry {
   id: number;
@@ -65,10 +65,8 @@ const AuditTrail = () => {
   const [logs, setLogs] = useState<AuditTrailEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<AuditTrailEntry | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const rowsPerPage = 10;
 
   const getToken = () => {
     const storedUser = localStorage.getItem("user");
@@ -98,7 +96,6 @@ const AuditTrail = () => {
         (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
       );
       setLogs(sortedLogs);
-      setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching audit trail:", error);
       toast({ title: "Error", description: "Failed to retrieve audit trail.", variant: "destructive" });
@@ -122,22 +119,6 @@ const AuditTrail = () => {
       return matchesQuery;
     });
   }, [logs, searchTerm]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / rowsPerPage));
-  const paginatedLogs = useMemo(() => {
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    return filteredLogs.slice(startIndex, startIndex + rowsPerPage);
-  }, [currentPage, filteredLogs]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
 
   const exportCsv = () => {
     if (filteredLogs.length === 0) {
@@ -188,6 +169,56 @@ const AuditTrail = () => {
     URL.revokeObjectURL(url);
   };
 
+  const columns: Column<AuditTrailEntry>[] = [
+    {
+      key: "date",
+      header: "Date",
+      cell: (log) => formatDate(log.createdAt),
+    },
+    {
+      key: "user",
+      header: "User",
+      cell: (log) => log.userId,
+    },
+    {
+      key: "role",
+      header: "Role",
+      cell: (log) => log.userRole || "-",
+    },
+    {
+      key: "method",
+      header: "Method",
+      cell: (log) => log.httpMethod,
+    },
+    {
+      key: "route",
+      header: "Route",
+      className: "max-w-[240px] truncate",
+      cell: (log) => log.route,
+    },
+    {
+      key: "action",
+      header: "Action",
+      className: "max-w-[200px] truncate",
+      cell: (log) => log.action,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (log) => log.resultStatus || "-",
+    },
+    {
+      key: "details",
+      header: "Details",
+      cell: (log) => (
+        <Button variant="outline" size="sm" onClick={() => setSelectedEntry(log)}>
+          <Eye className="mr-2 h-4 w-4" />
+          View
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -228,81 +259,23 @@ const AuditTrail = () => {
       </Card>
 
       <Card className="p-4">
-        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4 mb-4">
           <div className="space-y-2">
             <Label htmlFor="route-filter">Route</Label>
             <Input id="route-filter" value={routeFilter} onChange={(event) => setRouteFilter(event.target.value)} placeholder="Filter by route" />
           </div>
-          <div className="space-y-2 md:col-span-2 xl:col-span-3">
-            <Label htmlFor="search-term">Search</Label>
-            <Input id="search-term" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search by user, route, action, description" />
-          </div>
         </div>
-      </Card>
 
-      <Card className="p-4">
-        {isLoading ? (
-          <div className="py-8 text-center text-muted-foreground">Loading audit trail...</div>
-        ) : filteredLogs.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">No audit entries found for the selected criteria.</div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Showing {filteredLogs.length} matching audit entries.</p>
-              <p className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Route</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{formatDate(log.createdAt)}</TableCell>
-                      <TableCell>{log.userId}</TableCell>
-                      <TableCell>{log.userRole || "-"}</TableCell>
-                      <TableCell>{log.httpMethod}</TableCell>
-                      <TableCell className="max-w-[240px] truncate">{log.route}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{log.action}</TableCell>
-                      <TableCell>{log.resultStatus || "-"}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedEntry(log)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex justify-end">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm">Page {currentPage} of {totalPages}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages}>
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <DataTable
+          data={filteredLogs}
+          columns={columns}
+          loading={isLoading}
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search by user, route, action, description"
+          label="audit entry"
+          emptyMessage="No audit entries found for the selected criteria."
+        />
       </Card>
 
       <Dialog open={!!selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)}>

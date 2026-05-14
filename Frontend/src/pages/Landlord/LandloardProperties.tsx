@@ -1,15 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { getImageUrl } from "@/lib/imageUrl";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -299,6 +292,7 @@ const Properties = () => {
   }, []);
 
   const fetchProperties = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(
         `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
@@ -713,116 +707,84 @@ const Properties = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
-        <div className="mb-4 sm:mb-0">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            Landlord Properties
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            View and manage all properties registered in the system
-          </p>
-        </div>
-        <Button
-          onClick={() => setAddProperty(true)}
-          className="w-full sm:w-auto"
-        >
-          Add New Property
-        </Button>
+      <div className="p-4 sm:p-0">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
+          Landlord Properties
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          View and manage all properties registered in the system
+        </p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <div className="mb-6 flex items-center relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by property name, address, or landlord..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
           {error ? (
             <div className="py-8 text-center text-red-500">
               <p className="font-medium">Error retrieving properties</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
-          ) : isLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredProperties.length === 0 ? (
-            <div className="py-8 flex flex-col items-center justify-center text-center">
-              <House className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No properties found</h3>
-              <p className="text-muted-foreground mt-1">
-                {searchTerm
-                  ? "Try adjusting your search query"
-                  : "Start by adding a new property"}
-              </p>
-            </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Property Name</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Address
-                    </TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Rooms
-                    </TableHead>
-                    <TableHead>Landlord</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProperties.map((property) => (
-                    <TableRow key={property.id}>
-                      <TableCell className="font-medium">
-                        {property.name}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {property.address}
-                      </TableCell>
-                      <TableCell>{property.type}</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {property.numberOfRooms}
-                      </TableCell>
-                      <TableCell>{property.owner.fullName}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedProperty(property)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEditProperty(property)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-red-500"
-                            onClick={() => handleDeleteProperty(property.id)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              data={filteredProperties}
+              columns={[
+                {
+                  key: "name",
+                  header: "Property Name",
+                  cell: (p) => <span className="font-medium">{p.name}</span>,
+                },
+                {
+                  key: "address",
+                  header: "Address",
+                  cell: (p) => p.address,
+                },
+                {
+                  key: "type",
+                  header: "Type",
+                  cell: (p) => p.type,
+                },
+                {
+                  key: "rooms",
+                  header: "Rooms",
+                  cell: (p) => p.numberOfRooms,
+                },
+                {
+                  key: "landlord",
+                  header: "Landlord",
+                  cell: (p) => p.owner.fullName,
+                },
+                {
+                  key: "actions",
+                  header: "Actions",
+                  headerClassName: "text-right",
+                  className: "text-right",
+                  cell: (p) => (
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="icon" onClick={() => setSelectedProperty(p)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => handleEditProperty(p)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" className="text-red-500" onClick={() => handleDeleteProperty(p.id)}>
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              loading={isLoading}
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Search by property name, address, or landlord..."
+              label="property"
+              emptyIcon={<House className="h-10 w-10" />}
+              emptyMessage={searchTerm ? "Try adjusting your search query" : "Start by adding a new property"}
+              headerRight={
+                <Button onClick={() => setAddProperty(true)}>
+                  Add New Property
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>

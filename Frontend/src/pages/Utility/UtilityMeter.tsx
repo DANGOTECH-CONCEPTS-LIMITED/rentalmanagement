@@ -11,14 +11,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { DataTable, Column } from '@/components/ui/data-table';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +21,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,7 +55,7 @@ interface AddUtilityMeterProps {
   authToken?: string;
 }
 
-const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
+const UtilityMeterPage = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [landlords, setLandlords] = useState<{ id: number; fullName: string }[]>([]);
   const [selectedLandlordId, setSelectedLandlordId] = useState<string>('');
@@ -193,12 +185,12 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
       form.reset();
       setSelectedLandlordId('');
       setIsModalOpen(false);
-      
+
       // Refresh meters list for utility accounts
       if (isUtilityAccount) {
         fetchUtilityMeters();
       }
-      
+
       if (onSuccess) onSuccess();
     } catch (error) {
       let errorMessage = 'Failed to add utility meter';
@@ -224,6 +216,14 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
     }
   };
 
+  const meterColumns: Column<UtilityMeter>[] = [
+    { key: "id", header: "ID", cell: (m) => m.id },
+    { key: "meterType", header: "Meter Type", cell: (m) => m.meterType },
+    { key: "meterNumber", header: "Meter Number", cell: (m) => m.meterNumber },
+    { key: "nwscAccount", header: "NWSC Account", cell: (m) => m.nwscAccount },
+    { key: "location", header: "Location", cell: (m) => m.locationOfNwscMeter },
+  ];
+
   return (
     <div className="space-y-8">
       <section className="page-hero">
@@ -235,134 +235,134 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
             <div>
               <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Utility Meters</h1>
               <p className="text-sm text-muted-foreground mt-1 md:text-base">
-            Manage your utility meters
-          </p>
+                Manage your utility meters
+              </p>
             </div>
-        </div>
-        
-        <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Utility Meter
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
-            <DialogHeader>
-              <DialogTitle>Add New Utility Meter</DialogTitle>
-              <DialogDescription>
-                Fill in the details to register a new utility meter.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid gap-5 md:grid-cols-2">
-                {isAdmin && (
-                  <FormField
-                    control={form.control}
-                    name="landLordId"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Landlord</FormLabel>
-                        <Select
-                          value={selectedLandlordId}
-                          onValueChange={setSelectedLandlordId}
-                          disabled={isLoadingLandlords}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingLandlords ? 'Loading landlords...' : 'Select a landlord'} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {landlords.map((landlord) => (
-                              <SelectItem key={landlord.id} value={landlord.id.toString()}>
-                                {landlord.fullName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {!selectedLandlordId && <FormMessage>Please select a landlord</FormMessage>}
-                      </FormItem>
+          </div>
+
+          <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Utility Meter
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
+              <DialogHeader>
+                <DialogTitle>Add New Utility Meter</DialogTitle>
+                <DialogDescription>
+                  Fill in the details to register a new utility meter.
+                </DialogDescription>
+              </DialogHeader>
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid gap-5 md:grid-cols-2">
+                    {isAdmin && (
+                      <FormField
+                        control={form.control}
+                        name="landLordId"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Landlord</FormLabel>
+                            <Select
+                              value={selectedLandlordId}
+                              onValueChange={setSelectedLandlordId}
+                              disabled={isLoadingLandlords}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={isLoadingLandlords ? 'Loading landlords...' : 'Select a landlord'} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {landlords.map((landlord) => (
+                                  <SelectItem key={landlord.id} value={landlord.id.toString()}>
+                                    {landlord.fullName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {!selectedLandlordId && <FormMessage>Please select a landlord</FormMessage>}
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
-                )}
 
-                <FormField
-                  control={form.control}
-                  name="meterType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meter Type</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Electricity, Water" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="meterType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meter Type</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Electricity, Water" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="meterNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meter Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter meter number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="meterNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meter Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter meter number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="nwscAccount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>NWSC Account</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter NWSC account number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="nwscAccount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>NWSC Account</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter NWSC account number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="locationOfNwscMeter"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location of NWSC Meter</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter location of NWSC meter" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                </div>
+                    <FormField
+                      control={form.control}
+                      name="locationOfNwscMeter"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Location of NWSC Meter</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter location of NWSC meter" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                <div className="flex justify-end gap-2 border-t border-border/70 pt-5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsModalOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting || (isAdmin && !selectedLandlordId)}
-                  >
-                    {isSubmitting ? 'Adding...' : 'Add Meter'}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <div className="flex justify-end gap-2 border-t border-border/70 pt-5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsModalOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || (isAdmin && !selectedLandlordId)}
+                    >
+                      {isSubmitting ? 'Adding...' : 'Add Meter'}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </section>
 
@@ -376,46 +376,13 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
             <p className="text-sm text-muted-foreground mb-6">
               View all utility meters associated with your account
             </p>
-
-            {isLoadingMeters ? (
-              <div className="space-y-3">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ) : utilityMeters.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Meter Type</TableHead>
-                      <TableHead>Meter Number</TableHead>
-                      <TableHead>NWSC Account</TableHead>
-                      <TableHead>Location</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {utilityMeters.map((meter) => (
-                      <TableRow key={meter.id}>
-                        <TableCell>{meter.id}</TableCell>
-                        <TableCell>{meter.meterType}</TableCell>
-                        <TableCell>{meter.meterNumber}</TableCell>
-                        <TableCell>{meter.nwscAccount}</TableCell>
-                        <TableCell>{meter.locationOfNwscMeter}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No utility meters found</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Click "Add Utility Meter" to get started
-                </p>
-              </div>
-            )}
+            <DataTable
+              data={utilityMeters}
+              columns={meterColumns}
+              loading={isLoadingMeters}
+              label="meter"
+              emptyMessage="No utility meters found. Click 'Add Utility Meter' to get started."
+            />
           </CardContent>
         </Card>
       )}
@@ -423,4 +390,4 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
   );
 };
 
-export default UtilityMeter;
+export default UtilityMeterPage;

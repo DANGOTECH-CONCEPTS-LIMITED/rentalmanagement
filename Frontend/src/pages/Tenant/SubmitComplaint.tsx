@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Plus, X, Check, FileEdit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, Plus, X, Check, FileEdit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -12,38 +12,42 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataTable, Column } from '@/components/ui/data-table';
+
+interface Complaint {
+  id: number;
+  subject: string;
+  description: string;
+  dateCreated: string;
+  priority: string;
+  status: string;
+  resolutionDetails: string;
+  propertyId: number;
+  property?: { name: string };
+}
 
 const ComplaintsTable = () => {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [images, setImages] = useState([]);
   const [imagesPreviews, setImagesPreviews] = useState([]);
   const [priority, setPriority] = useState('medium');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [currentComplaint, setCurrentComplaint] = useState(null);
+  const [currentComplaint, setCurrentComplaint] = useState<Complaint | null>(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
@@ -51,23 +55,23 @@ const ComplaintsTable = () => {
   }, []);
 
   const fetchComplaints = async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const user = localStorage.getItem('user');
       if (!user) throw new Error('No user found in localStorage');
-  
+
       const userData = JSON.parse(user);
       const token = userData.token;
-  
+
       const response = await fetch(`${apiUrl}/GetComplaintsByTenantId/${userData.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           accept: '*/*',
         },
       });
-  
+
       if (!response.ok) throw new Error('Failed to fetch complaints');
-  
+
       const data = await response.json();
       setComplaints(data);
     } catch (error) {
@@ -78,7 +82,7 @@ const ComplaintsTable = () => {
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -95,7 +99,7 @@ const ComplaintsTable = () => {
         return;
       }
 
-      const newImageUrls = filesArray.map((file) => URL.createObjectURL(file));
+      const newImageUrls = filesArray.map((file) => URL.createObjectURL(file as Blob));
 
       setImages([...images, ...filesArray]);
       setImagesPreviews([...imagesPreviews, ...newImageUrls]);
@@ -118,26 +122,26 @@ const ComplaintsTable = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-  
+
     try {
       const user = localStorage.getItem('user');
       if (!user) throw new Error('No user found in localStorage');
-  
+
       const userData = JSON.parse(user);
       const token = userData.token;
-  
+
       const tenantRes = await fetch(`${apiUrl}/GetTenantById/${userData.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           accept: '*/*',
         },
       });
-  
+
       if (!tenantRes.ok) throw new Error('Failed to fetch tenant details');
-  
+
       const tenantData = await tenantRes.json();
       const propertyId = tenantData.propertyId || tenantData.PropertyId || 0;
-  
+
       const formData = new FormData();
       formData.append('Subject', subject);
       formData.append('Description', description);
@@ -145,14 +149,14 @@ const ComplaintsTable = () => {
       formData.append('Status', 'Pending');
       formData.append('ResolutionDetails', '');
       formData.append('PropertyId', propertyId.toString());
-      
+
       if (images.length === 0) {
         formData.append('file', new Blob([]), '');
       } else {
         images.forEach((image) => {
           formData.append('file', image, image.name);
         });
-      } 
+      }
 
       const complaintRes = await fetch(`${apiUrl}/LogTenantComplaint`, {
         method: 'POST',
@@ -161,11 +165,11 @@ const ComplaintsTable = () => {
         },
         body: formData,
       });
-  
+
       if (!complaintRes.ok) {
         const contentType = complaintRes.headers.get('content-type');
         let errorMessage = 'Failed to submit complaint';
-        
+
         if (contentType && contentType.includes('application/json')) {
           const errorData = await complaintRes.json();
           console.error('Error data:', errorData);
@@ -181,21 +185,21 @@ const ComplaintsTable = () => {
         }
         throw new Error(errorMessage);
       }
-  
+
       setSubmitted(true);
       toast({
         title: 'Complaint Submitted',
         description: "Your complaint has been successfully submitted. We'll respond to you soon.",
       });
-  
+
       setSubject('');
       setDescription('');
       setPriority('medium');
       setImages([]);
       setImagesPreviews([]);
-      
+
       fetchComplaints();
-  
+
     } catch (error) {
       console.error('Submission error:', error);
       toast({
@@ -211,14 +215,14 @@ const ComplaintsTable = () => {
   const handleUpdateComplaint = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-  
+
     try {
       const user = localStorage.getItem('user');
       if (!user) throw new Error('No user found in localStorage');
-  
+
       const userData = JSON.parse(user);
       const token = userData.token;
-  
+
       const updateData = {
         subject: subject,
         description: description,
@@ -227,7 +231,7 @@ const ComplaintsTable = () => {
         resolutionDetails: currentComplaint.resolutionDetails,
         propertyId: currentComplaint.propertyId
       };
-  
+
       const response = await fetch(`${apiUrl}/UpdateTenantComplaint/${currentComplaint.id}`, {
         method: 'PUT',
         headers: {
@@ -237,17 +241,17 @@ const ComplaintsTable = () => {
         },
         body: JSON.stringify(updateData),
       });
-  
+
       if (!response.ok) throw new Error('Failed to update complaint');
-  
+
       toast({
         title: 'Complaint Updated',
         description: "Your complaint has been successfully updated.",
       });
-  
+
       setIsEditModalOpen(false);
       fetchComplaints();
-  
+
     } catch (error) {
       console.error('Update error:', error);
       toast({
@@ -264,10 +268,10 @@ const ComplaintsTable = () => {
     try {
       const user = localStorage.getItem('user');
       if (!user) throw new Error('No user found in localStorage');
-  
+
       const userData = JSON.parse(user);
       const token = userData.token;
-  
+
       const response = await fetch(`${apiUrl}/DeleteTenantComplaint/${complaintId}`, {
         method: 'DELETE',
         headers: {
@@ -275,16 +279,16 @@ const ComplaintsTable = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-  
+
       if (!response.ok) throw new Error('Failed to delete complaint');
-  
+
       toast({
         title: 'Complaint Deleted',
         description: "Your complaint has been successfully deleted.",
       });
-  
+
       fetchComplaints();
-  
+
     } catch (error) {
       console.error('Delete error:', error);
       toast({
@@ -310,7 +314,7 @@ const ComplaintsTable = () => {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (complaint) => {
+  const openEditModal = (complaint: Complaint) => {
     setCurrentComplaint(complaint);
     setSubject(complaint.subject);
     setDescription(complaint.description);
@@ -327,10 +331,10 @@ const ComplaintsTable = () => {
   const getPriorityBadge = (priority) => {
     const colors = {
       low: "bg-blue-100 text-blue-800",
-      medium: "bg-yellow-100 text-yellow-800", 
+      medium: "bg-yellow-100 text-yellow-800",
       high: "bg-red-100 text-red-800"
     };
-    
+
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[priority.toLowerCase()]}`}>
         {priority}
@@ -345,9 +349,9 @@ const ComplaintsTable = () => {
       resolved: "bg-green-100 text-green-800",
       rejected: "bg-red-100 text-red-800"
     };
-    
+
     const statusKey = status.toLowerCase().replace(/\s+/g, '');
-    
+
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[statusKey] || "bg-gray-100 text-gray-800"}`}>
         {status}
@@ -363,14 +367,92 @@ const ComplaintsTable = () => {
       day: 'numeric',
     }).format(date);
   };
- 
-  const getPaginationData = () => {
-     const startIndex = (currentPage - 1) * itemsPerPage;
-     const endIndex = startIndex + itemsPerPage;
-     return complaints.slice(startIndex, endIndex);
-  };
 
-  const totalPages = Math.ceil(complaints.length / itemsPerPage);
+  const filteredComplaints = complaints.filter((c) =>
+    !searchValue ||
+    c.subject.toLowerCase().includes(searchValue.toLowerCase()) ||
+    c.description.toLowerCase().includes(searchValue.toLowerCase()) ||
+    c.status.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  const columns: Column<Complaint>[] = [
+    {
+      key: 'subject',
+      header: 'Subject',
+      cell: (row) => <span className="font-medium">{row.subject}</span>,
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      cell: (row) => <span className="font-medium">{row.description}</span>,
+    },
+    {
+      key: 'dateCreated',
+      header: 'Date',
+      cell: (row) => formatDate(row.dateCreated),
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      cell: (row) => getPriorityBadge(row.priority),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (row) => getStatusBadge(row.status),
+    },
+    {
+      key: 'property',
+      header: 'Property',
+      cell: (row) => row.property?.name || 'Unknown',
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {row.status === 'PENDING' && (
+              <>
+                <DropdownMenuItem onClick={() => openEditModal(row)}>
+                  <FileEdit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDeleteComplaint(row.id)}
+                  className="text-red-600"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -388,128 +470,27 @@ const ComplaintsTable = () => {
             </div>
           </div>
           <Button onClick={openModal}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Complaint
-        </Button>
+            <Plus className="mr-2 h-4 w-4" />
+            New Complaint
+          </Button>
         </div>
       </section>
 
       <Card className="data-surface border-none shadow-none">
         <CardHeader>
           <CardTitle>Complaint log</CardTitle>
-          <CardDescription>
-            {complaints.length} complaint{complaints.length === 1 ? '' : 's'} recorded.
-          </CardDescription>
         </CardHeader>
         <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Subject</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Property</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
-                  Loading complaints...
-                </TableCell>
-              </TableRow>
-            ) : complaints.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
-                  No complaints found. Create your first complaint.
-                </TableCell>
-              </TableRow>
-            ) : (
-              getPaginationData().map((complaint) => (
-                <TableRow key={complaint.id}>
-                  <TableCell className="font-medium">{complaint.subject}</TableCell>
-                  <TableCell className="font-medium">{complaint.description}</TableCell>
-                  <TableCell>{formatDate(complaint.dateCreated)}</TableCell>
-                  <TableCell>{getPriorityBadge(complaint.priority)}</TableCell>
-                  <TableCell>{getStatusBadge(complaint.status)}</TableCell>
-                  <TableCell>{complaint.property?.name || "Unknown"}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="h-4 w-4"
-                          >
-                            <circle cx="12" cy="12" r="1" />
-                            <circle cx="12" cy="5" r="1" />
-                            <circle cx="12" cy="19" r="1" />
-                          </svg>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {complaint.status === 'PENDING' && (
-                          <>
-                            <DropdownMenuItem onClick={() => openEditModal(complaint)}>
-                              <FileEdit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteComplaint(complaint.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-        {complaints.length > itemsPerPage && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <div className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-              {Math.min(currentPage * itemsPerPage, complaints.length)} of{' '}
-              {complaints.length} complaints
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
+          <DataTable
+            data={filteredComplaints}
+            columns={columns}
+            loading={isLoading}
+            searchValue={searchValue}
+            onSearchChange={setSearchValue}
+            searchPlaceholder="Search complaints..."
+            label="complaint"
+            emptyMessage="No complaints found. Create your first complaint."
+          />
         </CardContent>
       </Card>
 
@@ -518,7 +499,7 @@ const ComplaintsTable = () => {
           <DialogHeader>
             <DialogTitle>Submit a Complaint</DialogTitle>
           </DialogHeader>
-          
+
           {submitted ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -642,7 +623,7 @@ const ComplaintsTable = () => {
           <DialogHeader>
             <DialogTitle>Edit Complaint</DialogTitle>
           </DialogHeader>
-          
+
           <form onSubmit={handleUpdateComplaint} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Subject</label>

@@ -14,14 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateDmy, formatDateTimeDmy } from "@/lib/date-time";
@@ -1089,209 +1082,60 @@ const UtilityPaymentDashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <Input
-                    value={detailSearchTerm}
-                    onChange={(event) => setDetailSearchTerm(event.target.value)}
-                    placeholder={
-                      detailContent.type === "meters"
-                        ? "Search meters by number, type, location, or user"
-                        : "Search transactions by status, meter, phone, or reference"
+                {detailContent.type === "meters" ? (
+                  <DataTable
+                    data={sortedDetailRows as any[]}
+                    columns={[
+                      { key: "meterNumber", header: "Meter Number", cell: (m: any) => (
+                        <button type="button" onClick={() => openMeterPayments(m.meterNumber)} className="text-primary underline-offset-4 hover:underline font-medium">
+                          {m.meterNumber}
+                        </button>
+                      )},
+                      { key: "meterType", header: "Type", cell: (m: any) => m.meterType || "-" },
+                      { key: "nwscAccount", header: "NWSC Account", cell: (m: any) => m.nwscAccount || "-" },
+                      { key: "location", header: "Location", cell: (m: any) => m.locationOfNwscMeter || "-" },
+                      { key: "user", header: "User", cell: (m: any) => m.user?.fullName || "-" },
+                      { key: "created", header: "Created", cell: (m: any) => formatDateDmy(m.dateCreated) },
+                    ]}
+                    loading={isLoadingData}
+                    searchValue={detailSearchTerm}
+                    onSearchChange={setDetailSearchTerm}
+                    searchPlaceholder="Search meters by number, type, location, or user"
+                    label="meter"
+                    emptyMessage="No meters found for this selection"
+                    headerRight={
+                      <Button variant="outline" onClick={exportDetailRows} disabled={filteredDetailRows.length === 0}>
+                        Export CSV
+                      </Button>
                     }
-                    className="md:max-w-md"
+                    minWidth="700px"
                   />
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">Results: {sortedDetailRows.length}</Badge>
-                    <Badge variant="outline">
-                      Page: {currentDetailPage} / {totalDetailPages}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      onClick={exportDetailRows}
-                      disabled={filteredDetailRows.length === 0}
-                    >
-                      Export CSV
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  {detailContent.type === "meters" ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("meterNumber")}>
-                              Meter Number
-                              {renderSortIcon("meterNumber")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("meterType")}>
-                              Type
-                              {renderSortIcon("meterType")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("nwscAccount")}>
-                              NWSC Account
-                              {renderSortIcon("nwscAccount")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("locationOfNwscMeter")}>
-                              Location
-                              {renderSortIcon("locationOfNwscMeter")}
-                            </button>
-                          </TableHead>
-                          <TableHead>User</TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("dateCreated")}>
-                              Created
-                              {renderSortIcon("dateCreated")}
-                            </button>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedDetailRows.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground">
-                              No meters found for this selection.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedMeterRows.map((meter) => (
-                            <TableRow key={meter.id}>
-                              <TableCell className="font-medium">
-                                <button
-                                  type="button"
-                                  onClick={() => openMeterPayments(meter.meterNumber)}
-                                  className="text-primary underline-offset-4 hover:underline"
-                                >
-                                  {meter.meterNumber}
-                                </button>
-                              </TableCell>
-                              <TableCell>{meter.meterType || "-"}</TableCell>
-                              <TableCell>{meter.nwscAccount || "-"}</TableCell>
-                              <TableCell>{meter.locationOfNwscMeter || "-"}</TableCell>
-                              <TableCell>{meter.user?.fullName || "-"}</TableCell>
-                              <TableCell>{formatDateDmy(meter.dateCreated)}</TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("status")}>
-                              Status
-                              {renderSortIcon("status")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("amount")}>
-                              Amount
-                              {renderSortIcon("amount")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("charges")}>
-                              Charges
-                              {renderSortIcon("charges")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("meterNumber")}>
-                              Meter
-                              {renderSortIcon("meterNumber")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("phoneNumber")}>
-                              Phone
-                              {renderSortIcon("phoneNumber")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("transactionID")}>
-                              Transaction ID
-                              {renderSortIcon("transactionID")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("vendorTranId")}>
-                              Vendor Ref
-                              {renderSortIcon("vendorTranId")}
-                            </button>
-                          </TableHead>
-                          <TableHead>
-                            <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("createdAt")}>
-                              Created
-                              {renderSortIcon("createdAt")}
-                            </button>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedDetailRows.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} className="text-center text-muted-foreground">
-                              No transactions found for this selection.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedPaymentRows.map((payment) => (
-                            <TableRow key={payment.id}>
-                              <TableCell>{payment.status || "-"}</TableCell>
-                              <TableCell>{formatCurrency(payment.amount || 0)}</TableCell>
-                              <TableCell>{formatCurrency(payment.charges || 0)}</TableCell>
-                              <TableCell>{payment.meterNumber || "-"}</TableCell>
-                              <TableCell>{payment.phoneNumber || "-"}</TableCell>
-                              <TableCell>{payment.transactionID || "-"}</TableCell>
-                              <TableCell>{payment.vendorTranId || "-"}</TableCell>
-                              <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-
-                {sortedDetailRows.length > detailRowsPerPage && (
-                  <div className="flex justify-end">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setCurrentDetailPage((page) => Math.max(1, page - 1))
-                        }
-                        disabled={currentDetailPage === 1}
-                      >
-                        <ChevronsLeft className="h-4 w-4" />
+                ) : (
+                  <DataTable
+                    data={sortedDetailRows as any[]}
+                    columns={[
+                      { key: "status", header: "Status", cell: (p: any) => p.status || "-" },
+                      { key: "amount", header: "Amount", cell: (p: any) => formatCurrency(p.amount || 0) },
+                      { key: "charges", header: "Charges", cell: (p: any) => formatCurrency(p.charges || 0) },
+                      { key: "meter", header: "Meter", cell: (p: any) => p.meterNumber || "-" },
+                      { key: "phone", header: "Phone", cell: (p: any) => p.phoneNumber || "-" },
+                      { key: "txId", header: "Transaction ID", cell: (p: any) => p.transactionID || "-" },
+                      { key: "vendor", header: "Vendor Ref", cell: (p: any) => p.vendorTranId || "-" },
+                      { key: "created", header: "Created", cell: (p: any) => formatDateTimeDmy(p.createdAt) },
+                    ]}
+                    loading={isLoadingData}
+                    searchValue={detailSearchTerm}
+                    onSearchChange={setDetailSearchTerm}
+                    searchPlaceholder="Search transactions by status, meter, phone, or reference"
+                    label="transaction"
+                    emptyMessage="No transactions found for this selection"
+                    headerRight={
+                      <Button variant="outline" onClick={exportDetailRows} disabled={filteredDetailRows.length === 0}>
+                        Export CSV
                       </Button>
-                      <span className="text-sm">
-                        Page {currentDetailPage} of {totalDetailPages}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setCurrentDetailPage((page) =>
-                            Math.min(totalDetailPages, page + 1)
-                          )
-                        }
-                        disabled={currentDetailPage === totalDetailPages}
-                      >
-                        <ChevronsRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                    }
+                    minWidth="900px"
+                  />
                 )}
               </div>
             ) : (

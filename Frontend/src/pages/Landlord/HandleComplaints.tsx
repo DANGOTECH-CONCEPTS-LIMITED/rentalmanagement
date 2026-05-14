@@ -3,7 +3,6 @@ import { getImageUrl } from "@/lib/imageUrl";
 import { motion } from "framer-motion";
 import {
   MessageSquare,
-  Search,
   Filter,
   Eye,
   CheckCircle,
@@ -12,11 +11,8 @@ import {
   AlertCircle,
   FileText,
   Calendar,
-  ChevronRight,
-  ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -32,14 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Select,
   SelectContent,
@@ -256,22 +245,60 @@ const HandleComplaints = () => {
     setShowDetailsDialog(true);
   };
 
-  // Add pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5;
-
-  // Pagination logic
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filteredComplaints.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages = Math.ceil(filteredComplaints.length / rowsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterStatus, filterPriority, searchTerm]);
+  const complaintColumns: Column<Complaint>[] = [
+    {
+      key: 'id',
+      header: 'ID',
+      cell: (c) => c.id,
+    },
+    {
+      key: 'property',
+      header: 'Property',
+      cell: (c) => c.property.name,
+    },
+    {
+      key: 'subject',
+      header: 'Subject',
+      cell: (c) => c.subject,
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      cell: (c) => formatDate(c.dateCreated),
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      cell: (c) => getPriorityBadge(c.priority),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (c) => (
+        <div className="flex items-center">
+          {getStatusIcon(c.status)}
+          <span className="ml-2">{getStatusText(c.status)}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (c) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-blue-600"
+          onClick={() => viewComplaintDetails(c)}
+        >
+          <Eye className="h-4 w-4" />
+          <span className="ml-1">View</span>
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -311,172 +338,50 @@ const HandleComplaints = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search by subject or complaint ID"
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 min-w-[180px]">
-                <Filter className="h-4 w-4 text-gray-400" />
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
+          <DataTable
+            data={filteredComplaints}
+            columns={complaintColumns}
+            loading={loading}
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search by subject or complaint ID"
+            label="complaint"
+            pageSize={10}
+            emptyMessage="No complaints found"
+            emptyIcon={<MessageSquare className="h-12 w-12" />}
+            headerRight={
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2 min-w-[180px]">
+                  <Filter className="h-4 w-4 text-gray-400" />
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2 min-w-[180px]">
+                  <Select value={filterPriority} onValueChange={setFilterPriority}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Priorities" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex items-center gap-2 min-w-[180px]">
-                <Select value={filterPriority} onValueChange={setFilterPriority}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Priorities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentRows.length > 0 ? (
-                      currentRows.map((complaint) => (
-                        <TableRow
-                          key={complaint.id}
-                        >
-                          <TableCell>
-                            {complaint.id}
-                          </TableCell>
-                          <TableCell>
-                            {complaint.property.name}
-                          </TableCell>
-                          <TableCell>{complaint.subject}</TableCell>
-                          <TableCell>
-                            {formatDate(complaint.dateCreated)}
-                          </TableCell>
-                          <TableCell>
-                            {getPriorityBadge(complaint.priority)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {getStatusIcon(complaint.status)}
-                              <span className="ml-2">
-                                {getStatusText(complaint.status)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-blue-600"
-                              onClick={() => viewComplaintDetails(complaint)}
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span className="ml-1">View</span>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="py-10 text-center text-gray-500"
-                        >
-                          <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                          <p>No complaints found</p>
-                          <p className="text-sm mt-1">
-                            Try adjusting your search criteria
-                          </p>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-
-                {/* Pagination controls */}
-                {filteredComplaints.length > rowsPerPage && (
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-gray-500">
-                      Showing {indexOfFirstRow + 1} to{" "}
-                      {Math.min(indexOfLastRow, filteredComplaints.length)} of{" "}
-                      {filteredComplaints.length} entries
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => paginate(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="ml-2">Previous</span>
-                      </Button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                        (number) => (
-                          <Button
-                            key={number}
-                            variant={
-                              currentPage === number ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => paginate(number)}
-                          >
-                            {number}
-                          </Button>
-                        )
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => paginate(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
-                        <span className="mr-2">Next</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+            }
+          />
         </CardContent>
       </Card>
 

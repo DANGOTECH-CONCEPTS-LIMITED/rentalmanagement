@@ -1,27 +1,16 @@
-import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import {
   FileText,
   Download,
   CheckCircle,
   Clock,
   X,
-  Search,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
+  Filter,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -30,24 +19,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Toast, ToastAction } from "@/components/ui/toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { DataTable, Column } from "@/components/ui/data-table";
 
 interface Payment {
   id: number;
@@ -149,6 +124,7 @@ const StyledReceipt = ({ payment, setShowReceiptModal }) => {
     );
     drawRow("Payment Method", payment.paymentMethod);
     drawRow("Payment Type", payment.paymentType);
+    if (payment.vendor) drawRow("Received By", payment.vendor);
 
     const status =
       payment.paymentStatus === "SUCCESSFUL"
@@ -251,6 +227,12 @@ const StyledReceipt = ({ payment, setShowReceiptModal }) => {
               <p className="text-sm text-gray-500">Payment Type</p>
               <p className="text-gray-800">{payment.paymentType}</p>
             </div>
+            {payment.vendor && (
+              <div className="col-span-2">
+                <p className="text-sm text-gray-500">Received By</p>
+                <p className="text-gray-800 font-medium">{payment.vendor}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -289,12 +271,10 @@ const StyledReceipt = ({ payment, setShowReceiptModal }) => {
 
 const PaymentHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const tableRef = useRef<HTMLTableElement>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
 
@@ -342,7 +322,7 @@ const PaymentHistory = () => {
   }, []);
 
   const fetchPayments = async (propertyId = "", start = "", end = "") => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const userData = JSON.parse(user);
       let url = `${apiUrl}/GetPaymentsByTenantId/${userData.id}`;
@@ -369,41 +349,20 @@ const PaymentHistory = () => {
         err instanceof Error ? err.message : "An unknown error occurred"
       );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const filteredPayments = payments.filter(
-    (payment) =>
+  const filteredPayments = payments.filter((payment) => {
+    const matchesSearch =
       payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.propertyTenant.property.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      payment.propertyTenant.fullName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredPayments.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "SUCCESSFUL":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "PENDING":
-        return <Clock className="h-5 w-5 text-yellow-500" />;
-      case "FAILED":
-        return <X className="h-5 w-5 text-red-500" />;
-      default:
-        return null;
-    }
-  };
+      payment.propertyTenant.property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.propertyTenant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (payment.vendor ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || payment.paymentStatus === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -427,17 +386,101 @@ const PaymentHistory = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        Loading payments...
-      </div>
-    );
-  }
-
   if (error) {
     return <div className="text-red-500 p-4">Error: {error}</div>;
   }
+
+  const columns: Column<Payment>[] = [
+    {
+      key: "transactionId",
+      header: "Transaction ID",
+      cell: (payment) => (
+        <span className="font-medium">{payment.transactionId}</span>
+      ),
+    },
+    {
+      key: "paymentDate",
+      header: "Date",
+      cell: (payment) => formatDate(payment.paymentDate),
+    },
+    {
+      key: "tenant",
+      header: "Tenant",
+      cell: (payment) => payment.propertyTenant.fullName,
+    },
+    {
+      key: "property",
+      header: "Property",
+      cell: (payment) => payment.propertyTenant.property.name,
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      cell: (payment) => (
+        <span className="font-medium">
+          {payment.amount} {payment.propertyTenant.property.currency}
+        </span>
+      ),
+    },
+    {
+      key: "paymentMethod",
+      header: "Method",
+      cell: (payment) => payment.paymentMethod,
+    },
+    {
+      key: "paymentType",
+      header: "Type",
+      cell: (payment) => payment.paymentType,
+    },
+    {
+      key: "vendor",
+      header: "Received By",
+      cell: (payment) =>
+        payment.vendor ? (
+          <span className="flex items-center gap-1.5 text-sm">
+            <User className="h-3 w-3 text-muted-foreground" />
+            {payment.vendor}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        ),
+    },
+    {
+      key: "paymentStatus",
+      header: "Status",
+      cell: (payment) => {
+        const map: Record<string, string> = {
+          SUCCESSFUL: "bg-green-100 text-green-800",
+          PENDING: "bg-amber-100 text-amber-800",
+          FAILED: "bg-red-100 text-red-800",
+        };
+        const label: Record<string, string> = { SUCCESSFUL: "Paid", PENDING: "Pending", FAILED: "Failed" };
+        return (
+          <Badge className={`${map[payment.paymentStatus] ?? ""} w-fit`}>
+            {label[payment.paymentStatus] ?? payment.paymentStatus}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "receipt",
+      header: "Receipt",
+      cell: (payment) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex items-center gap-2 text-blue-600"
+          onClick={() => {
+            setSelectedPayment(payment);
+            setShowReceiptModal(true);
+          }}
+        >
+          <FileText className="h-4 w-4" />
+          <span>View Receipt</span>
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -471,144 +514,41 @@ const PaymentHistory = () => {
 
       <Card className="data-surface border-none shadow-none">
         <CardHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <CardTitle>Transaction records</CardTitle>
-              <CardDescription>
-                {filteredPayments.length} matching payment record{filteredPayments.length === 1 ? "" : "s"}.
-              </CardDescription>
-            </div>
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search by transaction ID, property or tenant"
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+          <div>
+            <CardTitle>Transaction records</CardTitle>
+            <CardDescription>
+              Your payment history and receipts.
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Transaction ID</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Method</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Receipt</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {currentItems.length > 0 ? (
-                currentItems.map((payment) => (
-                  <motion.tr
-                    key={payment.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="hover:bg-gray-50"
-                  >
-                    <TableCell className="font-medium">
-                      {payment.transactionId}
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(payment.paymentDate)}
-                    </TableCell>
-                    <TableCell>
-                      {payment.propertyTenant.fullName}
-                    </TableCell>
-                    <TableCell>
-                      {payment.propertyTenant.property.name}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {payment.amount}{" "}
-                      {payment.propertyTenant.property.currency}
-                    </TableCell>
-                    <TableCell>
-                      {payment.paymentMethod}
-                    </TableCell>
-                    <TableCell>
-                      {payment.paymentType}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        {payment.paymentStatus}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-2 text-blue-600"
-                        onClick={() => {
-                          setSelectedPayment(payment);
-                          setShowReceiptModal(true);
-                        }}
-                      >
-                        <FileText className="h-4 w-4" />
-                        <span>View Receipt</span>
-                      </Button>
-                    </TableCell>
-                  </motion.tr>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="py-10 text-center text-gray-500"
-                  >
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No payment records found</p>
-                    <p className="text-sm mt-1">
-                      Try adjusting your search criteria
-                    </p>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {filteredPayments.length > itemsPerPage && (
-          <div className="mt-6 flex items-center justify-between gap-3 flex-wrap">
-            <div className="text-sm text-gray-500">
-              Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, filteredPayments.length)} of{" "}
-              {filteredPayments.length} entries
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <span>Previous</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
-                disabled={currentPage === totalPages}
-              >
-                <span>Next</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+          <DataTable
+            data={filteredPayments}
+            columns={columns}
+            loading={isLoading}
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search by transaction ID, property, or received by"
+            label="payment"
+            emptyMessage="No payment records found"
+            emptyIcon={<FileText className="h-12 w-12" />}
+            minWidth="800px"
+            headerRight={
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <select
+                  className="input-field h-9 py-1 text-sm"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All Status</option>
+                  <option value="SUCCESSFUL">Paid</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="FAILED">Failed</option>
+                </select>
+              </div>
+            }
+          />
         </CardContent>
       </Card>
 

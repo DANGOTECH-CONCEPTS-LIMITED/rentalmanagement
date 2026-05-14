@@ -62,14 +62,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateDmy, formatDateTimeDmy } from "@/lib/date-time";
@@ -1812,183 +1805,50 @@ const AdminUtilityDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    {detailContent.type === "meters" ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterNumber")}>
-                                Meter Number
-                                {renderDetailSortIcon("meterNumber")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterType")}>
-                                Type
-                                {renderDetailSortIcon("meterType")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("nwscAccount")}>
-                                NWSC Account
-                                {renderDetailSortIcon("nwscAccount")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("locationOfNwscMeter")}>
-                                Location
-                                {renderDetailSortIcon("locationOfNwscMeter")}
-                              </button>
-                            </TableHead>
-                            <TableHead>Landlord</TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("dateCreated")}>
-                                Created
-                                {renderDetailSortIcon("dateCreated")}
-                              </button>
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {sortedDetailRows.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                No meters found for this selection.
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            paginatedMeterRows.map((meter) => (
-                              <TableRow key={meter.id}>
-                                <TableCell className="font-medium">
-                                  <button
-                                    type="button"
-                                    onClick={() => openMeterPayments(meter.meterNumber)}
-                                    className="text-primary underline-offset-4 hover:underline"
-                                  >
-                                    {meter.meterNumber}
-                                  </button>
-                                </TableCell>
-                                <TableCell>{meter.meterType || "-"}</TableCell>
-                                <TableCell>{meter.nwscAccount || "-"}</TableCell>
-                                <TableCell>{meter.locationOfNwscMeter || "-"}</TableCell>
-                                <TableCell>{meter.user?.fullName || "-"}</TableCell>
-                                <TableCell>{formatDateDmy(meter.dateCreated)}</TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("status")}>
-                                Status
-                                {renderDetailSortIcon("status")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("amount")}>
-                                Amount
-                                {renderDetailSortIcon("amount")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("charges")}>
-                                Charges
-                                {renderDetailSortIcon("charges")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterNumber")}>
-                                Meter
-                                {renderDetailSortIcon("meterNumber")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("phoneNumber")}>
-                                Phone
-                                {renderDetailSortIcon("phoneNumber")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("transactionID")}>
-                                Transaction ID
-                                {renderDetailSortIcon("transactionID")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("vendorTranId")}>
-                                Vendor Ref
-                                {renderDetailSortIcon("vendorTranId")}
-                              </button>
-                            </TableHead>
-                            <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("createdAt")}>
-                                Created
-                                {renderDetailSortIcon("createdAt")}
-                              </button>
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {sortedDetailRows.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={8} className="text-center text-muted-foreground">
-                                No transactions found for this selection.
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            paginatedPaymentRows.map((payment) => (
-                              <TableRow key={payment.id}>
-                                <TableCell>{payment.status || "-"}</TableCell>
-                                <TableCell>{formatCurrency(payment.amount || 0)}</TableCell>
-                                <TableCell>{formatCurrency(payment.charges || 0)}</TableCell>
-                                <TableCell>{payment.meterNumber || "-"}</TableCell>
-                                <TableCell>{payment.phoneNumber || "-"}</TableCell>
-                                <TableCell>{payment.transactionID || "-"}</TableCell>
-                                <TableCell>{payment.vendorTranId || "-"}</TableCell>
-                                <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </div>
-
-                  {sortedDetailRows.length > detailRowsPerPage && (
-                    <div className="flex justify-end">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            setCurrentDetailPage((page) => Math.max(1, page - 1))
-                          }
-                          disabled={currentDetailPage === 1}
-                        >
-                          <ChevronsLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm">
-                          Page {currentDetailPage} of {totalDetailPages}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            setCurrentDetailPage((page) =>
-                              Math.min(totalDetailPages, page + 1)
-                            )
-                          }
-                          disabled={currentDetailPage === totalDetailPages}
-                        >
-                          <ChevronsRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                  {detailContent.type === "meters" ? (
+                    <DataTable
+                      data={sortedDetailRows as any[]}
+                      columns={[
+                        { key: "meterNumber", header: "Meter Number", cell: (m: any) => (
+                          <button type="button" onClick={() => openMeterPayments(m.meterNumber)} className="text-primary underline-offset-4 hover:underline font-medium">
+                            {m.meterNumber}
+                          </button>
+                        )},
+                        { key: "meterType", header: "Type", cell: (m: any) => m.meterType || "-" },
+                        { key: "nwscAccount", header: "NWSC Account", cell: (m: any) => m.nwscAccount || "-" },
+                        { key: "location", header: "Location", cell: (m: any) => m.locationOfNwscMeter || "-" },
+                        { key: "landlord", header: "Landlord", cell: (m: any) => m.user?.fullName || "-" },
+                        { key: "created", header: "Created", cell: (m: any) => formatDateDmy(m.dateCreated) },
+                      ]}
+                      loading={isLoading}
+                      searchValue={detailSearchTerm}
+                      onSearchChange={setDetailSearchTerm}
+                      searchPlaceholder="Search meters by number, type, location"
+                      label="meter"
+                      emptyMessage="No meters found for this selection"
+                      minWidth="700px"
+                    />
+                  ) : (
+                    <DataTable
+                      data={sortedDetailRows as any[]}
+                      columns={[
+                        { key: "status", header: "Status", cell: (p: any) => p.status || "-" },
+                        { key: "amount", header: "Amount", cell: (p: any) => formatCurrency(p.amount || 0) },
+                        { key: "charges", header: "Charges", cell: (p: any) => formatCurrency(p.charges || 0) },
+                        { key: "meter", header: "Meter", cell: (p: any) => p.meterNumber || "-" },
+                        { key: "phone", header: "Phone", cell: (p: any) => p.phoneNumber || "-" },
+                        { key: "txId", header: "Transaction ID", cell: (p: any) => p.transactionID || "-" },
+                        { key: "vendor", header: "Vendor Ref", cell: (p: any) => p.vendorTranId || "-" },
+                        { key: "created", header: "Created", cell: (p: any) => formatDateTimeDmy(p.createdAt) },
+                      ]}
+                      loading={isLoading}
+                      searchValue={detailSearchTerm}
+                      onSearchChange={setDetailSearchTerm}
+                      searchPlaceholder="Search transactions by status, meter, phone"
+                      label="transaction"
+                      emptyMessage="No transactions found for this selection"
+                      minWidth="900px"
+                    />
                   )}
                 </div>
               ) : (
@@ -2125,117 +1985,36 @@ const AdminUtilityDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {[
-                        ["id", "ID"],
-                        ["status", "Status"],
-                        ["amount", "Amount"],
-                        ["charges", "Charges"],
-                        ["meterNumber", "Meter Number"],
-                        ["meterType", "Meter Type"],
-                        ["nwscAccount", "NWSC Account"],
-                        ["locationOfNwscMeter", "Location"],
-                        ["phoneNumber", "Phone Number"],
-                        ["paymentMethod", "Payment Method"],
-                        ["utilityType", "Utility Type"],
-                        ["transactionID", "Transaction ID"],
-                        ["vendorTranId", "Vendor Ref"],
-                        ["vendor", "Vendor"],
-                        ["description", "Description"],
-                        ["reasonAtTelecom", "Reason At Telecom"],
-                        ["units", "Units"],
-                        ["token", "Token"],
-                        ["utilityAccountNumber", "Utility Account Number"],
-                        ["isTokenGenerated", "Token Generated"],
-                        ["isSmsSent", "SMS Sent"],
-                        ["createdAt", "Created"],
-                        ["vendorPaymentDate", "Vendor Payment Date"],
-                        ["landlordName", "Landlord"],
-                        ["landlordEmail", "Landlord Email"],
-                      ].map(([key, label]) => (
-                        <TableHead key={key}>
-                          <button
-                            type="button"
-                            className="flex items-center gap-1 whitespace-nowrap"
-                            onClick={() => toggleSort(key as keyof AdminTransactionRow)}
-                          >
-                            {label}
-                            {renderSortIcon(key as keyof AdminTransactionRow)}
-                          </button>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedTransactionRows.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={25} className="py-10 text-center text-muted-foreground">
-                          No utility transactions matched the current filters.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedRows.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell>{row.id}</TableCell>
-                          <TableCell>{row.status || "-"}</TableCell>
-                          <TableCell>{formatCurrency(row.amount || 0)}</TableCell>
-                          <TableCell>{formatCurrency(row.charges || 0)}</TableCell>
-                          <TableCell className="font-medium">{row.meterNumber || "-"}</TableCell>
-                          <TableCell>{row.meterType || "-"}</TableCell>
-                          <TableCell>{row.nwscAccount || "-"}</TableCell>
-                          <TableCell>{row.locationOfNwscMeter || "-"}</TableCell>
-                          <TableCell>{row.phoneNumber || "-"}</TableCell>
-                          <TableCell>{row.paymentMethod || "-"}</TableCell>
-                          <TableCell>{row.utilityType || "-"}</TableCell>
-                          <TableCell>{row.transactionID || "-"}</TableCell>
-                          <TableCell>{row.vendorTranId || "-"}</TableCell>
-                          <TableCell>{row.vendor || "-"}</TableCell>
-                          <TableCell>{row.description || "-"}</TableCell>
-                          <TableCell>{row.reasonAtTelecom || "-"}</TableCell>
-                          <TableCell>{row.units || "-"}</TableCell>
-                          <TableCell>{row.token || "-"}</TableCell>
-                          <TableCell>{row.utilityAccountNumber || "-"}</TableCell>
-                          <TableCell>{row.isTokenGenerated ? "Yes" : "No"}</TableCell>
-                          <TableCell>{row.isSmsSent ? "Yes" : "No"}</TableCell>
-                          <TableCell>{formatDateTimeDmy(row.createdAt)}</TableCell>
-                          <TableCell>{formatDateTimeDmy(row.vendorPaymentDate)}</TableCell>
-                          <TableCell>{row.landlordName || "-"}</TableCell>
-                          <TableCell>{row.landlordEmail || "-"}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {sortedTransactionRows.length > rowsPerPage && (
-                <div className="mt-4 flex justify-end">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <DataTable
+                data={sortedTransactionRows}
+                columns={[
+                  { key: "id", header: "ID", cell: (r) => r.id },
+                  { key: "status", header: "Status", cell: (r) => r.status || "-" },
+                  { key: "amount", header: "Amount", cell: (r) => formatCurrency(r.amount || 0) },
+                  { key: "charges", header: "Charges", cell: (r) => formatCurrency(r.charges || 0) },
+                  { key: "meterNumber", header: "Meter Number", className: "font-medium", cell: (r) => r.meterNumber || "-" },
+                  { key: "meterType", header: "Meter Type", cell: (r) => r.meterType || "-" },
+                  { key: "nwscAccount", header: "NWSC Account", cell: (r) => r.nwscAccount || "-" },
+                  { key: "location", header: "Location", cell: (r) => r.locationOfNwscMeter || "-" },
+                  { key: "phone", header: "Phone Number", cell: (r) => r.phoneNumber || "-" },
+                  { key: "paymentMethod", header: "Payment Method", cell: (r) => r.paymentMethod || "-" },
+                  { key: "utilityType", header: "Utility Type", cell: (r) => r.utilityType || "-" },
+                  { key: "txId", header: "Transaction ID", cell: (r) => r.transactionID || "-" },
+                  { key: "vendor", header: "Vendor Ref", cell: (r) => r.vendorTranId || "-" },
+                  { key: "vendorName", header: "Vendor", cell: (r) => r.vendor || "-" },
+                  { key: "units", header: "Units", cell: (r) => r.units || "-" },
+                  { key: "token", header: "Token", cell: (r) => r.token || "-" },
+                  { key: "isTokenGenerated", header: "Token Generated", cell: (r) => r.isTokenGenerated ? "Yes" : "No" },
+                  { key: "isSmsSent", header: "SMS Sent", cell: (r) => r.isSmsSent ? "Yes" : "No" },
+                  { key: "createdAt", header: "Created", cell: (r) => formatDateTimeDmy(r.createdAt) },
+                  { key: "landlordName", header: "Landlord", cell: (r) => r.landlordName || "-" },
+                  { key: "landlordEmail", header: "Landlord Email", cell: (r) => r.landlordEmail || "-" },
+                ]}
+                loading={isLoading}
+                label="transaction"
+                emptyMessage="No utility transactions matched the current filters"
+                minWidth="2200px"
+              />
             </CardContent>
           </Card>
         </>
