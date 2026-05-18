@@ -78,6 +78,7 @@ builder.Services.AddScoped<IPropertyUnitService, PropertyUnitService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITenantInvoiceService, TenantInvoiceService>();
+// Version endpoint controller added for deployment verification
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IExternalPaymentService, ExternalPaymentService>();
 builder.Services.AddScoped<Application.Interfaces.Meter.IMeterTokenService, Infrastructure.Services.Meter.MeterTokenService>();
