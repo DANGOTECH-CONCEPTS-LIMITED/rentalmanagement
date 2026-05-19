@@ -236,13 +236,13 @@ const Header = () => {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl md:px-6"
+        className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-white/10 bg-[hsl(220,65%,15%)]/95 px-4 backdrop-blur-xl md:px-6"
       >
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300/80">
             Workspace
           </p>
-          <h2 className="truncate text-lg font-semibold text-slate-950 md:text-xl">
+          <h2 className="truncate text-lg font-semibold text-white md:text-xl">
             {roleName || "Dashboard"}
           </h2>
         </div>
@@ -250,25 +250,25 @@ const Header = () => {
         <div className="flex items-center gap-2 md:gap-4">
           <button
             onClick={toggleDarkMode}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-white/90 text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white/80 shadow-sm transition-colors hover:bg-white/20"
             aria-label="Toggle dark mode"
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
           <button
-            className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-border/70 bg-white/90 text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
+            className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white/80 shadow-sm transition-colors hover:bg-white/20"
             aria-label="Notifications"
           >
             <Bell size={18} />
-            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>
+            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400"></span>
           </button>
 
           {/* Profile trigger */}
           <div className="relative ml-1" ref={triggerRef}>
             <div
               onClick={handleProfileClick}
-              className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border/70 bg-white/92 px-2 py-2 shadow-sm transition-colors hover:bg-slate-50"
+              className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-2 py-2 shadow-sm transition-colors hover:bg-white/20"
             >
               <img
                 className="h-9 w-9 rounded-xl object-cover"
@@ -279,10 +279,10 @@ const Header = () => {
                 }}
               />
               <div className="hidden text-left md:block">
-                <p className="max-w-40 truncate text-sm font-semibold text-slate-900">
+                <p className="max-w-40 truncate text-sm font-semibold text-white">
                   {user?.fullName || "User"}
                 </p>
-                <p className="text-xs text-muted-foreground">{roleName || "Role"}</p>
+                <p className="text-xs text-blue-200/70">{roleName || "Role"}</p>
               </div>
             </div>
           </div>

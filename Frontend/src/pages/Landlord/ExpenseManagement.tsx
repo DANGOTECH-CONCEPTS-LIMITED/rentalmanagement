@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus, Pencil, Trash2, Receipt, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -18,6 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import axios from "axios";
 
 type ExpenseCategory = "Maintenance" | "Utilities" | "Insurance" | "Taxes" | "Cleaning" | "Repairs" | "Other";
 
@@ -25,28 +25,30 @@ interface Expense {
   id: number;
   date: string;
   amount: number;
-  category: ExpenseCategory;
+  category: string;
   description: string;
-  property: string;
-  unit: string;
   paidBy: string;
-  receipt?: string;
+  ownerId: number;
+  propertyId?: number;
+  propertyUnitId?: number;
+  receiptReference?: string;
+  createdAt?: string;
 }
 
-const dummyExpenses: Expense[] = [
-  { id: 1, date: "2025-05-02", amount: 85000, category: "Maintenance", description: "Plumbing repair in unit A1", property: "Sunset Apartments", unit: "A1", paidBy: "John Landlord", receipt: "receipt-001.pdf" },
-  { id: 2, date: "2025-05-05", amount: 45000, category: "Cleaning", description: "Common area cleaning service", property: "Greenview Estate", unit: "All", paidBy: "Jane Manager" },
-  { id: 3, date: "2025-05-08", amount: 120000, category: "Utilities", description: "Electricity bill for common areas", property: "Sunset Apartments", unit: "Common", paidBy: "John Landlord", receipt: "receipt-003.jpg" },
-  { id: 4, date: "2025-04-15", amount: 200000, category: "Insurance", description: "Property insurance premium Q2", property: "Palm Court", unit: "All", paidBy: "John Landlord" },
-  { id: 5, date: "2025-04-20", amount: 35000, category: "Repairs", description: "Door lock replacement B2", property: "Greenview Estate", unit: "B2", paidBy: "Jane Manager" },
-  { id: 6, date: "2025-03-10", amount: 75000, category: "Taxes", description: "Local council tax Q1", property: "Sunset Apartments", unit: "All", paidBy: "John Landlord" },
-];
+interface Property {
+  id: number;
+  name: string;
+}
+
+interface PropertyUnit {
+  id: number;
+  unitNumber: string;
+  propertyId: number;
+}
 
 const categories: ExpenseCategory[] = ["Maintenance", "Utilities", "Insurance", "Taxes", "Cleaning", "Repairs", "Other"];
-const dummyProperties = ["Sunset Apartments", "Greenview Estate", "Palm Court"];
-const dummyUnits = ["A1", "A2", "B1", "B2", "C1", "C2", "Common", "All"];
 
-const categoryColors: Record<ExpenseCategory, string> = {
+const categoryColors: Record<string, string> = {
   Maintenance: "bg-blue-100 text-blue-700",
   Utilities: "bg-yellow-100 text-yellow-700",
   Insurance: "bg-purple-100 text-purple-700",
@@ -61,16 +63,21 @@ const emptyForm = {
   amount: "",
   category: "Maintenance" as ExpenseCategory,
   description: "",
-  property: "",
-  unit: "",
+  propertyId: "",
+  propertyUnitId: "",
   paidBy: "",
-  receipt: "",
+  receiptReference: "",
 };
 
 const ExpenseManagement = () => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [expenses, setExpenses] = useState<Expense[]>(dummyExpenses);
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const userData = JSON.parse(localStorage.getItem("user") || "{}");
+
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<PropertyUnit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterFrom, setFilterFrom] = useState("");
@@ -81,10 +88,58 @@ const ExpenseManagement = () => {
   const [form, setForm] = useState(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchExpenses = async () => {
+    setIsLoading(true);
+    try {
+      const body: Record<string, unknown> = { OwnerId: userData.id };
+      if (filterCategory !== "All") body.Category = filterCategory;
+      if (filterFrom) body.From = new Date(filterFrom).toISOString();
+      if (filterTo) body.To = new Date(filterTo).toISOString();
+      if (search) body.Search = search;
+
+      const { data } = await axios.post<Expense[]>(`${apiUrl}/GetExpenses`, body);
+      setExpenses(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Failed to load expenses.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpenses();
+
+    const fetchProperties = async () => {
+      try {
+        const { data } = await axios.get<Property[]>(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`);
+        setProperties(data);
+      } catch {
+        // silent
+      }
+    };
+
+    const fetchUnits = async () => {
+      try {
+        const { data } = await axios.get<PropertyUnit[]>(`${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`);
+        setUnits(data);
+      } catch {
+        // silent
+      }
+    };
+
+    fetchProperties();
+    fetchUnits();
+  }, []);
+
+  const propertyName = (id?: number) => id ? (properties.find((p) => p.id === id)?.name ?? `Property #${id}`) : "—";
+  const unitName = (id?: number) => id ? (units.find((u) => u.id === id)?.unitNumber ?? `Unit #${id}`) : "—";
+  const unitsForProperty = (propertyId: string) =>
+    units.filter((u) => u.propertyId === Number(propertyId));
+
   const filtered = expenses.filter((e) => {
     const matchSearch =
       e.description.toLowerCase().includes(search.toLowerCase()) ||
-      e.property.toLowerCase().includes(search.toLowerCase()) ||
+      propertyName(e.propertyId).toLowerCase().includes(search.toLowerCase()) ||
       e.paidBy.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === "All" || e.category === filterCategory;
     const matchFrom = !filterFrom || e.date >= filterFrom;
@@ -97,7 +152,16 @@ const ExpenseManagement = () => {
 
   const openAdd = () => { setForm(emptyForm); setAddOpen(true); };
   const openEdit = (exp: Expense) => {
-    setForm({ date: exp.date, amount: String(exp.amount), category: exp.category, description: exp.description, property: exp.property, unit: exp.unit, paidBy: exp.paidBy, receipt: exp.receipt || "" });
+    setForm({
+      date: exp.date.split("T")[0],
+      amount: String(exp.amount),
+      category: exp.category as ExpenseCategory,
+      description: exp.description,
+      propertyId: exp.propertyId ? String(exp.propertyId) : "",
+      propertyUnitId: exp.propertyUnitId ? String(exp.propertyUnitId) : "",
+      paidBy: exp.paidBy,
+      receiptReference: exp.receiptReference || "",
+    });
     setEditExpense(exp);
   };
 
@@ -107,85 +171,73 @@ const ExpenseManagement = () => {
       return;
     }
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 600));
-
-    if (editExpense) {
-      setExpenses((prev) => prev.map((e) => e.id === editExpense.id ? { ...e, ...form, amount: Number(form.amount) } : e));
-      toast({ title: "Expense Updated", description: "Expense record updated successfully." });
-      setEditExpense(null);
-    } else {
-      setExpenses((prev) => [...prev, { id: Date.now(), ...form, amount: Number(form.amount) }]);
-      toast({ title: "Expense Added", description: "New expense recorded successfully." });
-      setAddOpen(false);
+    const body = {
+      Date: new Date(form.date).toISOString(),
+      Amount: Number(form.amount),
+      Category: form.category,
+      PaidBy: form.paidBy,
+      Description: form.description,
+      OwnerId: userData.id,
+      PropertyId: form.propertyId ? Number(form.propertyId) : null,
+      PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
+      ReceiptReference: form.receiptReference || null,
+    };
+    try {
+      if (editExpense) {
+        await axios.put(`${apiUrl}/UpdateExpense/${editExpense.id}`, body);
+        toast({ title: "Expense Updated", description: "Expense updated successfully." });
+        setEditExpense(null);
+      } else {
+        await axios.post(`${apiUrl}/AddExpense`, body);
+        toast({ title: "Expense Added", description: "Expense recorded successfully." });
+        setAddOpen(false);
+      }
+      fetchExpenses();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Operation failed.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteExpense) return;
-    setExpenses((prev) => prev.filter((e) => e.id !== deleteExpense.id));
-    toast({ title: "Expense Deleted", description: "Expense removed." });
-    setDeleteExpense(null);
+    try {
+      await axios.delete(`${apiUrl}/DeleteExpense/${deleteExpense.id}`);
+      toast({ title: "Expense Deleted", description: "Expense removed." });
+      setDeleteExpense(null);
+      fetchExpenses();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Delete failed.", variant: "destructive" });
+    }
   };
 
   const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
 
+  const byCategory = categories.map((cat) => ({
+    cat,
+    total: expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
+  })).filter((c) => c.total > 0);
+
   const expenseColumns: Column<Expense>[] = [
+    { key: "date", header: "Date", cell: (e) => new Date(e.date).toLocaleDateString() },
     {
-      key: 'date',
-      header: 'Date',
-      cell: (e) => new Date(e.date).toLocaleDateString(),
+      key: "category", header: "Category",
+      cell: (e) => <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryColors[e.category] || categoryColors.Other}`}>{e.category}</span>,
+    },
+    { key: "description", header: "Description", className: "max-w-[180px] truncate", cell: (e) => e.description },
+    { key: "property", header: "Property", cell: (e) => propertyName(e.propertyId) },
+    { key: "unit", header: "Unit", cell: (e) => unitName(e.propertyUnitId) },
+    { key: "amount", header: "Amount", cell: (e) => <span className="font-medium">{formatUGX(e.amount)}</span> },
+    { key: "paidBy", header: "Paid By", cell: (e) => e.paidBy },
+    {
+      key: "receipt", header: "Receipt",
+      cell: (e) => e.receiptReference
+        ? <span className="flex items-center gap-1 text-xs text-blue-600"><Receipt className="h-3 w-3" />{e.receiptReference}</span>
+        : <span className="text-muted-foreground text-xs">None</span>,
     },
     {
-      key: 'category',
-      header: 'Category',
-      cell: (e) => (
-        <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryColors[e.category]}`}>{e.category}</span>
-      ),
-    },
-    {
-      key: 'description',
-      header: 'Description',
-      className: 'max-w-[180px] truncate',
-      cell: (e) => e.description,
-    },
-    {
-      key: 'property',
-      header: 'Property',
-      cell: (e) => e.property,
-    },
-    {
-      key: 'unit',
-      header: 'Unit',
-      cell: (e) => e.unit,
-    },
-    {
-      key: 'amount',
-      header: 'Amount',
-      cell: (e) => <span className="font-medium">{formatUGX(e.amount)}</span>,
-    },
-    {
-      key: 'paidBy',
-      header: 'Paid By',
-      cell: (e) => e.paidBy,
-    },
-    {
-      key: 'receipt',
-      header: 'Receipt',
-      cell: (e) =>
-        e.receipt ? (
-          <span className="flex items-center gap-1 text-xs text-blue-600">
-            <Receipt className="h-3 w-3" />{e.receipt}
-          </span>
-        ) : (
-          <span className="text-muted-foreground text-xs">None</span>
-        ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      headerClassName: 'text-right',
-      className: 'text-right',
+      key: "actions", header: "Actions", headerClassName: "text-right", className: "text-right",
       cell: (e) => (
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" variant="outline" onClick={() => openEdit(e)}><Pencil className="h-4 w-4" /></Button>
@@ -195,15 +247,8 @@ const ExpenseManagement = () => {
     },
   ];
 
-  const byCategory = categories.map((cat) => ({
-    cat,
-    total: expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
-  })).filter((c) => c.total > 0);
-
   return (
     <div className="space-y-6">
-
-      {/* Page header */}
       <section className="page-hero">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="space-y-3">
@@ -212,18 +257,13 @@ const ExpenseManagement = () => {
             </span>
             <div>
               <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Expense Management</h1>
-              <p className="mt-2 text-sm text-muted-foreground md:text-base">
-                Track and manage property expenses with receipts.
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground md:text-base">Track and manage property expenses with receipts.</p>
             </div>
           </div>
-          <Button onClick={openAdd}>
-            <Plus className="mr-2 h-4 w-4" />Add Expense
-          </Button>
+          <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Expense</Button>
         </div>
       </section>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           className="data-surface p-5 col-span-2 sm:col-span-1">
@@ -237,30 +277,29 @@ const ExpenseManagement = () => {
         </motion.div>
         {byCategory.slice(0, 2).map(({ cat, total }, i) => (
           <motion.div key={cat} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + i * 0.05 }}
-            className="data-surface p-5">
+            transition={{ delay: 0.1 + i * 0.05 }} className="data-surface p-5">
             <p className="text-xs text-muted-foreground">{cat}</p>
             <p className="text-lg font-bold mt-1">{formatUGX(total)}</p>
           </motion.div>
         ))}
       </div>
 
-      {/* Category breakdown */}
-      <div className="data-surface p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="h-4 w-1 rounded-full bg-warning" />
-          <h2 className="text-base font-semibold text-slate-950">By Category</h2>
+      {byCategory.length > 0 && (
+        <div className="data-surface p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="h-4 w-1 rounded-full bg-warning" />
+            <h2 className="text-base font-semibold text-slate-950">By Category</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {byCategory.map(({ cat, total }) => (
+              <div key={cat} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${categoryColors[cat] || categoryColors.Other}`}>
+                {cat}: {formatUGX(total)}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {byCategory.map(({ cat, total }) => (
-            <div key={cat} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${categoryColors[cat]}`}>
-              {cat}: {formatUGX(total)}
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
-      {/* Table */}
       <div className="data-surface p-6">
         <div className="mb-4 flex items-center gap-2">
           <span className="h-4 w-1 rounded-full bg-danger" />
@@ -281,7 +320,7 @@ const ExpenseManagement = () => {
             <div className="flex flex-wrap gap-3 items-center">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); }}>
                   <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Categories</SelectItem>
@@ -297,6 +336,7 @@ const ExpenseManagement = () => {
                 <Label className="text-xs text-muted-foreground whitespace-nowrap">To</Label>
                 <Input type="date" className="w-36 h-9" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} />
               </div>
+              <Button size="sm" onClick={fetchExpenses}>Apply</Button>
             </div>
           }
         />
@@ -307,7 +347,7 @@ const ExpenseManagement = () => {
         )}
       </div>
 
-      {/* Add/Edit Dialog */}
+      {/* Add / Edit Dialog */}
       <Dialog open={addOpen || !!editExpense} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditExpense(null); } }}>
         <DialogContent className="sm:max-w-lg rounded-[20px]">
           <DialogHeader>
@@ -344,28 +384,37 @@ const ExpenseManagement = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Property</Label>
-                <Select value={form.property} onValueChange={(v) => setForm({ ...form, property: v })}>
+                <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v, propertyUnitId: "" })}>
                   <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
-                  <SelectContent>{dummyProperties.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {properties.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label>Unit</Label>
-                <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
-                  <SelectContent>{dummyUnits.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              {form.propertyId && form.propertyId !== "none" && unitsForProperty(form.propertyId).length > 0 && (
+                <div className="space-y-1">
+                  <Label>Unit</Label>
+                  <Select value={form.propertyUnitId} onValueChange={(v) => setForm({ ...form, propertyUnitId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {unitsForProperty(form.propertyId).map((u) => (
+                        <SelectItem key={u.id} value={String(u.id)}>{u.unitNumber}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <div className="space-y-1">
-              <Label>Receipt (optional)</Label>
-              <Input placeholder="e.g. receipt-001.pdf or upload filename" value={form.receipt} onChange={(e) => setForm({ ...form, receipt: e.target.value })} />
-              <p className="text-xs text-muted-foreground">API integration will enable file upload</p>
+              <Label>Receipt Reference (optional)</Label>
+              <Input placeholder="e.g. REC-001 or receipt number" value={form.receiptReference} onChange={(e) => setForm({ ...form, receiptReference: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setAddOpen(false); setEditExpense(null); }}>Cancel</Button>
-            <Button isLoading={isSubmitting} onClick={handleSave}>{editExpense ? "Save Changes" : "Add Expense"}</Button>
+            <Button disabled={isSubmitting} onClick={handleSave}>{editExpense ? "Save Changes" : "Add Expense"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

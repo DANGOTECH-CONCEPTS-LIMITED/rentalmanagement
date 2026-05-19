@@ -46,14 +46,14 @@
 
     --radius: 1rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-background: 220 65% 15%;
+    --sidebar-foreground: 210 40% 93%;
+    --sidebar-primary: 221 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 100% 97%;
-    --sidebar-accent-foreground: 221 83% 40%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-accent: 220 50% 22%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 220 45% 21%;
+    --sidebar-ring: 221 83% 58%;
   }
   
   .dark {
@@ -134,7 +134,7 @@
   }
   
   .sidebar-link.active {
-    @apply bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_18px_32px_-20px_rgba(37,99,235,0.95)];
+    @apply bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_12px_28px_-16px_rgba(37,99,235,0.7)];
   }
   
   .btn {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import {
   FileText,
   CheckCircle,
@@ -22,22 +23,23 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 
 type InvoiceStatus = "Paid" | "Pending" | "Overdue";
-type InvoiceType = "Invoice" | "Manual Invoice" | "Manual Payment";
 
 interface Invoice {
   id: number;
   invoiceNo: string;
-  tenant: string;
-  property: string;
-  unit: string;
-  amount: number;
-  type: InvoiceType;
+  type: string;
   status: InvoiceStatus;
+  amount: number;
   dueDate: string;
   generatedDate: string;
-  createdBy: string;
   notes?: string;
-  currency?: string;
+}
+
+interface TenantInfo {
+  id: number;
+  fullName: string;
+  property?: { name?: string; currency?: string };
+  unit?: { unitNumber?: string };
 }
 
 const statusBadge = (s: InvoiceStatus) => {
@@ -52,19 +54,19 @@ const statusBadge = (s: InvoiceStatus) => {
     Overdue: <AlertCircle className="h-3 w-3" />,
   };
   return (
-    <Badge className={`${map[s]} flex items-center gap-1 w-fit`}>
+    <Badge className={`${map[s] ?? "bg-gray-100 text-gray-800"} flex items-center gap-1 w-fit`}>
       {icons[s]}{s}
     </Badge>
   );
 };
 
-const typeBadge = (t: InvoiceType) => {
-  const map: Record<InvoiceType, string> = {
+const typeBadge = (t: string) => {
+  const map: Record<string, string> = {
     Invoice: "bg-blue-100 text-blue-800",
     "Manual Invoice": "bg-purple-100 text-purple-800",
     "Manual Payment": "bg-teal-100 text-teal-800",
   };
-  return <Badge className={`${map[t]} w-fit`}>{t}</Badge>;
+  return <Badge className={`${map[t] ?? "bg-gray-100 text-gray-800"} w-fit`}>{t}</Badge>;
 };
 
 const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
@@ -76,33 +78,73 @@ const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) 
 
 const TenantInvoices = () => {
   const { toast } = useToast();
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [tenant, setTenant] = useState<TenantInfo | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const dummyInvoices: Invoice[] = [
-    { id: 1, invoiceNo: "INV-2026-001", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 450000, type: "Invoice", status: "Paid", dueDate: "2026-01-05", generatedDate: "2026-01-01", createdBy: "Admin", currency: "UGX" },
-    { id: 2, invoiceNo: "INV-2026-002", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 450000, type: "Invoice", status: "Paid", dueDate: "2026-02-05", generatedDate: "2026-02-01", createdBy: "Admin", currency: "UGX" },
-    { id: 3, invoiceNo: "INV-2026-003", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 450000, type: "Invoice", status: "Paid", dueDate: "2026-03-05", generatedDate: "2026-03-01", createdBy: "Admin", currency: "UGX" },
-    { id: 4, invoiceNo: "INV-2026-004", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 450000, type: "Invoice", status: "Pending", dueDate: "2026-04-05", generatedDate: "2026-04-01", createdBy: "Admin", currency: "UGX" },
-    { id: 5, invoiceNo: "INV-2026-005", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 450000, type: "Invoice", status: "Overdue", dueDate: "2026-04-30", generatedDate: "2026-04-25", createdBy: "Admin", currency: "UGX" },
-    { id: 6, invoiceNo: "MAN-2026-001", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 75000, type: "Manual Invoice", status: "Paid", dueDate: "2026-03-10", generatedDate: "2026-03-08", createdBy: "Landlord", notes: "Water bill adjustment", currency: "UGX" },
-    { id: 7, invoiceNo: "PAY-2026-001", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 100000, type: "Manual Payment", status: "Paid", dueDate: "2026-02-15", generatedDate: "2026-02-15", createdBy: "Landlord", notes: "Advance payment received in cash", currency: "UGX" },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const stored = localStorage.getItem("user");
+        if (!stored) return;
+        const userData = JSON.parse(stored);
 
-  const [invoices] = useState<Invoice[]>(dummyInvoices);
+        // Resolve tenant record from user id (same pattern as all tenant pages)
+        const tenantRes = await axios.get<TenantInfo>(
+          `${apiUrl}/GetTenantById/${userData.id}`
+        );
+        const tenantData = tenantRes.data;
+        setTenant(tenantData);
 
-  const filtered = invoices.filter((inv) => {
-    const matchesTab =
-      tab === "all" ||
-      inv.status.toLowerCase() === tab;
-    return matchesTab;
-  });
+        // Fetch invoices using the tenant's Tenants.Id
+        const invoicesRes = await axios.get<any[]>(
+          `${apiUrl}/GetInvoicesByTenantId/${tenantData.id}`
+        );
+
+        const mapped: Invoice[] = invoicesRes.data.map((inv) => ({
+          id: inv.id,
+          invoiceNo: inv.invoiceNumber,
+          type: inv.type ?? "Invoice",
+          status: inv.status as InvoiceStatus,
+          amount: inv.amount,
+          dueDate: inv.dueDate,
+          generatedDate: inv.invoiceDate ?? inv.createdAt,
+          notes: inv.notes,
+        }));
+
+        setInvoices(mapped);
+      } catch (err) {
+        toast({
+          title: "Failed to load invoices",
+          description: axios.isAxiosError(err)
+            ? err.response?.data || err.message
+            : "An error occurred",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [apiUrl]);
+
+  const currency = tenant?.property?.currency || "UGX";
+  const propertyName = tenant?.property?.name ?? "";
+  const unitNumber = tenant?.unit?.unitNumber ?? "";
+
+  const filtered = invoices.filter((inv) =>
+    tab === "all" || inv.status.toLowerCase() === tab
+  );
 
   const totalPaid = invoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0);
   const totalPending = invoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
   const totalOverdue = invoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
-  const currency = invoices[0]?.currency || "UGX";
 
   const handleDownload = (inv: Invoice) => {
     const html = `
@@ -111,15 +153,14 @@ const TenantInvoices = () => {
       </head><body>
       <div class="header"><div class="title">INVOICE</div><div>${inv.invoiceNo}</div></div>
       <div class="divider"></div>
-      <div class="row"><div class="label">Tenant:</div><div>${inv.tenant}</div></div>
-      <div class="row"><div class="label">Property:</div><div>${inv.property}</div></div>
-      <div class="row"><div class="label">Unit:</div><div>${inv.unit || "—"}</div></div>
+      <div class="row"><div class="label">Tenant:</div><div>${tenant?.fullName ?? ""}</div></div>
+      <div class="row"><div class="label">Property:</div><div>${propertyName}</div></div>
+      <div class="row"><div class="label">Unit:</div><div>${unitNumber || "—"}</div></div>
       <div class="row"><div class="label">Type:</div><div>${inv.type}</div></div>
       <div class="row"><div class="label">Amount:</div><div>${currency} ${inv.amount.toLocaleString()}</div></div>
-      <div class="row"><div class="label">Generated:</div><div>${inv.generatedDate}</div></div>
-      <div class="row"><div class="label">Due Date:</div><div>${inv.dueDate}</div></div>
+      <div class="row"><div class="label">Generated:</div><div>${new Date(inv.generatedDate).toLocaleDateString()}</div></div>
+      <div class="row"><div class="label">Due Date:</div><div>${new Date(inv.dueDate).toLocaleDateString()}</div></div>
       <div class="row"><div class="label">Status:</div><div>${inv.status}</div></div>
-      <div class="row"><div class="label">Created By:</div><div>${inv.createdBy}</div></div>
       ${inv.notes ? `<div class="row"><div class="label">Notes:</div><div>${inv.notes}</div></div>` : ""}
       <div class="divider"></div>
       <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
@@ -169,11 +210,6 @@ const TenantInvoices = () => {
           {new Date(row.dueDate).toLocaleDateString()}
         </span>
       ),
-    },
-    {
-      key: "createdBy",
-      header: "Created By",
-      cell: (row) => row.createdBy,
     },
     {
       key: "status",
@@ -283,7 +319,7 @@ const TenantInvoices = () => {
             onSearchChange={setSearch}
             searchPlaceholder="Search by invoice number or type..."
             label="invoice"
-            emptyMessage="No invoices found"
+            emptyMessage={loading ? "Loading invoices…" : "No invoices found"}
             emptyIcon={<FileText className="h-10 w-10" />}
           />
         </CardContent>
@@ -303,13 +339,12 @@ const TenantInvoices = () => {
             <div className="space-y-1">
               <DetailRow label="Invoice No." value={viewInvoice.invoiceNo} />
               <DetailRow label="Type" value={typeBadge(viewInvoice.type)} />
-              <DetailRow label="Property" value={viewInvoice.property} />
-              <DetailRow label="Unit" value={viewInvoice.unit} />
+              {propertyName && <DetailRow label="Property" value={propertyName} />}
+              {unitNumber && <DetailRow label="Unit" value={unitNumber} />}
               <DetailRow label="Amount" value={`${currency} ${viewInvoice.amount.toLocaleString()}`} />
               <DetailRow label="Date Issued" value={new Date(viewInvoice.generatedDate).toLocaleDateString()} />
               <DetailRow label="Due Date" value={new Date(viewInvoice.dueDate).toLocaleDateString()} />
               <DetailRow label="Status" value={statusBadge(viewInvoice.status)} />
-              <DetailRow label="Created By" value={viewInvoice.createdBy} />
               {viewInvoice.notes && <DetailRow label="Notes" value={viewInvoice.notes} />}
             </div>
           )}

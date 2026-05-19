@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
+} from "recharts";
+import { Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,152 +11,138 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const incomeData = [
-  { month: "Jan", rent: 1200000, utility: 80000, other: 50000 },
-  { month: "Feb", rent: 1200000, utility: 95000, other: 0 },
-  { month: "Mar", rent: 1350000, utility: 90000, other: 100000 },
-  { month: "Apr", rent: 1400000, utility: 85000, other: 0 },
-  { month: "May", rent: 1850000, utility: 120000, other: 0 },
-];
-
-const expenseData = [
-  { month: "Jan", maintenance: 60000, utilities: 40000, insurance: 200000, cleaning: 30000, taxes: 75000, other: 20000 },
-  { month: "Feb", maintenance: 45000, utilities: 50000, insurance: 0, cleaning: 30000, taxes: 0, other: 0 },
-  { month: "Mar", maintenance: 120000, utilities: 45000, insurance: 0, cleaning: 35000, taxes: 0, other: 15000 },
-  { month: "Apr", maintenance: 35000, utilities: 48000, insurance: 0, cleaning: 30000, taxes: 0, other: 0 },
-  { month: "May", maintenance: 85000, utilities: 120000, insurance: 0, cleaning: 45000, taxes: 0, other: 0 },
-];
+import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
 const EXPENSE_COLORS = ["#3b82f6", "#f59e0b", "#8b5cf6", "#10b981", "#ef4444", "#6b7280"];
-const EXPENSE_KEYS = ["maintenance", "utilities", "insurance", "cleaning", "taxes", "other"];
 
-const profitData = incomeData.map((inc, i) => {
-  const totalIncome = inc.rent + inc.utility + inc.other;
-  const exp = expenseData[i];
-  const totalExpense = Object.values(exp).slice(1).reduce((s: number, v) => s + (v as number), 0);
-  return { month: inc.month, income: totalIncome, expense: totalExpense, profit: totalIncome - totalExpense };
+interface ProfitDto {
+  from: string;
+  to: string;
+  totalIncome: number;
+  totalExpenses: number;
+  netProfit: number;
+  incomeBreakdown?: Record<string, number>;
+  expenseBreakdown?: Record<string, number>;
+  monthlyBreakdown?: Array<{ month: string; income: number; expenses: number; profit: number }>;
+}
+
+interface TrialBalanceRow {
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  balance: number;
+}
+
+interface TrialBalanceDto {
+  from?: string;
+  to?: string;
+  rows: TrialBalanceRow[];
+  totalDebits: number;
+  totalCredits: number;
+}
+
+interface BalanceSheetDto {
+  asOf?: string;
+  assets?: Record<string, number>;
+  liabilities?: Record<string, number>;
+  equity?: Record<string, number>;
+  totalAssets?: number;
+  totalLiabilities?: number;
+  totalEquity?: number;
+}
+
+const formatUGX = (n: number) => `UGX ${(n ?? 0).toLocaleString()}`;
+
+const currentYear = new Date().getFullYear();
+const years = [currentYear, currentYear - 1, currentYear - 2].map(String);
+
+const yearRange = (year: string) => ({
+  from: `${year}-01-01`,
+  to: `${year}-12-31`,
 });
 
-const tenantHistory = [
-  { id: 1, name: "John Mwangi", property: "Sunset Apartments", unit: "A1", moveIn: "2024-01-15", moveOut: null, status: "Active", occupation: "Teacher", rentPaid: 12, rentMissed: 0 },
-  { id: 2, name: "Alice Kago", property: "Sunset Apartments", unit: "A2", moveIn: "2023-06-01", moveOut: "2025-03-31", status: "Left", occupation: "Nurse", rentPaid: 18, rentMissed: 2 },
-  { id: 3, name: "Sarah Nakato", property: "Greenview Estate", unit: "B1", moveIn: "2024-04-01", moveOut: null, status: "Active", occupation: "Engineer", rentPaid: 12, rentMissed: 0 },
-  { id: 4, name: "Peter Otieno", property: "Greenview Estate", unit: "B2", moveIn: "2024-07-01", moveOut: null, status: "Pending Payment", occupation: "Driver", rentPaid: 8, rentMissed: 2 },
-  { id: 5, name: "Mary Auma", property: "Palm Court", unit: "C2", moveIn: "2023-11-01", moveOut: null, status: "Active", occupation: "Business", rentPaid: 17, rentMissed: 1 },
-];
-
-const pieData = [
-  { name: "Maintenance", value: 345000 },
-  { name: "Utilities", value: 303000 },
-  { name: "Insurance", value: 200000 },
-  { name: "Cleaning", value: 170000 },
-  { name: "Taxes", value: 75000 },
-  { name: "Other", value: 35000 },
-];
-
-const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
-
-const statusColors: Record<string, string> = {
-  Active: "default",
-  Left: "secondary",
-  "Pending Payment": "destructive",
-};
-
-type IncomeRow = typeof incomeData[0] & { total?: number };
-type ProfitRow = typeof profitData[0] & { margin?: string };
-type TenantRow = typeof tenantHistory[0];
-
 const LandlordReports = () => {
-  const [period, setPeriod] = useState("2025");
+  const { toast } = useToast();
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const totalIncome = profitData.reduce((s, d) => s + d.income, 0);
-  const totalExpense = profitData.reduce((s, d) => s + d.expense, 0);
-  const netProfit = totalIncome - totalExpense;
+  const [period, setPeriod] = useState(String(currentYear));
+  const [profit, setProfit] = useState<ProfitDto | null>(null);
+  const [trialBalance, setTrialBalance] = useState<TrialBalanceDto | null>(null);
+  const [balanceSheet, setBalanceSheet] = useState<BalanceSheetDto | null>(null);
+  const [isLoadingProfit, setIsLoadingProfit] = useState(false);
+  const [isLoadingTrial, setIsLoadingTrial] = useState(false);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
-  const incomeColumns: Column<IncomeRow>[] = [
-    { key: "month", header: "Month", cell: (r) => r.month },
-    { key: "rent", header: "Rent", cell: (r) => formatUGX(r.rent) },
-    { key: "utility", header: "Utility", cell: (r) => formatUGX(r.utility) },
-    { key: "other", header: "Other", cell: (r) => formatUGX(r.other) },
-    {
-      key: "total",
-      header: "Total",
-      headerClassName: "font-semibold",
-      cell: (r) => (
-        <span className="font-semibold text-green-600">
-          {formatUGX(r.rent + r.utility + r.other)}
-        </span>
-      ),
-    },
-  ];
-
-  const incomeTotalsRow: IncomeRow = {
-    month: "Total",
-    rent: incomeData.reduce((s, r) => s + r.rent, 0),
-    utility: incomeData.reduce((s, r) => s + r.utility, 0),
-    other: incomeData.reduce((s, r) => s + r.other, 0),
+  const fetchProfit = async (year: string) => {
+    setIsLoadingProfit(true);
+    const { from, to } = yearRange(year);
+    try {
+      const { data } = await axios.get<ProfitDto>(`${apiUrl}/api/Accounting/profit`, { params: { from, to } });
+      setProfit(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Failed to load profit data.", variant: "destructive" });
+    } finally {
+      setIsLoadingProfit(false);
+    }
   };
-  const incomeTableData: IncomeRow[] = [...incomeData, incomeTotalsRow];
 
-  const pnlColumns: Column<ProfitRow>[] = [
-    { key: "month", header: "Month", cell: (r) => r.month },
-    { key: "income", header: "Income", cell: (r) => <span className="text-green-600">{formatUGX(r.income)}</span> },
-    { key: "expense", header: "Expenses", cell: (r) => <span className="text-red-600">{formatUGX(r.expense)}</span> },
-    {
-      key: "profit",
-      header: "Net Profit",
-      cell: (r) => (
-        <span className={r.profit >= 0 ? "text-blue-600 font-semibold" : "text-red-700 font-semibold"}>
-          {formatUGX(r.profit)}
-        </span>
-      ),
-    },
-    {
-      key: "margin",
-      header: "Margin",
-      cell: (r) => (r.income > 0 ? `${((r.profit / r.income) * 100).toFixed(1)}%` : "—"),
-    },
-  ];
-
-  const pnlTotalsRow: ProfitRow = {
-    month: "Total",
-    income: totalIncome,
-    expense: totalExpense,
-    profit: netProfit,
+  const fetchTrialBalance = async (year: string) => {
+    setIsLoadingTrial(true);
+    const { from, to } = yearRange(year);
+    try {
+      const { data } = await axios.get<TrialBalanceDto>(`${apiUrl}/api/Accounting/trial-balance`, { params: { from, to } });
+      setTrialBalance(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Failed to load trial balance.", variant: "destructive" });
+    } finally {
+      setIsLoadingTrial(false);
+    }
   };
-  const pnlTableData: ProfitRow[] = [...profitData, pnlTotalsRow];
 
-  const tenantColumns: Column<TenantRow>[] = [
-    { key: "name", header: "Tenant", className: "font-medium", cell: (t) => t.name },
-    { key: "property", header: "Property / Unit", cell: (t) => `${t.property} — ${t.unit}` },
-    { key: "occupation", header: "Occupation", cell: (t) => t.occupation },
-    { key: "moveIn", header: "Move In", cell: (t) => new Date(t.moveIn).toLocaleDateString() },
+  const fetchBalanceSheet = async (year: string) => {
+    setIsLoadingBalance(true);
+    const asOf = yearRange(year).to;
+    try {
+      const { data } = await axios.get<BalanceSheetDto>(`${apiUrl}/api/Accounting/balance-sheet`, { params: { asOf } });
+      setBalanceSheet(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Failed to load balance sheet.", variant: "destructive" });
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfit(period);
+    fetchTrialBalance(period);
+    fetchBalanceSheet(period);
+  }, [period]);
+
+  const monthly = profit?.monthlyBreakdown ?? [];
+
+  const expenseBreakdown = profit?.expenseBreakdown
+    ? Object.entries(profit.expenseBreakdown).map(([name, value]) => ({ name, value }))
+    : [];
+
+  const totalIncome = profit?.totalIncome ?? 0;
+  const totalExpenses = profit?.totalExpenses ?? 0;
+  const netProfit = profit?.netProfit ?? (totalIncome - totalExpenses);
+
+  const trialRows: TrialBalanceRow[] = trialBalance?.rows ?? [];
+
+  const trialCols: Column<TrialBalanceRow>[] = [
+    { key: "code", header: "Account Code", cell: (r) => r.accountCode },
+    { key: "name", header: "Account Name", cell: (r) => r.accountName },
+    { key: "debit", header: "Debit", cell: (r) => formatUGX(r.debit) },
+    { key: "credit", header: "Credit", cell: (r) => formatUGX(r.credit) },
     {
-      key: "moveOut",
-      header: "Move Out",
-      cell: (t) => t.moveOut
-        ? new Date(t.moveOut).toLocaleDateString()
-        : <span className="text-muted-foreground">Current</span>,
-    },
-    {
-      key: "status",
-      header: "Status",
-      cell: (t) => <Badge variant={statusColors[t.status] as any}>{t.status}</Badge>,
-    },
-    {
-      key: "rentPaid",
-      header: "Rent Paid",
-      className: "text-green-600 font-medium",
-      cell: (t) => t.rentPaid,
-    },
-    {
-      key: "rentMissed",
-      header: "Missed",
-      cell: (t) => (
-        <span className={t.rentMissed > 0 ? "text-red-600 font-medium" : ""}>{t.rentMissed}</span>
+      key: "balance", header: "Balance",
+      cell: (r) => (
+        <span className={r.balance >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+          {formatUGX(r.balance)}
+        </span>
       ),
     },
   ];
@@ -163,16 +152,18 @@ const LandlordReports = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Reports</h1>
-          <p className="text-sm text-muted-foreground mt-1">Income, expenses, profit & loss and tenant history</p>
+          <p className="text-sm text-muted-foreground mt-1">Income, expenses, profit & loss and accounting reports</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="2025">2025</SelectItem>
-              <SelectItem value="2024">2024</SelectItem>
+              {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => { fetchProfit(period); fetchTrialBalance(period); fetchBalanceSheet(period); }}>
+            <RefreshCw className="mr-2 h-4 w-4" />Refresh
+          </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />Export
           </Button>
@@ -180,125 +171,164 @@ const LandlordReports = () => {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {[
           { label: "Total Income", value: formatUGX(totalIncome), color: "text-green-600" },
-          { label: "Total Expenses", value: formatUGX(totalExpense), color: "text-red-600" },
+          { label: "Total Expenses", value: formatUGX(totalExpenses), color: "text-red-600" },
           { label: "Net Profit", value: formatUGX(netProfit), color: netProfit >= 0 ? "text-blue-600" : "text-red-700" },
-          { label: "Active Tenants", value: tenantHistory.filter((t) => t.status === "Active").length, color: "text-purple-600" },
         ].map((k) => (
           <div key={k.label} className="glass-card rounded-xl p-4">
             <p className="text-xs text-muted-foreground">{k.label}</p>
-            <p className={`text-xl font-bold mt-1 ${k.color}`}>{k.value}</p>
+            <p className={`text-xl font-bold mt-1 ${k.color}`}>
+              {isLoadingProfit ? <span className="animate-pulse">Loading...</span> : k.value}
+            </p>
           </div>
         ))}
       </div>
 
-      <Tabs defaultValue="income">
+      <Tabs defaultValue="pnl">
         <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="income">Income</TabsTrigger>
-          <TabsTrigger value="expense">Expense</TabsTrigger>
           <TabsTrigger value="pnl">Profit & Loss</TabsTrigger>
-          <TabsTrigger value="tenants">Tenant History</TabsTrigger>
+          <TabsTrigger value="expense">Expense Breakdown</TabsTrigger>
+          <TabsTrigger value="trial">Trial Balance</TabsTrigger>
+          <TabsTrigger value="balance">Balance Sheet</TabsTrigger>
         </TabsList>
-
-        {/* INCOME TAB */}
-        <TabsContent value="income" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-4">
-            <h2 className="font-medium mb-4">Monthly Income Breakdown</h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={incomeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} />
-                <Tooltip formatter={(v: number) => formatUGX(v)} />
-                <Legend />
-                <Bar dataKey="rent" fill="#3b82f6" name="Rent" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="utility" fill="#10b981" name="Utility" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="other" fill="#f59e0b" name="Other" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="glass-card rounded-xl p-4">
-            <DataTable
-              data={incomeTableData}
-              columns={incomeColumns}
-              label="month"
-              emptyMessage="No income data available."
-            />
-          </div>
-        </TabsContent>
-
-        {/* EXPENSE TAB */}
-        <TabsContent value="expense" className="space-y-4 mt-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="glass-card rounded-xl p-4">
-              <h2 className="font-medium mb-4">Monthly Expenses</h2>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={expenseData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => formatUGX(v)} />
-                  <Legend />
-                  {EXPENSE_KEYS.map((k, i) => (
-                    <Bar key={k} dataKey={k} fill={EXPENSE_COLORS[i]} name={k.charAt(0).toUpperCase() + k.slice(1)} stackId="a" />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="glass-card rounded-xl p-4">
-              <h2 className="font-medium mb-4">Expense Distribution</h2>
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {pieData.map((_, i) => <Cell key={i} fill={EXPENSE_COLORS[i % EXPENSE_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => formatUGX(v)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </TabsContent>
 
         {/* PROFIT & LOSS TAB */}
         <TabsContent value="pnl" className="space-y-4 mt-4">
+          {monthly.length > 0 ? (
+            <>
+              <div className="glass-card rounded-xl p-4">
+                <h2 className="font-medium mb-4">Monthly Profit & Loss</h2>
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={monthly}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} />
+                    <Tooltip formatter={(v: number) => formatUGX(v)} />
+                    <Legend />
+                    <Line type="monotone" dataKey="income" stroke="#3b82f6" strokeWidth={2} name="Income" dot />
+                    <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} name="Expenses" dot />
+                    <Line type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" name="Net Profit" dot />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="glass-card rounded-xl p-4">
+                <DataTable
+                  data={monthly.map((m) => ({ ...m, margin: m.income > 0 ? `${((m.profit / m.income) * 100).toFixed(1)}%` : "—" }))}
+                  columns={[
+                    { key: "month", header: "Month", cell: (r) => r.month },
+                    { key: "income", header: "Income", cell: (r) => <span className="text-green-600">{formatUGX(r.income)}</span> },
+                    { key: "expenses", header: "Expenses", cell: (r) => <span className="text-red-600">{formatUGX(r.expenses)}</span> },
+                    { key: "profit", header: "Net Profit", cell: (r) => <span className={r.profit >= 0 ? "text-blue-600 font-semibold" : "text-red-700 font-semibold"}>{formatUGX(r.profit)}</span> },
+                    { key: "margin", header: "Margin", cell: (r: any) => r.margin },
+                  ]}
+                  label="month"
+                  emptyMessage="No monthly breakdown available."
+                />
+              </div>
+            </>
+          ) : (
+            <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+              {isLoadingProfit ? "Loading profit data..." : "No profit & loss data available for this period."}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* EXPENSE BREAKDOWN TAB */}
+        <TabsContent value="expense" className="space-y-4 mt-4">
+          {expenseBreakdown.length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="glass-card rounded-xl p-4">
+                <h2 className="font-medium mb-4">Expense Distribution</h2>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={expenseBreakdown} cx="50%" cy="50%" outerRadius={80} dataKey="value" nameKey="name"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {expenseBreakdown.map((_, i) => <Cell key={i} fill={EXPENSE_COLORS[i % EXPENSE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => formatUGX(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="glass-card rounded-xl p-4">
+                <h2 className="font-medium mb-4">Expense Categories</h2>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={expenseBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: number) => formatUGX(v)} />
+                    <Bar dataKey="value" name="Amount" radius={[4, 4, 0, 0]}>
+                      {expenseBreakdown.map((_, i) => <Cell key={i} fill={EXPENSE_COLORS[i % EXPENSE_COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+              {isLoadingProfit ? "Loading expense data..." : "No expense breakdown available for this period."}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* TRIAL BALANCE TAB */}
+        <TabsContent value="trial" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-4">
-            <h2 className="font-medium mb-4">Profit & Loss Overview</h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={profitData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} />
-                <Tooltip formatter={(v: number) => formatUGX(v)} />
-                <Legend />
-                <Line type="monotone" dataKey="income" stroke="#3b82f6" strokeWidth={2} name="Income" dot />
-                <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} name="Expense" dot />
-                <Line type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" name="Net Profit" dot />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="glass-card rounded-xl p-4">
-            <DataTable
-              data={pnlTableData}
-              columns={pnlColumns}
-              label="month"
-              emptyMessage="No profit & loss data available."
-            />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-medium">Trial Balance — {period}</h2>
+              {trialBalance && (
+                <div className="flex gap-4 text-sm">
+                  <span>Total Debits: <span className="font-semibold">{formatUGX(trialBalance.totalDebits)}</span></span>
+                  <span>Total Credits: <span className="font-semibold">{formatUGX(trialBalance.totalCredits)}</span></span>
+                </div>
+              )}
+            </div>
+            {isLoadingTrial ? (
+              <div className="text-center text-muted-foreground py-8">Loading trial balance...</div>
+            ) : (
+              <DataTable
+                data={trialRows}
+                columns={trialCols}
+                label="account"
+                emptyMessage="No trial balance data available for this period."
+              />
+            )}
           </div>
         </TabsContent>
 
-        {/* TENANT HISTORY TAB */}
-        <TabsContent value="tenants" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-4">
-            <h2 className="font-medium mb-4">Tenant History</h2>
-            <DataTable
-              data={tenantHistory}
-              columns={tenantColumns}
-              label="tenant"
-              emptyMessage="No tenant history available."
-            />
-          </div>
+        {/* BALANCE SHEET TAB */}
+        <TabsContent value="balance" className="space-y-4 mt-4">
+          {isLoadingBalance ? (
+            <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">Loading balance sheet...</div>
+          ) : balanceSheet ? (
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                { title: "Assets", data: balanceSheet.assets, total: balanceSheet.totalAssets, color: "text-blue-600" },
+                { title: "Liabilities", data: balanceSheet.liabilities, total: balanceSheet.totalLiabilities, color: "text-red-600" },
+                { title: "Equity", data: balanceSheet.equity, total: balanceSheet.totalEquity, color: "text-green-600" },
+              ].map(({ title, data, total, color }) => (
+                <div key={title} className="glass-card rounded-xl p-4">
+                  <h3 className="font-semibold mb-3">{title}</h3>
+                  {data && Object.entries(data).map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-sm py-1 border-b last:border-0">
+                      <span className="text-muted-foreground">{k}</span>
+                      <span>{formatUGX(v as number)}</span>
+                    </div>
+                  ))}
+                  <div className={`flex justify-between font-bold mt-3 pt-2 border-t ${color}`}>
+                    <span>Total</span>
+                    <span>{formatUGX(total ?? 0)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+              No balance sheet data available for this period.
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

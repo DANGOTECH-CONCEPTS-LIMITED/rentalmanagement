@@ -46,12 +46,11 @@ const SendSMSForm = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://3.216.182.63:8091/sendSingleSms", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/sendSingleSms`, {
         method: "POST",
         headers: {
           "accept": "*/*",
           "Authorization": `Bearer ${token}`,
-          "Access-Control-Allow-Origin": "*",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
