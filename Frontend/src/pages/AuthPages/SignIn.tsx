@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Lock, Mail, ArrowRight, Home, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckCircle2 } from "lucide-react";
 
 const features = [
   { text: "Manage properties and tenants in one place" },
@@ -45,12 +45,7 @@ const SignIn = () => {
 
         {/* Logo */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 border border-white/20">
-              <Home className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white tracking-tight">Nyumba Yo</span>
-          </div>
+          <img src="/marple_logo.png" alt="Marble Logo" className="h-14 w-auto object-contain" />
         </div>
 
         {/* Center content */}
@@ -98,12 +93,9 @@ const SignIn = () => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-[400px]"
         >
-          {/* Mobile logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1D4ED8]">
-              <Home className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-[#0F172A]">Nyumba Yo</span>
+          {/* Logo — always visible above heading */}
+          <div className="mb-8">
+            <img src="/marple_logo.png" alt="Marble Logo" className="h-16 w-auto object-contain" />
           </div>
 
           {/* Heading */}

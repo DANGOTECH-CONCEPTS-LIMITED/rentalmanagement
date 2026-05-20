@@ -1,22 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, Receipt, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  Plus, Pencil, Trash2, Receipt, Filter, Loader2, X, AlertTriangle,
+  Calendar, Home, DoorOpen, User, TrendingDown, Tag,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
 import { DataTable, Column } from "@/components/ui/data-table";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import axios from "axios";
 
 type ExpenseCategory = "Maintenance" | "Utilities" | "Insurance" | "Taxes" | "Cleaning" | "Repairs" | "Other";
@@ -48,14 +39,14 @@ interface PropertyUnit {
 
 const categories: ExpenseCategory[] = ["Maintenance", "Utilities", "Insurance", "Taxes", "Cleaning", "Repairs", "Other"];
 
-const categoryColors: Record<string, string> = {
-  Maintenance: "bg-blue-100 text-blue-700",
-  Utilities: "bg-yellow-100 text-yellow-700",
-  Insurance: "bg-purple-100 text-purple-700",
-  Taxes: "bg-red-100 text-red-700",
-  Cleaning: "bg-green-100 text-green-700",
-  Repairs: "bg-orange-100 text-orange-700",
-  Other: "bg-gray-100 text-gray-700",
+const categoryStyle: Record<string, { pill: string; border: string; bg: string; color: string }> = {
+  Maintenance: { pill: "bg-blue-50 text-blue-700 border-blue-200",   border: "border-l-blue-500",   bg: "bg-blue-50",   color: "text-blue-600"   },
+  Utilities:   { pill: "bg-amber-50 text-amber-700 border-amber-200", border: "border-l-amber-500",  bg: "bg-amber-50",  color: "text-amber-600"  },
+  Insurance:   { pill: "bg-purple-50 text-purple-700 border-purple-200", border: "border-l-purple-500", bg: "bg-purple-50", color: "text-purple-600" },
+  Taxes:       { pill: "bg-red-50 text-red-700 border-red-200",       border: "border-l-red-500",    bg: "bg-red-50",    color: "text-red-600"    },
+  Cleaning:    { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", border: "border-l-emerald-500", bg: "bg-emerald-50", color: "text-emerald-600" },
+  Repairs:     { pill: "bg-orange-50 text-orange-700 border-orange-200", border: "border-l-orange-500", bg: "bg-orange-50", color: "text-orange-600" },
+  Other:       { pill: "bg-slate-50 text-slate-600 border-slate-200", border: "border-l-slate-400",  bg: "bg-slate-50",  color: "text-slate-500"  },
 };
 
 const emptyForm = {
@@ -67,6 +58,19 @@ const emptyForm = {
   propertyUnitId: "",
   paidBy: "",
   receiptReference: "",
+};
+
+const selCls =
+  "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
+
+const CategoryBadge = ({ category }: { category: string }) => {
+  const s = categoryStyle[category] ?? categoryStyle.Other;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${s.pill}`}>
+      <Tag className="h-2.5 w-2.5" />
+      {category}
+    </span>
+  );
 };
 
 const ExpenseManagement = () => {
@@ -96,7 +100,6 @@ const ExpenseManagement = () => {
       if (filterFrom) body.From = new Date(filterFrom).toISOString();
       if (filterTo) body.To = new Date(filterTo).toISOString();
       if (search) body.Search = search;
-
       const { data } = await axios.post<Expense[]>(`${apiUrl}/GetExpenses`, body);
       setExpenses(data);
     } catch (error: any) {
@@ -113,26 +116,24 @@ const ExpenseManagement = () => {
       try {
         const { data } = await axios.get<Property[]>(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`);
         setProperties(data);
-      } catch {
-        // silent
-      }
+      } catch { /* silent */ }
     };
 
     const fetchUnits = async () => {
       try {
         const { data } = await axios.get<PropertyUnit[]>(`${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`);
         setUnits(data);
-      } catch {
-        // silent
-      }
+      } catch { /* silent */ }
     };
 
     fetchProperties();
     fetchUnits();
   }, []);
 
-  const propertyName = (id?: number) => id ? (properties.find((p) => p.id === id)?.name ?? `Property #${id}`) : "—";
-  const unitName = (id?: number) => id ? (units.find((u) => u.id === id)?.unitNumber ?? `Unit #${id}`) : "—";
+  const propertyName = (id?: number) =>
+    id ? (properties.find((p) => p.id === id)?.name ?? `Property #${id}`) : "—";
+  const unitName = (id?: number) =>
+    id ? (units.find((u) => u.id === id)?.unitNumber ?? `Unit #${id}`) : "—";
   const unitsForProperty = (propertyId: string) =>
     units.filter((u) => u.propertyId === Number(propertyId));
 
@@ -178,8 +179,8 @@ const ExpenseManagement = () => {
       PaidBy: form.paidBy,
       Description: form.description,
       OwnerId: userData.id,
-      PropertyId: form.propertyId ? Number(form.propertyId) : null,
-      PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
+      PropertyId: form.propertyId && form.propertyId !== "none" ? Number(form.propertyId) : null,
+      PropertyUnitId: form.propertyUnitId && form.propertyUnitId !== "none" ? Number(form.propertyUnitId) : null,
       ReceiptReference: form.receiptReference || null,
     };
     try {
@@ -214,226 +215,468 @@ const ExpenseManagement = () => {
 
   const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
 
-  const byCategory = categories.map((cat) => ({
-    cat,
-    total: expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
-  })).filter((c) => c.total > 0);
+  const byCategory = categories
+    .map((cat) => ({ cat, total: expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0) }))
+    .filter((c) => c.total > 0);
 
   const expenseColumns: Column<Expense>[] = [
-    { key: "date", header: "Date", cell: (e) => new Date(e.date).toLocaleDateString() },
     {
-      key: "category", header: "Category",
-      cell: (e) => <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryColors[e.category] || categoryColors.Other}`}>{e.category}</span>,
-    },
-    { key: "description", header: "Description", className: "max-w-[180px] truncate", cell: (e) => e.description },
-    { key: "property", header: "Property", cell: (e) => propertyName(e.propertyId) },
-    { key: "unit", header: "Unit", cell: (e) => unitName(e.propertyUnitId) },
-    { key: "amount", header: "Amount", cell: (e) => <span className="font-medium">{formatUGX(e.amount)}</span> },
-    { key: "paidBy", header: "Paid By", cell: (e) => e.paidBy },
-    {
-      key: "receipt", header: "Receipt",
-      cell: (e) => e.receiptReference
-        ? <span className="flex items-center gap-1 text-xs text-blue-600"><Receipt className="h-3 w-3" />{e.receiptReference}</span>
-        : <span className="text-muted-foreground text-xs">None</span>,
+      key: "date",
+      header: "Date",
+      cell: (e) => (
+        <div className="flex items-center gap-1.5 text-sm text-slate-600">
+          <Calendar className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+          {new Date(e.date).toLocaleDateString()}
+        </div>
+      ),
     },
     {
-      key: "actions", header: "Actions", headerClassName: "text-right", className: "text-right",
+      key: "category",
+      header: "Category",
+      cell: (e) => <CategoryBadge category={e.category} />,
+    },
+    {
+      key: "description",
+      header: "Description",
+      className: "max-w-[180px]",
+      cell: (e) => (
+        <span className="text-sm text-[#0F172A] truncate block max-w-[180px]" title={e.description}>
+          {e.description}
+        </span>
+      ),
+    },
+    {
+      key: "property",
+      header: "Property",
+      cell: (e) => (
+        <div className="flex items-center gap-1.5 text-sm text-[#0F172A]">
+          <Home className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+          {propertyName(e.propertyId)}
+        </div>
+      ),
+    },
+    {
+      key: "unit",
+      header: "Unit",
+      cell: (e) => (
+        <div className="flex items-center gap-1.5 text-sm text-slate-600">
+          <DoorOpen className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+          {unitName(e.propertyUnitId)}
+        </div>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (e) => <span className="font-semibold text-red-600">{formatUGX(e.amount)}</span>,
+    },
+    {
+      key: "paidBy",
+      header: "Paid By",
+      cell: (e) => (
+        <div className="flex items-center gap-1.5 text-sm text-[#0F172A]">
+          <User className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+          {e.paidBy}
+        </div>
+      ),
+    },
+    {
+      key: "receipt",
+      header: "Receipt",
+      cell: (e) =>
+        e.receiptReference ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+            <Receipt className="h-3 w-3" />
+            {e.receiptReference}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
+      className: "text-right",
       cell: (e) => (
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={() => openEdit(e)}><Pencil className="h-4 w-4" /></Button>
-          <Button size="sm" variant="outline" onClick={() => setDeleteExpense(e)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+          <button
+            onClick={() => openEdit(e)}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-[#1D4ED8] transition-colors"
+            title="Edit"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setDeleteExpense(e)}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       ),
     },
   ];
 
+  const FormBody = () => (
+    <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Date *</label>
+          <Input
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Amount (UGX) *</label>
+          <Input
+            type="number"
+            placeholder="e.g. 85000"
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Category *</label>
+          <select
+            className={selCls}
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value as ExpenseCategory })}
+          >
+            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Paid By *</label>
+          <Input
+            placeholder="e.g. John Landlord"
+            value={form.paidBy}
+            onChange={(e) => setForm({ ...form, paidBy: e.target.value })}
+            className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+          />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Description *</label>
+        <Textarea
+          placeholder="Describe the expense..."
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          rows={2}
+          className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10 resize-none"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Property</label>
+          <select
+            className={selCls}
+            value={form.propertyId}
+            onChange={(e) => setForm({ ...form, propertyId: e.target.value, propertyUnitId: "" })}
+          >
+            <option value="">None</option>
+            {properties.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+          </select>
+        </div>
+        {form.propertyId && form.propertyId !== "none" && unitsForProperty(form.propertyId).length > 0 && (
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Unit</label>
+            <select
+              className={selCls}
+              value={form.propertyUnitId}
+              onChange={(e) => setForm({ ...form, propertyUnitId: e.target.value })}
+            >
+              <option value="">None</option>
+              {unitsForProperty(form.propertyId).map((u) => (
+                <option key={u.id} value={String(u.id)}>{u.unitNumber}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Receipt Reference (optional)</label>
+        <Input
+          placeholder="e.g. REC-001 or receipt number"
+          value={form.receiptReference}
+          onChange={(e) => setForm({ ...form, receiptReference: e.target.value })}
+          className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      <section className="page-hero">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="space-y-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-danger/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-danger">
-              Expenses
-            </span>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Expense Management</h1>
-              <p className="mt-2 text-sm text-muted-foreground md:text-base">Track and manage property expenses with receipts.</p>
-            </div>
-          </div>
-          <Button onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Expense</Button>
+      {/* Hero Banner */}
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] p-6 md:p-8">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-4 right-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute bottom-4 right-32 h-24 w-24 rounded-full bg-blue-300/10 blur-xl" />
         </div>
-      </section>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="data-surface p-5 col-span-2 sm:col-span-1">
-          <p className="text-xs text-muted-foreground">Total Expenses (All)</p>
-          <p className="text-xl font-bold text-danger mt-1">{formatUGX(totalAll)}</p>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="data-surface p-5 col-span-2 sm:col-span-1">
-          <p className="text-xs text-muted-foreground">Filtered Period</p>
-          <p className="text-xl font-bold text-warning mt-1">{formatUGX(totalFiltered)}</p>
-        </motion.div>
-        {byCategory.slice(0, 2).map(({ cat, total }, i) => (
-          <motion.div key={cat} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + i * 0.05 }} className="data-surface p-5">
-            <p className="text-xs text-muted-foreground">{cat}</p>
-            <p className="text-lg font-bold mt-1">{formatUGX(total)}</p>
-          </motion.div>
-        ))}
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center">
+                <TrendingDown className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-blue-200 text-sm font-medium">Expenses</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Expense Management</h1>
+            <p className="text-blue-200 text-sm mt-1">Track and manage property expenses with receipts.</p>
+          </div>
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-[#1D4ED8] text-sm font-semibold hover:bg-blue-50 transition-colors shadow-lg self-start md:self-auto"
+          >
+            <Plus className="h-4 w-4" />Add Expense
+          </button>
+        </div>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl border border-[#E2E8F0] border-l-4 border-l-red-500 p-4 flex items-center gap-3 col-span-2 sm:col-span-1"
+        >
+          <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+            <TrendingDown className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500">Total Expenses</p>
+            <p className="text-base font-bold text-red-600 mt-0.5 truncate">{formatUGX(totalAll)}</p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          className="bg-white rounded-xl border border-[#E2E8F0] border-l-4 border-l-amber-500 p-4 flex items-center gap-3 col-span-2 sm:col-span-1"
+        >
+          <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <Filter className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500">Filtered Period</p>
+            <p className="text-base font-bold text-amber-600 mt-0.5 truncate">{formatUGX(totalFiltered)}</p>
+          </div>
+        </motion.div>
+
+        {byCategory.slice(0, 2).map(({ cat, total }, i) => {
+          const s = categoryStyle[cat] ?? categoryStyle.Other;
+          return (
+            <motion.div
+              key={cat}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
+              className={`bg-white rounded-xl border border-[#E2E8F0] border-l-4 ${s.border} p-4 flex items-center gap-3`}
+            >
+              <div className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
+                <Tag className={`h-5 w-5 ${s.color}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-slate-500">{cat}</p>
+                <p className={`text-base font-bold mt-0.5 truncate ${s.color}`}>{formatUGX(total)}</p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Category Breakdown */}
       {byCategory.length > 0 && (
-        <div className="data-surface p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="h-4 w-1 rounded-full bg-warning" />
-            <h2 className="text-base font-semibold text-slate-950">By Category</h2>
+        <div className="bg-white rounded-xl border border-[#E2E8F0] p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <Tag className="h-4 w-4 text-slate-500" />
+            </div>
+            <h2 className="text-sm font-semibold text-[#0F172A]">By Category</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            {byCategory.map(({ cat, total }) => (
-              <div key={cat} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${categoryColors[cat] || categoryColors.Other}`}>
-                {cat}: {formatUGX(total)}
-              </div>
-            ))}
+            {byCategory.map(({ cat, total }) => {
+              const s = categoryStyle[cat] ?? categoryStyle.Other;
+              return (
+                <div
+                  key={cat}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border ${s.pill}`}
+                >
+                  <span className="font-semibold">{cat}:</span>
+                  <span>{formatUGX(total)}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div className="data-surface p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="h-4 w-1 rounded-full bg-danger" />
-          <h2 className="text-base font-semibold text-slate-950">Expense Records</h2>
-        </div>
+      {/* Expense Table */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] p-4">
         <DataTable
           data={filtered}
           columns={expenseColumns}
           loading={isLoading}
           searchValue={search}
           onSearchChange={setSearch}
-          searchPlaceholder="Search description, property..."
+          searchPlaceholder="Search description, property, paid by..."
           label="expense"
           pageSize={10}
           emptyMessage="No expenses found"
           emptyIcon={<Receipt className="h-12 w-12" />}
           headerRight={
-            <div className="flex flex-wrap gap-3 items-center">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v); }}>
-                  <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Categories</SelectItem>
-                    {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                <select
+                  className="rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#1D4ED8] transition-colors"
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                >
+                  <option value="All">All Categories</option>
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground whitespace-nowrap">From</Label>
-                <Input type="date" className="w-36 h-9" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-400 whitespace-nowrap">From</span>
+                <Input
+                  type="date"
+                  className="w-32 h-8 text-xs border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  value={filterFrom}
+                  onChange={(e) => setFilterFrom(e.target.value)}
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground whitespace-nowrap">To</Label>
-                <Input type="date" className="w-36 h-9" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-400 whitespace-nowrap">To</span>
+                <Input
+                  type="date"
+                  className="w-32 h-8 text-xs border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  value={filterTo}
+                  onChange={(e) => setFilterTo(e.target.value)}
+                />
               </div>
-              <Button size="sm" onClick={fetchExpenses}>Apply</Button>
+              <button
+                onClick={fetchExpenses}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1D4ED8] text-white hover:bg-blue-700 transition-colors"
+              >
+                Apply
+              </button>
             </div>
           }
         />
         {filtered.length > 0 && (
-          <div className="text-right text-sm font-medium border-t pt-3 mt-3">
-            Period Total: <span className="text-danger font-bold">{formatUGX(totalFiltered)}</span>
+          <div className="text-right text-sm font-medium border-t border-[#E2E8F0] pt-3 mt-3">
+            Period Total:{" "}
+            <span className="text-red-600 font-bold">{formatUGX(totalFiltered)}</span>
           </div>
         )}
       </div>
 
-      {/* Add / Edit Dialog */}
-      <Dialog open={addOpen || !!editExpense} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditExpense(null); } }}>
-        <DialogContent className="sm:max-w-lg rounded-[20px]">
-          <DialogHeader>
-            <DialogTitle>{editExpense ? "Edit Expense" : "Add Expense"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Date *</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+      {/* Add / Edit Modal */}
+      {(addOpen || !!editExpense) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => { setAddOpen(false); setEditExpense(null); }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  {editExpense ? "Edit Expense" : "Add Expense"}
+                </h2>
+                <p className="text-blue-200 text-xs mt-0.5">
+                  {editExpense ? "Update the expense details" : "Record a new expense"}
+                </p>
               </div>
-              <div className="space-y-1">
-                <Label>Amount (UGX) *</Label>
-                <Input type="number" placeholder="e.g. 85000" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              <button
+                onClick={() => { setAddOpen(false); setEditExpense(null); }}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <FormBody />
+            <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
+              <button
+                onClick={() => { setAddOpen(false); setEditExpense(null); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-[#E2E8F0] text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editExpense ? "Save Changes" : "Add Expense"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {!!deleteExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteExpense(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-white flex-shrink-0" />
+              <div>
+                <h2 className="text-lg font-bold text-white">Delete Expense</h2>
+                <p className="text-red-100 text-xs mt-0.5">This action is permanent</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Category *</Label>
-                <Select value={form.category} onValueChange={(v: ExpenseCategory) => setForm({ ...form, category: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Paid By *</Label>
-                <Input placeholder="e.g. John Landlord" value={form.paidBy} onChange={(e) => setForm({ ...form, paidBy: e.target.value })} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Description *</Label>
-              <Textarea placeholder="Describe the expense..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Property</Label>
-                <Select value={form.propertyId} onValueChange={(v) => setForm({ ...form, propertyId: v, propertyUnitId: "" })}>
-                  <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {properties.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              {form.propertyId && form.propertyId !== "none" && unitsForProperty(form.propertyId).length > 0 && (
-                <div className="space-y-1">
-                  <Label>Unit</Label>
-                  <Select value={form.propertyUnitId} onValueChange={(v) => setForm({ ...form, propertyUnitId: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {unitsForProperty(form.propertyId).map((u) => (
-                        <SelectItem key={u.id} value={String(u.id)}>{u.unitNumber}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <div className="p-6">
+              <p className="text-slate-600 text-sm">
+                Are you sure you want to delete this expense record? This cannot be undone.
+              </p>
+              {deleteExpense && (
+                <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-[#E2E8F0] text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Amount</span>
+                    <span className="font-semibold text-red-600">{formatUGX(deleteExpense.amount)}</span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-slate-500">Category</span>
+                    <CategoryBadge category={deleteExpense.category} />
+                  </div>
                 </div>
               )}
             </div>
-            <div className="space-y-1">
-              <Label>Receipt Reference (optional)</Label>
-              <Input placeholder="e.g. REC-001 or receipt number" value={form.receiptReference} onChange={(e) => setForm({ ...form, receiptReference: e.target.value })} />
+            <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteExpense(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-[#E2E8F0] text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Delete Expense
+              </button>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddOpen(false); setEditExpense(null); }}>Cancel</Button>
-            <Button disabled={isSubmitting} onClick={handleSave}>{editExpense ? "Save Changes" : "Add Expense"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteExpense} onOpenChange={(o) => !o && setDeleteExpense(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Expense</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this expense record? This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

@@ -86,10 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         >
           <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
             <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <House className="text-white" size={16} />
-              </div>
-              <h1 className="ml-3 font-semibold text-lg text-sidebar-foreground">Property Hub</h1>
+              <img src="/marple_logo.png" alt="Logo" className="h-8 w-auto object-contain" />
             </div>
             <button
               onClick={() => setIsMobileOpen(false)}
@@ -154,18 +151,17 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       onMouseLeave={() => setIsHovering(false)}
     >
       <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border/80">
-        <div className="flex items-center">
-          <div className="h-9 w-9 rounded-2xl bg-primary flex items-center justify-center shadow-[0_16px_32px_-18px_rgba(37,99,235,0.9)]">
-            <House className="text-white" size={16} />
-          </div>
-          {(!isCollapsed || isHovering) && (
-            <motion.h1
+        <div className="flex items-center min-w-0">
+          {isCollapsed && !isHovering ? (
+            <img src="/marple_logo.png" alt="Logo" className="h-8 w-8 object-contain rounded-lg" />
+          ) : (
+            <motion.img
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="ml-3 font-semibold text-lg text-sidebar-foreground"
-            >
-              Nyumba Yo
-            </motion.h1>
+              src="/marple_logo.png"
+              alt="Logo"
+              className="h-8 w-auto object-contain max-w-[140px]"
+            />
           )}
         </div>
         <button

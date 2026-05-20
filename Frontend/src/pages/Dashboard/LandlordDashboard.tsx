@@ -3,30 +3,23 @@ import {
   Loader2, Home, Users, TrendingUp, Wallet, ArrowUpRight,
   ArrowDownLeft, ChevronDown, CircleDollarSign, Download,
   FileText, Zap, CheckCircle, AlertTriangle, Building2,
-  Activity, Banknote, PiggyBank,
+  Activity, Banknote, PiggyBank, X, History,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import { exportWalletStatementCsv, exportWalletStatementPdf } from "@/lib/wallet-statement-export";
 import { exportDashboardPdf, exportDashboardWorkbook } from "@/lib/dashboard-export";
 import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import axios from "axios";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
+
+const inputCls =
+  "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
 
 interface Transaction {
   amount: number;
@@ -100,6 +93,8 @@ const LandlordDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [utilityStats, setUtilityStats] = useState<UtilityStats | null>(null);
@@ -262,88 +257,24 @@ const LandlordDashboard = () => {
               <div>
                 <p className="text-xs text-white/60 font-medium">Wallet Balance</p>
                 {isLoading
-                  ? <Skeleton className="h-6 w-28 bg-white/20 mt-1" />
+                  ? <div className="h-6 w-28 bg-white/20 rounded-md animate-pulse mt-1" />
                   : <p className="text-xl font-bold">{balance !== null ? formatCurrency(balance) : "--"}</p>}
               </div>
               <div className="ml-4 flex gap-2">
-                {/* Withdraw */}
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="bg-white text-[#1D4ED8] hover:bg-blue-50 font-semibold text-xs h-8 px-3">
-                      Withdraw
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>Withdraw Funds</DialogTitle></DialogHeader>
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">Available: {formatCurrency(balance || 0)}</p>
-                      <Input type="number" placeholder="Enter amount" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-                      <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => setWithdrawAmount("")} className="w-full">Cancel</Button>
-                        <Button onClick={() => { if (validateWithdrawal()) setShowConfirmation(true); }} className="w-full">Continue</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                {/* Transaction history */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white hover:bg-white/20">
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[300px] p-0">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-start">View Transaction History</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader><DialogTitle>Transaction History</DialogTitle></DialogHeader>
-                        {isLoading ? (
-                          <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
-                        ) : transactions.length === 0 ? (
-                          <div className="py-10 text-center text-muted-foreground">No transactions yet</div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="flex justify-end gap-2">
-                              <Button variant="outline" size="sm" onClick={exportStatement}><Download className="mr-2 h-4 w-4" />CSV</Button>
-                              <Button variant="outline" size="sm" onClick={exportStatementPdf}><FileText className="mr-2 h-4 w-4" />PDF</Button>
-                            </div>
-                            <div className="max-h-[60vh] overflow-x-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Date</TableHead><TableHead>Description</TableHead>
-                                    <TableHead className="text-right">Amount</TableHead>
-                                    <TableHead className="text-right">Balance</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {statementRows.map((tx, i) => (
-                                    <TableRow key={i}>
-                                      <TableCell className="text-xs text-slate-500">{new Date(tx.transactionDate).toLocaleDateString()}</TableCell>
-                                      <TableCell className="flex items-center gap-2 text-sm">
-                                        {tx.amount > 0 ? <ArrowDownLeft className="h-4 w-4 text-green-500" /> : <ArrowUpRight className="h-4 w-4 text-red-500" />}
-                                        {tx.description || "Transaction"}
-                                      </TableCell>
-                                      <TableCell className={`text-right font-semibold text-sm ${tx.amount > 0 ? "text-green-600" : "text-red-500"}`}>
-                                        {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
-                                      </TableCell>
-                                      <TableCell className="text-right text-sm font-medium">
-                                        {tx.runningBalance !== null ? formatCurrency(tx.runningBalance) : "--"}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Withdraw button */}
+                <button
+                  onClick={() => setShowWithdrawModal(true)}
+                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
+                >
+                  Withdraw
+                </button>
+                {/* History chevron */}
+                <button
+                  onClick={() => setShowHistoryModal(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25 transition-colors"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -355,26 +286,184 @@ const LandlordDashboard = () => {
         </div>
       </div>
 
-      {/* ── Confirm withdrawal ── */}
-      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Confirm Withdrawal</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm">Withdraw <span className="font-bold">{formatCurrency(Number(withdrawAmount))}</span> from your wallet?</p>
-            <p className="text-xs text-muted-foreground">Funds will be transferred to your registered bank or mobile money account.</p>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowConfirmation(false)} className="w-full">Cancel</Button>
-              <Button onClick={handleWithdraw} disabled={isWithdrawing} className="w-full">
-                {isWithdrawing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing…</> : "Confirm"}
-              </Button>
-            </div>
+      {/* ── Withdraw modal ── */}
+      <AnimatePresence>
+        {showWithdrawModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-2xl overflow-hidden bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)]"
+            >
+              <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                    <Wallet className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">Withdraw Funds</h3>
+                </div>
+                <button onClick={() => { setShowWithdrawModal(false); setWithdrawAmount(""); }} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-xs text-[#64748B]">Available balance: <span className="font-semibold text-[#0F172A]">{formatCurrency(balance || 0)}</span></p>
+                <div>
+                  <label className="block text-xs font-medium text-[#64748B] mb-1.5">Amount</label>
+                  <input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => { setShowWithdrawModal(false); setWithdrawAmount(""); }} className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { if (validateWithdrawal()) { setShowWithdrawModal(false); setShowConfirmation(true); } }}
+                    className="flex-1 rounded-lg bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </AnimatePresence>
+
+      {/* ── Confirm withdrawal ── */}
+      <AnimatePresence>
+        {showConfirmation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-2xl overflow-hidden bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)]"
+            >
+              <div className="bg-gradient-to-r from-amber-600 to-amber-500 px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                    <AlertTriangle className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">Confirm Withdrawal</h3>
+                </div>
+                <button onClick={() => setShowConfirmation(false)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-sm text-[#0F172A]">Withdraw <span className="font-bold">{formatCurrency(Number(withdrawAmount))}</span> from your wallet?</p>
+                <p className="text-xs text-[#64748B]">Funds will be transferred to your registered bank or mobile money account.</p>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setShowConfirmation(false)} className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleWithdraw}
+                    disabled={isWithdrawing}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
+                  >
+                    {isWithdrawing ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</> : "Confirm"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Transaction history modal ── */}
+      <AnimatePresence>
+        {showHistoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-2xl rounded-2xl overflow-hidden bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] max-h-[90vh] flex flex-col"
+            >
+              <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-5 py-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                    <History className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Transaction History</h3>
+                    <p className="text-[11px] text-blue-200/70">{statementRows.length} records</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={exportStatement} className="flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 px-2.5 py-1.5 text-xs font-medium text-white transition-colors">
+                    <Download className="h-3.5 w-3.5" /> CSV
+                  </button>
+                  <button onClick={exportStatementPdf} className="flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 px-2.5 py-1.5 text-xs font-medium text-white transition-colors">
+                    <FileText className="h-3.5 w-3.5" /> PDF
+                  </button>
+                  <button onClick={() => setShowHistoryModal(false)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-y-auto">
+                {isLoading ? (
+                  <div className="flex flex-col gap-3 p-5">
+                    {[...Array(4)].map((_, i) => <div key={i} className="h-12 rounded-lg bg-slate-100 animate-pulse" />)}
+                  </div>
+                ) : statementRows.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                      <FileText className="h-6 w-6 text-slate-400" />
+                    </div>
+                    <p className="text-sm text-[#64748B]">No transactions yet</p>
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[#E2E8F0] bg-slate-50/60">
+                        {["Date", "Description", "Amount", "Running Balance"].map((h) => (
+                          <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#F1F5F9]">
+                      {statementRows.map((tx, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-3 text-xs text-[#64748B]">{new Date(tx.transactionDate).toLocaleDateString()}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2 text-sm text-[#0F172A]">
+                              {tx.amount > 0 ? <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" /> : <ArrowUpRight className="h-3.5 w-3.5 text-red-500" />}
+                              {tx.description || "Transaction"}
+                            </div>
+                          </td>
+                          <td className={`px-4 py-3 text-right text-sm font-semibold ${tx.amount > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                            {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-medium text-[#0F172A]">
+                            {tx.runningBalance !== null ? formatCurrency(tx.runningBalance) : "--"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {isLoading ? [...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />) : (
+        {isLoading ? [...Array(4)].map((_, i) => <div key={i} className="h-32 rounded-2xl bg-slate-200 animate-pulse" />) : (
           <>
             <KpiCard label="Properties" value={properties.length} sub="Managed by you" icon={Building2} iconBg="bg-blue-50" iconColor="text-blue-600" trend={{ value: 0, up: true }} />
             <KpiCard label="Total Tenants" value={tenants.length} sub="Active occupants" icon={Users} iconBg="bg-violet-50" iconColor="text-violet-600" trend={{ value: 2, up: true }} />
@@ -420,7 +509,7 @@ const LandlordDashboard = () => {
               <h2 className="text-base font-semibold text-slate-900">Financial Overview</h2>
               <p className="text-xs text-slate-400 mt-0.5">Current month breakdown</p>
             </div>
-            <Badge className="bg-blue-50 text-blue-600 border-blue-100 text-xs">This Month</Badge>
+            <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-600">This Month</span>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart

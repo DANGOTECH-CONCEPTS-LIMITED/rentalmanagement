@@ -2,19 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import {
   Users, Home, Wallet, TrendingUp, MessageSquare, BarChart3,
   Settings, UserPlus, Building2, ChevronRight, ArrowUpRight,
-  CircleDollarSign, Loader2, AlertCircle, CheckCircle2,
+  CircleDollarSign, Loader2, AlertCircle, CheckCircle2, X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "@/hooks/use-toast";
 import { exportDashboardPdf, exportDashboardWorkbook } from "@/lib/dashboard-export";
+
+const inputCls =
+  "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
 
 type BalanceType = "SMS" | "BULK" | "WALLET";
 type WithdrawDestination = "BULK" | "flexipay";
@@ -430,59 +427,81 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Withdraw Dialog */}
-      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
-        <DialogContent className="rounded-2xl sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {withdrawDestination === "BULK" ? "Withdraw to BULK" : "Withdraw to FLEXIPAY"}
-            </DialogTitle>
-            <DialogDescription>
-              Submit a withdrawal from the Collecto wallet. This will be logged in the system.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label htmlFor="withdraw-reference">Reference</Label>
-              <Input
-                id="withdraw-reference"
-                value={withdrawReference}
-                onChange={(e) => setWithdrawReference(e.target.value)}
-                placeholder="Unique withdrawal reference"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="withdraw-amount">Amount</Label>
-              <Input
-                id="withdraw-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                placeholder="Amount to withdraw"
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" onClick={() => setWithdrawDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCollectoWithdraw}
-                disabled={isSubmittingWithdraw}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
-              >
-                {isSubmittingWithdraw ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
-                ) : (
-                  "Submit Withdrawal"
-                )}
-              </Button>
-            </div>
+      {/* Withdraw Modal */}
+      <AnimatePresence>
+        {withdrawDialogOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-2xl overflow-hidden bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)]"
+            >
+              <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                    <CircleDollarSign className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      {withdrawDestination === "BULK" ? "Withdraw to BULK" : "Withdraw to FLEXIPAY"}
+                    </h3>
+                    <p className="text-[11px] text-blue-200/70">Collecto wallet withdrawal</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setWithdrawDialogOpen(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-xs text-[#64748B]">Submit a withdrawal from the Collecto wallet. This will be logged in the system.</p>
+                <div>
+                  <label className="block text-xs font-medium text-[#64748B] mb-1.5">Reference</label>
+                  <input
+                    value={withdrawReference}
+                    onChange={(e) => setWithdrawReference(e.target.value)}
+                    placeholder="Unique withdrawal reference"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#64748B] mb-1.5">Amount</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Amount to withdraw"
+                    className={inputCls}
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setWithdrawDialogOpen(false)}
+                    className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCollectoWithdraw}
+                    disabled={isSubmittingWithdraw}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors"
+                  >
+                    {isSubmittingWithdraw ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
+                    ) : "Submit Withdrawal"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

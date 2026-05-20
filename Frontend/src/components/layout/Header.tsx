@@ -9,6 +9,7 @@ import {
   Key,
   Lock,
   X,
+  LogOut,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -115,7 +116,7 @@ const Header = () => {
             <span className="font-medium text-slate-900">{roleName}</span>
           </div>
           <div
-            className="flex items-center px-3 py-2 text-sm text-slate-700 gap-2 rounded-xl hover:bg-slate-50"
+            className="flex items-center px-3 py-2 text-sm text-slate-700 gap-2 rounded-xl hover:bg-slate-50 cursor-pointer"
             onClick={() => {
               setShowUserDropdown(false);
               setShowPasswordModal(true);
@@ -123,6 +124,17 @@ const Header = () => {
           >
             <Settings className="h-4 w-4 shrink-0" />
             Change Password
+          </div>
+          <div className="my-2 h-px bg-border/80" />
+          <div
+            className="flex items-center px-3 py-2 text-sm text-red-600 gap-2 rounded-xl hover:bg-red-50 cursor-pointer"
+            onClick={() => {
+              setShowUserDropdown(false);
+              logout();
+            }}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Logout
           </div>
         </div>,
         document.body
