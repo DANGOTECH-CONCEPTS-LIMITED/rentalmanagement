@@ -46,14 +46,14 @@
 
     --radius: 1rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-background: 215 28% 9%;
+    --sidebar-foreground: 213 27% 84%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 100% 97%;
-    --sidebar-accent-foreground: 221 83% 40%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-accent: 217 19% 16%;
+    --sidebar-accent-foreground: 213 27% 84%;
+    --sidebar-border: 217 19% 16%;
+    --sidebar-ring: 217 91% 60%;
   }
   
   .dark {
@@ -134,7 +134,7 @@
   }
   
   .sidebar-link.active {
-    @apply bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_18px_32px_-20px_rgba(37,99,235,0.95)];
+    @apply bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_12px_28px_-16px_rgba(37,99,235,0.7)];
   }
   
   .btn {
@@ -154,7 +154,7 @@
   }
   
   .input-field {
-    @apply flex h-12 w-full rounded-xl border border-input bg-white/90 px-4 py-3 text-sm shadow-sm ring-offset-background transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/90 focus-visible:outline-none focus-visible:border-primary/45 focus-visible:ring-4 focus-visible:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-sm text-[#0F172A] shadow-sm transition-all duration-150 placeholder:text-[#94A3B8] focus-visible:outline-none focus-visible:border-[#1D4ED8] focus-visible:ring-2 focus-visible:ring-blue-700/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-slate-50;
   }
   
   /* Responsive table utilities */

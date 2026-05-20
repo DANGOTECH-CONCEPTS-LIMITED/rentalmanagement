@@ -65,6 +65,10 @@ import AdminUtilityDashboard from "./pages/Admin/AdminUtilityDashboard";
 import AdminWalletManagement from "./pages/Admin/AdminWalletManagement";
 import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
 import UpdateTransaction from "./pages/Admin/UpdateTransaction";
+import AllComplaints from "./pages/Admin/AllComplaints";
+import CollectoPayments from "./pages/Admin/CollectoPayments";
+import MeterTokenGenerator from "./pages/Admin/MeterTokenGenerator";
+import UtilityChargeConfig from "./pages/Landlord/UtilityChargeConfig";
 
 const queryClient = new QueryClient();
 
@@ -131,6 +135,9 @@ const App = () => (
                   path="utility-payments/:landlordId"
                   element={<UtilityPayments />}
                 />
+                <Route path="all-complaints" element={<AllComplaints />} />
+                <Route path="collecto-payments" element={<CollectoPayments />} />
+                <Route path="meter-tokens" element={<MeterTokenGenerator />} />
               </Route>
             </Route>
 
@@ -154,6 +161,7 @@ const App = () => (
                 <Route path="invoices" element={<InvoiceManagement />} />
                 <Route path="expenses" element={<ExpenseManagement />} />
                 <Route path="reports" element={<LandlordReports />} />
+                <Route path="utility-charge" element={<UtilityChargeConfig />} />
               </Route>
             </Route>
 

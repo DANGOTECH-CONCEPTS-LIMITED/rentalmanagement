@@ -22,6 +22,8 @@ import {
   Receipt,
   TrendingDown,
   UserCircle,
+  Zap,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -80,18 +82,15 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           initial={{ x: "-100%" }}
           animate={{ x: isMobileOpen ? 0 : "-100%" }}
           transition={{ duration: 0.3 }}
-          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar/95 border-r border-sidebar-border shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] backdrop-blur overflow-y-auto"
+          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar border-r border-sidebar-border shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] overflow-y-auto"
         >
           <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
             <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <House className="text-white" size={16} />
-              </div>
-              <h1 className="ml-3 font-semibold text-lg">Property Hub</h1>
+              <img src="/marple_logo.png" alt="Logo" className="h-8 w-auto object-contain" />
             </div>
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="p-1 rounded-md hover:bg-sidebar-accent transition-colors"
+              className="p-1 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
             >
               <X size={18} />
             </button>
@@ -126,7 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           <div className="p-4 border-t border-sidebar-border">
             <button
               onClick={logout}
-              className="w-full sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600"
+              className="w-full sidebar-link text-red-400 hover:bg-red-500/15 hover:text-red-300"
             >
               <LogOut size={18} />
               <span>Logout</span>
@@ -146,29 +145,28 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       className={cn(
         "h-screen fixed top-0 left-0 z-30 overflow-hidden transition-all duration-300 ease-in-out",
         sidebarWidth,
-        "bg-sidebar/92 backdrop-blur flex flex-col border-r border-sidebar-border shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]"
+        "bg-sidebar flex flex-col border-r border-sidebar-border shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]"
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border/80">
-        <div className="flex items-center">
-          <div className="h-9 w-9 rounded-2xl bg-primary flex items-center justify-center shadow-[0_16px_32px_-18px_rgba(37,99,235,0.9)]">
-            <House className="text-white" size={16} />
-          </div>
-          {(!isCollapsed || isHovering) && (
-            <motion.h1
+        <div className="flex items-center min-w-0">
+          {isCollapsed && !isHovering ? (
+            <img src="/marple_logo.png" alt="Logo" className="h-8 w-8 object-contain rounded-lg" />
+          ) : (
+            <motion.img
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="ml-3 font-semibold text-lg"
-            >
-              Nyumba Yo
-            </motion.h1>
+              src="/marple_logo.png"
+              alt="Logo"
+              className="h-8 w-auto object-contain max-w-[140px]"
+            />
           )}
         </div>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1 rounded-md hover:bg-sidebar-accent transition-colors"
+          className="p-1 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
         >
           <Menu size={18} />
         </button>
@@ -313,6 +311,21 @@ function getNavItems(role: number): NavItem[] {
         icon: <Plus size={18} />,
         path: "/admin-dashboard/add-utility-meter",
       },
+      {
+        label: "All Complaints",
+        icon: <MessageSquare size={18} />,
+        path: "/admin-dashboard/all-complaints",
+      },
+      {
+        label: "Collecto Payments",
+        icon: <Smartphone size={18} />,
+        path: "/admin-dashboard/collecto-payments",
+      },
+      {
+        label: "Meter Tokens",
+        icon: <Zap size={18} />,
+        path: "/admin-dashboard/meter-tokens",
+      },
     ];
   }
 
@@ -384,6 +397,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Utility Report",
         icon: <FileText size={18} />,
         path: "/landlord-dashboard/utility-report",
+      },
+      {
+        label: "Utility Charge Config",
+        icon: <Zap size={18} />,
+        path: "/landlord-dashboard/utility-charge",
       },
     ];
   }

@@ -426,3 +426,6 @@ MigrationSript/MigrationScript/.vs/
 !MigrationSript/MigrationScript/**/*.cs
 !MigrationSript/MigrationScript/*.csproj
 !MigrationSript/MigrationScript/*.sln
+
+# Windows-path artifact directory (do not restore)
+Backend/PropertyManagementApi/API/C:\\propertymanagementfiles/

@@ -1,23 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import {
-  User,
-  Phone,
-  Mail,
-  Home,
-  Droplets,
-  Calendar,
-  Briefcase,
-  Users,
-  CreditCard,
-  ShieldCheck,
-  Clock,
-  AlertCircle,
-  MapPin,
-  DoorOpen,
+  User, Phone, Mail, Home, Droplets, Calendar, Briefcase,
+  Users, CreditCard, ShieldCheck, Clock, AlertCircle, MapPin, DoorOpen,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { getImageUrl } from "@/lib/imageUrl";
@@ -49,39 +35,91 @@ interface TenantProfile {
   };
 }
 
-const Field = ({
-  icon,
+const FALLBACK_AVATAR =
+  "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0=";
+
+const StatusBadge = ({ active, balance }: { active: boolean; balance: number }) => {
+  if (!active)
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+        <AlertCircle className="h-3 w-3" />Inactive
+      </span>
+    );
+  if (balance > 0)
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+        <Clock className="h-3 w-3" />Pending Payment
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <ShieldCheck className="h-3 w-3" />Active
+    </span>
+  );
+};
+
+const DetailRow = ({
+  icon: Icon,
   label,
   value,
+  iconBg = "bg-blue-50",
+  iconColor = "text-blue-600",
 }: {
-  icon: React.ReactNode;
+  icon: React.ElementType;
   label: string;
-  value: React.ReactNode;
+  value?: React.ReactNode;
+  iconBg?: string;
+  iconColor?: string;
 }) => (
-  <div className="flex items-start gap-3 py-3 border-b last:border-0">
-    <div className="mt-0.5 text-primary shrink-0 bg-primary/8 rounded-md p-1.5">{icon}</div>
-    <div className="min-w-0">
-      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-      <p className="text-sm font-medium text-slate-800 break-words">
-        {value || <span className="text-muted-foreground italic font-normal">Not provided</span>}
+  <div className="flex items-start gap-3 py-3 border-b border-[#E2E8F0] last:border-0">
+    <div className={`h-8 w-8 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
+      <Icon className={`h-4 w-4 ${iconColor}`} />
+    </div>
+    <div className="min-w-0 flex-1">
+      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">{label}</p>
+      <p className="text-sm font-medium text-[#0F172A] mt-0.5 break-words">
+        {value || <span className="text-slate-400 italic font-normal">Not provided</span>}
       </p>
     </div>
   </div>
 );
 
-const StatusBadge = ({ active, balance }: { active: boolean; balance: number }) => {
-  if (!active)
-    return <Badge variant="secondary" className="gap-1 px-2.5 py-1"><AlertCircle className="h-3 w-3" />Inactive</Badge>;
-  if (balance > 0)
-    return <Badge className="bg-amber-100 text-amber-800 gap-1 px-2.5 py-1"><Clock className="h-3 w-3" />Pending Payment</Badge>;
-  return <Badge className="bg-green-100 text-green-800 gap-1 px-2.5 py-1"><ShieldCheck className="h-3 w-3" />Active</Badge>;
-};
-
-const QuickChip = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
-  <div className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-xs text-white font-medium">
-    {icon}
-    {text}
+const SectionCard = ({
+  icon: Icon,
+  title,
+  iconBg,
+  iconColor,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  iconBg: string;
+  iconColor: string;
+  children: React.ReactNode;
+}) => (
+  <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E2E8F0]">
+      <div className={`h-9 w-9 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
+        <Icon className={`h-4.5 w-4.5 ${iconColor}`} size={18} />
+      </div>
+      <h3 className="text-sm font-semibold text-[#0F172A]">{title}</h3>
+    </div>
+    <div className="px-5">{children}</div>
   </div>
+);
+
+const FieldSkeleton = ({ rows = 4 }: { rows?: number }) => (
+  <>
+    {Array.from({ length: rows }).map((_, i) => (
+      <div key={i} className="flex items-start gap-3 py-3 border-b border-[#E2E8F0] last:border-0">
+        <Skeleton className="h-8 w-8 rounded-lg shrink-0" />
+        <div className="space-y-1.5 flex-1">
+          <Skeleton className="h-2.5 w-16" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      </div>
+    ))}
+  </>
 );
 
 const MyProfile = () => {
@@ -100,11 +138,7 @@ const MyProfile = () => {
         const { data } = await axios.get(`${apiUrl}/GetTenantById/${userData.id}`);
         setTenant(data);
       } catch {
-        toast({
-          title: "Could not load profile",
-          description: "Please try refreshing the page.",
-          variant: "destructive",
-        });
+        toast({ title: "Could not load profile", description: "Please try refreshing the page.", variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
@@ -114,237 +148,216 @@ const MyProfile = () => {
 
   return (
     <div className="space-y-6">
-      <section className="page-hero">
-        <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          My Account
-        </span>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-950 mt-2">My Profile</h1>
-        <p className="mt-1 text-muted-foreground">Your tenancy details, property assignment, and contact information.</p>
-      </section>
-
-      {/* ── Profile Hero Card ── */}
-      <Card className="overflow-hidden border-0 shadow-md">
-        {/* Banner */}
-        <div className="relative h-36 bg-gradient-to-r from-primary via-primary/80 to-indigo-500">
-          {/* Quick chips — bottom of banner */}
-          <div className="absolute bottom-3 left-[calc(5rem+1.5rem)] right-4 flex flex-wrap gap-2">
-            {isLoading ? null : (
-              <>
-                {tenant?.property?.name && (
-                  <QuickChip icon={<Home className="h-3 w-3" />} text={tenant.property.name} />
-                )}
-                {tenant?.unitId && (
-                  <QuickChip icon={<DoorOpen className="h-3 w-3" />} text={`Unit ${tenant.unitId}`} />
-                )}
-                {tenant?.dateMovedIn && (
-                  <QuickChip
-                    icon={<Calendar className="h-3 w-3" />}
-                    text={`Since ${new Date(tenant.dateMovedIn).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`}
-                  />
-                )}
-              </>
-            )}
-          </div>
+      {/* Hero Banner */}
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8]">
+        {/* Decorative blobs */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-4 right-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute bottom-0 right-32 h-24 w-24 rounded-full bg-blue-300/10 blur-xl" />
         </div>
 
-        {/* Avatar — overlaps banner */}
-        <div className="relative px-6 pb-6">
-          <div className="absolute -top-12 left-6">
-            {isLoading ? (
-              <Skeleton className="h-24 w-24 rounded-full ring-4 ring-white" />
-            ) : (
-              <div className="h-24 w-24 rounded-full overflow-hidden ring-4 ring-white bg-muted shadow-lg">
-                <img
-                  src={getImageUrl(tenant?.passportPhoto)}
-                  alt={tenant?.fullName}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      "https://media.istockphoto.com/id/1495088043/vector/user-profile-icon-avatar-or-person-icon-profile-picture-portrait-symbol-default-portrait.jpg?s=612x612&w=0&k=20&c=dhV2p1JwmloBTOaGAtaA3AW1KSnjsdMt7-U_3EZElZ0=";
-                  }}
-                />
-              </div>
-            )}
+        {/* Banner top strip */}
+        <div className="relative px-6 pt-6 pb-20">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center">
+              <User className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-blue-200 text-sm font-medium">My Account</span>
           </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">My Profile</h1>
+          <p className="text-blue-200 text-sm mt-1">Your tenancy details, property assignment, and contact information.</p>
+        </div>
 
-          {/* Name / email / badge — offset to clear avatar */}
-          <div className="pt-14 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
+        {/* Profile card overlapping the banner */}
+        <div className="relative mx-4 -mt-14 mb-0 bg-white rounded-2xl border border-[#E2E8F0] shadow-xl overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5">
+            {/* Avatar */}
+            <div className="flex-shrink-0">
               {isLoading ? (
-                <>
-                  <Skeleton className="h-7 w-52 mb-1.5" />
-                  <Skeleton className="h-4 w-40 mb-2" />
-                  <Skeleton className="h-6 w-24" />
-                </>
+                <Skeleton className="h-20 w-20 rounded-2xl" />
+              ) : (
+                <div className="h-20 w-20 rounded-2xl overflow-hidden ring-4 ring-white shadow-md border border-[#E2E8F0]">
+                  <img
+                    src={getImageUrl(tenant?.passportPhoto) || FALLBACK_AVATAR}
+                    alt={tenant?.fullName}
+                    className="h-full w-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_AVATAR; }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Name + status */}
+            <div className="flex-1 min-w-0">
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
               ) : (
                 <>
-                  <h2 className="text-2xl font-bold text-slate-900 leading-tight">
-                    {tenant?.fullName}
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">{tenant?.email}</p>
-                  <div className="mt-2">
+                  <h2 className="text-xl font-bold text-[#0F172A] leading-tight truncate">{tenant?.fullName}</h2>
+                  <p className="text-sm text-slate-500 mt-0.5 truncate">{tenant?.email}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <StatusBadge active={tenant?.active ?? false} balance={tenant?.balanceDue ?? 0} />
+                    {tenant?.property?.name && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        <Home className="h-3 w-3" />{tenant.property.name}
+                      </span>
+                    )}
+                    {tenant?.dateMovedIn && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
+                        <Calendar className="h-3 w-3" />
+                        Since {new Date(tenant.dateMovedIn).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
             </div>
 
-            {/* Rent highlight */}
+            {/* Rent box */}
             {!isLoading && tenant?.property && (
-              <div className="rounded-xl bg-primary/6 border border-primary/15 px-4 py-3 text-right shrink-0">
-                <p className="text-xs text-muted-foreground">Monthly Rent</p>
-                <p className="text-xl font-bold text-primary">
+              <div className="flex-shrink-0 rounded-xl bg-gradient-to-br from-[#1D4ED8]/5 to-[#1D4ED8]/10 border border-[#1D4ED8]/20 px-5 py-3 text-right">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Monthly Rent</p>
+                <p className="text-xl font-bold text-[#1D4ED8] mt-0.5">
                   {formatCurrency(tenant.property.price, tenant.property.currency)}
                 </p>
                 {(tenant.balanceDue ?? 0) > 0 && (
-                  <p className="text-xs text-amber-600 mt-0.5 font-medium">
+                  <p className="text-xs text-amber-600 mt-1 font-medium">
                     Balance: {formatCurrency(tenant.balanceDue, tenant.property.currency)}
                   </p>
                 )}
               </div>
             )}
           </div>
+
+          {/* Quick stat strip */}
+          {!isLoading && tenant && (
+            <div className="flex items-center gap-0 border-t border-[#E2E8F0] divide-x divide-[#E2E8F0]">
+              {[
+                { icon: Phone, label: "Phone", value: tenant.phoneNumber },
+                { icon: DoorOpen, label: "Unit", value: tenant.unitId || "—" },
+                { icon: Droplets, label: "Meter No.", value: tenant.waterMeterNo || "—" },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex-1 flex items-center gap-2 px-4 py-3">
+                  <Icon className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">{label}</p>
+                    <p className="text-xs font-semibold text-[#0F172A] truncate">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </Card>
 
-      {/* ── Detail Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Personal Info */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="rounded-lg bg-primary/10 p-1.5">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              Personal Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-start gap-3 py-3 border-b last:border-0">
-                  <Skeleton className="h-7 w-7 rounded-md shrink-0" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-4 w-36" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <>
-                <Field icon={<User className="h-3.5 w-3.5" />} label="Full Name" value={tenant?.fullName} />
-                <Field icon={<Mail className="h-3.5 w-3.5" />} label="Email Address" value={tenant?.email} />
-                <Field icon={<Phone className="h-3.5 w-3.5" />} label="Phone Number" value={tenant?.phoneNumber} />
-                <Field icon={<CreditCard className="h-3.5 w-3.5" />} label="National ID" value={tenant?.nationalIdNumber} />
-                <Field icon={<Briefcase className="h-3.5 w-3.5" />} label="Occupation" value={tenant?.occupation} />
-              </>
-            )}
-          </CardContent>
-        </Card>
+        {/* Spacing below the overlapping card */}
+        <div className="h-6" />
+      </div>
 
-        {/* Tenancy Info */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="rounded-lg bg-primary/10 p-1.5">
-                <Home className="h-4 w-4 text-primary" />
-              </div>
-              Tenancy Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-start gap-3 py-3 border-b last:border-0">
-                  <Skeleton className="h-7 w-7 rounded-md shrink-0" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-4 w-36" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <>
-                <Field icon={<Home className="h-3.5 w-3.5" />} label="Property" value={tenant?.property?.name} />
-                <Field icon={<Home className="h-3.5 w-3.5" />} label="Property Type" value={tenant?.property?.type} />
-                <Field icon={<DoorOpen className="h-3.5 w-3.5" />} label="Unit / Room" value={tenant?.unitId} />
-                <Field icon={<Droplets className="h-3.5 w-3.5" />} label="Water Meter No." value={tenant?.waterMeterNo} />
-                <Field
-                  icon={<Calendar className="h-3.5 w-3.5" />}
-                  label="Move-in Date"
-                  value={tenant?.dateMovedIn ? new Date(tenant.dateMovedIn).toLocaleDateString() : undefined}
-                />
-              </>
-            )}
-          </CardContent>
-        </Card>
+      {/* Detail Cards grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Personal Information */}
+        <SectionCard icon={User} title="Personal Information" iconBg="bg-blue-50" iconColor="text-blue-600">
+          {isLoading ? (
+            <FieldSkeleton rows={5} />
+          ) : (
+            <>
+              <DetailRow icon={User} label="Full Name" value={tenant?.fullName} iconBg="bg-blue-50" iconColor="text-blue-600" />
+              <DetailRow icon={Mail} label="Email Address" value={tenant?.email} iconBg="bg-blue-50" iconColor="text-blue-600" />
+              <DetailRow icon={Phone} label="Phone Number" value={tenant?.phoneNumber} iconBg="bg-blue-50" iconColor="text-blue-600" />
+              <DetailRow icon={CreditCard} label="National ID" value={tenant?.nationalIdNumber} iconBg="bg-blue-50" iconColor="text-blue-600" />
+              <DetailRow icon={Briefcase} label="Occupation" value={tenant?.occupation} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            </>
+          )}
+        </SectionCard>
+
+        {/* Tenancy Details */}
+        <SectionCard icon={Home} title="Tenancy Details" iconBg="bg-emerald-50" iconColor="text-emerald-600">
+          {isLoading ? (
+            <FieldSkeleton rows={5} />
+          ) : (
+            <>
+              <DetailRow icon={Home} label="Property" value={tenant?.property?.name} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+              <DetailRow icon={Home} label="Property Type" value={tenant?.property?.type} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+              <DetailRow icon={DoorOpen} label="Unit / Room" value={tenant?.unitId} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+              <DetailRow icon={Droplets} label="Water Meter No." value={tenant?.waterMeterNo} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+              <DetailRow
+                icon={Calendar}
+                label="Move-in Date"
+                value={tenant?.dateMovedIn ? new Date(tenant.dateMovedIn).toLocaleDateString() : undefined}
+                iconBg="bg-emerald-50"
+                iconColor="text-emerald-600"
+              />
+            </>
+          )}
+        </SectionCard>
 
         {/* Next of Kin */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="rounded-lg bg-primary/10 p-1.5">
-                <Users className="h-4 w-4 text-primary" />
+        <SectionCard icon={Users} title="Next of Kin" iconBg="bg-purple-50" iconColor="text-purple-600">
+          {isLoading ? (
+            <FieldSkeleton rows={2} />
+          ) : !tenant?.nextOfKinName ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="h-12 w-12 rounded-xl bg-slate-50 border border-[#E2E8F0] flex items-center justify-center mb-3">
+                <Users className="h-6 w-6 text-slate-300" />
               </div>
-              Next of Kin
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {isLoading ? (
-              Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="flex items-start gap-3 py-3 border-b last:border-0">
-                  <Skeleton className="h-7 w-7 rounded-md shrink-0" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-4 w-36" />
-                  </div>
-                </div>
-              ))
-            ) : !tenant?.nextOfKinName ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <Users className="h-8 w-8 mb-2 opacity-30" />
-                <p className="text-sm">No next of kin on record.</p>
-                <p className="text-xs mt-1">Contact your landlord to update this information.</p>
-              </div>
-            ) : (
-              <>
-                <Field icon={<User className="h-3.5 w-3.5" />} label="Name" value={tenant.nextOfKinName} />
-                <Field icon={<Phone className="h-3.5 w-3.5" />} label="Phone Number" value={tenant.nextOfKinPhone} />
-              </>
-            )}
-          </CardContent>
-        </Card>
+              <p className="text-sm font-medium text-slate-500">No next of kin on record</p>
+              <p className="text-xs text-slate-400 mt-1">Contact your landlord to update this information.</p>
+            </div>
+          ) : (
+            <>
+              <DetailRow icon={User} label="Name" value={tenant.nextOfKinName} iconBg="bg-purple-50" iconColor="text-purple-600" />
+              <DetailRow icon={Phone} label="Phone Number" value={tenant.nextOfKinPhone} iconBg="bg-purple-50" iconColor="text-purple-600" />
+            </>
+          )}
+        </SectionCard>
 
         {/* Property Address */}
-        <Card className="border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="rounded-lg bg-primary/10 p-1.5">
-                <MapPin className="h-4 w-4 text-primary" />
-              </div>
-              Property Address
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {isLoading ? (
-              <div className="py-3 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ) : (
-              <div className="flex items-start gap-3 pt-3">
-                <div className="rounded-md bg-primary/8 p-1.5 shrink-0 mt-0.5">
-                  <MapPin className="h-3.5 w-3.5 text-primary" />
+        <SectionCard icon={MapPin} title="Property Address" iconBg="bg-amber-50" iconColor="text-amber-600">
+          {isLoading ? (
+            <div className="py-4 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ) : (
+            <div className="py-4">
+              {tenant?.property?.address ? (
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <MapPin className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <p className="text-sm text-[#0F172A] leading-relaxed font-medium">{tenant.property.address}</p>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed">
-                  {tenant?.property?.address || (
-                    <span className="italic text-muted-foreground">Address not available</span>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <div className="h-12 w-12 rounded-xl bg-slate-50 border border-[#E2E8F0] flex items-center justify-center mb-3">
+                    <MapPin className="h-6 w-6 text-slate-300" />
+                  </div>
+                  <p className="text-sm text-slate-400 italic">Address not available</p>
+                </div>
+              )}
+
+              {/* Property quick stats */}
+              {tenant?.property && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {tenant.property.numberOfRooms && (
+                    <div className="bg-slate-50 rounded-lg border border-[#E2E8F0] p-3 text-center">
+                      <p className="text-lg font-bold text-[#0F172A]">{tenant.property.numberOfRooms}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium mt-0.5">Rooms</p>
+                    </div>
                   )}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <div className="bg-slate-50 rounded-lg border border-[#E2E8F0] p-3 text-center">
+                    <p className="text-xs font-bold text-[#0F172A] uppercase">{tenant.property.type}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium mt-0.5">Type</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SectionCard>
       </div>
     </div>
   );

@@ -1,128 +1,285 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Eye, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  Plus, Eye, FileText, CheckCircle, Clock, AlertCircle, Loader2,
+  User, Home, Calendar, CreditCard, X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, Column } from "@/components/ui/data-table";
+import axios from "axios";
 
 type InvoiceStatus = "Paid" | "Pending" | "Overdue";
 type InvoiceType = "Invoice" | "Manual Invoice" | "Manual Payment";
 
 interface Invoice {
   id: number;
-  invoiceNo: string;
-  tenant: string;
-  property: string;
-  unit: string;
+  invoiceNumber: string;
+  type: string;
+  status: string;
+  tenantId: number;
+  propertyId: number;
+  propertyUnitId?: number;
   amount: number;
-  type: InvoiceType;
-  status: InvoiceStatus;
+  invoiceDate: string;
   dueDate: string;
-  generatedDate: string;
-  createdBy: string;
   notes?: string;
+  createdByUserId: number;
+  createdAt: string;
 }
 
-const dummyInvoices: Invoice[] = [
-  { id: 1, invoiceNo: "INV-2025-001", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 300000, type: "Invoice", status: "Paid", dueDate: "2025-05-05", generatedDate: "2025-05-01", createdBy: "Admin" },
-  { id: 2, invoiceNo: "INV-2025-002", tenant: "Sarah Nakato", property: "Greenview Estate", unit: "B1", amount: 450000, type: "Invoice", status: "Pending", dueDate: "2025-05-05", generatedDate: "2025-05-01", createdBy: "Admin" },
-  { id: 3, invoiceNo: "INV-2025-003", tenant: "Peter Otieno", property: "Greenview Estate", unit: "B2", amount: 450000, type: "Invoice", status: "Overdue", dueDate: "2025-04-05", generatedDate: "2025-04-01", createdBy: "Admin" },
-  { id: 4, invoiceNo: "MAN-2025-001", tenant: "Mary Auma", property: "Palm Court", unit: "C2", amount: 200000, type: "Manual Invoice", status: "Paid", dueDate: "2025-05-10", generatedDate: "2025-05-02", createdBy: "Landlord", notes: "Partial payment agreed" },
-  { id: 5, invoiceNo: "PAY-2025-001", tenant: "John Mwangi", property: "Sunset Apartments", unit: "A1", amount: 50000, type: "Manual Payment", status: "Paid", dueDate: "2025-05-01", generatedDate: "2025-05-01", createdBy: "Landlord", notes: "Cash payment received" },
-];
+interface Tenant {
+  id: number;
+  fullName: string;
+  propertyId: number;
+}
 
-const dummyTenants = ["John Mwangi", "Sarah Nakato", "Peter Otieno", "Mary Auma"];
-const dummyProperties = ["Sunset Apartments", "Greenview Estate", "Palm Court"];
-const dummyUnits = ["A1", "A2", "B1", "B2", "C1", "C2"];
+interface Property {
+  id: number;
+  name: string;
+}
 
-const getLoggedInName = (): string => {
+interface PropertyUnit {
+  id: number;
+  unitNumber: string;
+  propertyId: number;
+}
+
+const getLoggedInUser = () => {
   try {
-    const raw = localStorage.getItem("user");
-    if (!raw) return "Unknown";
-    const u = JSON.parse(raw);
-    return u.fullName || u.name || u.email || "Unknown";
+    return JSON.parse(localStorage.getItem("user") || "{}");
   } catch {
-    return "Unknown";
+    return {};
   }
 };
 
-const emptyForm = {
-  tenant: "", property: "", unit: "", amount: "",
-  type: "Invoice" as InvoiceType, status: "Pending" as InvoiceStatus,
-  dueDate: "", generatedDate: new Date().toISOString().split("T")[0],
-  createdBy: getLoggedInName(), notes: "",
+const selCls =
+  "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
+
+const StatusBadge = ({ status }: { status: string }) => {
+  if (status === "Paid")
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <CheckCircle className="h-3 w-3" />Paid
+      </span>
+    );
+  if (status === "Overdue")
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+        <AlertCircle className="h-3 w-3" />Overdue
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+      <Clock className="h-3 w-3" />Pending
+    </span>
+  );
 };
 
-const statusBadge = (s: InvoiceStatus) => {
-  const map = { Paid: "default", Pending: "secondary", Overdue: "destructive" } as const;
-  const icon = { Paid: <CheckCircle className="h-3 w-3" />, Pending: <Clock className="h-3 w-3" />, Overdue: <AlertCircle className="h-3 w-3" /> };
-  return <Badge variant={map[s]} className="flex items-center gap-1 w-fit">{icon[s]}{s}</Badge>;
+const TypeBadge = ({ type }: { type: string }) => {
+  if (type === "Manual Payment")
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+        Manual Payment
+      </span>
+    );
+  if (type === "Manual Invoice")
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+        Manual Invoice
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200">
+      Invoice
+    </span>
+  );
 };
+
+const DetailRow = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: React.ReactNode;
+}) => (
+  <div className="flex items-start gap-3 py-3 border-b border-[#E2E8F0] last:border-0">
+    <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+      <Icon className="h-4 w-4 text-slate-500" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">{label}</p>
+      <div className="text-sm font-medium text-[#0F172A] mt-0.5">{value}</div>
+    </div>
+  </div>
+);
+
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "paid", label: "Paid" },
+  { key: "overdue", label: "Overdue" },
+  { key: "manual", label: "Manual" },
+];
 
 const InvoiceManagement = () => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [invoices, setInvoices] = useState<Invoice[]>(dummyInvoices);
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const userData = getLoggedInUser();
+
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<PropertyUnit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
-  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [updateStatusInvoice, setUpdateStatusInvoice] = useState<Invoice | null>(null);
+  const [newStatus, setNewStatus] = useState<InvoiceStatus>("Pending");
+  const [form, setForm] = useState({
+    type: "Invoice" as InvoiceType,
+    status: "Pending" as InvoiceStatus,
+    tenantId: "",
+    propertyId: "",
+    propertyUnitId: "",
+    amount: "",
+    invoiceDate: new Date().toISOString().split("T")[0],
+    dueDate: "",
+    notes: "",
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchInvoices = async () => {
+    setIsLoading(true);
+    try {
+      const { data } = await axios.get<Invoice[]>(`${apiUrl}/GetInvoicesByLandLordId/${userData.id}`);
+      setInvoices(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Failed to load invoices.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+
+    const fetchTenants = async () => {
+      try {
+        const { data } = await axios.get<Tenant[]>(`${apiUrl}/GetAllTenants`);
+        setTenants(data.filter((t: any) => t?.property?.ownerId === userData.id));
+      } catch {
+        // silent
+      }
+    };
+
+    const fetchProperties = async () => {
+      try {
+        const { data } = await axios.get<Property[]>(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`);
+        setProperties(data);
+      } catch {
+        // silent
+      }
+    };
+
+    const fetchUnits = async () => {
+      try {
+        const { data } = await axios.get<PropertyUnit[]>(`${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`);
+        setUnits(data);
+      } catch {
+        // silent
+      }
+    };
+
+    fetchTenants();
+    fetchProperties();
+    fetchUnits();
+  }, []);
+
+  const tenantName = (id: number) => tenants.find((t) => t.id === id)?.fullName ?? `Tenant #${id}`;
+  const propertyName = (id: number) => properties.find((p) => p.id === id)?.name ?? `Property #${id}`;
+  const unitName = (id?: number) =>
+    id ? (units.find((u) => u.id === id)?.unitNumber ?? `Unit #${id}`) : "—";
+
+  const unitsForProperty = (propertyId: string) =>
+    units.filter((u) => u.propertyId === Number(propertyId));
 
   const filtered = invoices.filter((inv) => {
     const matchSearch =
-      inv.tenant.toLowerCase().includes(search.toLowerCase()) ||
-      inv.invoiceNo.toLowerCase().includes(search.toLowerCase()) ||
-      inv.property.toLowerCase().includes(search.toLowerCase());
+      tenantName(inv.tenantId).toLowerCase().includes(search.toLowerCase()) ||
+      inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
+      propertyName(inv.propertyId).toLowerCase().includes(search.toLowerCase());
     const matchTab =
-      tab === "all" || inv.status.toLowerCase() === tab ||
+      tab === "all" ||
+      inv.status.toLowerCase() === tab ||
       (tab === "manual" && inv.type !== "Invoice");
     return matchSearch && matchTab;
   });
 
   const openAdd = (type: InvoiceType = "Invoice") => {
-    setForm({ ...emptyForm, type });
+    setForm({
+      type,
+      status: "Pending",
+      tenantId: "",
+      propertyId: "",
+      propertyUnitId: "",
+      amount: "",
+      invoiceDate: new Date().toISOString().split("T")[0],
+      dueDate: "",
+      notes: "",
+    });
     setAddOpen(true);
   };
 
-  const openEdit = (inv: Invoice) => {
-    setForm({ tenant: inv.tenant, property: inv.property, unit: inv.unit, amount: String(inv.amount), type: inv.type, status: inv.status, dueDate: inv.dueDate, generatedDate: inv.generatedDate, createdBy: inv.createdBy, notes: inv.notes || "" });
-    setEditInvoice(inv);
-  };
-
-  const handleSave = async () => {
-    if (!form.tenant || !form.amount || !form.dueDate) {
-      toast({ title: "Validation Error", description: "Tenant, amount and due date are required.", variant: "destructive" });
+  const handleCreate = async () => {
+    if (!form.tenantId || !form.propertyId || !form.amount || !form.dueDate) {
+      toast({ title: "Validation Error", description: "Tenant, property, amount and due date are required.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 600));
-
-    if (editInvoice) {
-      setInvoices((prev) => prev.map((inv) => inv.id === editInvoice.id ? { ...inv, ...form, amount: Number(form.amount) } : inv));
-      toast({ title: "Invoice Updated", description: `${editInvoice.invoiceNo} updated.` });
-      setEditInvoice(null);
-    } else {
-      const prefix = form.type === "Manual Payment" ? "PAY" : form.type === "Manual Invoice" ? "MAN" : "INV";
-      const newNo = `${prefix}-2025-${String(invoices.length + 1).padStart(3, "0")}`;
-      setInvoices((prev) => [...prev, { id: Date.now(), invoiceNo: newNo, ...form, amount: Number(form.amount) }]);
-      toast({ title: "Invoice Created", description: `${newNo} created successfully.` });
+    try {
+      const body = {
+        Type: form.type,
+        Status: form.status,
+        TenantId: Number(form.tenantId),
+        PropertyId: Number(form.propertyId),
+        PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
+        Amount: Number(form.amount),
+        InvoiceDate: new Date(form.invoiceDate).toISOString(),
+        DueDate: new Date(form.dueDate).toISOString(),
+        Notes: form.notes || null,
+        CreatedByUserId: userData.id,
+        CreatedByName: userData.fullName || "",
+      };
+      await axios.post(`${apiUrl}/CreateTenantInvoice`, body);
+      toast({ title: "Invoice Created", description: "Invoice created successfully." });
       setAddOpen(false);
+      fetchInvoices();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Failed to create invoice.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!updateStatusInvoice) return;
+    setIsSubmitting(true);
+    try {
+      await axios.put(`${apiUrl}/UpdateInvoiceStatus/${updateStatusInvoice.id}`, { Status: newStatus });
+      toast({ title: "Status Updated", description: `Invoice marked as ${newStatus}.` });
+      setUpdateStatusInvoice(null);
+      fetchInvoices();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data || "Failed to update status.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
@@ -130,198 +287,473 @@ const InvoiceManagement = () => {
   const totalPending = invoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
   const totalOverdue = invoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
 
+  const kpiCards = [
+    { label: "Total Invoices", value: invoices.length, Icon: FileText, border: "border-l-blue-500", bg: "bg-blue-50", color: "text-blue-600" },
+    { label: "Collected", value: formatUGX(totalPaid), Icon: CheckCircle, border: "border-l-emerald-500", bg: "bg-emerald-50", color: "text-emerald-600" },
+    { label: "Pending", value: formatUGX(totalPending), Icon: Clock, border: "border-l-amber-500", bg: "bg-amber-50", color: "text-amber-600" },
+    { label: "Overdue", value: formatUGX(totalOverdue), Icon: AlertCircle, border: "border-l-red-500", bg: "bg-red-50", color: "text-red-600" },
+  ];
+
+  const invoiceCols: Column<Invoice>[] = [
+    {
+      key: "no",
+      header: "Invoice No.",
+      cell: (i) => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <FileText className="h-4 w-4 text-blue-600" />
+          </div>
+          <span className="font-mono text-sm font-semibold text-[#0F172A]">{i.invoiceNumber}</span>
+        </div>
+      ),
+    },
+    { key: "type", header: "Type", cell: (i) => <TypeBadge type={i.type} /> },
+    {
+      key: "tenant",
+      header: "Tenant",
+      cell: (i) => (
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-full bg-[#1D4ED8]/10 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-semibold text-[#1D4ED8]">
+              {tenantName(i.tenantId).charAt(0)}
+            </span>
+          </div>
+          <span className="text-sm text-[#0F172A]">{tenantName(i.tenantId)}</span>
+        </div>
+      ),
+    },
+    {
+      key: "property",
+      header: "Property / Unit",
+      cell: (i) => (
+        <div className="flex items-center gap-1.5 text-sm text-[#0F172A]">
+          <Home className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+          <span>
+            {propertyName(i.propertyId)}
+            {i.propertyUnitId ? ` — ${unitName(i.propertyUnitId)}` : ""}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (i) => <span className="font-semibold text-[#0F172A]">{formatUGX(i.amount)}</span>,
+    },
+    {
+      key: "due",
+      header: "Due Date",
+      cell: (i) => (
+        <div className="flex items-center gap-1.5 text-sm text-slate-600">
+          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          {new Date(i.dueDate).toLocaleDateString()}
+        </div>
+      ),
+    },
+    { key: "status", header: "Status", cell: (i) => <StatusBadge status={i.status} /> },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (i) => (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => setViewInvoice(i)}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-[#1D4ED8] transition-colors"
+            title="View"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => { setUpdateStatusInvoice(i); setNewStatus(i.status as InvoiceStatus); }}
+            className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[#E2E8F0] hover:border-[#1D4ED8] text-slate-600 hover:text-[#1D4ED8] transition-colors"
+          >
+            Update Status
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Invoices</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create, view and manage tenant invoices and payments</p>
+      {/* Hero Banner */}
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] p-6 md:p-8">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-4 right-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute bottom-4 right-32 h-24 w-24 rounded-full bg-blue-300/10 blur-xl" />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => openAdd("Manual Payment")}>
-            <Plus className="mr-2 h-4 w-4" />Manual Payment
-          </Button>
-          <Button variant="outline" onClick={() => openAdd("Manual Invoice")}>
-            <FileText className="mr-2 h-4 w-4" />Manual Invoice
-          </Button>
-          <Button onClick={() => openAdd("Invoice")}>
-            <Plus className="mr-2 h-4 w-4" />New Invoice
-          </Button>
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-blue-200 text-sm font-medium">Invoice Management</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Invoices</h1>
+            <p className="text-blue-200 text-sm mt-1">Create, view and manage tenant invoices</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => openAdd("Manual Payment")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium border border-white/20 transition-colors"
+            >
+              <CreditCard className="h-4 w-4" />Manual Payment
+            </button>
+            <button
+              onClick={() => openAdd("Manual Invoice")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium border border-white/20 transition-colors"
+            >
+              <FileText className="h-4 w-4" />Manual Invoice
+            </button>
+            <button
+              onClick={() => openAdd("Invoice")}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-[#1D4ED8] text-sm font-semibold hover:bg-blue-50 transition-colors shadow-lg"
+            >
+              <Plus className="h-4 w-4" />New Invoice
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Summary cards */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Total Invoices", value: invoices.length, color: "text-blue-600" },
-          { label: "Collected", value: formatUGX(totalPaid), color: "text-green-600" },
-          { label: "Pending", value: formatUGX(totalPending), color: "text-amber-600" },
-          { label: "Overdue", value: formatUGX(totalOverdue), color: "text-red-600" },
-        ].map((s) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            className="glass-card rounded-xl p-4">
-            <p className="text-xs text-muted-foreground">{s.label}</p>
-            <p className={`text-lg font-bold mt-1 ${s.color}`}>{s.value}</p>
+        {kpiCards.map((card, i) => (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className={`bg-white rounded-xl border border-[#E2E8F0] border-l-4 ${card.border} p-4 flex items-center gap-3`}
+          >
+            <div className={`h-10 w-10 rounded-lg ${card.bg} flex items-center justify-center flex-shrink-0`}>
+              <card.Icon className={`h-5 w-5 ${card.color}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500">{card.label}</p>
+              <p className={`text-base font-bold mt-0.5 truncate ${card.color}`}>{card.value}</p>
+            </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="glass-card rounded-xl p-4 space-y-4">
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="paid">Paid</TabsTrigger>
-            <TabsTrigger value="overdue">Overdue</TabsTrigger>
-            <TabsTrigger value="manual">Manual</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {(() => {
-          const invoiceCols: Column<Invoice>[] = [
-            { key: "no", header: "Invoice No.", cell: (i) => <span className="font-medium">{i.invoiceNo}</span> },
-            { key: "type", header: "Type", cell: (i) => <Badge variant="outline" className="text-xs">{i.type}</Badge> },
-            { key: "tenant", header: "Tenant", cell: (i) => i.tenant },
-            { key: "unit", header: "Unit", cell: (i) => `${i.unit} — ${i.property}` },
-            { key: "amount", header: "Amount", cell: (i) => <span className="font-medium">{formatUGX(i.amount)}</span> },
-            { key: "due", header: "Due Date", cell: (i) => new Date(i.dueDate).toLocaleDateString() },
-            { key: "status", header: "Status", cell: (i) => statusBadge(i.status) },
-            { key: "by", header: "Created By", cell: (i) => i.createdBy },
-            {
-              key: "actions", header: "Actions", headerClassName: "text-right",
-              cell: (i) => (
-                <div className="flex items-center justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setViewInvoice(i)}><Eye className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" onClick={() => openEdit(i)}><Pencil className="h-4 w-4" /></Button>
-                </div>
-              ),
-            },
-          ];
-          return (
-            <DataTable
-              data={filtered}
-              columns={invoiceCols}
-              loading={isLoading}
-              searchValue={search}
-              onSearchChange={setSearch}
-              searchPlaceholder="Search invoice, tenant..."
-              label="invoice"
-              pageSize={10}
-              emptyIcon={<FileText className="h-10 w-10" />}
-              emptyMessage="No invoices found"
-            />
-          );
-        })()}
+      {/* Table Section */}
+      <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
+        <div className="flex items-center gap-1 p-4 border-b border-[#E2E8F0] flex-wrap">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                tab === t.key
+                  ? "bg-[#1D4ED8] text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="p-4">
+          <DataTable
+            data={filtered}
+            columns={invoiceCols}
+            loading={isLoading}
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search invoice, tenant..."
+            label="invoice"
+            pageSize={10}
+            emptyIcon={<FileText className="h-10 w-10" />}
+            emptyMessage="No invoices found"
+          />
+        </div>
       </div>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={addOpen || !!editInvoice} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditInvoice(null); } }}>
-        <DialogContent className="sm:max-w-lg rounded-[20px]">
-          <DialogHeader>
-            <DialogTitle>{editInvoice ? "Edit Invoice" : `New ${form.type}`}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Type</Label>
-                <Select value={form.type} onValueChange={(v: InvoiceType) => setForm({ ...form, type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Invoice">Invoice</SelectItem>
-                    <SelectItem value="Manual Invoice">Manual Invoice</SelectItem>
-                    <SelectItem value="Manual Payment">Manual Payment</SelectItem>
-                  </SelectContent>
-                </Select>
+      {/* Create Invoice Modal */}
+      {addOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setAddOpen(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">New {form.type}</h2>
+                <p className="text-blue-200 text-xs mt-0.5">Fill in the details below</p>
               </div>
-              <div className="space-y-1">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={(v: InvoiceStatus) => setForm({ ...form, status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Overdue">Overdue</SelectItem>
-                  </SelectContent>
-                </Select>
+              <button onClick={() => setAddOpen(false)} className="text-white/60 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Type</label>
+                  <select
+                    className={selCls}
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value as InvoiceType })}
+                  >
+                    <option value="Invoice">Invoice</option>
+                    <option value="Manual Invoice">Manual Invoice</option>
+                    <option value="Manual Payment">Manual Payment</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Status</label>
+                  <select
+                    className={selCls}
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value as InvoiceStatus })}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Overdue">Overdue</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Tenant *</label>
+                  <select
+                    className={selCls}
+                    value={form.tenantId}
+                    onChange={(e) => {
+                      const t = tenants.find((t) => t.id === Number(e.target.value));
+                      setForm({ ...form, tenantId: e.target.value, propertyId: t ? String(t.propertyId) : form.propertyId });
+                    }}
+                  >
+                    <option value="">Select tenant</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={String(t.id)}>{t.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Property *</label>
+                  <select
+                    className={selCls}
+                    value={form.propertyId}
+                    onChange={(e) => setForm({ ...form, propertyId: e.target.value, propertyUnitId: "" })}
+                  >
+                    <option value="">Select property</option>
+                    {properties.map((p) => (
+                      <option key={p.id} value={String(p.id)}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {form.propertyId && unitsForProperty(form.propertyId).length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Unit (optional)</label>
+                  <select
+                    className={selCls}
+                    value={form.propertyUnitId}
+                    onChange={(e) => setForm({ ...form, propertyUnitId: e.target.value })}
+                  >
+                    <option value="">Select unit</option>
+                    {unitsForProperty(form.propertyId).map((u) => (
+                      <option key={u.id} value={String(u.id)}>{u.unitNumber}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Amount (UGX) *</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 300000"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Invoice Date *</label>
+                  <Input
+                    type="date"
+                    value={form.invoiceDate}
+                    onChange={(e) => setForm({ ...form, invoiceDate: e.target.value })}
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Due Date *</label>
+                <Input
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                  className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Notes (optional)</label>
+                <Textarea
+                  placeholder="Additional notes..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  rows={2}
+                  className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10 resize-none"
+                />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Tenant *</Label>
-                <Select value={form.tenant} onValueChange={(v) => setForm({ ...form, tenant: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select tenant" /></SelectTrigger>
-                  <SelectContent>{dummyTenants.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Property</Label>
-                <Select value={form.property} onValueChange={(v) => setForm({ ...form, property: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
-                  <SelectContent>{dummyProperties.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+            <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
+              <button
+                onClick={() => setAddOpen(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-[#E2E8F0] text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Create Invoice
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Unit</Label>
-                <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
-                  <SelectContent>{dummyUnits.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Amount (UGX) *</Label>
-                <Input type="number" placeholder="e.g. 300000" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Invoice Date *</Label>
-                <Input type="date" value={form.generatedDate} onChange={(e) => setForm({ ...form, generatedDate: e.target.value })} />
-              </div>
-              <div className="space-y-1">
-                <Label>Due Date *</Label>
-                <Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Created By</Label>
-              <Input value={form.createdBy} readOnly className="bg-muted/50 cursor-not-allowed" />
-            </div>
-            <div className="space-y-1">
-              <Label>Notes (optional)</Label>
-              <Textarea placeholder="Additional notes..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddOpen(false); setEditInvoice(null); }}>Cancel</Button>
-            <Button isLoading={isSubmitting} onClick={handleSave}>{editInvoice ? "Save Changes" : "Create"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </motion.div>
+        </div>
+      )}
 
-      {/* View Invoice Dialog */}
-      <Dialog open={!!viewInvoice} onOpenChange={(o) => !o && setViewInvoice(null)}>
-        <DialogContent className="sm:max-w-sm rounded-[20px]">
-          <DialogHeader><DialogTitle>Invoice Details</DialogTitle></DialogHeader>
-          {viewInvoice && (
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">Invoice No.</span><span className="font-semibold">{viewInvoice.invoiceNo}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Type</span><Badge variant="outline">{viewInvoice.type}</Badge></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Tenant</span><span>{viewInvoice.tenant}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Property</span><span>{viewInvoice.property}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Unit</span><span>{viewInvoice.unit}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold text-primary">UGX {viewInvoice.amount.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Invoice Date</span><span>{new Date(viewInvoice.generatedDate).toLocaleDateString()}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Due Date</span><span>{new Date(viewInvoice.dueDate).toLocaleDateString()}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Status</span>{statusBadge(viewInvoice.status)}</div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Created By</span><span>{viewInvoice.createdBy}</span></div>
-              {viewInvoice.notes && <div className="pt-2 border-t"><span className="text-muted-foreground">Notes: </span>{viewInvoice.notes}</div>}
+      {/* Update Status Modal */}
+      {updateStatusInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setUpdateStatusInvoice(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Update Status</h2>
+                <p className="text-blue-200 text-xs mt-0.5 font-mono">{updateStatusInvoice.invoiceNumber}</p>
+              </div>
+              <button onClick={() => setUpdateStatusInvoice(null)} className="text-white/60 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          )}
-          <DialogFooter><Button onClick={() => setViewInvoice(null)}>Close</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between text-sm border-b border-[#E2E8F0] pb-3">
+                <span className="text-slate-500">Amount</span>
+                <span className="font-semibold text-[#0F172A]">{formatUGX(updateStatusInvoice.amount)}</span>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">New Status</label>
+                <select
+                  className={selCls}
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value as InvoiceStatus)}
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Overdue">Overdue</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
+              <button
+                onClick={() => setUpdateStatusInvoice(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-[#E2E8F0] text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateStatus}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Update
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* View Invoice Modal */}
+      {viewInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setViewInvoice(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Invoice Details</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-mono text-blue-200 text-xs">{viewInvoice.invoiceNumber}</span>
+                  <StatusBadge status={viewInvoice.status} />
+                </div>
+              </div>
+              <button onClick={() => setViewInvoice(null)} className="text-white/60 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <DetailRow icon={FileText} label="Type" value={<TypeBadge type={viewInvoice.type} />} />
+              <DetailRow icon={User} label="Tenant" value={tenantName(viewInvoice.tenantId)} />
+              <DetailRow
+                icon={Home}
+                label="Property"
+                value={`${propertyName(viewInvoice.propertyId)}${viewInvoice.propertyUnitId ? ` — ${unitName(viewInvoice.propertyUnitId)}` : ""}`}
+              />
+              <DetailRow
+                icon={CreditCard}
+                label="Amount"
+                value={<span className="text-[#1D4ED8] font-bold">{formatUGX(viewInvoice.amount)}</span>}
+              />
+              <DetailRow
+                icon={Calendar}
+                label="Invoice Date"
+                value={new Date(viewInvoice.invoiceDate).toLocaleDateString()}
+              />
+              <DetailRow
+                icon={Calendar}
+                label="Due Date"
+                value={new Date(viewInvoice.dueDate).toLocaleDateString()}
+              />
+              {viewInvoice.notes && (
+                <div className="mt-3 p-3 bg-slate-50 rounded-lg text-sm text-slate-600">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium mb-1">Notes</p>
+                  {viewInvoice.notes}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
+              <button
+                onClick={() => setViewInvoice(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-[#E2E8F0] text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setUpdateStatusInvoice(viewInvoice);
+                  setNewStatus(viewInvoice.status as InvoiceStatus);
+                  setViewInvoice(null);
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 transition-colors"
+              >
+                Update Status
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
