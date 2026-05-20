@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, InboxIcon } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export interface Column<T> {
   key: string;
@@ -37,7 +33,7 @@ export function DataTable<T>({
   loading = false,
   searchValue,
   onSearchChange,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = "Search…",
   pageSize = 10,
   label = "record",
   headerRight,
@@ -65,28 +61,31 @@ export function DataTable<T>({
     }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground min-w-[100px]">
+        {/* Record count badge */}
+        <div className="flex items-center gap-2">
           {loading ? (
-            <span className="inline-block h-4 w-24 rounded bg-muted animate-pulse" />
+            <div className="h-6 w-28 rounded-full bg-slate-100 animate-pulse" />
           ) : (
-            <>
-              <span className="font-semibold text-slate-800">{data.length.toLocaleString()}</span>{" "}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+              <span className="text-[#1D4ED8] font-bold">{data.length.toLocaleString()}</span>
               {label}{data.length !== 1 ? "s" : ""}
-            </>
+            </span>
           )}
-        </p>
-        <div className="flex items-center gap-3 flex-wrap justify-end">
+        </div>
+
+        {/* Right-side controls */}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {onSearchChange !== undefined && (
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <input
                 placeholder={searchPlaceholder}
                 value={searchValue ?? ""}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9 h-9 w-56 sm:w-72"
+                className="h-9 w-52 sm:w-64 rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 shadow-sm"
               />
             </div>
           )}
@@ -95,128 +94,128 @@ export function DataTable<T>({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto w-full rounded-xl border border-border">
-        <Table style={{ minWidth }}>
-          <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              {columns.map((col) => (
-                <TableHead
-                  key={col.key}
-                  className={`whitespace-nowrap font-semibold text-slate-700 ${col.headerClassName ?? ""}`}
-                >
-                  {col.header}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              Array.from({ length: SKELETON_ROWS }).map((_, ri) => (
-                <TableRow key={ri} className="hover:bg-transparent">
-                  {columns.map((col, ci) => (
-                    <TableCell key={col.key}>
-                      <div
-                        className={`h-4 rounded-md bg-muted animate-pulse ${
-                          ci === 0 ? "w-4/5" : ci % 3 === 0 ? "w-2/3" : "w-1/2"
-                        }`}
-                        style={{ animationDelay: `${ri * 60}ms` }}
-                      />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : paginated.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="py-16 text-center">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    {emptyIcon && <div className="opacity-40">{emptyIcon}</div>}
-                    <p className="text-sm">{emptyMessage}</p>
-                  </div>
-                </TableCell>
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto w-full">
+          <Table style={{ minWidth }}>
+            <TableHeader>
+              <TableRow className="hover:bg-slate-50">
+                {columns.map((col) => (
+                  <TableHead key={col.key} className={col.headerClassName ?? ""}>
+                    {col.header}
+                  </TableHead>
+                ))}
               </TableRow>
-            ) : (
-              paginated.map((row, ri) => (
-                <TableRow key={(row as any).id ?? ri}>
-                  {columns.map((col) => (
-                    <TableCell
-                      key={col.key}
-                      className={`whitespace-nowrap ${col.className ?? ""}`}
-                    >
-                      {col.cell(row)}
-                    </TableCell>
-                  ))}
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: SKELETON_ROWS }).map((_, ri) => (
+                  <TableRow key={ri} className="hover:bg-transparent">
+                    {columns.map((col, ci) => (
+                      <TableCell key={col.key}>
+                        <div
+                          className={`h-4 rounded-lg bg-slate-100 animate-pulse ${
+                            ci === 0 ? "w-4/5" : ci % 3 === 0 ? "w-2/3" : "w-1/2"
+                          }`}
+                          style={{ animationDelay: `${ri * 50}ms` }}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : paginated.length === 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-3 text-slate-400">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                        {emptyIcon ?? <InboxIcon className="h-6 w-6 text-slate-300" />}
+                      </div>
+                      <p className="text-sm font-medium">{emptyMessage}</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                paginated.map((row, ri) => (
+                  <TableRow key={(row as any).id ?? ri}>
+                    {columns.map((col) => (
+                      <TableCell key={col.key} className={col.className ?? ""}>
+                        {col.cell(row)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Pagination */}
       {!loading && data.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
-          <span>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-xs text-slate-400">
             {data.length > pageSize
-              ? `Showing ${start}–${end} of ${data.length.toLocaleString()}`
-              : `${data.length.toLocaleString()} ${label}${data.length !== 1 ? "s" : ""}`}
-          </span>
+              ? `Showing ${start}–${end} of ${data.length.toLocaleString()} ${label}s`
+              : `${data.length.toLocaleString()} ${label}${data.length !== 1 ? "s" : ""} total`}
+          </p>
+
           {data.length > pageSize && (
             <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 text-xs"
+              {/* First */}
+              <button
                 disabled={page === 1}
                 onClick={() => setPage(1)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                «
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
+                <ChevronsLeft className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Prev */}
+              <button
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
 
+              {/* Page numbers */}
               {pageNumbers.map((p, i) =>
                 p === "..." ? (
-                  <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground">
+                  <span key={`ellipsis-${i}`} className="flex h-8 w-8 items-center justify-center text-xs text-slate-400">
                     …
                   </span>
                 ) : (
-                  <Button
+                  <button
                     key={p}
-                    variant={p === page ? "default" : "outline"}
-                    size="icon"
-                    className="h-8 w-8 text-xs"
                     onClick={() => setPage(p as number)}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
+                      p === page
+                        ? "bg-[#1D4ED8] text-white shadow-sm"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
                   >
                     {p}
-                  </Button>
+                  </button>
                 )
               )}
 
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
+              {/* Next */}
+              <button
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 text-xs"
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Last */}
+              <button
                 disabled={page === totalPages}
                 onClick={() => setPage(totalPages)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                »
-              </Button>
+                <ChevronsRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           )}
         </div>

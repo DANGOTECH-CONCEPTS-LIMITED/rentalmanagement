@@ -1,32 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { Users, Home, Wallet, TrendingUp } from "lucide-react";
-import StatCard from "../../components/common/StatCard";
-import Button from "../../components/ui/button/Button";
-import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
+import {
+  Users, Home, Wallet, TrendingUp, MessageSquare, BarChart3,
+  Settings, UserPlus, Building2, ChevronRight, ArrowUpRight,
+  CircleDollarSign, Loader2, AlertCircle, CheckCircle2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  exportDashboardPdf,
-  exportDashboardWorkbook,
-} from "@/lib/dashboard-export";
-
-interface Stats {
-  totalProperties: number;
-  totalLandlords: number;
-  totalRevenue: number;
-  occupancyRate: number;
-}
+import { exportDashboardPdf, exportDashboardWorkbook } from "@/lib/dashboard-export";
 
 type BalanceType = "SMS" | "BULK" | "WALLET";
 type WithdrawDestination = "BULK" | "flexipay";
@@ -37,10 +25,7 @@ interface BalanceApiResponse {
   data: {
     currentBalance: boolean;
     message: string;
-    balance?: {
-      type: BalanceType;
-      amount: string; // sample shows amount as string
-    };
+    balance?: { type: BalanceType; amount: string };
   };
 }
 
@@ -50,18 +35,66 @@ interface SimpleBalance {
   message: string;
 }
 
+const greeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+};
+
+const KpiCard = ({
+  label, value, sub, icon: Icon, iconBg, iconColor, trend,
+}: {
+  label: string; value: string | number; sub?: string;
+  icon: any; iconBg: string; iconColor: string; trend?: { value: number; up: boolean };
+}) => (
+  <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-start justify-between">
+      <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBg}`}>
+        <Icon className={`h-5 w-5 ${iconColor}`} />
+      </div>
+      {trend && (
+        <span className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${trend.up ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+          <ArrowUpRight className={`h-3 w-3 ${trend.up ? "" : "rotate-180"}`} />
+          {Math.abs(trend.value)}%
+        </span>
+      )}
+    </div>
+    <div className="mt-4">
+      <p className="text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-0.5 text-sm font-medium text-slate-500">{label}</p>
+      {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
+    </div>
+  </div>
+);
+
+const QuickActionCard = ({
+  title, desc, path, icon: Icon, color, bg, navigate,
+}: {
+  title: string; desc: string; path: string;
+  icon: any; color: string; bg: string; navigate: (p: string) => void;
+}) => (
+  <button
+    onClick={() => navigate(path)}
+    className="group flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
+  >
+    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${bg}`}>
+      <Icon className={`h-5 w-5 ${color}`} />
+    </div>
+    <div className="flex-1">
+      <p className="font-semibold text-slate-900 text-sm">{title}</p>
+      <p className="mt-0.5 text-xs text-slate-500">{desc}</p>
+    </div>
+    <ChevronRight className={`h-4 w-4 ${color} transition-transform group-hover:translate-x-0.5`} />
+  </button>
+);
+
 const AdminDashboard = () => {
   const dashboardRef = useRef<HTMLDivElement>(null);
-  const [stats, setStats] = useState<Stats>({
-    totalProperties: 0,
-    totalLandlords: 0,
-    totalRevenue: 0,
-    occupancyRate: 0,
-  });
+  const navigate = useNavigate();
 
-  const [properties, setProperties] = useState([]);
-  const [landlords, setLandlords] = useState([]);
-
+  const [properties, setProperties] = useState<any[]>([]);
+  const [landlords, setLandlords] = useState<any[]>([]);
   const [balance, setBalance] = useState<SimpleBalance | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
@@ -72,64 +105,39 @@ const AdminDashboard = () => {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isSubmittingWithdraw, setIsSubmittingWithdraw] = useState(false);
 
-  const navigate = useNavigate();
-
   const user = localStorage.getItem("user");
   let token = "";
-
+  let firstName = "Admin";
   try {
     if (user) {
-      const userData = JSON.parse(user);
-      token = userData.token;
-    } else {
-      
+      const u = JSON.parse(user);
+      token = u.token;
+      firstName = u.fullName?.split(" ")[0] ?? "Admin";
     }
-  } catch (error) {
-  }
+  } catch {}
+
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const fetchBalance = async (type: BalanceType) => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
     try {
       setBalanceLoading(true);
       setBalanceError(null);
-      // normalize and track the active type
-      const normalizedType = (type || "") as BalanceType;
-      setBalanceType(normalizedType);
-
+      setBalanceType(type);
       const response = await fetch(`${apiUrl}/currentBalance`, {
         method: "POST",
-        headers: {
-          accept: "*/*",
-          Authorization: "Bearer " + token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ type: normalizedType }),
+        headers: { accept: "*/*", Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
       });
-
       const data: BalanceApiResponse = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.status_message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      if (!data?.data?.currentBalance) {
-        throw new Error(data?.data?.message || "Unknown balance type");
-      }
-
-      const apiBalance = data.data.balance;
-      const message = data.data.message;
-      const simple: SimpleBalance = {
-        type: (apiBalance?.type || normalizedType) as BalanceType,
-        amount: apiBalance?.amount || "0",
-        message: message || "",
-      };
-      setBalance(simple);
+      if (!response.ok) throw new Error(data?.status_message || `HTTP ${response.status}`);
+      if (!data?.data?.currentBalance) throw new Error(data?.data?.message || "Unknown balance type");
+      setBalance({
+        type: (data.data.balance?.type || type) as BalanceType,
+        amount: data.data.balance?.amount || "0",
+        message: data.data.message || "",
+      });
     } catch (err) {
-      setBalanceError(
-        err instanceof Error ? err.message : "Unknown error occurred"
-      );
+      setBalanceError(err instanceof Error ? err.message : "Unknown error");
       setBalance(null);
     } finally {
       setBalanceLoading(false);
@@ -142,187 +150,67 @@ const AdminDashboard = () => {
   };
 
   const handleCollectoWithdraw = async () => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-    if (!withdrawDestination) {
-      toast({
-        title: "Destination required",
-        description: "Choose a valid withdraw destination.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!withdrawDestination) return;
     if (!withdrawReference.trim()) {
-      toast({
-        title: "Reference required",
-        description: "Enter a reference for this Collecto withdrawal.",
-        variant: "destructive",
-      });
+      toast({ title: "Reference required", description: "Enter a reference for this withdrawal.", variant: "destructive" });
       return;
     }
-
-    if (!withdrawAmount || Number.isNaN(Number(withdrawAmount)) || Number(withdrawAmount) <= 0) {
-      toast({
-        title: "Invalid amount",
-        description: "Enter a valid withdraw amount greater than zero.",
-        variant: "destructive",
-      });
+    if (!withdrawAmount || isNaN(Number(withdrawAmount)) || Number(withdrawAmount) <= 0) {
+      toast({ title: "Invalid amount", description: "Enter a valid amount greater than zero.", variant: "destructive" });
       return;
     }
-
     setIsSubmittingWithdraw(true);
-
     try {
       const response = await fetch(`${apiUrl}/withdrawFromCollectoWallet`, {
         method: "POST",
-        headers: {
-          accept: "*/*",
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reference: withdrawReference.trim(),
-          amount: withdrawAmount,
-          withdrawTo: withdrawDestination,
-        }),
+        headers: { accept: "*/*", Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: withdrawReference.trim(), amount: withdrawAmount, withdrawTo: withdrawDestination }),
       });
-
       const rawText = await response.text();
-      let parsedResponse: { message?: string; response?: string; status?: string } | null = null;
-
-      try {
-        parsedResponse = rawText ? JSON.parse(rawText) : null;
-      } catch {
-        parsedResponse = null;
-      }
-
-      if (!response.ok) {
-        throw new Error(parsedResponse?.message || rawText || "Collecto withdrawal failed.");
-      }
-
-      toast({
-        title: "Withdrawal submitted",
-        description:
-          parsedResponse?.message ||
-          `Withdrawal to ${withdrawDestination.toUpperCase()} was submitted successfully.`,
-      });
-
+      let parsed: { message?: string } | null = null;
+      try { parsed = rawText ? JSON.parse(rawText) : null; } catch {}
+      if (!response.ok) throw new Error(parsed?.message || rawText || "Withdrawal failed.");
+      toast({ title: "Withdrawal submitted", description: parsed?.message || `Withdrawal to ${withdrawDestination.toUpperCase()} submitted.` });
       setWithdrawDialogOpen(false);
       setWithdrawReference("");
       setWithdrawAmount("");
     } catch (error) {
-      toast({
-        title: "Withdrawal failed",
-        description: error instanceof Error ? error.message : "Failed to submit Collecto withdrawal.",
-        variant: "destructive",
-      });
+      toast({ title: "Withdrawal failed", description: error instanceof Error ? error.message : "Failed to submit withdrawal.", variant: "destructive" });
     } finally {
       setIsSubmittingWithdraw(false);
     }
   };
 
   const fetchLandlords = async () => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    if (!apiUrl) {
-      throw new Error("API base URL is not configured");
-    }
-
     try {
       const { data } = await axios.get(`${apiUrl}/GetLandlords`);
       setLandlords(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error.response.status === 404
-            ? `Landlords ${error.response.statusText}`
-            : error.response.data,
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.response?.data ?? "Failed to load landlords.", variant: "destructive" });
     }
   };
 
   const fetchProperties = async () => {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    if (!apiUrl) {
-      throw new Error("API base URL is not configured");
-    }
-
     try {
       const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
       setProperties(data);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error.response.status === 404
-            ? `Properties ${error.response.statusText}`
-            : error.response.data,
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.response?.data ?? "Failed to load properties.", variant: "destructive" });
     }
   };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const mockStats: Stats = {
-        totalProperties: 150,
-        totalLandlords: 45,
-        totalRevenue: 125000,
-        occupancyRate: 92,
-      };
-      setStats(mockStats);
-    };
-
-    fetchStats();
     fetchProperties();
     fetchLandlords();
   }, []);
 
-  const quickActions = [
-    {
-      title: "Register Landlord",
-      description: "Add a new landlord to the system",
-      path: "/admin-dashboard/register-landlord",
-    },
-    {
-      title: "Register Property",
-      description: "Add a new property to listing",
-      path: "/admin-dashboard/register-property",
-    },
-    {
-      title: "View Reports",
-      description: "Access detailed analytics",
-      path: "/admin-dashboard/reports",
-    },
-    {
-      title: "System Settings",
-      description: "Configure system preferences",
-      path: "/admin-dashboard/system-settings",
-    },
-  ];
-
   const handleExportPdf = async () => {
-    if (!dashboardRef.current) {
-      return;
-    }
-
+    if (!dashboardRef.current) return;
     try {
-      await exportDashboardPdf(dashboardRef.current, {
-        fileNamePrefix: "admin-dashboard-overview",
-      });
-
-      toast({
-        title: "Export Successful",
-        description: "Dashboard exported to PDF.",
-      });
+      await exportDashboardPdf(dashboardRef.current, { fileNamePrefix: "admin-dashboard-overview" });
+      toast({ title: "Export Successful", description: "Dashboard exported to PDF." });
     } catch (error) {
-      toast({
-        title: "Export Failed",
-        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: error instanceof Error ? error.message : "Export failed.", variant: "destructive" });
     }
   };
 
@@ -332,278 +220,264 @@ const AdminDashboard = () => {
         title: "Admin Dashboard Overview",
         fileNamePrefix: "admin-dashboard-overview",
         metadata: [
-          { label: "Selected Balance Type", value: balanceType || "Not selected" },
-          { label: "Balance Message", value: balance?.message || "N/A" },
-          { label: "Balance Error", value: balanceError || "None" },
+          { label: "Balance Type", value: balanceType || "Not selected" },
+          { label: "Balance", value: balance?.message || "N/A" },
         ],
         summary: [
           { label: "Total Properties", value: properties.length },
           { label: "Total Landlords", value: landlords.length },
-          { label: "Total Revenue", value: stats.totalRevenue },
-          { label: "Occupancy Rate", value: `${stats.occupancyRate}%` },
         ],
         sections: [
           {
             sheetName: "Quick Actions",
-            columns: ["Title", "Description", "Path"],
-            rows: quickActions.map((action) => [action.title, action.description, action.path]),
+            columns: ["Title", "Path"],
+            rows: [
+              ["Register Landlord", "/admin-dashboard/register-landlord"],
+              ["Register Property", "/admin-dashboard/register-property"],
+              ["View Reports", "/admin-dashboard/reports"],
+              ["System Settings", "/admin-dashboard/system-settings"],
+            ],
           },
         ],
       });
-
-      toast({
-        title: "Export Successful",
-        description: "Dashboard exported to Excel.",
-      });
+      toast({ title: "Export Successful", description: "Dashboard exported to Excel." });
     } catch (error) {
-      toast({
-        title: "Export Failed",
-        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: error instanceof Error ? error.message : "Export failed.", variant: "destructive" });
     }
   };
 
+  const balanceTabs: { type: BalanceType; label: string }[] = [
+    { type: "SMS", label: "SMS" },
+    { type: "BULK", label: "Bulk" },
+    { type: "WALLET", label: "Wallet" },
+  ];
+
   return (
     <div ref={dashboardRef} className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Dashboard Overview
-        </h1>
-        <DashboardExportToolbar
-          onExportExcel={handleExportExcel}
-          onExportPdf={handleExportPdf}
-        />
-      </div>
+      {/* Welcome Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#1D4ED8] p-7 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
 
-      <div className="flex gap-4 mb-6">
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            fetchBalance("SMS");
-          }}
-          disabled={balanceLoading}
-          variant={balanceType === "SMS" ? "primary" : "outline"}
-          className="min-w-32"
-        >
-          {balanceLoading && balanceType === "SMS" ? (
-            <div className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Loading...
-            </div>
-          ) : (
-            "SMS Balance"
-          )}
-        </Button>
-
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            fetchBalance("BULK");
-          }}
-          disabled={balanceLoading}
-          variant={balanceType === "BULK" ? "primary" : "outline"}
-          className="min-w-32"
-        >
-          {balanceLoading && balanceType === "BULK" ? (
-            <div className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Loading...
-            </div>
-          ) : (
-            "Bulk Balance"
-          )}
-        </Button>
-
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            fetchBalance("Wallet");
-          }}
-          disabled={balanceLoading}
-          variant={balanceType === "WALLET" ? "primary" : "outline"}
-          className="min-w-32"
-        >
-          {balanceLoading && balanceType === "WALLET" ? (
-            <div className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Loading...
-            </div>
-          ) : (
-            "Wallet Balance"
-          )}
-        </Button>
-      </div>
-
-      <div className="glass-card p-4 rounded-lg space-y-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="font-medium">Collecto Wallet Withdrawals</h3>
-            <p className="text-sm text-gray-500">
-              Submit and track admin withdrawals from the Collecto wallet to BULK and FLEXIPAY.
-            </p>
+            <p className="text-sm font-medium text-blue-200">{greeting()},</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">{firstName}</h1>
+            <p className="mt-2 text-sm text-slate-300">Platform Overview — Nyumba Yo Administration</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-2">
+                <p className="text-xs text-blue-200">Properties</p>
+                <p className="text-lg font-bold">{properties.length}</p>
+              </div>
+              <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-2">
+                <p className="text-xs text-blue-200">Landlords</p>
+                <p className="text-lg font-bold">{landlords.length}</p>
+              </div>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/admin-dashboard/collecto-withdraw-logs")}
-          >
-            View Withdraw Logs
-          </Button>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button onClick={() => openWithdrawDialog("BULK")}>Withdraw to BULK</Button>
-          <Button variant="secondary" onClick={() => openWithdrawDialog("flexipay")}>
-            Withdraw to FLEXIPAY
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={handleExportExcel} className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-colors">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Export Excel
+            </button>
+            <button onClick={handleExportPdf} className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-colors">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Export PDF
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Balance Display */}
-      {balance && !balanceError ? (
-        <div className="glass-card p-4 rounded-lg">
-          <h3 className="font-medium">{balance.type} Balance</h3>
-          <p className="text-2xl font-bold">
-            {balance.message || `UGX ${Number(balance.amount).toLocaleString()}`}
-          </p>
-        </div>
-      ) : balanceError ? (
-        <div className="text-red-500 p-4 bg-red-50 rounded-lg">Error: {balanceError}</div>
-      ) : null}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Properties"
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard
+          label="Total Properties"
           value={properties.length}
-          icon={<Home />}
-          change={{ value: 12, type: "increase" }}
+          sub="Registered on platform"
+          icon={Home}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+          trend={{ value: 12, up: true }}
         />
-
-        <StatCard
-          title="Total Landlords"
+        <KpiCard
+          label="Total Landlords"
           value={landlords.length}
-          icon={<Users />}
-          change={{ value: 8, type: "increase" }}
+          sub="Active accounts"
+          icon={Users}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          trend={{ value: 8, up: true }}
         />
-        <StatCard
-          title="Total Revenue"
-          value={`UGX${stats.totalRevenue.toLocaleString()}`}
-          icon={<Wallet />}
-          change={{ value: 15, type: "increase" }}
+        <KpiCard
+          label="Total Revenue"
+          value="UGX 125,000"
+          sub="Lifetime collections"
+          icon={CircleDollarSign}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+          trend={{ value: 15, up: true }}
         />
-        <StatCard
-          title="Occupancy Rate"
-          value={`${stats.occupancyRate}%`}
-          icon={<TrendingUp />}
-          change={{ value: 5, type: "increase" }}
+        <KpiCard
+          label="Occupancy Rate"
+          value="92%"
+          sub="Across all properties"
+          icon={TrendingUp}
+          iconBg="bg-violet-50"
+          iconColor="text-violet-600"
+          trend={{ value: 5, up: true }}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {quickActions.map((action, index) => (
-          <motion.div
-            key={action.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="glass-card p-6 rounded-xl space-y-4"
+      {/* Balance Checker */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+            <Wallet className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Account Balances</p>
+            <p className="text-xs text-slate-400">Check SMS, Bulk, or Wallet balance in real time</p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Tab selector */}
+          <div className="flex gap-2 flex-wrap">
+            {balanceTabs.map(({ type, label }) => (
+              <button
+                key={type}
+                onClick={() => fetchBalance(type)}
+                disabled={balanceLoading}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all border ${
+                  balanceType === type
+                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                    : "border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600 bg-white"
+                }`}
+              >
+                {balanceLoading && balanceType === type ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                {label} Balance
+              </button>
+            ))}
+          </div>
+
+          {/* Balance display */}
+          {balance && !balanceError && (
+            <div className="flex items-center gap-4 rounded-xl border border-green-100 bg-green-50 px-5 py-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-green-700 uppercase tracking-wider">{balance.type} Balance</p>
+                <p className="text-2xl font-bold text-green-800">
+                  {balance.message || `UGX ${Number(balance.amount).toLocaleString()}`}
+                </p>
+              </div>
+            </div>
+          )}
+          {balanceError && (
+            <div className="flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {balanceError}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Collecto Wallet */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600">
+            <CircleDollarSign className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-slate-800">Collecto Wallet</p>
+            <p className="text-xs text-slate-400">Submit withdrawals to BULK or FLEXIPAY</p>
+          </div>
+          <button
+            onClick={() => navigate("/admin-dashboard/collecto-withdraw-logs")}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
           >
-            <h3 className="font-medium">{action.title}</h3>
-            <p className="text-sm text-gray-500">{action.description}</p>
-            <Button
-              onClick={() => navigate(action.path)}
-              variant="secondary"
-              className="w-full"
-            >
-              Get Started
-            </Button>
-          </motion.div>
-        ))}
+            View logs <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3 p-6 sm:flex-row">
+          <button
+            onClick={() => openWithdrawDialog("BULK")}
+            className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+          >
+            <ArrowUpRight className="h-4 w-4" /> Withdraw to BULK
+          </button>
+          <button
+            onClick={() => openWithdrawDialog("flexipay")}
+            className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+          >
+            <ArrowUpRight className="h-4 w-4" /> Withdraw to FLEXIPAY
+          </button>
+        </div>
       </div>
 
+      {/* Quick Actions */}
+      <div>
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">Quick Actions</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <QuickActionCard title="Register Landlord" desc="Add a new landlord to the system" path="/admin-dashboard/register-landlord" icon={UserPlus} color="text-blue-600" bg="bg-blue-50" navigate={navigate} />
+          <QuickActionCard title="Register Property" desc="Add a new property to listings" path="/admin-dashboard/register-property" icon={Building2} color="text-emerald-600" bg="bg-emerald-50" navigate={navigate} />
+          <QuickActionCard title="View Reports" desc="Access detailed analytics" path="/admin-dashboard/reports" icon={BarChart3} color="text-amber-600" bg="bg-amber-50" navigate={navigate} />
+          <QuickActionCard title="System Settings" desc="Configure system preferences" path="/admin-dashboard/system-settings" icon={Settings} color="text-violet-600" bg="bg-violet-50" navigate={navigate} />
+        </div>
+      </div>
+
+      {/* Withdraw Dialog */}
       <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
-        <DialogContent className="rounded-[28px] sm:max-w-lg">
+        <DialogContent className="rounded-2xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {withdrawDestination === "BULK" ? "Withdraw to BULK" : "Withdraw to FLEXIPAY"}
             </DialogTitle>
             <DialogDescription>
-              This submits a request to the `withdrawFromCollectoWallet` endpoint and stores the local plus downstream Collecto logs in the database.
+              Submit a withdrawal from the Collecto wallet. This will be logged in the system.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 pt-2">
             <div className="space-y-2">
-              <Label htmlFor="collecto-withdraw-reference">Reference</Label>
+              <Label htmlFor="withdraw-reference">Reference</Label>
               <Input
-                id="collecto-withdraw-reference"
+                id="withdraw-reference"
                 value={withdrawReference}
-                onChange={(event) => setWithdrawReference(event.target.value)}
-                placeholder="Enter a unique withdrawal reference"
+                onChange={(e) => setWithdrawReference(e.target.value)}
+                placeholder="Unique withdrawal reference"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="collecto-withdraw-amount">Amount</Label>
+              <Label htmlFor="withdraw-amount">Amount</Label>
               <Input
-                id="collecto-withdraw-amount"
+                id="withdraw-amount"
                 type="number"
                 min="0"
                 step="0.01"
                 value={withdrawAmount}
-                onChange={(event) => setWithdrawAmount(event.target.value)}
-                placeholder="Enter amount to withdraw"
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                placeholder="Amount to withdraw"
               />
             </div>
-
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-2">
               <Button variant="outline" onClick={() => setWithdrawDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCollectoWithdraw} isLoading={isSubmittingWithdraw}>
-                Submit Withdrawal
+              <Button
+                onClick={handleCollectoWithdraw}
+                disabled={isSubmittingWithdraw}
+                className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+              >
+                {isSubmittingWithdraw ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
+                ) : (
+                  "Submit Withdrawal"
+                )}
               </Button>
             </div>
           </div>

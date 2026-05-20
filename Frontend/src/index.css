@@ -46,14 +46,14 @@
 
     --radius: 1rem;
 
-    --sidebar-background: 220 65% 15%;
-    --sidebar-foreground: 210 40% 93%;
-    --sidebar-primary: 221 83% 58%;
+    --sidebar-background: 215 28% 9%;
+    --sidebar-foreground: 213 27% 84%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 50% 22%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 220 45% 21%;
-    --sidebar-ring: 221 83% 58%;
+    --sidebar-accent: 217 19% 16%;
+    --sidebar-accent-foreground: 213 27% 84%;
+    --sidebar-border: 217 19% 16%;
+    --sidebar-ring: 217 91% 60%;
   }
   
   .dark {
@@ -154,7 +154,7 @@
   }
   
   .input-field {
-    @apply flex h-12 w-full rounded-xl border border-input bg-white/90 px-4 py-3 text-sm shadow-sm ring-offset-background transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/90 focus-visible:outline-none focus-visible:border-primary/45 focus-visible:ring-4 focus-visible:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-sm text-[#0F172A] shadow-sm transition-all duration-150 placeholder:text-[#94A3B8] focus-visible:outline-none focus-visible:border-[#1D4ED8] focus-visible:ring-2 focus-visible:ring-blue-700/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-slate-50;
   }
   
   /* Responsive table utilities */

@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
-import { ArrowRight, User, Lock, Eye, EyeOff } from "lucide-react";
-import Button from "../../components/ui/button/Button";
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Home, CheckCircle2 } from "lucide-react";
+
+const features = [
+  { text: "Manage properties and tenants in one place" },
+  { text: "Track payments and invoices in real time" },
+  { text: "Automated rent reminders and SMS alerts" },
+  { text: "Utility billing with token generation" },
+];
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -16,22 +22,12 @@ const SignIn = () => {
     e.preventDefault();
     try {
       const { systemRoleId } = await login(email, password);
-
       switch (systemRoleId) {
-        case 1: // Admin
-          navigate("/admin-dashboard");
-          break;
-        case 2: // Landlord
-          navigate("/landlord-dashboard");
-          break;
-        case 3: // Tenant
-          navigate("/tenant-dashboard");
-          break;
-        case 4: // Utility
-          navigate("/utility-dashboard");
-          break;
-        default:
-          navigate("/");
+        case 1: navigate("/admin-dashboard"); break;
+        case 2: navigate("/landlord-dashboard"); break;
+        case 3: navigate("/tenant-dashboard"); break;
+        case 4: navigate("/utility-dashboard"); break;
+        default: navigate("/");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -39,190 +35,168 @@ const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-5xl"
-      >
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 grid-rows-[1fr] min-h-[600px]">
-          {/* Left Side - House Image */}
-          <div className="relative hidden lg:block row-span-1 h-full">
-            <img
-              src="/uploads/studioroom.jpg"
-              alt="Property"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-            <div className="absolute bottom-6 left-6 right-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-              >
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Welcome to Nyumba Yo
-                </h2>
-                <p className="text-white/80 text-sm">
-                  Your one-stop property management solution. Manage properties,
-                  tenants, and payments all in one place.
-                </p>
-              </motion.div>
+    <div className="min-h-screen flex bg-[#F8FAFC]">
+      {/* Left panel — branding */}
+      <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] flex-col justify-between p-12">
+        {/* Decorative circles */}
+        <div className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute bottom-0 -left-20 h-72 w-72 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute top-1/2 right-8 h-48 w-48 rounded-full bg-blue-400/10" />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 border border-white/20">
+              <Home className="h-5 w-5 text-white" />
             </div>
-          </div>
-
-          {/* Right Side - Login Form */}
-          <div className="p-8 lg:p-12 flex flex-col justify-center">
-            <div className="mb-8 text-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-              >
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"
-                    />
-                  </svg>
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  NYUMBA YO
-                </h1>
-                <p className="text-gray-600">
-                  Your one stop property management solution
-                </p>
-              </motion.div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User size={18} className="text-gray-400" />
-                    </div>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="input-field pl-10"
-                      placeholder="Enter your email"
-                      required
-                      autoComplete="username"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock size={18} className="text-gray-400" />
-                    </div>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="input-field pl-10 pr-10"
-                      placeholder="Enter your password"
-                      required
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff size={18} className="text-gray-400" />
-                      ) : (
-                        <Eye size={18} className="text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-
-              {authError && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-red-600 mt-2"
-                >
-                  {authError}
-                </motion.p>
-              )}
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-              >
-                <Button
-                  type="submit"
-                  className="w-full"
-                  isLoading={authLoading}
-                  rightIcon={<ArrowRight size={18} />}
-                >
-                  Sign In
-                </Button>
-              </motion.div>
-            </form>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-              className="mt-6 space-y-4"
-            >
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium text-primary hover:text-primary/80 block text-center"
-              >
-                Forgot password?
-              </Link>
-              <p className="text-center text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Link
-                  to="/signup"
-                  className="font-medium text-primary hover:text-primary/80"
-                >
-                  Contact Admin
-                </Link>
-              </p>
-            </motion.div>
-
-            {/* Mobile image preview */}
-            <div className="lg:hidden mt-8 rounded-xl overflow-hidden">
-              <img
-                src="/uploads/studioroom.jpg"
-                alt="Property"
-                className="w-full h-48 object-cover"
-              />
-            </div>
+            <span className="text-xl font-bold text-white tracking-tight">Nyumba Yo</span>
           </div>
         </div>
-      </motion.div>
+
+        {/* Center content */}
+        <div className="relative z-10 space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white leading-tight">
+              Property Management<br />
+              <span className="text-blue-300">Made Simple</span>
+            </h1>
+            <p className="mt-4 text-base text-slate-300 leading-relaxed max-w-sm">
+              Your all-in-one platform for managing properties, tenants, payments, and utilities — from anywhere.
+            </p>
+          </div>
+
+          <ul className="space-y-3">
+            {features.map((f, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
+                className="flex items-center gap-3 text-sm text-slate-200"
+              >
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-300" />
+                {f.text}
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Bottom badge */}
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2">
+            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-medium text-white/80">System online — all services running</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-[400px]"
+        >
+          {/* Mobile logo */}
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1D4ED8]">
+              <Home className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg font-bold text-[#0F172A]">Nyumba Yo</span>
+          </div>
+
+          {/* Heading */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-[#0F172A] tracking-tight">Welcome back</h2>
+            <p className="mt-1 text-sm text-[#64748B]">Sign in to your account to continue</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-[#0F172A]">Email address</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="username"
+                  className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 pl-10 pr-4 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/15"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-[#0F172A]">Password</label>
+                <a href="#/forgot-password" className="text-xs font-medium text-[#1D4ED8] hover:text-[#1e40af]">
+                  Forgot password?
+                </a>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  autoComplete="current-password"
+                  className="w-full rounded-xl border border-[#E2E8F0] bg-white py-3 pl-10 pr-11 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/15"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#64748B] transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {authError && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
+                <div className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+                {authError}
+              </motion.div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1D4ED8] py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1e40af] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/40 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {authLoading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Signing in…
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="mt-8 text-center text-xs text-[#94A3B8]">
+            Don't have an account?{" "}
+            <span className="font-medium text-[#1D4ED8]">Contact your administrator</span>
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   CircleDollarSign,
-  Calendar,
   Filter,
   ArrowUp,
   ArrowDown,
@@ -15,25 +14,11 @@ import {
   Send,
   Loader2,
   User,
+  TrendingUp,
+  Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +33,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { DataTable, Column } from "@/components/ui/data-table";
 
-const SMS_ENDPOINT = "http://3.216.182.63:8091/sendSingleSms";
 const AUTO_ACK_KEY = "sms_auto_acknowledge";
 
 interface Payment {
@@ -75,6 +59,74 @@ interface Payment {
   };
 }
 
+// ── KPI Card ────────────────────────────────────────────────────────────────
+interface KpiCardProps {
+  label: string;
+  value: string;
+  sub: string;
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+  accent: string;
+}
+const KpiCard = ({ label, value, sub, icon: Icon, iconBg, iconColor, accent }: KpiCardProps) => (
+  <div className={`rounded-2xl border-l-4 border border-slate-200 bg-white p-5 shadow-sm ${accent}`}>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+        <p className="mt-1.5 text-2xl font-bold text-[#0F172A] leading-none">{value}</p>
+        <p className="mt-1.5 text-xs text-slate-500">{sub}</p>
+      </div>
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
+        <Icon className={`h-5 w-5 ${iconColor}`} />
+      </div>
+    </div>
+  </div>
+);
+
+// ── Status & Method badges ───────────────────────────────────────────────────
+const StatusBadge = ({ status }: { status: string }) => {
+  if (status === "SUCCESSFUL")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-100">
+        <CheckCircle2 className="h-3 w-3" /> Paid
+      </span>
+    );
+  if (status === "PENDING")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-100">
+        <AlertCircle className="h-3 w-3" /> Pending
+      </span>
+    );
+  if (status === "FAILED")
+    return (
+      <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700 border border-red-100">
+        Failed
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+      {status}
+    </span>
+  );
+};
+
+const MethodBadge = ({ method }: { method: string }) => {
+  const map: Record<string, { label: string; cls: string }> = {
+    CASH: { label: "Cash", cls: "bg-slate-100 text-slate-700 border-slate-200" },
+    MOMO: { label: "Mobile Money", cls: "bg-violet-50 text-violet-700 border-violet-100" },
+    BANK: { label: "Bank", cls: "bg-blue-50 text-blue-700 border-blue-100" },
+    CARD: { label: "Card", cls: "bg-indigo-50 text-indigo-700 border-indigo-100" },
+  };
+  const m = map[method] ?? { label: method, cls: "bg-slate-100 text-slate-600 border-slate-200" };
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${m.cls}`}>
+      {m.label}
+    </span>
+  );
+};
+
+// ── Component ────────────────────────────────────────────────────────────────
 const TrackPayments = () => {
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -85,7 +137,6 @@ const TrackPayments = () => {
   const [sortField, setSortField] = useState("paymentDate");
   const [sortDirection, setSortDirection] = useState("desc");
 
-  // SMS state
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<Set<number>>(new Set());
   const [isSendingReminders, setIsSendingReminders] = useState(false);
@@ -97,26 +148,17 @@ const TrackPayments = () => {
   const user = localStorage.getItem("user");
   const userData = JSON.parse(user);
   const token = userData?.token ?? "";
-
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const fetchPayments = async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`${apiUrl}/GetAllPayments`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          accept: "*/*",
-        },
+        headers: { Authorization: `Bearer ${token}`, accept: "*/*" },
       });
-
       if (!response.ok) throw new Error("Failed to fetch payments");
-
       const data = await response.json();
-      const filteredData = data.filter(
-        (payment: any) => payment.propertyTenant.property.ownerId === userData.id
-      );
-      setPayments(filteredData);
+      setPayments(data.filter((p: any) => p.propertyTenant.property.ownerId === userData.id));
     } catch (error) {
       console.error("Error fetching payments:", error);
       toast({
@@ -134,7 +176,7 @@ const TrackPayments = () => {
   }, []);
 
   const sendSms = async (phone: string, message: string, reference: string) => {
-    const res = await fetch(SMS_ENDPOINT, {
+    const res = await fetch(`${apiUrl}/sendSingleSms`, {
       method: "POST",
       headers: {
         accept: "*/*",
@@ -146,7 +188,6 @@ const TrackPayments = () => {
     if (!res.ok) throw new Error(`SMS failed: ${res.status}`);
   };
 
-  // Deduplicate pending payments by tenant (one entry per tenant)
   const pendingByTenant = Object.values(
     payments
       .filter((p) => p.paymentStatus === "PENDING")
@@ -174,15 +215,10 @@ const TrackPayments = () => {
   };
 
   const handleSendBulkReminders = async () => {
-    const targets = pendingByTenant.filter((p) =>
-      selectedTenantIds.has(p.propertyTenantId)
-    );
+    const targets = pendingByTenant.filter((p) => selectedTenantIds.has(p.propertyTenantId));
     if (targets.length === 0) return;
-
     setIsSendingReminders(true);
-    let sent = 0;
-    let failed = 0;
-
+    let sent = 0, failed = 0;
     for (const p of targets) {
       const msg =
         `Dear ${p.propertyTenant.fullName}, your rent payment of UGX ${p.amount.toLocaleString()} ` +
@@ -191,15 +227,11 @@ const TrackPayments = () => {
       try {
         await sendSms(p.propertyTenant.phoneNumber, msg, "Rent Payment Reminder");
         sent++;
-      } catch {
-        failed++;
-      }
+      } catch { failed++; }
     }
-
     setIsSendingReminders(false);
     setShowReminderDialog(false);
     setSelectedTenantIds(new Set());
-
     toast({
       title: failed === 0 ? "Reminders Sent" : "Partial Success",
       description:
@@ -217,21 +249,10 @@ const TrackPayments = () => {
       `for ${payment.propertyTenant.property.name} (Ref: ${payment.transactionId}) was received on ` +
       `${new Date(payment.paymentDate).toLocaleDateString()}. Thank you!`;
     try {
-      await sendSms(
-        payment.propertyTenant.phoneNumber,
-        msg,
-        "Payment Acknowledgment"
-      );
-      toast({
-        title: "Acknowledgment Sent",
-        description: `SMS sent to ${payment.propertyTenant.fullName}.`,
-      });
+      await sendSms(payment.propertyTenant.phoneNumber, msg, "Payment Acknowledgment");
+      toast({ title: "Acknowledgment Sent", description: `SMS sent to ${payment.propertyTenant.fullName}.` });
     } catch {
-      toast({
-        title: "SMS Failed",
-        description: "Could not send acknowledgment. Check the phone number.",
-        variant: "destructive",
-      });
+      toast({ title: "SMS Failed", description: "Could not send acknowledgment.", variant: "destructive" });
     } finally {
       setSendingAckId(null);
     }
@@ -298,10 +319,7 @@ const TrackPayments = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({
-      title: "Receipt Generated",
-      description: `Receipt for ${payment.transactionId} downloaded.`,
-    });
+    toast({ title: "Receipt Generated", description: `Receipt for ${payment.transactionId} downloaded.` });
   };
 
   const handleExport = () => {
@@ -344,92 +362,66 @@ const TrackPayments = () => {
       payment.propertyTenant.property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (payment.vendor ?? "").toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesStatus = filterStatus === "all" || payment.paymentStatus === filterStatus;
     const matchesMethod = filterMethod === "all" || payment.paymentMethod === filterMethod;
-
     return matchesSearch && matchesStatus && matchesMethod;
   });
 
   const sortedPayments = [...filteredPayments].sort((a, b) => {
     if (sortField === "paymentDate") {
-      const dateA = new Date(a.paymentDate).getTime();
-      const dateB = new Date(b.paymentDate).getTime();
-      return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
-    } else if (sortField === "amount") {
+      const dA = new Date(a.paymentDate).getTime();
+      const dB = new Date(b.paymentDate).getTime();
+      return sortDirection === "asc" ? dA - dB : dB - dA;
+    }
+    if (sortField === "amount")
       return sortDirection === "asc" ? a.amount - b.amount : b.amount - a.amount;
-    } else if (sortField === "tenant") {
+    if (sortField === "tenant")
       return sortDirection === "asc"
         ? a.propertyTenant.fullName.localeCompare(b.propertyTenant.fullName)
         : b.propertyTenant.fullName.localeCompare(a.propertyTenant.fullName);
-    }
     return 0;
   });
 
   const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
+    if (sortField === field) setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDirection("asc"); }
   };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "SUCCESSFUL":
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
-      case "PENDING":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
-      case "FAILED":
-        return <Badge variant="destructive">Failed</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getMethodBadge = (method: string) => {
-    switch (method) {
-      case "CASH": return <Badge variant="secondary">Cash</Badge>;
-      case "MOMO": return <Badge variant="secondary">Mobile Money</Badge>;
-      case "BANK": return <Badge variant="secondary">Bank Transfer</Badge>;
-      case "CARD": return <Badge variant="secondary">Credit Card</Badge>;
-      default: return <Badge variant="outline">{method}</Badge>;
-    }
-  };
-
-  const totalReceived = payments
-    .filter((p) => p.paymentStatus === "SUCCESSFUL")
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const totalPending = payments
-    .filter((p) => p.paymentStatus === "PENDING")
-    .reduce((sum, p) => sum + p.amount, 0);
 
   const SortIcon = ({ field }: { field: string }) =>
     sortField === field ? (
-      sortDirection === "asc" ? (
-        <ArrowUp className="ml-1 h-3 w-3 inline" />
-      ) : (
-        <ArrowDown className="ml-1 h-3 w-3 inline" />
-      )
+      sortDirection === "asc"
+        ? <ArrowUp className="ml-1 h-3 w-3 inline" />
+        : <ArrowDown className="ml-1 h-3 w-3 inline" />
     ) : null;
+
+  const totalReceived = payments.filter((p) => p.paymentStatus === "SUCCESSFUL").reduce((s, p) => s + p.amount, 0);
+  const totalPending  = payments.filter((p) => p.paymentStatus === "PENDING").reduce((s, p) => s + p.amount, 0);
+  const totalCash     = payments.filter((p) => p.paymentMethod === "CASH" && p.paymentStatus === "SUCCESSFUL").reduce((s, p) => s + p.amount, 0);
+
+  const selectCls =
+    "h-9 rounded-xl border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] shadow-sm " +
+    "outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer";
 
   const columns: Column<Payment>[] = [
     {
       key: "transactionId",
       header: "Transaction ID",
-      headerClassName: "w-[120px]",
-      cell: (row) => <span className="font-medium">{row.transactionId}</span>,
+      headerClassName: "w-[130px]",
+      cell: (row) => (
+        <span className="font-mono text-xs font-semibold text-[#0F172A]">{row.transactionId}</span>
+      ),
     },
     {
       key: "tenant",
       header: "Tenant",
       cell: (row) => (
         <button
-          className="cursor-pointer text-left flex items-center"
+          className="flex items-center gap-1.5 text-left text-sm font-medium text-[#0F172A] hover:text-[#1D4ED8] transition-colors"
           onClick={() => handleSort("tenant")}
         >
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1D4ED8]/10 text-[10px] font-bold text-[#1D4ED8]">
+            {row.propertyTenant.fullName.charAt(0)}
+          </span>
           {row.propertyTenant.fullName}
           <SortIcon field="tenant" />
         </button>
@@ -438,7 +430,9 @@ const TrackPayments = () => {
     {
       key: "property",
       header: "Property",
-      cell: (row) => row.propertyTenant.property.name,
+      cell: (row) => (
+        <span className="text-sm text-slate-600">{row.propertyTenant.property.name}</span>
+      ),
     },
     {
       key: "amount",
@@ -447,7 +441,7 @@ const TrackPayments = () => {
       className: "text-right",
       cell: (row) => (
         <button
-          className="cursor-pointer w-full text-right flex items-center justify-end"
+          className="flex w-full items-center justify-end gap-1 text-sm font-semibold text-[#0F172A] hover:text-[#1D4ED8] transition-colors"
           onClick={() => handleSort("amount")}
         >
           UGX {row.amount.toLocaleString()}
@@ -460,7 +454,7 @@ const TrackPayments = () => {
       header: "Date",
       cell: (row) => (
         <button
-          className="cursor-pointer text-left flex items-center"
+          className="flex items-center gap-1 text-sm text-slate-600 hover:text-[#1D4ED8] transition-colors"
           onClick={() => handleSort("paymentDate")}
         >
           {new Date(row.paymentDate).toLocaleDateString()}
@@ -471,25 +465,25 @@ const TrackPayments = () => {
     {
       key: "paymentMethod",
       header: "Method",
-      cell: (row) => getMethodBadge(row.paymentMethod),
+      cell: (row) => <MethodBadge method={row.paymentMethod} />,
     },
     {
       key: "vendor",
       header: "Received By",
       cell: (row) =>
         row.vendor ? (
-          <span className="flex items-center gap-1.5 text-sm">
-            <User className="h-3 w-3 text-muted-foreground" />
+          <span className="flex items-center gap-1.5 text-sm text-slate-600">
+            <User className="h-3 w-3 text-slate-400" />
             {row.vendor}
           </span>
         ) : (
-          <span className="text-muted-foreground text-xs">—</span>
+          <span className="text-slate-300 text-sm">—</span>
         ),
     },
     {
       key: "paymentStatus",
       header: "Status",
-      cell: (row) => getStatusBadge(row.paymentStatus),
+      cell: (row) => <StatusBadge status={row.paymentStatus} />,
     },
     {
       key: "actions",
@@ -499,30 +493,24 @@ const TrackPayments = () => {
       cell: (row) => (
         <div className="flex items-center justify-end gap-1">
           {row.paymentStatus === "SUCCESSFUL" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-emerald-600 hover:text-emerald-800"
+            <button
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-50"
               disabled={sendingAckId === row.id}
               onClick={() => handleSendAcknowledgment(row)}
             >
-              {sendingAckId === row.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MessageSquare className="h-4 w-4" />
-              )}
-              <span className="ml-1.5 hidden sm:inline">Acknowledge</span>
-            </Button>
+              {sendingAckId === row.id
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <MessageSquare className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">SMS</span>
+            </button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-blue-600 hover:text-blue-800"
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
             onClick={() => generateReceipt(row)}
           >
-            <DownloadIcon className="h-4 w-4" />
-            <span className="ml-1.5 hidden sm:inline">Receipt</span>
-          </Button>
+            <DownloadIcon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Receipt</span>
+          </button>
         </div>
       ),
     },
@@ -530,22 +518,14 @@ const TrackPayments = () => {
 
   const filterControls = (
     <div className="flex items-center gap-2">
-      <Filter className="h-4 w-4 text-muted-foreground" />
-      <select
-        className="input-field h-9 py-1 text-sm"
-        value={filterStatus}
-        onChange={(e) => setFilterStatus(e.target.value)}
-      >
+      <Filter className="h-3.5 w-3.5 text-slate-400" />
+      <select className={selectCls} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
         <option value="all">All Status</option>
         <option value="SUCCESSFUL">Successful</option>
         <option value="PENDING">Pending</option>
         <option value="FAILED">Failed</option>
       </select>
-      <select
-        className="input-field h-9 py-1 text-sm"
-        value={filterMethod}
-        onChange={(e) => setFilterMethod(e.target.value)}
-      >
+      <select className={selectCls} value={filterMethod} onChange={(e) => setFilterMethod(e.target.value)}>
         <option value="all">All Methods</option>
         <option value="CASH">Cash</option>
         <option value="MOMO">Mobile Money</option>
@@ -556,39 +536,25 @@ const TrackPayments = () => {
   );
 
   return (
-    <div className="space-y-8">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Track Payments</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div className="space-y-6">
 
-      <section className="page-hero">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+      {/* ── Hero banner ── */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
               Payment Monitoring
             </span>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-                Payment Tracking
-              </h1>
-              <p className="mt-2 text-muted-foreground">
-                View and manage all payment transactions
-              </p>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Payment Tracking</h1>
+            <p className="text-sm text-blue-200">View and manage all payment transactions</p>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-3 flex-wrap">
             {pendingByTenant.length > 0 && (
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+              <button
+                className="inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-300 transition-colors hover:bg-amber-400/20"
                 onClick={() => {
                   setSelectedTenantIds(new Set(pendingByTenant.map((p) => p.propertyTenantId)));
                   setShowReminderDialog(true);
@@ -596,162 +562,136 @@ const TrackPayments = () => {
               >
                 <Bell className="h-4 w-4" />
                 Send Reminders
-                <Badge className="ml-1 bg-amber-100 text-amber-700 text-xs px-1.5">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400/30 text-[11px] font-bold">
                   {pendingByTenant.length}
-                </Badge>
-              </Button>
+                </span>
+              </button>
             )}
-            <Button onClick={handleExport} className="flex items-center gap-2">
+            <button
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+              onClick={handleExport}
+            >
               <Download className="h-4 w-4" />
-              Export
-            </Button>
+              Export CSV
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Received</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">UGX {totalReceived.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {payments.filter((p) => p.paymentStatus === "SUCCESSFUL").length} completed payments
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">UGX {totalPending.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {payments.filter((p) => p.paymentStatus === "PENDING").length} payments awaiting
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cash Payments</CardTitle>
-            <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              UGX{" "}
-              {payments
-                .filter((p) => p.paymentMethod === "CASH" && p.paymentStatus === "SUCCESSFUL")
-                .reduce((sum, p) => sum + p.amount, 0)
-                .toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {payments.filter((p) => p.paymentMethod === "CASH").length} cash transactions
-            </p>
-          </CardContent>
-        </Card>
+      {/* ── KPI cards ── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KpiCard
+          label="Total Received"
+          value={`UGX ${totalReceived.toLocaleString()}`}
+          sub={`${payments.filter((p) => p.paymentStatus === "SUCCESSFUL").length} completed payments`}
+          icon={TrendingUp}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          accent="border-l-emerald-500"
+        />
+        <KpiCard
+          label="Pending Payments"
+          value={`UGX ${totalPending.toLocaleString()}`}
+          sub={`${payments.filter((p) => p.paymentStatus === "PENDING").length} payments awaiting`}
+          icon={AlertCircle}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-600"
+          accent="border-l-amber-500"
+        />
+        <KpiCard
+          label="Cash Payments"
+          value={`UGX ${totalCash.toLocaleString()}`}
+          sub={`${payments.filter((p) => p.paymentMethod === "CASH").length} cash transactions`}
+          icon={Banknote}
+          iconBg="bg-slate-100"
+          iconColor="text-slate-600"
+          accent="border-l-slate-400"
+        />
       </div>
 
-      {/* Auto-acknowledge toggle */}
-      <Card className="border border-dashed border-emerald-200 bg-emerald-50/40">
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-emerald-100 p-2">
-                <BellRing className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-800">
-                  Automatic Payment Acknowledgment SMS
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Send an SMS to tenants automatically when their payment is confirmed
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="auto-ack" className="text-sm text-muted-foreground">
-                {autoAcknowledge ? "On" : "Off"}
-              </Label>
-              <Switch
-                id="auto-ack"
-                checked={autoAcknowledge}
-                onCheckedChange={handleAutoAcknowledgeToggle}
-              />
-            </div>
+      {/* ── Auto-acknowledge toggle ── */}
+      <div className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/60 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
+            <BellRing className="h-5 w-5 text-emerald-600" />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <p className="text-sm font-semibold text-[#0F172A]">Automatic Payment Acknowledgment SMS</p>
+            <p className="text-xs text-slate-500">
+              Send an SMS to tenants automatically when their payment is confirmed
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 ml-4 shrink-0">
+          <Label htmlFor="auto-ack" className="text-sm font-medium text-slate-600">
+            {autoAcknowledge ? "On" : "Off"}
+          </Label>
+          <Switch id="auto-ack" checked={autoAcknowledge} onCheckedChange={handleAutoAcknowledgeToggle} />
+        </div>
+      </div>
 
-      {/* Payments table */}
-      <Card className="data-surface border-none shadow-none">
-        <CardHeader>
-          <CardDescription>
-            Filter and search all payment transactions. Use the{" "}
-            <MessageSquare className="inline h-3 w-3" /> Acknowledge button on successful
-            payments to send a receipt SMS to the tenant.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            data={sortedPayments}
-            columns={columns}
-            loading={isLoading}
-            searchValue={searchTerm}
-            onSearchChange={setSearchTerm}
-            searchPlaceholder="Search by tenant, property, transaction ID, or received by"
-            label="payment"
-            emptyMessage="No payments found"
-            emptyIcon={<CircleDollarSign className="h-12 w-12" />}
-            headerRight={filterControls}
-          />
-        </CardContent>
-      </Card>
+      {/* ── Payments table ── */}
+      <div className="space-y-1">
+        <div className="px-0.5">
+          <p className="text-xs text-slate-400">
+            Use the{" "}
+            <MessageSquare className="inline h-3 w-3" />{" "}
+            SMS button on successful payments to send an acknowledgment to the tenant.
+          </p>
+        </div>
+        <DataTable
+          data={sortedPayments}
+          columns={columns}
+          loading={isLoading}
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search tenant, property, transaction ID…"
+          label="payment"
+          emptyMessage="No payments found"
+          emptyIcon={<CircleDollarSign className="h-6 w-6 text-slate-300" />}
+          headerRight={filterControls}
+          minWidth="820px"
+        />
+      </div>
 
-      {/* Bulk SMS Reminder Dialog */}
+      {/* ── Bulk SMS Reminder Dialog ── */}
       <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-amber-500" />
-              Send Overdue Payment Reminders
-            </DialogTitle>
-            <DialogDescription>
-              Select tenants to notify via SMS about their pending payments.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col p-0 overflow-hidden rounded-2xl">
+          {/* Dialog header */}
+          <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-5 text-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <Bell className="h-5 w-5" />
+                Send Overdue Payment Reminders
+              </DialogTitle>
+              <DialogDescription className="text-amber-100 mt-1">
+                Select tenants to notify via SMS about their pending payments.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-muted-foreground">
+          <div className="px-6 pt-4 pb-2 flex items-center justify-between">
+            <span className="text-sm text-slate-500">
               {pendingByTenant.length} tenant{pendingByTenant.length !== 1 ? "s" : ""} with pending payments
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
+            <button
+              className="rounded-lg px-2.5 py-1 text-xs font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
               onClick={handleSelectAll}
             >
               {selectedTenantIds.size === pendingByTenant.length ? "Deselect All" : "Select All"}
-            </Button>
+            </button>
           </div>
 
           <Separator />
 
-          <div className="overflow-y-auto flex-1 space-y-1 py-2">
+          <div className="overflow-y-auto flex-1 space-y-0.5 px-4 py-2">
             {pendingByTenant.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-8">
-                No pending payments found.
-              </p>
+              <p className="py-10 text-center text-sm text-slate-400">No pending payments found.</p>
             ) : (
               pendingByTenant.map((p) => (
                 <label
                   key={p.propertyTenantId}
-                  className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-muted/50 cursor-pointer"
+                  className="flex cursor-pointer items-start gap-3 rounded-xl px-3 py-3 hover:bg-slate-50 transition-colors"
                 >
                   <Checkbox
                     checked={selectedTenantIds.has(p.propertyTenantId)}
@@ -760,14 +700,14 @@ const TrackPayments = () => {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-sm truncate">
+                      <span className="font-semibold text-sm text-[#0F172A] truncate">
                         {p.propertyTenant.fullName}
                       </span>
-                      <span className="text-sm font-semibold text-amber-700 shrink-0">
+                      <span className="text-sm font-bold text-amber-700 shrink-0">
                         UGX {p.amount.toLocaleString()}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
+                    <div className="text-xs text-slate-400 mt-0.5 space-y-0.5">
                       <div>{p.propertyTenant.property.name}</div>
                       <div>{p.propertyTenant.phoneNumber}</div>
                     </div>
@@ -779,34 +719,29 @@ const TrackPayments = () => {
 
           <Separator />
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
+          <DialogFooter className="gap-2 px-6 py-4">
+            <button
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
               onClick={() => setShowReminderDialog(false)}
               disabled={isSendingReminders}
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
               onClick={handleSendBulkReminders}
               disabled={selectedTenantIds.size === 0 || isSendingReminders}
-              className="gap-2"
             >
               {isSendingReminders ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Sending…
-                </>
+                <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
               ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Send to {selectedTenantIds.size} Selected
-                </>
+                <><Send className="h-4 w-4" /> Send to {selectedTenantIds.size} Selected</>
               )}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

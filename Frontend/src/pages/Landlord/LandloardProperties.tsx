@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getImageUrl } from "@/lib/imageUrl";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DataTable, Column } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -11,11 +9,18 @@ import {
   Search,
   Eye,
   Edit,
-  Trash,
+  Trash2,
   X,
   ImageIcon,
-  Upload,
-  XIcon,
+  Building2,
+  MapPin,
+  BedDouble,
+  CircleDollarSign,
+  User,
+  Mail,
+  Phone,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -63,7 +68,6 @@ interface PropertyPhoto {
 }
 
 type Region = "Central" | "Eastern" | "Northern" | "Western";
-
 interface RegionDistrictsMap {
   Central: string[];
   Eastern: string[];
@@ -79,28 +83,53 @@ interface Landlord {
   passportPhoto: string;
   nationalIdNumber: string;
   systemRoleId: number;
-  systemRole: {
-    id: number;
-    name: string;
-    description: string;
-  };
+  systemRole: { id: number; name: string; description: string };
 }
 
-const propertyTypes = [
-  "Apartment",
-  "House",
-  "Villa",
-  "Condo",
-  "Townhouse",
-  "Commercial",
-];
+const propertyTypes = ["Apartment", "House", "Villa", "Condo", "Townhouse", "Commercial"];
 
+const typeBadge = (type: string) => {
+  const map: Record<string, string> = {
+    Apartment: "bg-blue-50 text-blue-700 border-blue-100",
+    House: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    Villa: "bg-violet-50 text-violet-700 border-violet-100",
+    Condo: "bg-indigo-50 text-indigo-700 border-indigo-100",
+    Townhouse: "bg-amber-50 text-amber-700 border-amber-100",
+    Commercial: "bg-slate-100 text-slate-700 border-slate-200",
+  };
+  const cls = map[type] ?? "bg-slate-100 text-slate-600 border-slate-200";
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
+      {type}
+    </span>
+  );
+};
+
+const DetailRow = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: React.ReactNode;
+}) => (
+  <div className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-0">
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+      <Icon className="h-3.5 w-3.5 text-slate-500" />
+    </div>
+    <div className="min-w-0 flex-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-0.5 text-sm font-medium text-[#0F172A]">{value}</p>
+    </div>
+  </div>
+);
+
+// ── Component ─────────────────────────────────────────────────────────────────
 const Properties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(
-    null
-  );
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchTerm1, setSearchTerm1] = useState<string>("");
@@ -113,174 +142,32 @@ const Properties = () => {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
   const [formData, setFormData] = useState({
-    Name: "",
-    Address: "",
-    Region: "",
-    District: "",
-    Zipcode: "",
-    Type: "",
-    NumberOfRooms: "0",
-    Description: "",
-    OwnerId: "0",
-    Price: "0",
-    Currency: "UGX",
-    Occupied: "true",
+    Name: "", Address: "", Region: "", District: "", Zipcode: "",
+    Type: "", NumberOfRooms: "0", Description: "", OwnerId: "0",
+    Price: "0", Currency: "UGX", Occupied: "true",
   });
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
+
   const user = localStorage.getItem("user") || null;
   const districtsByRegion: RegionDistrictsMap = {
-    Central: [
-      "Buikwe",
-      "Bukomansimbi",
-      "Butambala",
-      "Buvuma",
-      "Gomba",
-      "Kalangala",
-      "Kalungu",
-      "Kampala",
-      "Kayunga",
-      "Kiboga",
-      "Kyankwanzi",
-      "Luweero",
-      "Lwengo",
-      "Lyantonde",
-      "Masaka",
-      "Mityana",
-      "Mpigi",
-      "Mubende",
-      "Mukono",
-      "Nakaseke",
-      "Nakasongola",
-      "Rakai",
-      "Sembabule",
-      "Wakiso",
-    ],
-    Eastern: [
-      "Amuria",
-      "Budaka",
-      "Bududa",
-      "Bugiri",
-      "Bukedea",
-      "Bukwa",
-      "Bulambuli",
-      "Busia",
-      "Butaleja",
-      "Buyende",
-      "Iganga",
-      "Jinja",
-      "Kaberamaido",
-      "Kaliro",
-      "Kamuli",
-      "Kapchorwa",
-      "Katakwi",
-      "Kibuku",
-      "Kumi",
-      "Kween",
-      "Luuka",
-      "Manafwa",
-      "Mayuge",
-      "Mbale",
-      "Namayingo",
-      "Namisindwa",
-      "Namutumba",
-      "Ngora",
-      "Pallisa",
-      "Serere",
-      "Sironko",
-      "Soroti",
-      "Tororo",
-    ],
-    Northern: [
-      "Abim",
-      "Adjumani",
-      "Agago",
-      "Alebtong",
-      "Amolatar",
-      "Amudat",
-      "Amuru",
-      "Apac",
-      "Arua",
-      "Dokolo",
-      "Gulu",
-      "Kaabong",
-      "Kitgum",
-      "Koboko",
-      "Kole",
-      "Kotido",
-      "Lamwo",
-      "Lira",
-      "Maracha",
-      "Moroto",
-      "Moyo",
-      "Nakapiripirit",
-      "Napak",
-      "Nebbi",
-      "Nwoya",
-      "Omoro",
-      "Otuke",
-      "Oyam",
-      "Pader",
-      "Pakwach",
-      "Yumbe",
-      "Zombo",
-    ],
-    Western: [
-      "Buhweju",
-      "Buliisa",
-      "Bundibugyo",
-      "Bushenyi",
-      "Hoima",
-      "Ibanda",
-      "Isingiro",
-      "Kabale",
-      "Kabarole",
-      "Kagadi",
-      "Kakumiro",
-      "Kamwenge",
-      "Kanungu",
-      "Kasese",
-      "Kibaale",
-      "Kiruhura",
-      "Kiryandongo",
-      "Kisoro",
-      "Kyegegwa",
-      "Kyenjojo",
-      "Masindi",
-      "Mitooma",
-      "Ntoroko",
-      "Ntungamo",
-      "Rubanda",
-      "Rubirizi",
-      "Rukiga",
-      "Rukungiri",
-      "Sheema",
-    ],
+    Central: ["Buikwe","Bukomansimbi","Butambala","Buvuma","Gomba","Kalangala","Kalungu","Kampala","Kayunga","Kiboga","Kyankwanzi","Luweero","Lwengo","Lyantonde","Masaka","Mityana","Mpigi","Mubende","Mukono","Nakaseke","Nakasongola","Rakai","Sembabule","Wakiso"],
+    Eastern: ["Amuria","Budaka","Bududa","Bugiri","Bukedea","Bukwa","Bulambuli","Busia","Butaleja","Buyende","Iganga","Jinja","Kaberamaido","Kaliro","Kamuli","Kapchorwa","Katakwi","Kibuku","Kumi","Kween","Luuka","Manafwa","Mayuge","Mbale","Namayingo","Namisindwa","Namutumba","Ngora","Pallisa","Serere","Sironko","Soroti","Tororo"],
+    Northern: ["Abim","Adjumani","Agago","Alebtong","Amolatar","Amudat","Amuru","Apac","Arua","Dokolo","Gulu","Kaabong","Kitgum","Koboko","Kole","Kotido","Lamwo","Lira","Maracha","Moroto","Moyo","Nakapiripirit","Napak","Nebbi","Nwoya","Omoro","Otuke","Oyam","Pader","Pakwach","Yumbe","Zombo"],
+    Western: ["Buhweju","Buliisa","Bundibugyo","Bushenyi","Hoima","Ibanda","Isingiro","Kabale","Kabarole","Kagadi","Kakumiro","Kamwenge","Kanungu","Kasese","Kibaale","Kiruhura","Kiryandongo","Kisoro","Kyegegwa","Kyenjojo","Masindi","Mitooma","Ntoroko","Ntungamo","Rubanda","Rubirizi","Rukiga","Rukungiri","Sheema"],
   };
 
   const userData = JSON.parse(user);
   const token = userData.token;
   if (!token) {
-    toast({
-      title: "Error",
-      description: "User token not found. Please log in again.",
-      variant: "destructive",
-    });
+    toast({ title: "Error", description: "User token not found. Please log in again.", variant: "destructive" });
     return;
   }
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
   const navigate = useNavigate();
 
-  const handleNavigate = () => {
-    navigate("/admin-dashboard/register-property");
-  };
-
-  // Handle region change
-  const handleRegionChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
+  const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
     setSelectedRegion(e.target.value as Region | "");
     setSelectedDistrict("");
     setSearchTerm1("");
@@ -294,30 +181,12 @@ const Properties = () => {
   const fetchProperties = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
-        {
-          method: "GET",
-          headers: {
-            accept: "*/*",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 400) {
-        // API returns 400 when the landlord has no properties yet
-        setProperties([]);
-        setError(null);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setProperties(data);
+      const response = await fetch(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`, {
+        headers: { accept: "*/*", Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 400) { setProperties([]); setError(null); return; }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      setProperties(await response.json());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch properties");
@@ -330,99 +199,57 @@ const Properties = () => {
     setIsLoadingLandlords(true);
     try {
       const response = await fetch(`${apiUrl}/GetLandlords`, {
-        method: "GET",
-        headers: {
-          accept: "*/*",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { accept: "*/*", Authorization: `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch landlords");
-      }
-
-      const data: Landlord[] = await response.json();
-      setLandlords(data);
+      if (!response.ok) throw new Error("Failed to fetch landlords");
+      setLandlords(await response.json());
     } catch (error) {
-      console.error("Error fetching landlords:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch landlords",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to fetch landlords", variant: "destructive" });
     } finally {
       setIsLoadingLandlords(false);
     }
   };
 
   const filteredProperties = properties.filter(
-    (property) =>
-      property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+    (p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteProperty = async (id: number) => {
     try {
       const response = await fetch(`${apiUrl}/DeleteProperty/${id}`, {
         method: "DELETE",
-        headers: {
-          accept: "*/*",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { accept: "*/*", Authorization: `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete property");
-      }
-
-      setProperties((prev) => prev.filter((property) => property.id !== id));
-      toast({
-        title: "Success",
-        description: "Property deleted successfully",
-      });
+      if (!response.ok) throw new Error("Failed to delete property");
+      setProperties((prev) => prev.filter((p) => p.id !== id));
+      toast({ title: "Success", description: "Property deleted successfully" });
     } catch (err) {
-      console.error("Error deleting property:", err);
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to delete property",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to delete property", variant: "destructive" });
     }
   };
 
   const handleEditProperty = (property: Property) => {
     setEditingProperty(property);
-    // Reset property photos when starting to edit
     setPropertyPhotos([]);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
     if (propertyPhotos.length + files.length > 3) {
-      toast({
-        title: "Upload limit exceeded",
-        description: "You can only upload a maximum of 3 photos.",
-        variant: "destructive",
-      });
+      toast({ title: "Upload limit exceeded", description: "Maximum 3 photos allowed.", variant: "destructive" });
       return;
     }
-
     const newPhotos: PropertyPhoto[] = [];
-
     Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        newPhotos.push({
-          file,
-          preview: reader.result as string,
-        });
-
-        if (newPhotos.length === files.length) {
+        newPhotos.push({ file, preview: reader.result as string });
+        if (newPhotos.length === files.length)
           setPropertyPhotos((prev) => [...prev, ...newPhotos]);
-        }
       };
       reader.readAsDataURL(file);
     });
@@ -432,9 +259,7 @@ const Properties = () => {
     setPropertyPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAddInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleAddInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -443,80 +268,54 @@ const Properties = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle district selection
   const selectDistrict = (district: string): void => {
     setSelectedDistrict(district);
     setSearchTerm1(district);
     setIsDropdownOpen(false);
   };
 
-  // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm1(e.target.value);
     setIsDropdownOpen(true);
   };
 
   const filteredDistricts: string[] = selectedRegion
-    ? districtsByRegion[selectedRegion].filter((district) =>
-        district.toLowerCase().startsWith(searchTerm.toLowerCase())
+    ? districtsByRegion[selectedRegion as Region].filter((d) =>
+        d.toLowerCase().startsWith(searchTerm1.toLowerCase())
       )
     : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (propertyPhotos.length === 0) {
-      toast({
-        title: "Photos Required",
-        description: "Please upload at least one property photo.",
-        variant: "destructive",
-      });
+      toast({ title: "Photos Required", description: "Please upload at least one property photo.", variant: "destructive" });
       return;
     }
-
     setIsSubmitting(true);
-
     try {
-      const formDataToSend = new FormData();
-
-      formDataToSend.append("Price", formData.Price);
-      formDataToSend.append("Name", formData.Name);
-      formDataToSend.append("Zipcode", formData.Zipcode);
-      formDataToSend.append("OwnerId", userData.id);
-      formDataToSend.append("District", selectedDistrict);
-      formDataToSend.append("Currency", formData.Currency);
-      formDataToSend.append("Region", selectedRegion);
-      formDataToSend.append("Address", formData.Address);
-      formDataToSend.append("NumberOfRooms", formData.NumberOfRooms);
-      formDataToSend.append("Type", formData.Type);
-      formDataToSend.append("Description", formData.Description);
-      formDataToSend.append("Occupied", formData.Occupied);
-
-      propertyPhotos.forEach((photo) => {
-        formDataToSend.append("files", photo.file);
-      });
-
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(`${key}:`, value);
-      }
-
-      const apiUrl = import.meta.env.VITE_API_BASE_URL;
-      if (!apiUrl) {
-        throw new Error("API base URL is not configured");
-      }
+      const fd = new FormData();
+      fd.append("Price", formData.Price);
+      fd.append("Name", formData.Name);
+      fd.append("Zipcode", formData.Zipcode);
+      fd.append("OwnerId", userData.id);
+      fd.append("District", selectedDistrict);
+      fd.append("Currency", formData.Currency);
+      fd.append("Region", selectedRegion);
+      fd.append("Address", formData.Address);
+      fd.append("NumberOfRooms", formData.NumberOfRooms);
+      fd.append("Type", formData.Type);
+      fd.append("Description", formData.Description);
+      fd.append("Occupied", formData.Occupied);
+      propertyPhotos.forEach((photo) => fd.append("files", photo.file));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
-
       const response = await fetch(`${apiUrl}/AddProperty`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formDataToSend,
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
         signal: controller.signal,
       });
-
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -524,424 +323,339 @@ const Properties = () => {
         throw new Error(errorText || "Failed to register property");
       }
 
-      const contentType = response.headers.get("content-type");
-      let result: string;
-      if (contentType && contentType.includes("application/json")) {
-        result = await response.json();
-      } else {
-        result = await response.text();
-      }
-
       fetchProperties();
-
-      toast({
-        title: "Property Registered",
-        description: `Successfully registered property: ${formData.Name}`,
-      });
-
+      toast({ title: "Property Registered", description: `Successfully registered: ${formData.Name}` });
       setAddProperty(false);
-
-      setFormData({
-        Name: "",
-        Address: "",
-        Region: "",
-        District: "",
-        Zipcode: "",
-        Type: "",
-        NumberOfRooms: "0",
-        Description: "",
-        OwnerId: "0",
-        Price: "0",
-        Currency: "UGX",
-        Occupied: "true",
-      });
+      setFormData({ Name: "", Address: "", Region: "", District: "", Zipcode: "", Type: "", NumberOfRooms: "0", Description: "", OwnerId: "0", Price: "0", Currency: "UGX", Occupied: "true" });
       setSelectedDistrict("");
       setSelectedRegion("");
       setPropertyPhotos([]);
     } catch (error) {
-      console.error("Error submitting form:", error);
-
-      let errorMessage = "Failed to register property. Please try again.";
-      if (error instanceof Error) {
-        if (error.name === "AbortError") {
-          errorMessage = "Request timed out. Please try again.";
-        } else if (error.message.includes("Failed to fetch")) {
-          errorMessage =
-            "Could not connect to the server. Please check your connection.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      toast({
-        title: "Error",
-        description: error.response.data,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: (error as any)?.response?.data ?? "Failed to register property.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
+
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProperty) return;
-
     setIsSubmitting(true);
     try {
-      const formDataToSend = new FormData();
-
-      formDataToSend.append("Id", editingProperty.id.toString());
-      formDataToSend.append("Price", editingProperty.price.toString());
-      formDataToSend.append("Name", editingProperty.name);
-      formDataToSend.append("Zipcode", editingProperty.zipcode);
-      formDataToSend.append("OwnerId", userData.id);
-      formDataToSend.append("Owner", userData.id);
-      formDataToSend.append("District", editingProperty.district);
-      formDataToSend.append("Currency", editingProperty.currency);
-      formDataToSend.append("Region", editingProperty.region);
-      formDataToSend.append("Address", editingProperty.address);
-      formDataToSend.append(
-        "NumberOfRooms",
-        editingProperty.numberOfRooms.toString()
-      );
-      formDataToSend.append("Type", editingProperty.type);
-      formDataToSend.append("Description", editingProperty.description);
-      formDataToSend.append(
-        "Occupied",
-        editingProperty.occupied ? "true" : "false"
-      );
-
-      propertyPhotos.forEach((photo, index) => {
-        formDataToSend.append("files", photo.file);
-      });
+      const fd = new FormData();
+      fd.append("Id", editingProperty.id.toString());
+      fd.append("Price", editingProperty.price.toString());
+      fd.append("Name", editingProperty.name);
+      fd.append("Zipcode", editingProperty.zipcode);
+      fd.append("OwnerId", userData.id);
+      fd.append("Owner", userData.id);
+      fd.append("District", editingProperty.district);
+      fd.append("Currency", editingProperty.currency);
+      fd.append("Region", editingProperty.region);
+      fd.append("Address", editingProperty.address);
+      fd.append("NumberOfRooms", editingProperty.numberOfRooms.toString());
+      fd.append("Type", editingProperty.type);
+      fd.append("Description", editingProperty.description);
+      fd.append("Occupied", editingProperty.occupied ? "true" : "false");
+      propertyPhotos.forEach((photo) => fd.append("files", photo.file));
 
       const response = await fetch(`${apiUrl}/UpdateProperty`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formDataToSend,
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
       });
-      console.log("response", response);
-      if (!response.ok) {
-        throw new Error("Failed to update property");
-      }
-
-      // Update the properties list with the edited property
-      setProperties((prev) =>
-        prev.map((prop) =>
-          prop.id === editingProperty.id ? editingProperty : prop
-        )
-      );
-
+      if (!response.ok) throw new Error("Failed to update property");
+      setProperties((prev) => prev.map((p) => (p.id === editingProperty.id ? editingProperty : p)));
       setEditingProperty(null);
       setPropertyPhotos([]);
-
-      toast({
-        title: "Success",
-        description: "Property updated successfully",
-      });
-
-      // Refresh the properties list to get the updated data
+      toast({ title: "Success", description: "Property updated successfully" });
       fetchProperties();
-    } catch (err) {
-      console.error("Error updating property:", err);
-      toast({
-        title: "Error",
-        description: "Failed to update property",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Error", description: "Failed to update property", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    // if (!editingProperty) return;
-
     setEditingProperty((prev) => {
       if (!prev) return null;
-
-      if (name === "price" || name === "numberOfRooms") {
-        return { ...prev, [name]: Number(value) };
-      }
-
+      if (name === "price" || name === "numberOfRooms") return { ...prev, [name]: Number(value) };
       return { ...prev, [name]: value };
     });
   };
 
   const handleSelectChange = (name: string, value: string) => {
     if (!editingProperty) return;
-
     setEditingProperty((prev) => {
       if (!prev) return null;
-
-      if (name === "OwnerId") {
-        const selectedLandlord = landlords.find(
-          (landlord) => landlord.id.toString() === value
-        );
-        if (selectedLandlord) {
-          return {
-            ...prev,
-            owner: {
-              id: selectedLandlord.id,
-              fullName: selectedLandlord.fullName,
-              email: selectedLandlord.email,
-              phoneNumber: selectedLandlord.phoneNumber,
-            },
-          };
-        }
-        return prev;
-      }
-
-      if (name === "occupied") {
-        return { ...prev, occupied: value === "true" };
-      }
-
+      if (name === "occupied") return { ...prev, occupied: value === "true" };
       return { ...prev, [name]: value };
     });
   };
 
+  const occupiedCount = properties.filter((p) => p.occupied).length;
+  const vacantCount = properties.length - occupiedCount;
+
+  const inputCls =
+    "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-sm text-[#0F172A] " +
+    "placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
+
   return (
     <div className="space-y-6">
-      <div className="p-4 sm:p-0">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-          Landlord Properties
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          View and manage all properties registered in the system
-        </p>
-      </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          {error ? (
-            <div className="py-8 text-center text-red-500">
-              <p className="font-medium">Error retrieving properties</p>
-              <p className="text-sm mt-1">{error}</p>
+      {/* ── Hero banner ── */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+              Property Registry
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Landlord Properties</h1>
+              <p className="mt-1 text-sm text-blue-200">View and manage all properties registered in the system</p>
             </div>
-          ) : (
-            <DataTable
-              data={filteredProperties}
-              columns={[
-                {
-                  key: "name",
-                  header: "Property Name",
-                  cell: (p) => <span className="font-medium">{p.name}</span>,
-                },
-                {
-                  key: "address",
-                  header: "Address",
-                  cell: (p) => p.address,
-                },
-                {
-                  key: "type",
-                  header: "Type",
-                  cell: (p) => p.type,
-                },
-                {
-                  key: "rooms",
-                  header: "Rooms",
-                  cell: (p) => p.numberOfRooms,
-                },
-                {
-                  key: "landlord",
-                  header: "Landlord",
-                  cell: (p) => p.owner.fullName,
-                },
-                {
-                  key: "actions",
-                  header: "Actions",
-                  headerClassName: "text-right",
-                  className: "text-right",
-                  cell: (p) => (
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="icon" onClick={() => setSelectedProperty(p)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={() => handleEditProperty(p)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="text-red-500" onClick={() => handleDeleteProperty(p.id)}>
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ),
-                },
-              ]}
-              loading={isLoading}
-              searchValue={searchTerm}
-              onSearchChange={setSearchTerm}
-              searchPlaceholder="Search by property name, address, or landlord..."
-              label="property"
-              emptyIcon={<House className="h-10 w-10" />}
-              emptyMessage={searchTerm ? "Try adjusting your search query" : "Start by adding a new property"}
-              headerRight={
-                <Button onClick={() => setAddProperty(true)}>
-                  Add New Property
-                </Button>
-              }
-            />
-          )}
-        </CardContent>
-      </Card>
+            <div className="flex flex-wrap gap-3 pt-1">
+              {[
+                { label: "Total", value: properties.length },
+                { label: "Occupied", value: occupiedCount, color: "text-emerald-300" },
+                { label: "Vacant", value: vacantCount, color: "text-amber-300" },
+              ].map((s) => (
+                <div key={s.label} className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-1.5">
+                  <span className={`text-sm font-bold ${s.color ?? "text-white"}`}>{s.value}</span>
+                  <span className="text-xs text-blue-200">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* View Property Dialog */}
+          <button
+            onClick={() => setAddProperty(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white px-5 py-2.5 text-sm font-bold text-[#1D4ED8] shadow-sm transition-colors hover:bg-blue-50 shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Add New Property
+          </button>
+        </div>
+      </section>
+
+      {/* ── Table ── */}
+      {error ? (
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
+          <p className="font-semibold text-red-700">Error retrieving properties</p>
+          <p className="mt-1 text-sm text-red-500">{error}</p>
+        </div>
+      ) : (
+        <DataTable
+          data={filteredProperties}
+          columns={[
+            {
+              key: "name",
+              header: "Property Name",
+              cell: (p) => (
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1D4ED8]/10">
+                    <Building2 className="h-4 w-4 text-[#1D4ED8]" />
+                  </div>
+                  <span className="font-semibold text-[#0F172A]">{p.name}</span>
+                </div>
+              ),
+            },
+            {
+              key: "address",
+              header: "Address",
+              cell: (p) => (
+                <span className="flex items-center gap-1.5 text-sm text-slate-500">
+                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                  {p.address}
+                </span>
+              ),
+            },
+            {
+              key: "type",
+              header: "Type",
+              cell: (p) => typeBadge(p.type),
+            },
+            {
+              key: "rooms",
+              header: "Rooms",
+              cell: (p) => (
+                <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                  <BedDouble className="h-3.5 w-3.5 text-slate-400" />
+                  {p.numberOfRooms}
+                </span>
+              ),
+            },
+            {
+              key: "landlord",
+              header: "Landlord",
+              cell: (p) => (
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">
+                    {p.owner.fullName.charAt(0)}
+                  </span>
+                  <span className="text-sm text-[#0F172A]">{p.owner.fullName}</span>
+                </div>
+              ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (p) =>
+                p.occupied ? (
+                  <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                    Occupied
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                    Vacant
+                  </span>
+                ),
+            },
+            {
+              key: "actions",
+              header: "Actions",
+              headerClassName: "text-right",
+              className: "text-right",
+              cell: (p) => (
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors"
+                    onClick={() => setSelectedProperty(p)}
+                    title="View"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                    onClick={() => handleEditProperty(p)}
+                    title="Edit"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    onClick={() => handleDeleteProperty(p.id)}
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ),
+            },
+          ] as Column<Property>[]}
+          loading={isLoading}
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search by property name, address, or landlord…"
+          label="property"
+          emptyIcon={<House className="h-6 w-6 text-slate-300" />}
+          emptyMessage={searchTerm ? "No properties match your search" : "Start by adding a new property"}
+        />
+      )}
+
+      {/* ── View Property Modal ── */}
       {selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold">
-                  {selectedProperty.name}
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="relative bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Property Details</p>
+                  <h2 className="mt-0.5 text-xl font-bold">{selectedProperty.name}</h2>
+                  <p className="mt-1 flex items-center gap-1 text-sm text-blue-200">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {selectedProperty.address}
+                  </p>
+                </div>
+                <button
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
                   onClick={() => setSelectedProperty(null)}
                 >
-                  <XIcon className="h-4 w-4" />
-                </Button>
+                  <X className="h-4 w-4" />
+                </button>
               </div>
+              <div className="mt-3 flex gap-2">
+                {typeBadge(selectedProperty.type)}
+                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${selectedProperty.occupied ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"}`}>
+                  {selectedProperty.occupied ? "Occupied" : "Vacant"}
+                </span>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <div className="mb-4">
-                    <h3 className="text-sm sm:text-base font-medium text-gray-500">
-                      Property Details
-                    </h3>
-                    <p className="mt-1">
-                      <span className="font-medium">Address:</span>{" "}
-                      {selectedProperty.address}
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-medium">Type:</span>{" "}
-                      {selectedProperty.type}
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-medium">Rooms:</span>{" "}
-                      {selectedProperty.numberOfRooms}
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-medium">Price:</span>{" "}
-                      {selectedProperty.price} {selectedProperty.currency}
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-medium">Status:</span>{" "}
-                      {selectedProperty.occupied ? "Occupied" : "Vacant"}
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-medium">Description:</span>{" "}
-                      {selectedProperty.description}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm sm:text-base font-medium text-gray-500">
-                      Landlord Information
-                    </h3>
-                    <p className="mt-1">
-                      <span className="font-medium">Name:</span>{" "}
-                      {selectedProperty.owner.fullName}
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-medium">Email:</span>{" "}
-                      {selectedProperty.owner.email}
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-medium">Phone:</span>{" "}
-                      {selectedProperty.owner.phoneNumber}
-                    </p>
+            <div className="flex-1 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-0 sm:grid-cols-2">
+                <div className="border-r border-slate-100 px-6 py-4">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property Info</p>
+                  <DetailRow icon={BedDouble} label="Rooms" value={selectedProperty.numberOfRooms} />
+                  <DetailRow icon={CircleDollarSign} label="Rent" value={`${selectedProperty.currency} ${selectedProperty.price.toLocaleString()}`} />
+                  <DetailRow icon={MapPin} label="District" value={`${selectedProperty.district}, ${selectedProperty.region}`} />
+                  {selectedProperty.description && (
+                    <DetailRow icon={Building2} label="Description" value={selectedProperty.description} />
+                  )}
+                  <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Landlord</p>
+                  <DetailRow icon={User} label="Name" value={selectedProperty.owner.fullName} />
+                  <DetailRow icon={Mail} label="Email" value={selectedProperty.owner.email} />
+                  <DetailRow icon={Phone} label="Phone" value={selectedProperty.owner.phoneNumber} />
+                </div>
+                <div className="px-6 py-4">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property Image</p>
+                  <div className="overflow-hidden rounded-xl border border-slate-100">
+                    <img
+                      src={getImageUrl(selectedProperty.imageUrl)}
+                      alt={selectedProperty.name}
+                      className="h-52 w-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder-property.jpg"; }}
+                    />
                   </div>
                 </div>
-
-                <div>
-                  <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">
-                    Property Image
-                  </h3>
-                  <img
-                    src={getImageUrl(selectedProperty.imageUrl)}
-                    alt={selectedProperty.name}
-                    className="rounded-md w-full h-64 object-cover"
-                  />
-                </div>
               </div>
+            </div>
 
-              <div className="flex flex-col sm:flex-row sm:justify-end mt-6 space-y-2 sm:space-x-2 md:space-x-6 sm:space-y-0">
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedProperty(null)}
-                  className="w-full sm:w-auto"
-                >
-                  Close
-                </Button>
-                <Button
-                  className="w-full sm:w-auto bg-green-700 text-white hover:bg-green-600"
-                  onClick={() => {
-                    // setSelectedProperty(null);
-                    sessionStorage.setItem(
-                      "propertyId",
-                      selectedProperty.id.toString()
-                    );
-                    navigate("/admin-dashboard/transactions");
-                  }}
-                >
-                  Property Transactions
-                </Button>
-                <Button
-                  className="w-full sm:w-auto"
-                  onClick={() => {
-                    setSelectedProperty(null);
-                    handleEditProperty(selectedProperty);
-                  }}
-                >
-                  Edit Property
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+              <button
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                onClick={() => setSelectedProperty(null)}
+              >
+                Close
+              </button>
+              <button
+                className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                onClick={() => {
+                  sessionStorage.setItem("propertyId", selectedProperty.id.toString());
+                  navigate("/admin-dashboard/transactions");
+                }}
+              >
+                Transactions
+              </button>
+              <button
+                className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                onClick={() => { setSelectedProperty(null); handleEditProperty(selectedProperty); }}
+              >
+                Edit Property
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Property Dialog - Using the same form as RegisterProperty */}
+      {/* ── Add Property Modal ── */}
       {addProperty && (
-        <Modal
-          isOpen={addProperty}
-          onClose={() => {
-            setAddProperty(false);
-          }}
-          title="Add Property"
-          size="xl"
-        >
+        <Modal isOpen={addProperty} onClose={() => setAddProperty(false)} title="Add Property" size="xl">
           <div className="sm:max-w-2xl max-h-[80vh] overflow-y-auto px-2">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="Name">Property Name*</Label>
-                  <Input
-                    id="Name"
-                    name="Name"
-                    value={formData.Name}
-                    onChange={handleAddInputChange}
-                    required
-                  />
+                  <Input id="Name" name="Name" value={formData.Name} onChange={handleAddInputChange} required />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="Type">Property Type*</Label>
-                  <Select
-                    value={formData.Type}
-                    onValueChange={(value) =>
-                      handleAddSelectChange("Type", value)
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select property type" />
-                    </SelectTrigger>
+                  <Select value={formData.Type} onValueChange={(v) => handleAddSelectChange("Type", v)} required>
+                    <SelectTrigger><SelectValue placeholder="Select property type" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Apartment">Apartment</SelectItem>
                       <SelectItem value="Studio">Studio Room</SelectItem>
@@ -954,145 +668,81 @@ const Properties = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="region">Select Region</Label>
-
                   <select
                     id="region"
                     value={selectedRegion}
                     onChange={handleRegionChange}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+                    className={inputCls}
                   >
                     <option value="">-- Select Region --</option>
-                    {Object.keys(districtsByRegion).map((region) => (
-                      <option key={region} value={region}>
-                        {region} Region
-                      </option>
+                    {Object.keys(districtsByRegion).map((r) => (
+                      <option key={r} value={r}>{r} Region</option>
                     ))}
                   </select>
                 </div>
 
-                {/* District Selection with Search */}
                 {selectedRegion && (
                   <div className="space-y-2 relative" ref={dropdownRef}>
-                    <Label htmlFor="district">
-                      Select District in {selectedRegion} Region*
-                    </Label>
+                    <Label htmlFor="district">District in {selectedRegion} Region*</Label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
-                      </div>
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                       <input
                         type="text"
                         id="district"
-                        placeholder="Type to search districts..."
+                        placeholder="Type to search districts…"
                         value={searchTerm1}
                         onChange={handleSearchChange}
                         onClick={() => setIsDropdownOpen(true)}
-                        className="pl-10 w-full px-3 py-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+                        className={`${inputCls} pl-9`}
                       />
                     </div>
-
                     {isDropdownOpen && filteredDistricts.length > 0 && (
-                      <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {filteredDistricts.map((district) => (
-                          <li
-                            key={district}
-                            onClick={() => selectDistrict(district)}
-                            className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-                          >
-                            {district}
+                      <ul className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                        {filteredDistricts.map((d) => (
+                          <li key={d} onClick={() => selectDistrict(d)} className="px-4 py-2.5 text-sm hover:bg-blue-50 hover:text-[#1D4ED8] cursor-pointer transition-colors">
+                            {d}
                           </li>
                         ))}
                       </ul>
                     )}
-
-                    {isDropdownOpen &&
-                      searchTerm1 &&
-                      filteredDistricts.length === 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-center text-gray-500">
-                          No districts found starting with "{searchTerm1}"
-                        </div>
-                      )}
+                    {isDropdownOpen && searchTerm1 && filteredDistricts.length === 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-4 text-center text-sm text-slate-400">
+                        No districts found starting with "{searchTerm1}"
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <div className="space-y-2">
                   <Label htmlFor="Address">Street Address*</Label>
-                  <Input
-                    id="Address"
-                    name="Address"
-                    value={formData.Address}
-                    onChange={handleAddInputChange}
-                    required
-                  />
+                  <Input id="Address" name="Address" value={formData.Address} onChange={handleAddInputChange} required />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="Zipcode">ZIP Code*</Label>
-                  <Input
-                    id="Zipcode"
-                    name="Zipcode"
-                    value={formData.Zipcode}
-                    onChange={handleAddInputChange}
-                    required
-                  />
+                  <Input id="Zipcode" name="Zipcode" value={formData.Zipcode} onChange={handleAddInputChange} required />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="NumberOfRooms">Number of Rooms*</Label>
-                  <Input
-                    id="NumberOfRooms"
-                    name="NumberOfRooms"
-                    type="number"
-                    min="0"
-                    value={formData.NumberOfRooms}
-                    onChange={handleAddInputChange}
-                    required
-                  />
+                  <Input id="NumberOfRooms" name="NumberOfRooms" type="number" min="0" value={formData.NumberOfRooms} onChange={handleAddInputChange} required />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="Price">Price*</Label>
-                  <Input
-                    id="Price"
-                    name="Price"
-                    type="text"
-                    value={formData.Price}
-                    onChange={handleAddInputChange}
-                    required
-                  />
+                  <Input id="Price" name="Price" type="text" value={formData.Price} onChange={handleAddInputChange} required />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="Currency">Currency*</Label>
-                  <Select
-                    value={formData.Currency}
-                    onValueChange={(value) =>
-                      handleAddSelectChange("Currency", value)
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
+                  <Select value={formData.Currency} onValueChange={(v) => handleAddSelectChange("Currency", v)} required>
+                    <SelectTrigger><SelectValue placeholder="Select currency" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="UGX">UGX</SelectItem>
                       <SelectItem value="USD">USD</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="Occupied">Occupied Status*</Label>
-                  <Select
-                    value={formData.Occupied}
-                    onValueChange={(value) =>
-                      handleAddSelectChange("Occupied", value)
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select occupancy status" />
-                    </SelectTrigger>
+                  <Select value={formData.Occupied} onValueChange={(v) => handleAddSelectChange("Occupied", v)} required>
+                    <SelectTrigger><SelectValue placeholder="Select occupancy status" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="true">Occupied</SelectItem>
                       <SelectItem value="false">Vacant</SelectItem>
@@ -1101,55 +751,27 @@ const Properties = () => {
                 </div>
               </div>
 
+              {/* Photo upload */}
               <div className="space-y-2">
                 <Label>Property Photos* (Maximum 3)</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {propertyPhotos.map((photo, index) => (
-                    <div
-                      key={index}
-                      className="relative h-40 border rounded-md overflow-hidden"
-                    >
-                      <img
-                        src={photo.preview}
-                        alt={`Property ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "/placeholder-property.jpg";
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                      >
-                        <X size={16} />
+                    <div key={index} className="relative h-40 overflow-hidden rounded-xl border border-slate-200">
+                      <img src={photo.preview} alt={`Property ${index + 1}`} className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => removePhoto(index)} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
+                        <X size={12} />
                       </button>
                     </div>
                   ))}
-
                   {propertyPhotos.length < 3 && (
-                    <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
-                      <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                          <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">
-                              Click to upload
-                            </span>{" "}
-                            or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            PNG, JPG, WEBP (MAX. 3)
-                          </p>
-                        </div>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          multiple
-                          onChange={handlePhotoUpload}
-                        />
+                    <div className="flex h-40 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 hover:border-[#1D4ED8] transition-colors">
+                      <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2">
+                        <ImageIcon className="h-8 w-8 text-slate-300" />
+                        <p className="text-center text-xs text-slate-400">
+                          <span className="font-semibold text-[#1D4ED8]">Click to upload</span>
+                          <br />PNG, JPG, WEBP (max 3)
+                        </p>
+                        <input type="file" className="hidden" accept="image/*" multiple onChange={handlePhotoUpload} />
                       </label>
                     </div>
                   )}
@@ -1158,30 +780,27 @@ const Properties = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="Description">Property Description*</Label>
-                <Textarea
-                  id="Description"
-                  name="Description"
-                  value={formData.Description}
-                  onChange={handleAddInputChange}
-                  rows={4}
-                  required
-                />
+                <Textarea id="Description" name="Description" value={formData.Description} onChange={handleAddInputChange} rows={4} required />
               </div>
 
               <div className="flex justify-end">
-                <Button type="submit" isLoading={isSubmitting}>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Register Property
-                </Button>
+                </button>
               </div>
             </form>
           </div>
         </Modal>
       )}
+
+      {/* ── Edit Property Dialog ── */}
       {editingProperty && (
-        <Dialog
-          open={!!editingProperty}
-          onOpenChange={() => setEditingProperty(null)}
-        >
+        <Dialog open={!!editingProperty} onOpenChange={() => setEditingProperty(null)}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Property</DialogTitle>
@@ -1190,30 +809,14 @@ const Properties = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Property Name*</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={editingProperty.name}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <Input id="name" name="name" value={editingProperty.name} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="type">Property Type*</Label>
-                  <Select
-                    value={editingProperty.type}
-                    onValueChange={(value) => handleSelectChange("type", value)}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select property type" />
-                    </SelectTrigger>
+                  <Select value={editingProperty.type} onValueChange={(v) => handleSelectChange("type", v)} required>
+                    <SelectTrigger><SelectValue placeholder="Select property type" /></SelectTrigger>
                     <SelectContent>
-                      {propertyTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
+                      {propertyTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1221,137 +824,50 @@ const Properties = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="address">Address*</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={editingProperty.address}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Input id="address" name="address" value={editingProperty.address} onChange={handleInputChange} required />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="region">Region*</Label>
-                  <Input
-                    id="region"
-                    name="region"
-                    value={editingProperty.region}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <Input id="region" name="region" value={editingProperty.region} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="district">District*</Label>
-                  <Input
-                    id="district"
-                    name="district"
-                    value={editingProperty.district}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <Input id="district" name="district" value={editingProperty.district} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="zipcode">Zip Code*</Label>
-                  <Input
-                    id="zipcode"
-                    name="zipcode"
-                    value={editingProperty.zipcode}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <Input id="zipcode" name="zipcode" value={editingProperty.zipcode} onChange={handleInputChange} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="numberOfRooms">Number of Rooms*</Label>
-                  <Input
-                    id="numberOfRooms"
-                    name="numberOfRooms"
-                    type="number"
-                    min="0"
-                    value={editingProperty.numberOfRooms}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <Input id="numberOfRooms" name="numberOfRooms" type="number" min="0" value={editingProperty.numberOfRooms} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="occupied">Occupied Status*</Label>
-                  <Select
-                    value={editingProperty.occupied ? "true" : "false"}
-                    onValueChange={(value) =>
-                      handleSelectChange("occupied", value)
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select occupancy status" />
-                    </SelectTrigger>
+                  <Select value={editingProperty.occupied ? "true" : "false"} onValueChange={(v) => handleSelectChange("occupied", v)} required>
+                    <SelectTrigger><SelectValue placeholder="Select occupancy status" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="true">Occupied</SelectItem>
                       <SelectItem value="false">Vacant</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {/* <div className="space-y-2">
-                  <Label htmlFor="OwnerId">Landlord*</Label>
-                  <Select
-                    value={editingProperty.owner.id.toString()}
-                    onValueChange={(value) =>
-                      handleSelectChange("OwnerId", value)
-                    }
-                    disabled={isLoadingLandlords}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={
-                          isLoadingLandlords
-                            ? "Loading landlords..."
-                            : "Select a landlord"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {landlords.map((landlord) => (
-                        <SelectItem
-                          key={landlord.id}
-                          value={landlord.id.toString()}
-                        >
-                          {landlord.fullName} ({landlord.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div> */}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price*</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    min="0"
-                    value={editingProperty.price}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <Input id="price" name="price" type="number" min="0" value={editingProperty.price} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency*</Label>
-                  <Select
-                    value={editingProperty.currency}
-                    onValueChange={(value) =>
-                      handleSelectChange("currency", value)
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
+                  <Select value={editingProperty.currency} onValueChange={(v) => handleSelectChange("currency", v)} required>
+                    <SelectTrigger><SelectValue placeholder="Select currency" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="UGX">UGX</SelectItem>
                       <SelectItem value="USD">USD</SelectItem>
@@ -1362,101 +878,68 @@ const Properties = () => {
                 </div>
               </div>
 
+              {/* Existing + new photos */}
               <div className="space-y-2">
                 <Label>Property Photos (Maximum 3)</Label>
-                <div className="space-y-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {editingProperty.imageUrl && (
-                    <div className="relative h-40 border rounded-md overflow-hidden">
-                      <img
-                        src={getImageUrl(editingProperty.imageUrl)}
-                        alt={editingProperty.name}
-                        className="w-full h-full object-cover"
-                      />
+                {editingProperty.imageUrl && (
+                  <div className="mb-3">
+                    <p className="text-xs text-slate-400 mb-2">Current image</p>
+                    <div className="h-36 w-full overflow-hidden rounded-xl border border-slate-200 sm:w-1/2">
+                      <img src={getImageUrl(editingProperty.imageUrl)} alt={editingProperty.name} className="h-full w-full object-cover" />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {propertyPhotos.map((photo, index) => (
-                    <div
-                      key={index}
-                      className="relative h-40 border rounded-md overflow-hidden"
-                    >
-                      <img
-                        src={photo.preview}
-                        alt={`Property ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "/placeholder-property.jpg";
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                      >
-                        <X size={16} />
+                    <div key={index} className="relative h-40 overflow-hidden rounded-xl border border-slate-200">
+                      <img src={photo.preview} alt={`Property ${index + 1}`} className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => removePhoto(index)} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
+                        <X size={12} />
                       </button>
                     </div>
                   ))}
-
                   {propertyPhotos.length < 3 && (
-                    <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
-                      <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                          <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">
-                              Click to upload
-                            </span>{" "}
-                            or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            PNG, JPG, WEBP (MAX. 3)
-                          </p>
-                        </div>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          multiple
-                          onChange={handlePhotoUpload}
-                        />
+                    <div className="flex h-40 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 hover:border-[#1D4ED8] transition-colors">
+                      <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2">
+                        <ImageIcon className="h-8 w-8 text-slate-300" />
+                        <p className="text-center text-xs text-slate-400">
+                          <span className="font-semibold text-[#1D4ED8]">Click to upload</span>
+                          <br />PNG, JPG, WEBP (max 3)
+                        </p>
+                        <input type="file" className="hidden" accept="image/*" multiple onChange={handlePhotoUpload} />
                       </label>
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-xs text-slate-400">
                   {propertyPhotos.length === 0
-                    ? "Upload new photos only if you want to change the existing ones. Leave empty to keep current images."
+                    ? "Upload new photos only if you want to replace existing ones."
                     : "New photos will replace existing ones."}
                 </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="description">Property Description*</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={editingProperty.description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  required
-                />
+                <Textarea id="description" name="description" value={editingProperty.description} onChange={handleInputChange} rows={4} required />
               </div>
 
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
+              <div className="flex justify-end gap-2 pt-2">
+                <button
                   type="button"
-                  variant="outline"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
                   onClick={() => setEditingProperty(null)}
                   disabled={isSubmitting}
                 >
                   Cancel
-                </Button>
-                <Button type="submit" isLoading={isSubmitting}>
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Save Changes
-                </Button>
+                </button>
               </div>
             </form>
           </DialogContent>
