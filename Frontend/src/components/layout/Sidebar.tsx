@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           animate={{ x: isMobileOpen ? 0 : "-100%" }}
           transition={{ duration: 0.3 }}
           className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs border-r border-white/[0.07] shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] overflow-y-auto"
-          style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}
+          style={{ background: "linear-gradient(180deg, #0a0f1e 0%, #0d1f4a 50%, #1a3a6e 100%)" }}
         >
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/[0.07]">
             <div className="flex items-center">
@@ -150,7 +150,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         sidebarWidth,
         "flex flex-col border-r border-white/[0.07] shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]"
       )}
-      style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}
+      style={{ background: "linear-gradient(180deg, #0a0f1e 0%, #0d1f4a 50%, #1a3a6e 100%)" }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
