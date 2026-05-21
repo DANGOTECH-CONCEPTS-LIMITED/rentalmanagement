@@ -1,13 +1,14 @@
 
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Breadcrumb, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbList, 
-  BreadcrumbPage, 
-  BreadcrumbSeparator 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
 import { Property } from '@/types/property';
 import PropertyCard from '@/components/property/PropertyCard';
@@ -15,6 +16,7 @@ import PropertyDetailModal from '@/components/property/PropertyDetailModal';
 import PropertyFilters from '@/components/property/PropertyFilters';
 import PropertyEmptyState from '@/components/property/PropertyEmptyState';
 import { useCurrencyFormatter } from '@/hooks/use-currency-formatter';
+import { getImageUrl } from '@/lib/imageUrl';
 
 const AvailableProperties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -31,87 +33,43 @@ const AvailableProperties = () => {
   const formatCurrency = useCurrencyFormatter();
 
   useEffect(() => {
-    // Simulate API call to fetch properties
-    setTimeout(() => {
-      const mockProperties: Property[] = [
-        {
-          id: 'prop1',
-          name: 'Luxury Apartment in Kololo',
-          address: '15 Acacia Avenue, Kololo, Kampala',
-          type: 'Apartment',
-          bedrooms: 2,
-          bathrooms: 2,
-          area: 120,
-          rentAmount: 1200000,
-          images: [
-            'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGhvdXNlfGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8aG91c2UlMjBpbnRlcmlvcnxlbnwwfHwwfHx8MA%3D%3D',
-            'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8MHx8fDA%3D'
+    const fetchProperties = async () => {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+      const userData = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const token = userData?.token;
+      try {
+        const { data } = await axios.get(`${apiUrl}/GetAllProperties`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const mapped: Property[] = (data ?? []).map((p: any) => ({
+          id: p.id,
+          name: p.name ?? 'Unnamed Property',
+          address: [p.address, p.district, p.region].filter(Boolean).join(', '),
+          type: p.type ?? 'Property',
+          bedrooms: p.numberOfRooms ?? 0,
+          bathrooms: 0,
+          area: '',
+          rentAmount: p.price ?? 0,
+          currency: p.currency ?? 'UGX',
+          images: p.imageUrl ? [getImageUrl(p.imageUrl)] : [
+            'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&auto=format&fit=crop&q=60'
           ],
-          amenities: ['Gym', 'Swimming Pool', 'Security', 'Parking', 'Balcony'],
+          amenities: [],
           status: 'available',
-          landlord: 'John Doe'
-        },
-        {
-          id: 'prop2',
-          name: 'Garden View Villa in Muyenga',
-          address: '78 Tank Hill Road, Muyenga, Kampala',
-          type: 'House',
-          bedrooms: 4,
-          bathrooms: 3,
-          area: 250,
-          rentAmount: 2500000,
-          images: [
-            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8aG91c2V8ZW58MHx8MHx8fDA%3D',
-            'https://images.unsplash.com/photo-1589834390005-5d4fb9bf3d32?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8MHx8fDA%3D',
-            'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8MHx8fDA%3D'
-          ],
-          amenities: ['Garden', 'Security', 'Parking', 'Servants Quarter', 'Water Tank'],
-          status: 'available',
-          landlord: 'Sarah Smith'
-        },
-        {
-          id: 'prop3',
-          name: 'Modern Apartment in Bugolobi',
-          address: '45 Luthuli Avenue, Bugolobi, Kampala',
-          type: 'Apartment',
-          bedrooms: 3,
-          bathrooms: 2,
-          area: 160,
-          rentAmount: 1800000,
-          images: [
-            'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YXBhcnRtZW50fGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1588854337116-d1feb5189d54?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8YXBhcnRtZW50fGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fGFwYXJ0bWVudHxlbnwwfHwwfHx8MA%3D%3D'
-          ],
-          amenities: ['Security', 'Parking', 'Internet', 'Water Tank', 'Generator'],
-          status: 'available',
-          landlord: 'Michael Johnson'
-        },
-        {
-          id: 'prop4',
-          name: 'Cozy Studio in Ntinda',
-          address: '12 Ntinda Road, Ntinda, Kampala',
-          type: 'Studio',
-          bedrooms: 1,
-          bathrooms: 1,
-          area: 75,
-          rentAmount: 800000,
-          images: [
-            'https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGFwYXJ0bWVudHxlbnwwfHwwfHx8MA%3D%3D',
-            'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YXBhcnRtZW50fGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1489171078254-c3365d6e359f?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGFwYXJ0bWVudHxlbnwwfHwwfHx8MA%3D%3D'
-          ],
-          amenities: ['Security', 'Parking', 'Furnished', 'Internet'],
-          status: 'available',
-          landlord: 'Emma Davis'
-        },
-      ];
-      
-      setProperties(mockProperties);
-      setFilteredProperties(mockProperties);
-      setIsLoading(false);
-    }, 1000);
+          landlord: p.owner?.fullName ?? '',
+          description: p.description ?? '',
+          region: p.region ?? '',
+          district: p.district ?? '',
+        }));
+        setProperties(mapped);
+        setFilteredProperties(mapped);
+      } catch {
+        // silently fail — empty state will show
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProperties();
   }, []);
 
   useEffect(() => {

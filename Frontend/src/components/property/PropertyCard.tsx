@@ -1,4 +1,4 @@
-import { Property } from "@/pages/Landlord/RegisterTenants";
+import { Property } from "@/types/property";
 import { Bed, Bath, Square, MapPin } from "lucide-react";
 
 interface PropertyCardProps {
