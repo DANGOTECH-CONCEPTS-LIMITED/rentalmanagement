@@ -134,10 +134,6 @@
     @apply animate-slide-in-bottom;
   }
   
-  .bg-sidebar {
-    background: linear-gradient(180deg, #0a0f1e 0%, #0f2044 55%, #1a3a6e 100%) !important;
-  }
-
   .sidebar-link {
     @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-sidebar-foreground transition-all duration-200;
   }
