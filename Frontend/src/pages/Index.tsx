@@ -137,8 +137,8 @@ const Index = () => {
 
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl px-8 py-16 text-white shadow-2xl md:px-14 md:py-20" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
-          <div className="pointer-events-none absolute -right-16 -top-16 h-80 w-80 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute -bottom-12 left-1/3 h-60 w-60 rounded-full bg-white/5" />
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
 
           <div className="relative grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <div className="space-y-7">

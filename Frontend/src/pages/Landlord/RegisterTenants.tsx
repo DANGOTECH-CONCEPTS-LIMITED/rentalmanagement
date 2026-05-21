@@ -332,8 +332,9 @@ const RegisterTenants = () => {
     <div className="space-y-6">
       {/* Hero Banner */}
       <div className="relative rounded-2xl overflow-hidden p-6 md:p-8" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-4 right-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute bottom-0 right-24 h-24 w-24 rounded-full bg-blue-300/10 blur-xl" />
         </div>
         <div className="relative">

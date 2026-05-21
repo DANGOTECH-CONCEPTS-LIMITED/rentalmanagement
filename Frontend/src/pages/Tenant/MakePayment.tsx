@@ -174,8 +174,6 @@ const MakePayment = () => {
     <div className="space-y-8">
       {/* Hero banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#0C4A6E] to-[#1D4ED8] p-7 text-white shadow-xl">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
         <div className="relative z-10 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold text-blue-200 uppercase tracking-wider">

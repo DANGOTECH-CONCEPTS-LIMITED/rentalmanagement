@@ -234,10 +234,9 @@ const LandlordDashboard = () => {
 
       {/* ── Welcome banner ── */}
       <div className="relative overflow-hidden rounded-2xl px-7 py-6 text-white shadow-lg" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
         {/* decorative blobs */}
-        <div className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute bottom-0 right-24 h-32 w-32 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-blue-400/10" />
 
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
