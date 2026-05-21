@@ -328,6 +328,11 @@ function getNavItems(role: number): NavItem[] {
         icon: <Zap size={18} />,
         path: "/admin-dashboard/meter-tokens",
       },
+      {
+        label: "My Profile",
+        icon: <UserCircle size={18} />,
+        path: "/admin-dashboard/my-profile",
+      },
     ];
   }
 
@@ -409,6 +414,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Viewing Requests",
         icon: <Eye size={18} />,
         path: "/landlord-dashboard/viewing-requests",
+      },
+      {
+        label: "My Profile",
+        icon: <UserCircle size={18} />,
+        path: "/landlord-dashboard/my-profile",
       },
     ];
   }

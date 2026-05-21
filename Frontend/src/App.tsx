@@ -72,6 +72,7 @@ import CollectoPayments from "./pages/Admin/CollectoPayments";
 import MeterTokenGenerator from "./pages/Admin/MeterTokenGenerator";
 import UtilityChargeConfig from "./pages/Landlord/UtilityChargeConfig";
 import ViewingRequests from "./pages/Landlord/ViewingRequests";
+import UserProfile from "./pages/shared/UserProfile";
 
 const queryClient = new QueryClient();
 
@@ -141,6 +142,7 @@ const App = () => (
                 <Route path="all-complaints" element={<AllComplaints />} />
                 <Route path="collecto-payments" element={<CollectoPayments />} />
                 <Route path="meter-tokens" element={<MeterTokenGenerator />} />
+                <Route path="my-profile" element={<UserProfile />} />
               </Route>
             </Route>
 
@@ -166,6 +168,7 @@ const App = () => (
                 <Route path="reports" element={<LandlordReports />} />
                 <Route path="utility-charge" element={<UtilityChargeConfig />} />
                 <Route path="viewing-requests" element={<ViewingRequests />} />
+                <Route path="my-profile" element={<UserProfile />} />
               </Route>
             </Route>
 
