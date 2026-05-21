@@ -468,7 +468,7 @@ const ComplaintsTable = () => {
   return (
     <div className="space-y-6">
       {/* Hero Banner */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] p-6 md:p-8">
+      <div className="relative rounded-2xl overflow-hidden p-6 md:p-8" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-4 right-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute bottom-4 right-32 h-24 w-24 rounded-full bg-blue-300/10 blur-xl" />

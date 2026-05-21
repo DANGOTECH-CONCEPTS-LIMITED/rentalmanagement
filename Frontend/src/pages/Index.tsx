@@ -136,7 +136,7 @@ const Index = () => {
       <div className="mx-auto max-w-7xl px-6 py-16 space-y-24">
 
         {/* Hero */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-16 text-white shadow-2xl md:px-14 md:py-20">
+        <section className="relative overflow-hidden rounded-3xl px-8 py-16 text-white shadow-2xl md:px-14 md:py-20" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
           <div className="pointer-events-none absolute -right-16 -top-16 h-80 w-80 rounded-full bg-white/5" />
           <div className="pointer-events-none absolute -bottom-12 left-1/3 h-60 w-60 rounded-full bg-white/5" />
 
