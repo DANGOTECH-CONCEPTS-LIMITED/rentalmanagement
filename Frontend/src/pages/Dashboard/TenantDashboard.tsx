@@ -300,7 +300,7 @@ const TenantDashboard = () => {
         {[
           { label: "Payment History", desc: "View past payments", path: "/tenant-dashboard/payment-history", icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
           { label: "My Invoices", desc: "View & download invoices", path: "/tenant-dashboard/invoices", icon: FileText, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "My Complaints", desc: "Submit or track issues", path: "/tenant-dashboard/complaints", icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "My Complaints", desc: "Submit or track issues", path: "/tenant-dashboard/submit-complaint", icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
           { label: "Available Units", desc: "Browse open properties", path: "/tenant-dashboard/available-properties", icon: Home, color: "text-violet-600", bg: "bg-violet-50" },
         ].map(({ label, desc, path, icon: Icon, color, bg }) => (
           <button
