@@ -566,18 +566,38 @@ const Header = () => {
         className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[#E2E8F0] bg-white px-4 shadow-sm md:px-6"
       >
         {/* Left — role title */}
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1D4ED8]">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2.2}>
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Icon badge */}
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm"
+            style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)" }}>
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2.3}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.75L12 3l9 6.75V21a.75.75 0 01-.75.75H3.75A.75.75 0 013 21V9.75z" />
             </svg>
+            {/* subtle glow dot */}
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-white" />
           </div>
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-[#0F172A] md:text-base leading-tight">
+          {/* Text */}
+          <div className="min-w-0 hidden md:block">
+            <h2
+              className="truncate text-[15px] font-bold leading-tight tracking-tight text-[#0F172A]"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
               {roleName || "Dashboard"}
             </h2>
-            <p className="text-[11px] text-[#94A3B8] leading-tight hidden md:block">Marple Properties Platform</p>
+            <p
+              className="text-[11px] leading-tight font-medium tracking-wide"
+              style={{ color: "#94a3b8", fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: "0.04em" }}
+            >
+              Marple Properties
+            </p>
           </div>
+          {/* Mobile: just role name */}
+          <h2
+            className="truncate text-sm font-bold text-[#0F172A] md:hidden"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+          >
+            {roleName || "Dashboard"}
+          </h2>
         </div>
 
         {/* Right — actions */}
