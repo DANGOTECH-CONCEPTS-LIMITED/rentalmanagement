@@ -257,7 +257,7 @@ const SendSMSForm = () => {
                         <span className="text-[10px] font-bold text-white">NY</span>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold text-slate-800">Nyumba Yo</p>
+                        <p className="text-[10px] font-semibold text-slate-800">Marple Properties</p>
                         <p className="text-[9px] text-slate-400">{formData.phone || "256XXXXXXXXX"}</p>
                       </div>
                     </div>

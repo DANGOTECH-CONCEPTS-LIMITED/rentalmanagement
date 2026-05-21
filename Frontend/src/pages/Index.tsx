@@ -122,7 +122,7 @@ const Index = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1D4ED8]">
               <Home className="h-4 w-4 text-white" />
             </div>
-            <span className="text-base font-bold text-[#0F172A]">Nyumba Yo</span>
+            <span className="text-base font-bold text-[#0F172A]">Marple Properties</span>
           </div>
           <Link
             to="/"
@@ -293,9 +293,9 @@ const Index = () => {
             <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#1D4ED8]">
               <Home className="h-3 w-3 text-white" />
             </div>
-            <span className="font-semibold text-slate-600">Nyumba Yo</span>
+            <span className="font-semibold text-slate-600">Marple Properties</span>
           </div>
-          <p>© {new Date().getFullYear()} Nyumba Yo Platform. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Marple Properties Platform. All rights reserved.</p>
         </div>
       </footer>
     </div>

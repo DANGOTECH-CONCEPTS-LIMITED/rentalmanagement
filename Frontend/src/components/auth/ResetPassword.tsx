@@ -48,7 +48,7 @@ const ResetPassword = () => {
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 border border-white/20">
             <Home className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-white tracking-tight">Nyumba Yo</span>
+          <span className="text-xl font-bold text-white tracking-tight">Marple Properties</span>
         </div>
 
         {/* Center */}
@@ -96,7 +96,7 @@ const ResetPassword = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1D4ED8]">
               <Home className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-[#0F172A]">Nyumba Yo</span>
+            <span className="text-lg font-bold text-[#0F172A]">Marple Properties</span>
           </div>
 
           {/* Heading */}

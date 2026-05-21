@@ -260,7 +260,7 @@ const AdminDashboard = () => {
           <div>
             <p className="text-sm font-medium text-blue-200">{greeting()},</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">{firstName}</h1>
-            <p className="mt-2 text-sm text-slate-300">Platform Overview — Nyumba Yo Administration</p>
+            <p className="mt-2 text-sm text-slate-300">Platform Overview — Marple Properties Administration</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-2">
                 <p className="text-xs text-blue-200">Properties</p>

@@ -576,7 +576,7 @@ const Header = () => {
             <h2 className="truncate text-sm font-semibold text-[#0F172A] md:text-base leading-tight">
               {roleName || "Dashboard"}
             </h2>
-            <p className="text-[11px] text-[#94A3B8] leading-tight hidden md:block">Nyumba Yo Platform</p>
+            <p className="text-[11px] text-[#94A3B8] leading-tight hidden md:block">Marple Properties Platform</p>
           </div>
         </div>
 

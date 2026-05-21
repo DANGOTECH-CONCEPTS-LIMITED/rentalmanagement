@@ -124,7 +124,7 @@ namespace Infrastructure.Services.UserServices
             var body = new StringBuilder()
                 .AppendLine($"Hello {user.FullName},")
                 .AppendLine()
-                .AppendLine($"Welcome to Nyumba Yo as “{systemRole.Name}.”")
+                .AppendLine($"Welcome to Marple Properties as “{systemRole.Name}.”")
                 .AppendLine()
                 .AppendLine($"Username: {user.Email}")
                 .AppendLine($"One-time password: {tempPassword}")
@@ -134,7 +134,7 @@ namespace Infrastructure.Services.UserServices
                 .AppendLine("Please change your password on first login.")
                 .ToString();
 
-            await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", body);
+            await _emailService.SendEmailAsync(user.Email, "Welcome to Marple Properties", body);
         }
 
 
@@ -175,7 +175,7 @@ namespace Infrastructure.Services.UserServices
             await _context.SaveChangesAsync();
 
             // Notify user via email about the password change
-            var emailContent = $"Hello {user.FullName},\n\nYour password on Nyumba Yo has been changed successfully. " +
+            var emailContent = $"Hello {user.FullName},\n\nYour password on Marple Properties has been changed successfully. " +
                                "If you did not initiate this change, please contact our support immediately.";
             await _emailService.SendEmailAsync(user.Email, "Password Change Notification", emailContent);
         }
@@ -268,10 +268,10 @@ namespace Infrastructure.Services.UserServices
             await _context.SaveChangesAsync();
 
             // Compose welcome email (note: ensure 'user.Password' is not sent in plaintext if already hashed)
-            var emailContent = $"Hello {user.FullName},\n\nThank you for registering with Nyumba Yo. " +
+            var emailContent = $"Hello {user.FullName},\n\nThank you for registering with Marple Properties. " +
                                $"You have been registered as {systemRole.Name} on our platform.\n\n" +
                                $"Username: {user.Email}\n Your password is {password}Please log in to change your password.";
-            await _emailService.SendEmailAsync(user.Email, "Welcome to Nyumba Yo", emailContent);
+            await _emailService.SendEmailAsync(user.Email, "Welcome to Marple Properties", emailContent);
 
             return user;
         }
