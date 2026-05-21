@@ -68,11 +68,13 @@ namespace Infrastructure.Services.PrepaidApi
         public PrepaidApiService(HttpClient httpClient, IConfiguration config, ISTSProcessing sTSProcessing)
         {
             _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri(config["PosApi:BaseUrl"]);
-            _username = config["PosApi:user_name"];
-            _password = config["PosApi:password"];
-            _companyname = config["PosApi:company_name"];
-            _password_vend = config["PosApi:vendpassword"];
+            var baseUrl = config["PosApi:BaseUrl"];
+            if (!string.IsNullOrWhiteSpace(baseUrl))
+                _httpClient.BaseAddress = new Uri(baseUrl);
+            _username = config["PosApi:user_name"] ?? string.Empty;
+            _password = config["PosApi:password"] ?? string.Empty;
+            _companyname = config["PosApi:company_name"] ?? string.Empty;
+            _password_vend = config["PosApi:vendpassword"] ?? string.Empty;
             _stsProcessing = sTSProcessing;
         }
 

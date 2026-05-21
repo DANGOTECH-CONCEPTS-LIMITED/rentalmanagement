@@ -87,8 +87,11 @@ const TenantDashboard = () => {
 
   const fetchTenant = async () => {
     const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const token = userData?.token;
     try {
-      const { data } = await axios.get(`${apiUrl}/GetTenantById/${userData.id}`);
+      const { data } = await axios.get(`${apiUrl}/GetTenantById/${userData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setTenant(data);
     } catch (error: any) {
       toast({
