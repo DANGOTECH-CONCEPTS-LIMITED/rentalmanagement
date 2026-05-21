@@ -3,6 +3,7 @@ import axios from "axios";
 import {
   User, Phone, Mail, Home, Droplets, Calendar, Briefcase,
   Users, CreditCard, ShieldCheck, Clock, AlertCircle, MapPin, DoorOpen,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,8 @@ interface TenantProfile {
   nationalIdNumber: string;
   occupation?: string;
   passportPhoto?: string;
+  idFront?: string;
+  idBack?: string;
   active: boolean;
   dateMovedIn: string;
   propertyUnitId?: number;
@@ -122,6 +125,26 @@ const FieldSkeleton = ({ rows = 4 }: { rows?: number }) => (
     ))}
   </>
 );
+
+const IdImage = ({ src, label }: { src?: string; label: string }) => {
+  const [err, setErr] = useState(false);
+  const url = src ? getImageUrl(src) : null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">{label}</p>
+      {url && !err ? (
+        <div className="h-32 rounded-xl overflow-hidden border border-[#E2E8F0] bg-slate-50">
+          <img src={url} alt={label} className="h-full w-full object-cover" onError={() => setErr(true)} />
+        </div>
+      ) : (
+        <div className="h-32 rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2">
+          <ImageIcon className="h-6 w-6 text-slate-300" />
+          <p className="text-xs text-slate-400">Not available</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const MyProfile = () => {
   const { toast } = useToast();
@@ -315,6 +338,31 @@ const MyProfile = () => {
             </>
           )}
         </SectionCard>
+
+        {/* Identity Documents */}
+        <div className="md:col-span-2 bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E2E8F0]">
+            <div className="h-9 w-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <ImageIcon className="h-4 w-4 text-amber-600" />
+            </div>
+            <h3 className="text-sm font-semibold text-[#0F172A]">Identity Documents</h3>
+          </div>
+          <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {isLoading ? (
+              <>
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+              </>
+            ) : (
+              <>
+                <IdImage src={tenant?.passportPhoto} label="Passport Photo" />
+                <IdImage src={tenant?.idFront} label="ID Front" />
+                <IdImage src={tenant?.idBack} label="ID Back" />
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Property Address */}
         <SectionCard icon={MapPin} title="Property Address" iconBg="bg-amber-50" iconColor="text-amber-600">
