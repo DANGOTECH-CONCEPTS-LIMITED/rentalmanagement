@@ -51,13 +51,13 @@
 
     --radius: 1rem;
 
-    --sidebar-background: 215 28% 9%;
-    --sidebar-foreground: 213 27% 84%;
+    --sidebar-background: 225 50% 8%;
+    --sidebar-foreground: 213 40% 80%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 19% 16%;
-    --sidebar-accent-foreground: 213 27% 84%;
-    --sidebar-border: 217 19% 16%;
+    --sidebar-accent: 218 55% 20%;
+    --sidebar-accent-foreground: 213 40% 92%;
+    --sidebar-border: 218 40% 16%;
     --sidebar-ring: 217 91% 60%;
   }
   
@@ -134,10 +134,19 @@
     @apply animate-slide-in-bottom;
   }
   
-  .sidebar-link {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200;
+  .bg-sidebar {
+    background: linear-gradient(180deg, #0a0f1e 0%, #0f2044 55%, #1a3a6e 100%) !important;
   }
-  
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-sidebar-foreground transition-all duration-200;
+  }
+
+  .sidebar-link:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+
   .sidebar-link.active {
     @apply bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_12px_28px_-16px_rgba(37,99,235,0.7)];
   }

@@ -84,15 +84,15 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           initial={{ x: "-100%" }}
           animate={{ x: isMobileOpen ? 0 : "-100%" }}
           transition={{ duration: 0.3 }}
-          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar border-r border-sidebar-border shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] overflow-y-auto"
+          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar border-r border-white/[0.07] shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] overflow-y-auto"
         >
-          <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/[0.07]">
             <div className="flex items-center">
               <img src="/marple_logo.png" alt="Logo" className="h-8 w-auto object-contain" />
             </div>
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="p-1 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+              className="p-1 rounded-md text-sidebar-foreground hover:bg-white/10 transition-colors"
             >
               <X size={18} />
             </button>
@@ -124,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
             </ul>
           </nav>
 
-          <div className="p-4 border-t border-sidebar-border">
+          <div className="p-4 border-t border-white/[0.07]">
             <button
               onClick={logout}
               className="w-full sidebar-link text-red-400 hover:bg-red-500/15 hover:text-red-300"
@@ -147,12 +147,12 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       className={cn(
         "h-screen fixed top-0 left-0 z-30 overflow-hidden transition-all duration-300 ease-in-out",
         sidebarWidth,
-        "bg-sidebar flex flex-col border-r border-sidebar-border shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]"
+        "bg-sidebar flex flex-col border-r border-white/[0.07] shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]"
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border/80">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-white/[0.07]">
         <div className="flex items-center min-w-0">
           {isCollapsed && !isHovering ? (
             <img src="/marple_logo.png" alt="Logo" className="h-8 w-8 object-contain rounded-lg" />
@@ -168,7 +168,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </div>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          className="p-1 rounded-md text-sidebar-foreground hover:bg-white/10 transition-colors"
         >
           <Menu size={18} />
         </button>
@@ -207,11 +207,11 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-white/[0.07]">
         <button
           onClick={logout}
           className={cn(
-            "w-full sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600",
+            "w-full sidebar-link text-red-400 hover:bg-red-500/15 hover:text-red-300",
             isCollapsed && !isHovering ? "justify-center px-2" : ""
           )}
         >
