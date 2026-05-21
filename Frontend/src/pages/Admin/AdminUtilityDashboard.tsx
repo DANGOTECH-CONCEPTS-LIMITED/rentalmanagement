@@ -16,52 +16,22 @@ import {
   YAxis,
 } from "recharts";
 import {
+  AlertTriangle,
   ArrowUpDown,
   Check,
   ChevronDown,
   ChevronUp,
-  ChevronsLeft,
-  ChevronsRight,
-  ChevronsUpDown,
   CircleDollarSign,
   Clock,
   Download,
+  Loader2,
   Search,
   TrendingUp,
   XCircle,
   Zap,
   CheckCircle,
-  AlertTriangle,
 } from "lucide-react";
-import StatCard from "@/components/common/StatCard";
 import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
@@ -71,6 +41,12 @@ import {
   exportDashboardWorkbook,
 } from "@/lib/dashboard-export";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
+const selCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer";
 
 interface UtilityMeter {
   id: number;
@@ -213,6 +189,7 @@ const AdminUtilityDashboard = () => {
   const [selectableUsers, setSelectableUsers] = useState<ApiUser[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState(ALL_ACCOUNT_VALUE);
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
+  const [accountPickerSearch, setAccountPickerSearch] = useState("");
   const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
   const [utilityPayments, setUtilityPayments] = useState<UtilityPayment[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -1255,17 +1232,53 @@ const AdminUtilityDashboard = () => {
   };
 
   const cards = [
-    { key: "totalMeters" as const, title: "Total Meters", value: stats.totalMeters, icon: <Zap className="h-6 w-6" /> },
-    { key: "activeMeters" as const, title: "Active Meters", value: stats.activeMeters, icon: <CheckCircle className="h-6 w-6" /> },
-    { key: "inactiveMeters" as const, title: "Inactive Meters", value: stats.inactiveMeters, icon: <Clock className="h-6 w-6" /> },
-    { key: "overdueMeters" as const, title: "30+ Days Without Payment", value: overdueMeters.length, icon: <AlertTriangle className="h-6 w-6" /> },
-    { key: "totalPayments" as const, title: "Total Payments", value: stats.totalPayments, icon: <CircleDollarSign className="h-6 w-6" /> },
-    { key: "successfulPayments" as const, title: "Successful Payments", value: stats.successfulPayments, icon: <CheckCircle className="h-6 w-6" /> },
-    { key: "pendingPayments" as const, title: "Pending Payments", value: stats.pendingPayments, icon: <Clock className="h-6 w-6" /> },
-    { key: "failedPayments" as const, title: "Failed Payments", value: stats.failedPayments, icon: <XCircle className="h-6 w-6" /> },
-    { key: "totalAmount" as const, title: "Total Amount", value: formatCurrency(stats.totalAmount), icon: <TrendingUp className="h-6 w-6" /> },
-    { key: "totalCharges" as const, title: "Total Charges", value: formatCurrency(stats.totalCharges), icon: <CircleDollarSign className="h-6 w-6" /> },
+    { key: "totalMeters" as const, title: "Total Meters", value: stats.totalMeters, icon: <Zap className="h-5 w-5" />, color: "blue" },
+    { key: "activeMeters" as const, title: "Active Meters", value: stats.activeMeters, icon: <CheckCircle className="h-5 w-5" />, color: "emerald" },
+    { key: "inactiveMeters" as const, title: "Inactive Meters", value: stats.inactiveMeters, icon: <Clock className="h-5 w-5" />, color: "amber" },
+    { key: "overdueMeters" as const, title: "30+ Days Without Payment", value: overdueMeters.length, icon: <AlertTriangle className="h-5 w-5" />, color: "red" },
+    { key: "totalPayments" as const, title: "Total Payments", value: stats.totalPayments, icon: <CircleDollarSign className="h-5 w-5" />, color: "blue" },
+    { key: "successfulPayments" as const, title: "Successful Payments", value: stats.successfulPayments, icon: <CheckCircle className="h-5 w-5" />, color: "emerald" },
+    { key: "pendingPayments" as const, title: "Pending Payments", value: stats.pendingPayments, icon: <Clock className="h-5 w-5" />, color: "amber" },
+    { key: "failedPayments" as const, title: "Failed Payments", value: stats.failedPayments, icon: <XCircle className="h-5 w-5" />, color: "red" },
+    { key: "totalAmount" as const, title: "Total Amount", value: formatCurrency(stats.totalAmount), icon: <TrendingUp className="h-5 w-5" />, color: "violet" },
+    { key: "totalCharges" as const, title: "Total Charges", value: formatCurrency(stats.totalCharges), icon: <CircleDollarSign className="h-5 w-5" />, color: "indigo" },
   ];
+
+  const cardColorMap: Record<string, { border: string; bg: string; text: string }> = {
+    blue:    { border: "border-l-blue-500",    bg: "bg-blue-50",    text: "text-blue-600" },
+    emerald: { border: "border-l-emerald-500", bg: "bg-emerald-50", text: "text-emerald-600" },
+    amber:   { border: "border-l-amber-500",   bg: "bg-amber-50",   text: "text-amber-600" },
+    red:     { border: "border-l-red-500",     bg: "bg-red-50",     text: "text-red-600" },
+    violet:  { border: "border-l-violet-500",  bg: "bg-violet-50",  text: "text-violet-600" },
+    indigo:  { border: "border-l-indigo-500",  bg: "bg-indigo-50",  text: "text-indigo-600" },
+  };
+
+  const statusBadge = (status: string | undefined | null) => {
+    const s = (status ?? "").trim().toUpperCase();
+    if (successfulStatuses.has(s))
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+          <CheckCircle className="h-3 w-3" /> {status}
+        </span>
+      );
+    if (pendingStatuses.has(s))
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+          <Clock className="h-3 w-3" /> {status}
+        </span>
+      );
+    if (failedStatuses.has(s))
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+          <XCircle className="h-3 w-3" /> {status}
+        </span>
+      );
+    return (
+      <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+        {status || "—"}
+      </span>
+    );
+  };
 
   const handleExportPdf = async () => {
     if (!dashboardRef.current) {
@@ -1466,20 +1479,29 @@ const AdminUtilityDashboard = () => {
     }
   };
 
+  const filteredAccountPickerUsers = useMemo(() => {
+    const s = accountPickerSearch.trim().toLowerCase();
+    if (!s) return selectableUsers;
+    return selectableUsers.filter((u) =>
+      [u.fullName, u.email, getRoleLabel(u)].join(" ").toLowerCase().includes(s)
+    );
+  }, [accountPickerSearch, selectableUsers]);
+
   return (
-    <div ref={dashboardRef} className="space-y-8">
-      <section className="page-hero">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              Admin Utility Analytics
+    <div ref={dashboardRef} className="space-y-6">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+              Admin
             </span>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Statistics Dashboard</h1>
-              <p className="mt-2 text-sm text-muted-foreground md:text-base">
-                Review the same utility statistics experience available to other users, then narrow it to one landlord or utility account when needed.
-              </p>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Utility Statistics Dashboard</h1>
+            <p className="text-sm text-blue-200/80">
+              Review utility analytics across all landlord and utility accounts, or narrow to a single account for targeted inspection.
+            </p>
           </div>
           <DashboardExportToolbar
             onExportExcel={handleExportExcel}
@@ -1488,320 +1510,375 @@ const AdminUtilityDashboard = () => {
         </div>
       </section>
 
-      <Card className="data-surface border-none shadow-none">
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Select an account scope, then limit analytics and transaction results to a specific period.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Filters Panel */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-6 py-5">
+          <h2 className="text-base font-bold text-[#0F172A]">Filters</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Select an account scope, then limit analytics and transaction results to a specific period.
+          </p>
+        </div>
+        <div className="p-6 space-y-4">
+          {/* Primary filter row */}
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))_minmax(0,1.2fr)_auto]">
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-account-filter">Landlord or utility user</Label>
-              <Popover open={accountPickerOpen} onOpenChange={setAccountPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="admin-utility-account-filter"
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    disabled={isLoadingUsers}
-                    className={cn(
-                      "h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm",
-                      !selectedAccountId && "text-muted-foreground"
-                    )}
-                  >
-                    <span className="truncate">
-                      {isLoadingUsers
-                        ? "Loading landlords and utility users..."
-                        : selectedScopeLabel}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search by name, email, or role" />
-                    <CommandList>
-                      <CommandEmpty>No landlord or utility user found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          value="all landlord utility accounts"
-                          onSelect={() => {
+            {/* Account Picker */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Landlord or Utility User</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={isLoadingUsers}
+                  onClick={() => setAccountPickerOpen((o) => !o)}
+                  className={cn(
+                    "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 flex items-center justify-between cursor-pointer disabled:opacity-50",
+                    !selectedAccountId && "text-[#94A3B8]"
+                  )}
+                >
+                  <span className="truncate text-left text-[#0F172A]">
+                    {isLoadingUsers ? "Loading..." : selectedScopeLabel}
+                  </span>
+                  <Search className="h-4 w-4 shrink-0 text-slate-400 ml-2" />
+                </button>
+                <AnimatePresence>
+                  {accountPickerOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg"
+                    >
+                      <div className="p-2">
+                        <input
+                          className={inputCls}
+                          placeholder="Search by name, email, or role"
+                          value={accountPickerSearch}
+                          onChange={(e) => setAccountPickerSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto px-2 pb-2">
+                        {/* All accounts option */}
+                        <button
+                          type="button"
+                          onClick={() => {
                             setSelectedAccountId(ALL_ACCOUNT_VALUE);
                             setAccountPickerOpen(false);
+                            setAccountPickerSearch("");
                           }}
-                          className="flex items-start gap-3 py-3"
+                          className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
                         >
                           <Check
                             className={cn(
-                              "mt-0.5 h-4 w-4",
+                              "mt-0.5 h-4 w-4 shrink-0 text-[#1D4ED8]",
                               selectedAccountId === ALL_ACCOUNT_VALUE ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-slate-900">All landlord and utility accounts</p>
-                            <p className="text-xs text-muted-foreground">Show statistics across the full admin scope</p>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-[#0F172A]">All landlord and utility accounts</p>
+                            <p className="text-xs text-slate-500">Show statistics across the full admin scope</p>
                           </div>
-                        </CommandItem>
-                        {selectableUsers.map((user) => (
-                          <CommandItem
+                        </button>
+                        {filteredAccountPickerUsers.map((user) => (
+                          <button
                             key={user.id}
-                            value={`${user.fullName} ${user.email} ${getRoleLabel(user)}`}
-                            onSelect={() => {
+                            type="button"
+                            onClick={() => {
                               setSelectedAccountId(String(user.id));
                               setAccountPickerOpen(false);
+                              setAccountPickerSearch("");
                             }}
-                            className="flex items-start gap-3 py-3"
+                            className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
                           >
                             <Check
                               className={cn(
-                                "mt-0.5 h-4 w-4",
+                                "mt-0.5 h-4 w-4 shrink-0 text-[#1D4ED8]",
                                 selectedAccountId === String(user.id) ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-slate-900">{user.fullName}</p>
-                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-[#0F172A]">{user.fullName}</p>
+                              <p className="truncate text-xs text-slate-500">{user.email}</p>
+                              <p className="text-xs text-slate-400">{getRoleLabel(user)}</p>
                             </div>
-                          </CommandItem>
+                          </button>
                         ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                        {filteredAccountPickerUsers.length === 0 && accountPickerSearch && (
+                          <p className="py-4 text-center text-sm text-slate-400">No landlord or utility user found.</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-start-date">Start date</Label>
-              <Input
-                id="admin-utility-start-date"
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Start Date</label>
+              <input
                 type="date"
+                className={inputCls}
                 value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
+                onChange={(e) => setStartDate(e.target.value)}
                 max={endDate || undefined}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-end-date">End date</Label>
-              <Input
-                id="admin-utility-end-date"
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">End Date</label>
+              <input
                 type="date"
+                className={inputCls}
                 value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
+                onChange={(e) => setEndDate(e.target.value)}
                 min={startDate || undefined}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-search">Global search</Label>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Global Search</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="admin-utility-search"
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  className={cn(inputCls, "pl-9")}
                   value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search any transaction field, meter, vendor, token, phone, or landlord"
-                  className="pl-10"
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search any field, meter, vendor, phone..."
                 />
               </div>
             </div>
-            <div className="flex items-end gap-2">
-              <Button variant="outline" onClick={clearFilters} className="w-full">
+            <div className="flex items-end">
+              <button
+                onClick={clearFilters}
+                className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+              >
                 Clear Filters
-              </Button>
+              </button>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger id="admin-utility-status-filter">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Secondary filter row */}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Status</label>
+              <select className={selCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="all">All statuses</option>
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-phone-filter">Phone number</Label>
-              <Input
-                id="admin-utility-phone-filter"
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Phone Number</label>
+              <input
+                className={inputCls}
                 value={phoneFilter}
-                onChange={(event) => setPhoneFilter(event.target.value)}
+                onChange={(e) => setPhoneFilter(e.target.value)}
                 placeholder="Filter by phone number"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-meter-filter">Meter number</Label>
-              <Input
-                id="admin-utility-meter-filter"
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Meter Number</label>
+              <input
+                className={inputCls}
                 value={meterFilter}
-                onChange={(event) => setMeterFilter(event.target.value)}
+                onChange={(e) => setMeterFilter(e.target.value)}
                 placeholder="Filter by meter number"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-method-filter">Payment method</Label>
-              <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                <SelectTrigger id="admin-utility-method-filter">
-                  <SelectValue placeholder="All methods" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All methods</SelectItem>
-                  {paymentMethodOptions.map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {method}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Payment Method</label>
+              <select className={selCls} value={paymentMethodFilter} onChange={(e) => setPaymentMethodFilter(e.target.value)}>
+                <option value="all">All methods</option>
+                {paymentMethodOptions.map((method) => (
+                  <option key={method} value={method}>{method}</option>
+                ))}
+              </select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-vendor-filter">Vendor</Label>
-              <Select value={vendorFilter} onValueChange={setVendorFilter}>
-                <SelectTrigger id="admin-utility-vendor-filter">
-                  <SelectValue placeholder="All vendors" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All vendors</SelectItem>
-                  {vendorOptions.map((vendor) => (
-                    <SelectItem key={vendor} value={vendor}>
-                      {vendor}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Vendor</label>
+              <select className={selCls} value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value)}>
+                <option value="all">All vendors</option>
+                {vendorOptions.map((vendor) => (
+                  <option key={vendor} value={vendor}>{vendor}</option>
+                ))}
+              </select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="admin-utility-transaction-filter">Transaction ID</Label>
-              <Input
-                id="admin-utility-transaction-filter"
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Transaction ID</label>
+              <input
+                className={inputCls}
                 value={transactionIdFilter}
-                onChange={(event) => setTransactionIdFilter(event.target.value)}
+                onChange={(e) => setTransactionIdFilter(e.target.value)}
                 placeholder="Filter by transaction ID"
               />
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant="secondary">Scope: {selectedScopeLabel}</Badge>
-            <Badge variant="secondary">
+          {/* Active filter badges */}
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+              Scope: {selectedScopeLabel}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
               Period: {startDate || endDate ? `${startDate || "..."} to ${endDate || "..."}` : "All time"}
-            </Badge>
-            <Badge variant="outline">Meters: {filteredMeters.length}</Badge>
-            <Badge variant="outline">Transactions: {filteredPayments.length}</Badge>
-            <Badge variant="outline">Filtered rows: {filteredTransactionRows.length}</Badge>
+            </span>
+            <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+              Meters: {filteredMeters.length}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+              Transactions: {filteredPayments.length}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+              Filtered rows: {filteredTransactionRows.length}
+            </span>
             {!isLoadingUsers && selectableUsers.length === 0 && (
-              <Badge variant="outline">No landlord or utility users found</Badge>
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                No landlord or utility users found
+              </span>
             )}
-            {statusFilter !== "all" && <Badge variant="outline">Status: {statusFilter}</Badge>}
-            {phoneFilter && <Badge variant="outline">Phone: {phoneFilter}</Badge>}
-            {meterFilter && <Badge variant="outline">Meter: {meterFilter}</Badge>}
-            {paymentMethodFilter !== "all" && <Badge variant="outline">Method: {paymentMethodFilter}</Badge>}
-            {vendorFilter !== "all" && <Badge variant="outline">Vendor: {vendorFilter}</Badge>}
-            {transactionIdFilter && <Badge variant="outline">Transaction: {transactionIdFilter}</Badge>}
+            {statusFilter !== "all" && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                Status: {statusFilter}
+              </span>
+            )}
+            {phoneFilter && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                Phone: {phoneFilter}
+              </span>
+            )}
+            {meterFilter && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                Meter: {meterFilter}
+              </span>
+            )}
+            {paymentMethodFilter !== "all" && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                Method: {paymentMethodFilter}
+              </span>
+            )}
+            {vendorFilter !== "all" && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                Vendor: {vendorFilter}
+              </span>
+            )}
+            {transactionIdFilter && (
+              <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                Transaction: {transactionIdFilter}
+              </span>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {isLoading ? (
-        <Card className="data-surface border-none shadow-none">
-          <CardContent className="py-10 text-sm text-muted-foreground">Loading admin utility dashboard...</CardContent>
-        </Card>
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-16 flex flex-col items-center justify-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1D4ED8]/10">
+            <Loader2 className="h-7 w-7 animate-spin text-[#1D4ED8]" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-[#0F172A]">Loading Dashboard</p>
+            <p className="text-xs text-slate-400 mt-0.5">Fetching utility meters and payment data…</p>
+          </div>
+        </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {cards.map((card) => (
-              <button
-                key={card.key}
-                type="button"
-                onClick={() => {
-                  setSelectedMeterNumber("");
-                  setPreviousDetailView(null);
-                  setActiveDetailView(card.key);
-                }}
-                className="w-full text-left"
-              >
-                <StatCard
-                  title={card.title}
-                  value={card.value}
-                  icon={card.icon}
-                  className={
-                    activeDetailView === card.key
-                      ? "cursor-pointer ring-2 ring-primary shadow-lg"
-                      : "cursor-pointer"
-                  }
-                />
-              </button>
-            ))}
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            {cards.map((card) => {
+              const colors = cardColorMap[card.color] ?? cardColorMap.blue;
+              const isActive = activeDetailView === card.key;
+              return (
+                <button
+                  key={card.key}
+                  type="button"
+                  onClick={() => {
+                    setSelectedMeterNumber("");
+                    setPreviousDetailView(null);
+                    setActiveDetailView(card.key);
+                  }}
+                  className={cn(
+                    "w-full text-left rounded-2xl border border-slate-200 border-l-4 bg-white p-5 shadow-sm transition-all hover:shadow-md",
+                    colors.border,
+                    isActive && "ring-2 ring-[#1D4ED8] shadow-md"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 truncate">{card.title}</p>
+                      <p className="mt-1.5 text-2xl font-bold text-[#0F172A]">{card.value}</p>
+                    </div>
+                    <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", colors.bg)}>
+                      <span className={colors.text}>{card.icon}</span>
+                    </div>
+                  </div>
+                  {isActive && (
+                    <p className="mt-2 text-[11px] font-semibold text-[#1D4ED8]">Viewing details ↓</p>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          <Card className="data-surface border-none shadow-none">
-            <CardContent className="pt-6">
+          {/* Detail View Panel */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="p-6">
               {detailContent ? (
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-semibold">{detailContent.title}</h2>
-                      <p className="text-sm text-muted-foreground">
-                        {detailContent.description}
-                      </p>
+                      <h2 className="text-base font-bold text-[#0F172A]">{detailContent.title}</h2>
+                      <p className="mt-0.5 text-sm text-slate-500">{detailContent.description}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       {activeDetailView === "meterPayments" && previousDetailView && (
-                        <Button variant="outline" onClick={returnToPreviousView}>
+                        <button
+                          onClick={returnToPreviousView}
+                          className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                        >
                           Back to meters
-                        </Button>
+                        </button>
                       )}
-                      <Button
-                        variant="ghost"
+                      <button
                         onClick={() => {
                           setActiveDetailView(null);
                           setSelectedMeterNumber("");
                           setPreviousDetailView(null);
                         }}
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
                       >
                         Close
-                      </Button>
+                      </button>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <Input
-                      value={detailSearchTerm}
-                      onChange={(event) => setDetailSearchTerm(event.target.value)}
-                      placeholder={
-                        detailContent.type === "meters"
-                          ? "Search meters by number, type, location, or landlord"
-                          : "Search transactions by status, meter, phone, or reference"
-                      }
-                      className="md:max-w-md"
-                    />
+                    <div className="relative md:max-w-md">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        className={cn(inputCls, "pl-9")}
+                        value={detailSearchTerm}
+                        onChange={(e) => setDetailSearchTerm(e.target.value)}
+                        placeholder={
+                          detailContent.type === "meters"
+                            ? "Search meters by number, type, location, or landlord"
+                            : "Search transactions by status, meter, phone, or reference"
+                        }
+                      />
+                    </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">Results: {sortedDetailRows.length}</Badge>
-                      <Badge variant="outline">
+                      <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                        Results: {sortedDetailRows.length}
+                      </span>
+                      <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
                         Page: {currentDetailPage} / {totalDetailPages}
-                      </Badge>
-                      <Button
-                        variant="outline"
+                      </span>
+                      <button
                         onClick={exportDetailRows}
                         disabled={filteredDetailRows.length === 0}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
                       >
+                        <Download className="h-4 w-4" />
                         Export CSV
-                      </Button>
+                      </button>
                     </div>
                   </div>
 
@@ -1809,11 +1886,17 @@ const AdminUtilityDashboard = () => {
                     <DataTable
                       data={sortedDetailRows as any[]}
                       columns={[
-                        { key: "meterNumber", header: "Meter Number", cell: (m: any) => (
-                          <button type="button" onClick={() => openMeterPayments(m.meterNumber)} className="text-primary underline-offset-4 hover:underline font-medium">
-                            {m.meterNumber}
-                          </button>
-                        )},
+                        {
+                          key: "meterNumber", header: "Meter Number", cell: (m: any) => (
+                            <button
+                              type="button"
+                              onClick={() => openMeterPayments(m.meterNumber)}
+                              className="text-[#1D4ED8] underline-offset-4 hover:underline font-semibold"
+                            >
+                              {m.meterNumber}
+                            </button>
+                          )
+                        },
                         { key: "meterType", header: "Type", cell: (m: any) => m.meterType || "-" },
                         { key: "nwscAccount", header: "NWSC Account", cell: (m: any) => m.nwscAccount || "-" },
                         { key: "location", header: "Location", cell: (m: any) => m.locationOfNwscMeter || "-" },
@@ -1832,7 +1915,7 @@ const AdminUtilityDashboard = () => {
                     <DataTable
                       data={sortedDetailRows as any[]}
                       columns={[
-                        { key: "status", header: "Status", cell: (p: any) => p.status || "-" },
+                        { key: "status", header: "Status", cell: (p: any) => statusBadge(p.status) },
                         { key: "amount", header: "Amount", cell: (p: any) => formatCurrency(p.amount || 0) },
                         { key: "charges", header: "Charges", cell: (p: any) => formatCurrency(p.charges || 0) },
                         { key: "meter", header: "Meter", cell: (p: any) => p.meterNumber || "-" },
@@ -1852,43 +1935,48 @@ const AdminUtilityDashboard = () => {
                   )}
                 </div>
               ) : (
-                <div className="py-10 text-center text-sm text-muted-foreground">
-                  Click a stat card to view the records behind that metric.
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
+                    <Zap className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-500">Click a stat card above to inspect its records</p>
+                  <p className="text-xs text-slate-400">Meter and payment details will appear here</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
+          {/* Charts */}
           <div className="grid gap-6 xl:grid-cols-2">
-            <Card ref={paymentTrendChartRef} className="data-surface border-none shadow-none">
-              <CardHeader>
-                <CardTitle>Payment Trend</CardTitle>
-                <CardDescription>Monthly transaction volume and successful amount collected.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div ref={paymentTrendChartRef} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-6 py-5">
+                <h2 className="text-base font-bold text-[#0F172A]">Payment Trend</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Monthly transaction volume and successful amount collected.</p>
+              </div>
+              <div className="p-6">
                 <div className="h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={monthlyTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="label" />
-                      <YAxis yAxisId="left" allowDecimals={false} />
-                      <YAxis yAxisId="right" orientation="right" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis yAxisId="left" allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
                       <Tooltip />
                       <Legend />
-                      <Bar yAxisId="left" dataKey="payments" fill="#2563eb" radius={[8, 8, 0, 0]} />
-                      <Line yAxisId="right" type="monotone" dataKey="amount" stroke="#0f766e" strokeWidth={3} dot={{ r: 3 }} />
+                      <Bar yAxisId="left" dataKey="payments" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                      <Line yAxisId="right" type="monotone" dataKey="amount" stroke="#0f766e" strokeWidth={2.5} dot={{ r: 3, fill: "#0f766e" }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card ref={statusBreakdownChartRef} className="data-surface border-none shadow-none">
-              <CardHeader>
-                <CardTitle>Status Breakdown</CardTitle>
-                <CardDescription>Distribution of payment states in the active period.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div ref={statusBreakdownChartRef} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-6 py-5">
+                <h2 className="text-base font-bold text-[#0F172A]">Status Breakdown</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Distribution of payment states in the active period.</p>
+              </div>
+              <div className="p-6">
                 <div className="h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -1910,15 +1998,15 @@ const AdminUtilityDashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card ref={paymentMethodsChartRef} className="data-surface border-none shadow-none">
-              <CardHeader>
-                <CardTitle>Payment Methods</CardTitle>
-                <CardDescription>Share of transactions by payment method.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div ref={paymentMethodsChartRef} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-6 py-5">
+                <h2 className="text-base font-bold text-[#0F172A]">Payment Methods</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Share of transactions by payment method.</p>
+              </div>
+              <div className="p-6">
                 <div className="h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -1940,15 +2028,15 @@ const AdminUtilityDashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card ref={topMeterActivityChartRef} className="data-surface border-none shadow-none">
-              <CardHeader>
-                <CardTitle>Top Meter Activity</CardTitle>
-                <CardDescription>Most active meters by transaction count.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div ref={topMeterActivityChartRef} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-6 py-5">
+                <h2 className="text-base font-bold text-[#0F172A]">Top Meter Activity</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Most active meters by transaction count.</p>
+              </div>
+              <div className="p-6">
                 <div className="h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topMetersData} layout="vertical" margin={{ left: 12, right: 12 }}>
@@ -1960,36 +2048,47 @@ const AdminUtilityDashboard = () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
-          <Card className="data-surface border-none shadow-none">
-            <CardHeader>
+          {/* All Transactions Table */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <CardTitle>All Meter Transactions</CardTitle>
-                  <CardDescription>
+                  <h2 className="text-base font-bold text-[#0F172A]">All Meter Transactions</h2>
+                  <p className="mt-0.5 text-sm text-slate-500">
                     Search across the current account scope and inspect every transaction column in one place.
-                  </CardDescription>
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">Rows: {sortedTransactionRows.length}</Badge>
-                  <Badge variant="outline">Page: {currentPage} / {totalPages}</Badge>
-                  <Badge variant="secondary">Charges: {formatCurrency(stats.totalCharges)}</Badge>
-                  <Button variant="outline" onClick={exportTransactions} disabled={sortedTransactionRows.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
+                  <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                    Rows: {sortedTransactionRows.length}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                    Page: {currentPage} / {totalPages}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                    Charges: {formatCurrency(stats.totalCharges)}
+                  </span>
+                  <button
+                    onClick={exportTransactions}
+                    disabled={sortedTransactionRows.length === 0}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <Download className="h-4 w-4" />
                     Export CSV
-                  </Button>
+                  </button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="p-4">
               <DataTable
                 data={sortedTransactionRows}
                 columns={[
                   { key: "id", header: "ID", cell: (r) => r.id },
-                  { key: "status", header: "Status", cell: (r) => r.status || "-" },
+                  { key: "status", header: "Status", cell: (r) => statusBadge(r.status) },
                   { key: "amount", header: "Amount", cell: (r) => formatCurrency(r.amount || 0) },
                   { key: "charges", header: "Charges", cell: (r) => formatCurrency(r.charges || 0) },
                   { key: "meterNumber", header: "Meter Number", className: "font-medium", cell: (r) => r.meterNumber || "-" },
@@ -2015,8 +2114,8 @@ const AdminUtilityDashboard = () => {
                 emptyMessage="No utility transactions matched the current filters"
                 minWidth="2200px"
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </>
       )}
     </div>

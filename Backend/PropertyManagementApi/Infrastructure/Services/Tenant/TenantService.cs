@@ -62,8 +62,13 @@ namespace Infrastructure.Services.Tenant
                 IdBack = idBackPath,
                 NationalIdNumber = tenantDto.NationalIdNumber,
                 PropertyId = tenantDto.PropertyId,
+                PropertyUnitId = tenantDto.PropertyUnitId,
                 DateMovedIn = tenantDto.DateMovedIn,
                 Property = property,
+                WaterMeterNo = tenantDto.WaterMeterNo ?? string.Empty,
+                Occupation = tenantDto.Occupation ?? string.Empty,
+                NextOfKinName = tenantDto.NextOfKinName ?? string.Empty,
+                NextOfKinPhone = tenantDto.NextOfKinPhone ?? string.Empty,
             };
             //get tenant system role
             var systemRole = await _context.SystemRoles
@@ -96,6 +101,7 @@ namespace Infrastructure.Services.Tenant
             var tenants = await _context.Tenants
                 .Include(t => t.Property)
                   .ThenInclude(p => p.Owner)
+                .Include(t => t.Unit)
                 .ToListAsync();
             return tenants;
         }
@@ -105,13 +111,14 @@ namespace Infrastructure.Services.Tenant
             var tenant = await _context.Tenants
                 .Include(t => t.Property)
                   .ThenInclude(p => p.Owner)
+                .Include(t => t.Unit)
                 .FirstOrDefaultAsync(t => t.Id == id);
             if (tenant == null)
                 throw new Exception("Tenant not found.");
             return tenant;
         }
 
-        public async Task UpdateTenantAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, TenantDto tenant,int tenantid)
+        public async Task UpdateTenantAsync(IFormFile? passportphoto, IFormFile? idfront, IFormFile? idback, TenantDto tenant, int tenantid)
         {
             if (tenant == null)
                 throw new Exception("Tenant data is required.");
@@ -146,6 +153,11 @@ namespace Infrastructure.Services.Tenant
             existingTenant.Active = tenant.Active ?? false;
             existingTenant.NationalIdNumber = tenant.NationalIdNumber;
             existingTenant.PropertyId = tenant.PropertyId;
+            existingTenant.PropertyUnitId = tenant.PropertyUnitId;
+            existingTenant.WaterMeterNo = tenant.WaterMeterNo ?? string.Empty;
+            existingTenant.Occupation = tenant.Occupation ?? string.Empty;
+            existingTenant.NextOfKinName = tenant.NextOfKinName ?? string.Empty;
+            existingTenant.NextOfKinPhone = tenant.NextOfKinPhone ?? string.Empty;
             existingTenant.Property = await _context.LandLordProperties
                 .Include(p => p.Owner)
                 .FirstOrDefaultAsync(p => p.Id == tenant.PropertyId);
@@ -170,6 +182,7 @@ namespace Infrastructure.Services.Tenant
                 .Where(t => t.PropertyId == propertyId)
                 .Include(t => t.Property)
                   .ThenInclude(p => p.Owner)
+                .Include(t => t.Unit)
                 .ToListAsync();
 
             if (tenants == null)

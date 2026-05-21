@@ -24,6 +24,7 @@ import {
   UserCircle,
   Zap,
   Smartphone,
+  Inbox,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -424,16 +425,21 @@ function getNavItems(role: number): NavItem[] {
         icon: <CreditCard size={18} />,
         path: "/tenant-dashboard/make-payment",
       },
-      {
-        label: "Payment History",
-        icon: <FileText size={18} />,
-        path: "/tenant-dashboard/payment-history",
-      },
-      {
-        label: "Submit Complaint",
-        icon: <MessageSquare size={18} />,
-        path: "/tenant-dashboard/submit-complaint",
-      },
+       {
+         label: "Payment History",
+         icon: <FileText size={18} />,
+         path: "/tenant-dashboard/payment-history",
+       },
+       {
+         label: "My Contracts",
+         icon: <FileText size={18} />,
+         path: "/tenant-dashboard/tenant-contracts",
+       },
+       {
+         label: "Submit Complaint",
+         icon: <MessageSquare size={18} />,
+         path: "/tenant-dashboard/submit-complaint",
+       },
       {
         label: "My Invoices",
         icon: <Receipt size={18} />,
@@ -448,6 +454,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Send SMS",
         icon: <MessageSquare size={18} />,
         path: "/tenant-dashboard/send-sms",
+      },
+      {
+        label: "My Messages",
+        icon: <Inbox size={18} />,
+        path: "/tenant-dashboard/messages",
       },
     ];
   }

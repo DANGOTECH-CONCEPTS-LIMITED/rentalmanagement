@@ -1,10 +1,13 @@
 ﻿using Application.Interfaces.Collecto;
 using Domain.Dtos.Collecto;
+using System.Collections.Generic;
 using Domain.Entities.PropertyMgt;
 using Dtos.Collecto;
+using Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.Security.Claims;
 using System.Text.Json;
@@ -18,13 +21,16 @@ namespace API.Controllers.CollectoApi
     {
         private readonly ICollectoApiClient _collectoApiClient;
         private readonly ICollectoWalletWithdrawalHistoryService _withdrawalHistoryService;
+        private readonly AppDbContext _context;
 
         public MobileMoneyController(
             ICollectoApiClient collectoApiClient,
-            ICollectoWalletWithdrawalHistoryService withdrawalHistoryService)
+            ICollectoWalletWithdrawalHistoryService withdrawalHistoryService,
+            AppDbContext context)
         {
             _collectoApiClient = collectoApiClient;
             _withdrawalHistoryService = withdrawalHistoryService;
+            _context = context;
         }
 
         [HttpPost("/requestToPay")]
@@ -117,19 +123,102 @@ namespace API.Controllers.CollectoApi
         {
             try
             {
-                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
-                var userrole = User.FindFirst(ClaimTypes.Role)?.Value;//User.IsInRole("role", "CollectoAdmin");
-                if (userrole == null || !userrole.Equals("Administrator"))
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value
+                            ?? User.FindFirst("role")?.Value;
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value
+                             ?? User.FindFirst("email")?.Value
+                             ?? User.Identity?.Name ?? string.Empty;
+
+                var allowedRoles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    return Unauthorized();
+                    "Administrator", "Landlord", "Tenant"
+                };
+
+                if (userrole == null || !allowedRoles.Contains(userrole))
+                    return Unauthorized("Your role is not permitted to send SMS.");
+
+                bool success = false;
+                string responseMsg;
+                try
+                {
+                    responseMsg = await _collectoApiClient.SendSingleSmsAsync(request);
+                    success = responseMsg.Contains("success", StringComparison.OrdinalIgnoreCase);
                 }
-                var response = await _collectoApiClient.SendSingleSmsAsync(request);
-                return Ok(response);
+                catch (Exception ex)
+                {
+                    responseMsg = ex.Message;
+                }
+
+                await _context.SmsLogs.AddAsync(new SmsLog
+                {
+                    Phone = request.Phone,
+                    Message = request.Message,
+                    Reference = request.Reference ?? string.Empty,
+                    SentByEmail = userEmail,
+                    SentByRole = userrole ?? string.Empty,
+                    Success = success,
+                    SentAt = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync();
+
+                return Ok(responseMsg);
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        [HttpGet("/GetAllSmsLogs")]
+        [Authorize]
+        public async Task<IActionResult> GetAllSmsLogs()
+        {
+            try
+            {
+                var userrole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+                if (!string.Equals(userrole, "Administrator", StringComparison.OrdinalIgnoreCase))
+                    return Unauthorized();
+
+                var logs = await _context.SmsLogs
+                    .OrderByDescending(l => l.SentAt)
+                    .ToListAsync();
+                return Ok(logs);
+            }
+            catch (Exception ex) { return BadRequest(ex.Message); }
+        }
+
+        [HttpGet("/GetMySmsSentLogs")]
+        [Authorize]
+        public async Task<IActionResult> GetMySmsSentLogs()
+        {
+            try
+            {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value
+                         ?? User.FindFirst("email")?.Value
+                         ?? User.Identity?.Name;
+
+                var logs = await _context.SmsLogs
+                    .Where(l => l.SentByEmail == email)
+                    .OrderByDescending(l => l.SentAt)
+                    .ToListAsync();
+                return Ok(logs);
+            }
+            catch (Exception ex) { return BadRequest(ex.Message); }
+        }
+
+        [HttpGet("/GetSmsLogsByPhone/{phone}")]
+        [Authorize]
+        public async Task<IActionResult> GetSmsLogsByPhone(string phone)
+        {
+            try
+            {
+                var logs = await _context.SmsLogs
+                    .Where(l => l.Phone == phone)
+                    .OrderByDescending(l => l.SentAt)
+                    .ToListAsync();
+                return Ok(logs);
+            }
+            catch (Exception ex) { return BadRequest(ex.Message); }
         }
 
         [HttpPost("/currentBalance")]

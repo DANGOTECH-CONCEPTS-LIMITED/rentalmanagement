@@ -36,13 +36,16 @@ namespace API.Controllers.Tenant
 
         [HttpPut("/UpdateTenant")]
         [Authorize]
-        public async Task<IActionResult> UpdateTenant(List<IFormFile> files, [FromForm] TenantDto tenant, [FromForm] int tenantid)
+        public async Task<IActionResult> UpdateTenant(
+            [FromForm] IFormFile? passportPhoto,
+            [FromForm] IFormFile? idFront,
+            [FromForm] IFormFile? idBack,
+            [FromForm] TenantDto tenant,
+            [FromForm] int tenantid)
         {
             try
             {
-                if (files.Count != 3)
-                    return BadRequest("Please upload exactly 3 files: passport photo, ID front, and ID back.");
-                await _tenantService.UpdateTenantAsync(files[0], files[1], files[2], tenant, tenantid);
+                await _tenantService.UpdateTenantAsync(passportPhoto, idFront, idBack, tenant, tenantid);
                 return Ok("Tenant updated successfully.");
             }
             catch (Exception ex)

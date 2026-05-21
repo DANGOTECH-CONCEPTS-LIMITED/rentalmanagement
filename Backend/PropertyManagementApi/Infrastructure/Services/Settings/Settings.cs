@@ -59,7 +59,7 @@ namespace Infrastructure.Services.Settings
 
         public async Task<string> SaveFileAndReturnPathAsync(IFormFile file)
         {
-            string uploadsDirectory = @"C:\propertymanagementfiles\uploads"; //"uploads/";//Path.Combine("uploads", file.FileName);//Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            string uploadsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
 
             // Check whether directory exists and create if it doesn't
             if (!Directory.Exists(uploadsDirectory))
@@ -75,12 +75,7 @@ namespace Infrastructure.Services.Settings
                 await file.CopyToAsync(stream);
             }
 
-            // Access the base URL from appsettings.json
-            //string baseUrl = _configuration["BaseUrl"]; // Use indexer instead of GetValue
-
-            string fileUrl = filepath;//$"{baseUrl}/files/{filename}";
-
-            return fileUrl;
+            return filename;
         }
 
         

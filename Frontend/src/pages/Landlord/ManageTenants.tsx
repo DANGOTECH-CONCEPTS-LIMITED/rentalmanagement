@@ -31,7 +31,8 @@ interface Tenant {
   arrears: number;
   nextPaymentDate: string;
   dateMovedIn: string;
-  unitId?: string;
+  propertyUnitId?: number;
+  unit?: { id: number; unitNumber: string };
   waterMeterNo?: string;
   occupation?: string;
   nextOfKinName?: string;
@@ -102,6 +103,7 @@ const ManageTenants = () => {
   const { toast } = useToast();
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<{ id: number; unitNumber: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
@@ -175,6 +177,19 @@ const ManageTenants = () => {
   }, [toast]);
 
   useEffect(() => {
+    if (!formData.PropertyId) { setUnits([]); return; }
+    const fetchUnits = async () => {
+      try {
+        const { data } = await axios.get(`${apiUrl}/GetPropertyUnitsByPropertyId/${formData.PropertyId}`);
+        setUnits(data);
+      } catch {
+        setUnits([]);
+      }
+    };
+    fetchUnits();
+  }, [formData.PropertyId, apiUrl]);
+
+  useEffect(() => {
     return () => {
       if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
       if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
@@ -217,12 +232,14 @@ const ManageTenants = () => {
       form.append("DateMovedIn", formattedDate);
       form.append("PropertyId", formData.PropertyId);
       form.append("Active", formData.Active);
-      form.append("PassportPhoto", passportPhoto);
-      form.append("IdFront", idFrontPhoto);
-      form.append("IdBack", idBackPhoto);
-      form.append("files", passportPhoto);
-      form.append("files", idFrontPhoto);
-      form.append("files", idBackPhoto);
+      if (formData.UnitId) form.append("PropertyUnitId", formData.UnitId);
+      form.append("WaterMeterNo", formData.WaterMeterNo || "");
+      form.append("Occupation", formData.Occupation || "");
+      form.append("NextOfKinName", formData.NextOfKinName || "");
+      form.append("NextOfKinPhone", formData.NextOfKinPhone || "");
+      if (passportPhoto instanceof File) form.append("passportPhoto", passportPhoto);
+      if (idFrontPhoto instanceof File) form.append("idFront", idFrontPhoto);
+      if (idBackPhoto instanceof File) form.append("idBack", idBackPhoto);
 
       const response = await axios.put(`${apiUrl}/UpdateTenant`, form, { headers: { Accept: "*/*" } });
       if (response.status !== 200) throw new Error("Failed to update tenant");
@@ -318,7 +335,7 @@ const ManageTenants = () => {
       DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0],
       PropertyId: t.propertyId, Active: String(t.active),
       idFront: t.idFront || "", idBack: t.idBack || "", passportPhoto: t.passportPhoto || "",
-      UnitId: t.unitId || "", WaterMeterNo: t.waterMeterNo || "",
+      UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "",
       TenantStatus: t.active ? "active" : "left",
       Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "",
     });
@@ -407,8 +424,8 @@ const ManageTenants = () => {
     },
     {
       key: "unit", header: "Unit",
-      cell: (t) => t.unitId
-        ? <span className="rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-600">{t.unitId}</span>
+      cell: (t) => t.unit?.unitNumber
+        ? <span className="rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-600">{t.unit.unitNumber}</span>
         : <span className="text-slate-300">—</span>,
     },
     {
@@ -439,7 +456,7 @@ const ManageTenants = () => {
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors"
             onClick={() => {
               setSelectedTenant(t);
-              setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront, idBack: t.idBack, passportPhoto: t.passportPhoto, UnitId: t.unitId || "", WaterMeterNo: t.waterMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
+              setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront, idBack: t.idBack, passportPhoto: t.passportPhoto, UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
             }}
             title="View"
           >
@@ -583,7 +600,7 @@ const ManageTenants = () => {
                 <div className="px-6 py-4">
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property & Payment</p>
                   <DetailRow icon={Home} label="Property" value={`${selectedTenant.property.name} (${selectedTenant.property.type})`} />
-                  {selectedTenant.unitId && <DetailRow icon={Key} label="Unit / Room" value={selectedTenant.unitId} />}
+                  {selectedTenant.unit?.unitNumber && <DetailRow icon={Key} label="Unit / Room" value={selectedTenant.unit.unitNumber} />}
                   {selectedTenant.waterMeterNo && <DetailRow icon={Key} label="Water Meter" value={selectedTenant.waterMeterNo} />}
                   <DetailRow icon={Banknote} label="Monthly Rent" value={<span className="font-semibold">{formatCurrency(selectedTenant.property.price, selectedTenant.property.currency)}</span>} />
                   <DetailRow
@@ -715,7 +732,7 @@ const ManageTenants = () => {
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Unit / Room</label>
                     <select name="UnitId" className={selectCls} value={formData.UnitId} onChange={handleInputChange}>
                       <option value="">Select unit</option>
-                      {["A1","A2","B1","B2","C1","C2"].map((u) => <option key={u} value={u}>{u}</option>)}
+                      {units.map((u) => <option key={u.id} value={u.id}>{u.unitNumber}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1.5">

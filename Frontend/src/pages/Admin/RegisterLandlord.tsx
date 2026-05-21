@@ -1,8 +1,18 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Upload, X, Camera, CreditCard, FileText } from "lucide-react";
-import Button from "../../components/ui/button/Button";
-import { toast } from "@/components/ui/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Upload,
+  X,
+  Camera,
+  CreditCard,
+  FileText,
+  User,
+  Phone,
+  Mail,
+  IdCard,
+  Loader2,
+} from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 export interface LandlordFormData {
   FullName: string;
@@ -22,6 +32,9 @@ const idTypes = [
   { value: "drivingPermit", label: "Driving Permit", requiresBack: true },
   { value: "passport", label: "Passport", requiresBack: true },
 ];
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
 
 const RegisterLandlord = () => {
   const [formData, setFormData] = useState<LandlordFormData>({
@@ -153,7 +166,7 @@ const RegisterLandlord = () => {
         });
       }
 
-      files.forEach((fileObj, index) => {
+      files.forEach((fileObj) => {
         formDataToSend.append(`files`, fileObj.file);
       });
 
@@ -246,72 +259,181 @@ const RegisterLandlord = () => {
     setPreviewUrls((prev) => ({ ...prev, [fileType]: null }));
   };
 
+  const UploadZone = ({
+    fileType,
+    label,
+    icon: Icon,
+    previewUrl,
+  }: {
+    fileType: "PassportPhoto" | "IdFront" | "IdBack";
+    label: string;
+    icon: React.ElementType;
+    previewUrl: string | null;
+  }) => (
+    <div className="space-y-2">
+      <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+        <span className="flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5" />
+          {label}
+        </span>
+      </label>
+      <div
+        className="relative h-40 rounded-xl border-2 border-dashed border-[#E2E8F0] bg-slate-50 overflow-hidden transition-colors hover:border-[#1D4ED8] hover:bg-blue-50/30"
+        onDragOver={(e) => e.preventDefault()}
+        onDragLeave={(e) => e.preventDefault()}
+        onDrop={(e) => handleDrop(e, fileType)}
+      >
+        <AnimatePresence mode="wait">
+          {previewUrl ? (
+            <motion.div
+              key="preview"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="relative h-full w-full"
+            >
+              <img
+                src={previewUrl}
+                alt={label}
+                className="h-full w-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => removeFile(fileType)}
+                className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </motion.div>
+          ) : (
+            <motion.label
+              key="upload"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1.5"
+            >
+              <Upload className="h-6 w-6 text-slate-400" />
+              <span className="text-xs text-slate-500">Click or drag to upload</span>
+              <span className="text-[10px] text-slate-400">PNG, JPG up to 5MB</span>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => handleFileChange(e, fileType)}
+              />
+            </motion.label>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="max-w-3xl mx-auto"
+      className="space-y-6"
     >
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Register Landlord
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Add a new landlord to the property management system
-          </p>
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+              Admin
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Register Landlord
+            </h1>
+            <p className="text-sm text-blue-200/80">
+              Add a new landlord to the property management system
+            </p>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="glass-card p-6 rounded-xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Full Name</label>
-              <input
-                type="text"
-                name="FullName"
-                value={formData.FullName}
-                onChange={handleInputChange}
-                className="input-field"
-                placeholder="Enter landlord's full name"
-                required
-              />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Personal Information */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <User className="h-3.5 w-3.5 text-blue-600" />
             </div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Personal Information</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="FullName"
+                  value={formData.FullName}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  placeholder="Enter landlord's full name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="PhoneNumber"
+                  value={formData.PhoneNumber}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  placeholder="Enter phone number"
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="Email"
+                  value={formData.Email}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Phone Number</label>
-              <input
-                type="tel"
-                name="PhoneNumber"
-                value={formData.PhoneNumber}
-                onChange={handleInputChange}
-                className="input-field"
-                placeholder="Enter phone number"
-                required
-              />
+        {/* Identification */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <IdCard className="h-3.5 w-3.5 text-blue-600" />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <input
-                type="email"
-                name="Email"
-                value={formData.Email}
-                onChange={handleInputChange}
-                className="input-field"
-                placeholder="Enter email address"
-                required
-              />
-            </div>
-            <div className="md:col-span-2 space-y-4">
-              <label className="text-sm font-medium">Identification Type</label>
-              <div className="flex flex-wrap gap-4">
+            <h3 className="text-sm font-bold text-[#0F172A]">Identification</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-3">
+                ID Type
+              </label>
+              <div className="flex flex-wrap gap-3">
                 {idTypes.map((type) => (
                   <label
                     key={type.value}
-                    className="flex items-center space-x-2 cursor-pointer"
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all ${
+                      formData.IdType === type.value
+                        ? "border-[#1D4ED8] bg-blue-50 text-[#1D4ED8]"
+                        : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-slate-300"
+                    }`}
                   >
                     <input
                       type="radio"
@@ -319,16 +441,15 @@ const RegisterLandlord = () => {
                       value={type.value}
                       checked={formData.IdType === type.value}
                       onChange={handleRadioChange}
-                      className="radio-input"
+                      className="h-4 w-4 accent-[#1D4ED8]"
                     />
-                    <span>{type.label}</span>
+                    {type.label}
                   </label>
                 ))}
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
                 {getIdTypeLabel(formData.IdType)} Number
               </label>
               <input
@@ -336,177 +457,82 @@ const RegisterLandlord = () => {
                 name="IdNumber"
                 value={formData.IdNumber}
                 onChange={handleInputChange}
-                className="input-field w-full"
-                placeholder={`Enter ${getIdTypeLabel(
-                  formData.IdType
-                ).toLowerCase()} number`}
+                className={inputCls}
+                placeholder={`Enter ${getIdTypeLabel(formData.IdType).toLowerCase()} number`}
                 required
               />
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Passport Photo Upload */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Camera size={16} className="mr-1" />
-                Passport Photo
-              </label>
-              <div
-                className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
-                onDragOver={(e) => e.preventDefault()}
-                onDragLeave={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, "PassportPhoto")}
-              >
-                {previewUrls.PassportPhoto ? (
-                  <div className="relative w-full h-full">
-                    <img
-                      src={previewUrls.PassportPhoto}
-                      alt="Passport Preview"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeFile("PassportPhoto")}
-                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                    <div className="mt-2 text-xs">
-                      <label className="cursor-pointer text-primary hover:text-primary/80">
-                        Upload photo
-                        <input
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange(e, "PassportPhoto")}
-                        />
-                      </label>
-                      <p>or drag and drop</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+        {/* Document Uploads */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <Camera className="h-3.5 w-3.5 text-blue-600" />
             </div>
-
-            {/* ID Document Front Upload */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                {formData.IdType === "passport" ? (
-                  <FileText size={16} className="mr-1" />
-                ) : (
-                  <CreditCard size={16} className="mr-1" />
-                )}
-                {formData.IdType === "passport"
-                  ? "Passport Data Page"
-                  : `${getIdTypeLabel(formData.IdType)} Front`}
-              </label>
-              <div
-                className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
-                onDragOver={(e) => e.preventDefault()}
-                onDragLeave={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, "IdFront")}
-              >
-                {previewUrls.IdFront ? (
-                  <div className="relative w-full h-full">
-                    <img
-                      src={previewUrls.IdFront}
-                      alt="ID Front Preview"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeFile("IdFront")}
-                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                    <div className="mt-2 text-xs">
-                      <label className="cursor-pointer text-primary hover:text-primary/80">
-                        Upload{" "}
-                        {formData.IdType === "passport" ? "page" : "front"}
-                        <input
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange(e, "IdFront")}
-                        />
-                      </label>
-                      <p>or drag and drop</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Document Uploads</h3>
+          </div>
+          <div className="p-5">
+            <div className={`grid gap-4 ${isBackSideRequired() ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
+              <UploadZone
+                fileType="PassportPhoto"
+                label="Passport Photo"
+                icon={Camera}
+                previewUrl={previewUrls.PassportPhoto}
+              />
+              <UploadZone
+                fileType="IdFront"
+                label={
+                  formData.IdType === "passport"
+                    ? "Passport Data Page"
+                    : `${getIdTypeLabel(formData.IdType)} Front`
+                }
+                icon={formData.IdType === "passport" ? FileText : CreditCard}
+                previewUrl={previewUrls.IdFront}
+              />
+              {isBackSideRequired() && (
+                <UploadZone
+                  fileType="IdBack"
+                  label={`${getIdTypeLabel(formData.IdType)} Back`}
+                  icon={CreditCard}
+                  previewUrl={previewUrls.IdBack}
+                />
+              )}
             </div>
-
-            {/* ID Document Back Upload */}
-            {isBackSideRequired() && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <CreditCard size={16} className="mr-1" />
-                  {getIdTypeLabel(formData.IdType)} Back
-                </label>
-                <div
-                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDragLeave={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, "IdBack")}
-                >
-                  {previewUrls.IdBack ? (
-                    <div className="relative w-full h-full">
-                      <img
-                        src={previewUrls.IdBack}
-                        alt="ID Back Preview"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFile("IdBack")}
-                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                      <div className="mt-2 text-xs">
-                        <label className="cursor-pointer text-primary hover:text-primary/80">
-                          Upload back
-                          <input
-                            type="file"
-                            className="sr-only"
-                            accept="image/*"
-                            onChange={(e) => handleFileChange(e, "IdBack")}
-                          />
-                        </label>
-                        <p>or drag and drop</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
+        </div>
 
-          <div className="flex justify-end space-x-4">
-            <Button type="button" variant="secondary">
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              Register Landlord
-            </Button>
-          </div>
-        </form>
-      </div>
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pb-4">
+          <button
+            type="button"
+            className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+            onClick={() => {
+              setFormData({
+                FullName: "",
+                PhoneNumber: "",
+                Email: "",
+                Password: "defaultPassword",
+                IdType: "nationalId",
+                IdNumber: "",
+                systemRoleId: "2",
+              });
+              setPreviewUrls({ PassportPhoto: null, IdFront: null, IdBack: null });
+            }}
+          >
+            Clear Form
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+          >
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Registering…" : "Register Landlord"}
+          </button>
+        </div>
+      </form>
     </motion.div>
   );
 };

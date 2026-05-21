@@ -14,7 +14,12 @@ namespace Domain.Dtos.Tenant
         public string PhoneNumber { get; set; } = string.Empty;
         public string NationalIdNumber { get; set; } = string.Empty;
         public int PropertyId { get; set; }
+        public int? PropertyUnitId { get; set; }
         public DateTime? DateMovedIn { get; set; }
         public bool? Active { get; set; } = false;
+        public string WaterMeterNo { get; set; } = string.Empty;
+        public string Occupation { get; set; } = string.Empty;
+        public string NextOfKinName { get; set; } = string.Empty;
+        public string NextOfKinPhone { get; set; } = string.Empty;
     }
 }

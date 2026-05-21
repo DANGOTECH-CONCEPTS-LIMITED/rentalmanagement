@@ -45,9 +45,11 @@ using Infrastructure.Services.External;
 using System.Security.Claims;
 using Serilog;
 using Application.Interfaces.STSVending;
+using Application.Interfaces.Contract;
 using API.Filters;
 using API.Logging;
 using Infrastructure.Services.STSVending;
+using Infrastructure.Services.Contract;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +76,7 @@ builder.Services.AddTransient<LoggingHandler>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISettings, Settings>();
 builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
+builder.Services.AddScoped<IRentalContractService, RentalContractService>();
 builder.Services.AddScoped<IPropertyUnitService, PropertyUnitService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
@@ -282,7 +285,16 @@ builder.Logging.AddConsole();
 
 var app = builder.Build();
 
-app.UseStaticFiles(); // For accessing static files if any
+app.UseStaticFiles(); // wwwroot
+
+// Serve uploaded files at /uploads/{filename}
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
 
 // ✅ Apply CORS FIRST
 app.UseCors("AllowDangopayFrontend");

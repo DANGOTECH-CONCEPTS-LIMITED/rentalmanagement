@@ -1,17 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DataTable, Column } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pencil } from "lucide-react";
+import { Pencil, ArrowLeft, CreditCard, X } from "lucide-react";
 import { formatDateTimeDmy } from "@/lib/date-time";
+import { motion, AnimatePresence } from "framer-motion";
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
+const selCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer";
 
 const UtilityPayments = () => {
   const { landlordId } = useParams<{ landlordId: string }>();
@@ -82,7 +79,6 @@ const UtilityPayments = () => {
     e.preventDefault();
     if (!editPayment) return;
 
-    // Trim and validate fields
     if (!editVendor.trim() || !editVendorRef.trim()) {
       setEditError("Vendor and Vendor Ref are required.");
       return;
@@ -93,7 +89,6 @@ const UtilityPayments = () => {
     const user = localStorage.getItem("user");
     const token = user ? JSON.parse(user).token : null;
     try {
-      // Build query string
       const params = new URLSearchParams({
         tranid: String(editPayment.id),
         vendor: editVendor.trim(),
@@ -118,7 +113,8 @@ const UtilityPayments = () => {
       // update status via admin endpoint (best-effort)
       try {
         const statusPayload = {
-          transactionId: editPayment.transactionID || editPayment.transactionId || editPayment.id,
+          transactionId:
+            editPayment.transactionID || editPayment.transactionId || editPayment.id,
           status: editStatus,
           reasonAtTelecom: "",
           vendorTranRef: editVendorRef,
@@ -165,7 +161,23 @@ const UtilityPayments = () => {
     {
       key: "status",
       header: "Status",
-      cell: (p) => p.status || "-",
+      cell: (p) => {
+        const s = (p.status || "").toUpperCase();
+        const colorMap: Record<string, string> = {
+          SUCCESSFUL: "bg-green-50 text-green-700 border-green-200",
+          "SUCCESSFUL AT TELCOM": "bg-green-50 text-green-700 border-green-200",
+          PENDING: "bg-yellow-50 text-yellow-700 border-yellow-200",
+          "PENDING AT TELCOM": "bg-yellow-50 text-yellow-700 border-yellow-200",
+          FAILED: "bg-red-50 text-red-700 border-red-200",
+          REVERSED: "bg-slate-50 text-slate-600 border-slate-200",
+        };
+        const cls = colorMap[s] || "bg-slate-50 text-slate-600 border-slate-200";
+        return (
+          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cls}`}>
+            {p.status || "-"}
+          </span>
+        );
+      },
     },
     {
       key: "amount",
@@ -219,55 +231,61 @@ const UtilityPayments = () => {
       key: "actions",
       header: "Actions",
       cell: (p) => (
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={() => handleEditClick(p)}
+          className="inline-flex items-center justify-center rounded-lg border border-[#E2E8F0] bg-white p-2 text-[#0F172A] shadow-sm transition-colors hover:bg-slate-50"
         >
-          <Pencil className="h-4 w-4" />
-        </Button>
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
       ),
     },
   ];
 
   return (
-    <div className="space-y-8">
-      <section className="page-hero">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              Utility Payments
+    <div className="space-y-6">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+              Utilities
             </span>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-                Landlord payment activity
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground md:text-base">
-                Review, search, and update vendor details for utility payments linked to landlord ID {landlordId}.
-              </p>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Landlord Payment Activity
+            </h1>
+            <p className="text-sm text-blue-200/80">
+              Review, search, and update vendor details for utility payments linked to landlord ID{" "}
+              <span className="font-semibold text-white">{landlordId}</span>.
+            </p>
           </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              Back
-            </Button>
-          </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 self-start rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20 lg:self-auto"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
         </div>
       </section>
 
-      <Card className="data-surface border-none shadow-none">
-        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <CardTitle>Payment records</CardTitle>
-            <CardDescription>
-              {filteredPayments.length} matching payment record{filteredPayments.length === 1 ? "" : "s"}.
-            </CardDescription>
+      {/* Table Panel */}
+      <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+        <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-6 py-4 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+            <CreditCard className="h-4 w-4 text-blue-600" />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Payment Records</h3>
+            <p className="text-xs text-[#64748B]">
+              {filteredPayments.length} matching payment record
+              {filteredPayments.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+        <div className="p-4">
           {error ? (
-            <div className="text-center py-8 text-red-500">{error}</div>
+            <div className="py-8 text-center text-sm text-red-500">{error}</div>
           ) : (
             <DataTable
               data={filteredPayments}
@@ -280,78 +298,121 @@ const UtilityPayments = () => {
               emptyMessage="No payments found."
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-xl rounded-[28px] border border-border/70 bg-white p-0 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.4)]">
-          <DialogHeader>
-            <DialogTitle className="px-6 pt-6">Edit Vendor Info</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-5 px-6 pb-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">Vendor</label>
-              <Input
-                value={editVendor}
-                onChange={(e) => setEditVendor(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Status</label>
-              <select
-                value={editStatus}
-                onChange={(e) => setEditStatus(e.target.value)}
-                className="block w-full rounded-md border px-3 py-2"
-                required
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editDialogOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
+            >
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
+                <h2 className="text-lg font-bold">Edit Vendor Info</h2>
+                <button
+                  onClick={() => setEditDialogOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form
+                id="edit-payment-form"
+                onSubmit={handleEditSubmit}
+                className="flex-1 overflow-y-auto px-6 py-5 space-y-4"
               >
-                <option value="PENDING">PENDING</option>
-                <option value="PENDING AT TELCOM">PENDING AT TELCOM</option>
-                <option value="SUCCESSFUL">SUCCESSFUL</option>
-                <option value="SUCCESSFUL AT TELCOM">SUCCESSFUL AT TELCOM</option>
-                <option value="FAILED">FAILED</option>
-                <option value="REVERSED">REVERSED</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Vendor Ref
-              </label>
-              <Input
-                value={editVendorRef}
-                onChange={(e) => setEditVendorRef(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Vendor Payment Date
-              </label>
-              <Input
-                type="date"
-                value={editVendorPaymentDate}
-                onChange={(e) => setEditVendorPaymentDate(e.target.value)}
-              />
-            </div>
-            {editError && (
-              <div className="text-red-500 text-sm">{editError}</div>
-            )}
-            <div className="flex justify-end gap-2 border-t border-border/70 pt-5">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditDialogOpen(false)}
-                disabled={editLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" isLoading={editLoading}>
-                Save
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                    Vendor *
+                  </label>
+                  <input
+                    className={inputCls}
+                    value={editVendor}
+                    onChange={(e) => setEditVendor(e.target.value)}
+                    placeholder="Enter vendor name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                    Status *
+                  </label>
+                  <select
+                    className={selCls}
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    required
+                  >
+                    <option value="PENDING">PENDING</option>
+                    <option value="PENDING AT TELCOM">PENDING AT TELCOM</option>
+                    <option value="SUCCESSFUL">SUCCESSFUL</option>
+                    <option value="SUCCESSFUL AT TELCOM">SUCCESSFUL AT TELCOM</option>
+                    <option value="FAILED">FAILED</option>
+                    <option value="REVERSED">REVERSED</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                    Vendor Ref *
+                  </label>
+                  <input
+                    className={inputCls}
+                    value={editVendorRef}
+                    onChange={(e) => setEditVendorRef(e.target.value)}
+                    placeholder="Enter vendor reference"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                    Vendor Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    className={inputCls}
+                    value={editVendorPaymentDate}
+                    onChange={(e) => setEditVendorPaymentDate(e.target.value)}
+                  />
+                </div>
+
+                {editError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {editError}
+                  </div>
+                )}
+              </form>
+
+              <div className="shrink-0 border-t border-slate-100 px-6 py-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditDialogOpen(false)}
+                  disabled={editLoading}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="edit-payment-form"
+                  disabled={editLoading}
+                  className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+                >
+                  {editLoading ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

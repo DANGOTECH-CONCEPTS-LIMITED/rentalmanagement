@@ -1,27 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
-import { Download, Eye } from "lucide-react";
+import { Download, Eye, ArrowDownLeft } from "lucide-react";
 import { DataTable, Column } from "@/components/ui/data-table";
+import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 
 interface CollectoWithdrawHistoryEntry {
   id: number;
@@ -44,16 +28,15 @@ interface CollectoWithdrawHistoryEntry {
   createdAt: string;
 }
 
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
+const selCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer";
+
 const formatDate = (dateValue?: string) => {
-  if (!dateValue) {
-    return "-";
-  }
-
+  if (!dateValue) return "-";
   const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
+  if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString();
 };
 
@@ -62,6 +45,23 @@ const toInputDate = (date: Date) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+const statusBadge = (status: string) => {
+  const map: Record<string, string> = {
+    SUCCESS: "bg-emerald-50 border-emerald-100 text-emerald-700",
+    PENDING: "bg-amber-50 border-amber-100 text-amber-700",
+    FAILED: "bg-red-50 border-red-100 text-red-700",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+        map[status?.toUpperCase()] ?? "bg-slate-50 border-slate-200 text-slate-600"
+      }`}
+    >
+      {status}
+    </span>
+  );
 };
 
 const CollectoWithdrawLogs = () => {
@@ -94,35 +94,22 @@ const CollectoWithdrawLogs = () => {
   const fetchHistory = async () => {
     const token = getToken();
     if (!token) {
-      toast({
-        title: "Error",
-        description: "Authentication token not found.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Authentication token not found.", variant: "destructive" });
       return;
     }
-
     setIsLoading(true);
     try {
       const response = await axios.get<CollectoWithdrawHistoryEntry[]>(
         `${apiUrl}/GetCollectoWalletWithdrawalHistory`,
         {
           params: { startDate, endDate },
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "*/*",
-          },
+          headers: { Authorization: `Bearer ${token}`, accept: "*/*" },
         }
       );
-
       setEntries(response.data ?? []);
     } catch (error) {
       console.error("Error fetching Collecto withdrawal history:", error);
-      toast({
-        title: "Error",
-        description: "Failed to retrieve Collecto wallet withdrawal history.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to retrieve Collecto wallet withdrawal history.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +121,6 @@ const CollectoWithdrawLogs = () => {
 
   const filteredEntries = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-
     return entries.filter((entry) => {
       const matchesDestination =
         destinationFilter === "all" || entry.withdrawTo.toLowerCase() === destinationFilter.toLowerCase();
@@ -157,28 +143,14 @@ const CollectoWithdrawLogs = () => {
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(query));
-
       return matchesDestination && matchesStatus && matchesQuery;
     });
   }, [destinationFilter, entries, searchTerm, statusFilter]);
 
   const exportCsv = () => {
-    if (filteredEntries.length === 0) {
-      return;
-    }
-
+    if (filteredEntries.length === 0) return;
     const csvRows = [
-      [
-        "Date",
-        "Reference",
-        "Amount",
-        "Withdraw To",
-        "Requested By",
-        "Endpoint Status",
-        "Collecto Status",
-        "Collecto HTTP Status",
-        "Error",
-      ]
+      ["Date", "Reference", "Amount", "Withdraw To", "Requested By", "Endpoint Status", "Collecto Status", "Collecto HTTP Status", "Error"]
         .map(escapeCsvCell)
         .join(","),
       ...filteredEntries.map((entry) =>
@@ -197,10 +169,7 @@ const CollectoWithdrawLogs = () => {
           .join(",")
       ),
     ];
-
-    const blob = new Blob([csvRows.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -211,140 +180,174 @@ const CollectoWithdrawLogs = () => {
     URL.revokeObjectURL(url);
   };
 
+  const successCount = useMemo(() => entries.filter((e) => e.isSuccess).length, [entries]);
+  const failedCount = useMemo(() => entries.filter((e) => !e.isSuccess).length, [entries]);
+
   const columns: Column<CollectoWithdrawHistoryEntry>[] = [
     {
       key: "createdAt",
       header: "Date",
-      cell: (row) => formatDate(row.createdAt),
+      cell: (row) => <span className="text-xs text-slate-500 whitespace-nowrap">{formatDate(row.createdAt)}</span>,
     },
     {
       key: "reference",
       header: "Reference",
-      cell: (row) => row.reference,
+      cell: (row) => <span className="text-xs font-mono text-slate-700">{row.reference}</span>,
     },
     {
       key: "withdrawTo",
       header: "Withdraw To",
-      cell: (row) => <Badge variant="secondary">{row.withdrawTo}</Badge>,
+      cell: (row) => (
+        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+          {row.withdrawTo}
+        </span>
+      ),
     },
     {
       key: "requestedByEmail",
       header: "Requested By",
-      cell: (row) => (
-        <span className="max-w-[240px] truncate block">{row.requestedByEmail}</span>
-      ),
+      cell: (row) => <span className="max-w-[240px] truncate block text-sm text-slate-600">{row.requestedByEmail}</span>,
     },
     {
       key: "endpointStatus",
       header: "Endpoint",
-      cell: (row) => (
-        <Badge variant={row.endpointStatus === "SUCCESS" ? "secondary" : "destructive"}>
-          {row.endpointStatus}
-        </Badge>
-      ),
+      cell: (row) => statusBadge(row.endpointStatus),
     },
     {
       key: "collectoStatus",
       header: "Collecto",
-      cell: (row) => (
-        <Badge variant={row.isSuccess ? "secondary" : "destructive"}>
-          {row.collectoStatus}
-        </Badge>
-      ),
+      cell: (row) => statusBadge(row.collectoStatus),
     },
     {
       key: "amount",
       header: "Amount",
       headerClassName: "text-right",
       className: "text-right font-medium",
-      cell: (row) => formatCurrency(row.amount),
+      cell: (row) => <span className="font-semibold text-slate-800">{formatCurrency(row.amount)}</span>,
     },
     {
       key: "actions",
       header: "Actions",
       cell: (row) => (
-        <Button variant="outline" size="sm" onClick={() => setSelectedEntry(row)}>
-          <Eye className="mr-2 h-4 w-4" />
+        <button
+          onClick={() => setSelectedEntry(row)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900"
+        >
+          <Eye className="h-3.5 w-3.5" />
           View
-        </Button>
+        </button>
       ),
     },
   ];
 
   const filterControls = (
-    <Button variant="outline" onClick={exportCsv} disabled={filteredEntries.length === 0}>
-      <Download className="mr-2 h-4 w-4" />
+    <button
+      onClick={exportCsv}
+      disabled={filteredEntries.length === 0}
+      className="inline-flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-40"
+    >
+      <Download className="h-4 w-4" />
       Export CSV
-    </Button>
+    </button>
   );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Collecto Withdraw Logs</h1>
-        <p className="text-muted-foreground">
-          Review every admin withdraw request sent through the local endpoint and the downstream Collecto wallet call it triggered.
-        </p>
-      </div>
-
-      <Card className="p-4 space-y-4">
-        <div className="grid gap-4 md:grid-cols-[repeat(2,minmax(0,180px))_repeat(2,minmax(0,180px))_auto]">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <Label htmlFor="collecto-start-date">Start date</Label>
-            <Input
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+              <ArrowDownLeft className="h-3 w-3" />
+              Admin
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Collecto Withdraw Logs</h1>
+            <p className="text-sm text-blue-200/80">
+              Review every admin withdraw request sent through the local endpoint and the downstream Collecto wallet call it triggered.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-center">
+              <p className="text-2xl font-bold">{successCount}</p>
+              <p className="text-[11px] text-emerald-300 uppercase tracking-wider">Successful</p>
+            </div>
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-center">
+              <p className="text-2xl font-bold">{failedCount}</p>
+              <p className="text-[11px] text-red-300 uppercase tracking-wider">Failed</p>
+            </div>
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-center">
+              <p className="text-2xl font-bold">{entries.length}</p>
+              <p className="text-[11px] text-blue-200/80 uppercase tracking-wider">Total</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Filters Card */}
+      <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-5">
+        <div className="grid gap-4 md:grid-cols-[repeat(2,minmax(0,180px))_repeat(2,minmax(0,180px))_auto]">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Start Date</label>
+            <input
               id="collecto-start-date"
               type="date"
               value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
+              onChange={(e) => setStartDate(e.target.value)}
               max={endDate || undefined}
+              className={inputCls}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="collecto-end-date">End date</Label>
-            <Input
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">End Date</label>
+            <input
               id="collecto-end-date"
               type="date"
               value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
+              onChange={(e) => setEndDate(e.target.value)}
               min={startDate || undefined}
+              className={inputCls}
             />
           </div>
-          <div className="space-y-2">
-            <Label>Destination</Label>
-            <Select value={destinationFilter} onValueChange={setDestinationFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All destinations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All destinations</SelectItem>
-                <SelectItem value="BULK">BULK</SelectItem>
-                <SelectItem value="flexipay">FLEXIPAY</SelectItem>
-                <SelectItem value="SMS">SMS</SelectItem>
-              </SelectContent>
-            </Select>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Destination</label>
+            <select
+              className={selCls}
+              value={destinationFilter}
+              onChange={(e) => setDestinationFilter(e.target.value)}
+            >
+              <option value="all">All destinations</option>
+              <option value="BULK">BULK</option>
+              <option value="flexipay">FLEXIPAY</option>
+              <option value="SMS">SMS</option>
+            </select>
           </div>
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="SUCCESS">Success</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
-              </SelectContent>
-            </Select>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Status</label>
+            <select
+              className={selCls}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All statuses</option>
+              <option value="SUCCESS">Success</option>
+              <option value="FAILED">Failed</option>
+            </select>
           </div>
-          <div className="flex items-end gap-2">
-            <Button onClick={fetchHistory} className="w-full md:w-auto">
+          <div className="flex items-end">
+            <button
+              onClick={fetchHistory}
+              className="h-11 w-full rounded-xl bg-[#1D4ED8] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90"
+            >
               Retrieve Logs
-            </Button>
+            </button>
           </div>
         </div>
-      </Card>
+      </div>
 
-      <Card className="p-4">
+      {/* Table Card */}
+      <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-4">
         <DataTable
           data={filteredEntries}
           columns={columns}
@@ -357,83 +360,124 @@ const CollectoWithdrawLogs = () => {
           headerRight={filterControls}
           minWidth="900px"
         />
-      </Card>
+      </div>
 
-      <Dialog open={!!selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)}>
-        <DialogContent className="max-w-5xl rounded-[28px]">
-          <DialogHeader>
-            <DialogTitle>Withdraw log details</DialogTitle>
-          </DialogHeader>
-
-          {selectedEntry && (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Reference</p>
-                  <p className="mt-2 font-semibold text-slate-950">{selectedEntry.reference}</p>
-                </Card>
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Amount</p>
-                  <p className="mt-2 font-semibold text-slate-950">{formatCurrency(selectedEntry.amount)}</p>
-                </Card>
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Destination</p>
-                  <p className="mt-2 font-semibold text-slate-950">{selectedEntry.withdrawTo}</p>
-                </Card>
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {selectedEntry && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Collecto Withdrawals</p>
+                  <h2 className="text-lg font-bold">Withdraw Log Details</h2>
+                </div>
+                <button
+                  onClick={() => setSelectedEntry(null)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <Card className="space-y-4 p-4">
-                  <div>
-                    <h3 className="font-semibold text-slate-950">Local endpoint log</h3>
-                    <p className="text-sm text-muted-foreground">Request made to `/withdrawFromCollectoWallet`</p>
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+                {/* Summary chips */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">Reference</p>
+                    <p className="mt-2 font-semibold text-slate-950 text-sm break-all">{selectedEntry.reference}</p>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Status:</span> {selectedEntry.endpointStatus}</p>
-                    <p><span className="font-medium">URL:</span> {selectedEntry.endpointRequestUrl}</p>
-                    <p><span className="font-medium">Requested By:</span> {selectedEntry.requestedByEmail}</p>
+                  <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">Amount</p>
+                    <p className="mt-2 font-semibold text-slate-950">{formatCurrency(selectedEntry.amount)}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Request payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.endpointRequestPayload || "-"}</pre>
+                  <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">Destination</p>
+                    <p className="mt-2 font-semibold text-slate-950">{selectedEntry.withdrawTo}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Response payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.endpointResponsePayload || "-"}</pre>
-                  </div>
-                </Card>
+                </div>
 
-                <Card className="space-y-4 p-4">
-                  <div>
-                    <h3 className="font-semibold text-slate-950">Collecto endpoint log</h3>
-                    <p className="text-sm text-muted-foreground">Outbound request made to the Collecto `withdrawFromWallet` endpoint</p>
+                {/* Endpoint logs */}
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Local endpoint */}
+                  <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-5 space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-slate-950">Local Endpoint Log</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Request made to `/withdrawFromCollectoWallet`</p>
+                    </div>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-700 w-28 shrink-0">Status:</span>
+                        {statusBadge(selectedEntry.endpointStatus)}
+                      </div>
+                      <p><span className="font-medium text-slate-700">URL:</span> <span className="text-xs text-slate-600 break-all">{selectedEntry.endpointRequestUrl}</span></p>
+                      <p><span className="font-medium text-slate-700">Requested By:</span> <span className="text-slate-600">{selectedEntry.requestedByEmail}</span></p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Request Payload</label>
+                      <pre className="max-h-56 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.endpointRequestPayload || "-"}</pre>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Response Payload</label>
+                      <pre className="max-h-56 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.endpointResponsePayload || "-"}</pre>
+                    </div>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Status:</span> {selectedEntry.collectoStatus}</p>
-                    <p><span className="font-medium">HTTP status:</span> {selectedEntry.collectoHttpStatusCode}</p>
-                    <p><span className="font-medium">URL:</span> {selectedEntry.collectoRequestUrl || "-"}</p>
+
+                  {/* Collecto endpoint */}
+                  <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm p-5 space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-slate-950">Collecto Endpoint Log</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Outbound request made to the Collecto `withdrawFromWallet` endpoint</p>
+                    </div>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-700 w-28 shrink-0">Status:</span>
+                        {statusBadge(selectedEntry.collectoStatus)}
+                      </div>
+                      <p><span className="font-medium text-slate-700">HTTP Status:</span> <span className="text-slate-600">{selectedEntry.collectoHttpStatusCode}</span></p>
+                      <p><span className="font-medium text-slate-700">URL:</span> <span className="text-xs text-slate-600 break-all">{selectedEntry.collectoRequestUrl || "-"}</span></p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Request Payload</label>
+                      <pre className="max-h-56 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.collectoRequestPayload || "-"}</pre>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Response Payload</label>
+                      <pre className="max-h-56 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.collectoResponsePayload || "-"}</pre>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Request payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.collectoRequestPayload || "-"}</pre>
+                </div>
+
+                {/* Error message */}
+                {selectedEntry.errorMessage && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <p className="font-semibold text-red-700">Error</p>
+                    <pre className="mt-2 whitespace-pre-wrap text-sm text-red-700">{selectedEntry.errorMessage}</pre>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Response payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.collectoResponsePayload || "-"}</pre>
-                  </div>
-                </Card>
+                )}
               </div>
 
-              {selectedEntry.errorMessage ? (
-                <Card className="border-red-200 bg-red-50 p-4">
-                  <p className="font-medium text-red-700">Error</p>
-                  <pre className="mt-2 whitespace-pre-wrap text-sm text-red-700">{selectedEntry.errorMessage}</pre>
-                </Card>
-              ) : null}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              {/* Modal Footer */}
+              <div className="shrink-0 border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setSelectedEntry(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

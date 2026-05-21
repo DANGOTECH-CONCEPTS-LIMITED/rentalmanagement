@@ -187,6 +187,41 @@ const HandleComplaints = () => {
   const resolvedCount   = complaints.filter(c => c.status.toUpperCase() === "RESOLVED").length;
   const rejectedCount   = complaints.filter(c => c.status.toUpperCase() === "REJECTED").length;
 
+  const [updating, setUpdating] = useState(false);
+
+  const updateComplaintStatus = async (complaint: Complaint, newStatus: string) => {
+    setUpdating(true);
+    try {
+      const response = await fetch(`${apiUrl}/UpdateTenantComplaint/${complaint.id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "*/*",
+        },
+        body: JSON.stringify({
+          subject: complaint.subject,
+          description: complaint.description,
+          priority: complaint.priority,
+          status: newStatus,
+          resolutionDetails: complaint.resolutionDetails ?? "",
+          propertyId: complaint.propertyId,
+        }),
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      setComplaints((prev) =>
+        prev.map((c) => (c.id === complaint.id ? { ...c, status: newStatus } : c))
+      );
+      setSelectedComplaint((prev) => (prev ? { ...prev, status: newStatus } : null));
+      toast({ title: "Status updated", description: `Complaint marked as ${newStatus.toLowerCase().replace("_", " ")}.` });
+    } catch (error) {
+      console.error("Error updating complaint:", error);
+      toast({ title: "Update failed", description: "Could not update complaint status.", variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const selectCls =
     "h-9 rounded-xl border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] shadow-sm " +
     "outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer";
@@ -392,7 +427,7 @@ const HandleComplaints = () => {
                       <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                         <FileText className="h-4 w-4 text-slate-400 shrink-0" />
                         <span className="text-xs text-slate-600 truncate">
-                          {selectedComplaint.attachement.split("\\").pop()}
+                          {selectedComplaint.attachement.split(/[/\\]/).pop()}
                         </span>
                       </div>
                       <div className="overflow-hidden rounded-xl border border-slate-200">
@@ -400,7 +435,21 @@ const HandleComplaints = () => {
                           src={getImageUrl(selectedComplaint.attachement)}
                           alt="Attachment"
                           className="w-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = "flex";
+                          }}
                         />
+                        <div
+                          style={{ display: "none" }}
+                          className="flex h-32 items-center justify-center bg-slate-50"
+                        >
+                          <div className="text-center">
+                            <FileText className="mx-auto h-8 w-8 text-slate-300" />
+                            <p className="mt-1 text-xs text-slate-400">Image unavailable</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -430,14 +479,26 @@ const HandleComplaints = () => {
                   selectedComplaint.status.toUpperCase() === "IN_PROGRESS") && (
                   <>
                     {selectedComplaint.status.toUpperCase() === "PENDING" && (
-                      <button className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors">
+                      <button
+                        disabled={updating}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                        onClick={() => updateComplaintStatus(selectedComplaint, "IN_PROGRESS")}
+                      >
                         <Clock className="h-3.5 w-3.5" /> Mark In Progress
                       </button>
                     )}
-                    <button className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors">
+                    <button
+                      disabled={updating}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      onClick={() => updateComplaintStatus(selectedComplaint, "REJECTED")}
+                    >
                       <XCircle className="h-3.5 w-3.5" /> Reject
                     </button>
-                    <button className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors">
+                    <button
+                      disabled={updating}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                      onClick={() => updateComplaintStatus(selectedComplaint, "RESOLVED")}
+                    >
                       <CheckCircle className="h-3.5 w-3.5" /> Resolve
                     </button>
                   </>

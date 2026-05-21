@@ -1,26 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DataTable, Column } from "@/components/ui/data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Eye, FileText, Copy, Check } from "lucide-react";
+import { Download, Eye, FileText, Copy, Check, X, Activity, Server, FolderOpen } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const inputCls = 'h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10';
+const selCls = 'h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer';
 
 interface HttpLogEntry {
   id: number;
@@ -44,22 +30,15 @@ interface SerilogFileContent extends SerilogFileEntry {
 }
 
 const formatDate = (dateValue?: string) => {
-  if (!dateValue) {
-    return "-";
-  }
-
+  if (!dateValue) return "-";
   const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
+  if (Number.isNaN(date.getTime())) return "-";
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const seconds = String(date.getSeconds()).padStart(2, "0");
-
   return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 };
 
@@ -79,6 +58,16 @@ const prettyJson = (raw?: string | null): string => {
   }
 };
 
+const methodBadgeClass = (method?: string | null) => {
+  const m = (method || "").toUpperCase();
+  if (m === "GET") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  if (m === "POST") return "bg-blue-50 text-blue-700 border border-blue-200";
+  if (m === "PUT") return "bg-amber-50 text-amber-700 border border-amber-200";
+  if (m === "DELETE") return "bg-red-50 text-red-700 border border-red-200";
+  if (m === "PATCH") return "bg-purple-50 text-purple-700 border border-purple-200";
+  return "bg-slate-50 text-slate-600 border border-slate-200";
+};
+
 const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -92,10 +81,13 @@ const CopyButton = ({ text }: { text: string }) => {
     }
   };
   return (
-    <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={handleCopy}>
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
+    >
       {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
       {copied ? "Copied" : "Copy"}
-    </Button>
+    </button>
   );
 };
 
@@ -104,6 +96,7 @@ const HttpLogs = () => {
   const weekAgo = new Date();
   weekAgo.setDate(today.getDate() - 7);
 
+  const [activeTab, setActiveTab] = useState<"database" | "files">("database");
   const [startDate, setStartDate] = useState(toInputDate(weekAgo));
   const [endDate, setEndDate] = useState(toInputDate(today));
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,11 +105,11 @@ const HttpLogs = () => {
   const [methodFilter, setMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [serilogFiles, setSerilogFiles] = useState<SerilogFileEntry[]>([]);
-  const [selectedSerilogFile, setSelectedSerilogFile] =
-    useState<SerilogFileContent | null>(null);
+  const [selectedSerilogFile, setSelectedSerilogFile] = useState<SerilogFileContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSerilogFiles, setIsLoadingSerilogFiles] = useState(false);
   const [isLoadingSerilogContent, setIsLoadingSerilogContent] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -131,58 +124,31 @@ const HttpLogs = () => {
   };
 
   const formatSize = (sizeBytes: number) => {
-    if (sizeBytes < 1024) {
-      return `${sizeBytes} B`;
-    }
-
-    if (sizeBytes < 1024 * 1024) {
-      return `${(sizeBytes / 1024).toFixed(1)} KB`;
-    }
-
+    if (sizeBytes < 1024) return `${sizeBytes} B`;
+    if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
     return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const fetchLogs = async () => {
     const token = getToken();
-
     if (!token) {
-      toast({
-        title: "Error",
-        description: "Authentication token not found.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Authentication token not found.", variant: "destructive" });
       return;
     }
-
     setIsLoading(true);
-
     try {
-      const response = await axios.get<HttpLogEntry[]>(
-        `${apiUrl}/GetRequestResponseByDate`,
-        {
-          params: { startDate, endDate },
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "*/*",
-          },
-        }
-      );
-
+      const response = await axios.get<HttpLogEntry[]>(`${apiUrl}/GetRequestResponseByDate`, {
+        params: { startDate, endDate },
+        headers: { Authorization: `Bearer ${token}`, accept: "*/*" },
+      });
       const sortedLogs = [...(response.data ?? [])].sort(
-        (left, right) =>
-          new Date(right.createdAt ?? 0).getTime() -
-          new Date(left.createdAt ?? 0).getTime()
+        (l, r) => new Date(r.createdAt ?? 0).getTime() - new Date(l.createdAt ?? 0).getTime()
       );
-
       setLogs(sortedLogs);
       setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching HTTP logs:", error);
-      toast({
-        title: "Error",
-        description: "Failed to retrieve HTTP logs.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to retrieve HTTP logs.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -190,32 +156,16 @@ const HttpLogs = () => {
 
   const fetchSerilogFiles = async () => {
     const token = getToken();
-
-    if (!token) {
-      return;
-    }
-
+    if (!token) return;
     setIsLoadingSerilogFiles(true);
-
     try {
-      const response = await axios.get<SerilogFileEntry[]>(
-        `${apiUrl}/GetSerilogLogFiles`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "*/*",
-          },
-        }
-      );
-
+      const response = await axios.get<SerilogFileEntry[]>(`${apiUrl}/GetSerilogLogFiles`, {
+        headers: { Authorization: `Bearer ${token}`, accept: "*/*" },
+      });
       setSerilogFiles(response.data ?? []);
     } catch (error) {
       console.error("Error fetching Serilog files:", error);
-      toast({
-        title: "Error",
-        description: "Failed to retrieve raw Serilog log files.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to retrieve raw Serilog log files.", variant: "destructive" });
     } finally {
       setIsLoadingSerilogFiles(false);
     }
@@ -223,33 +173,17 @@ const HttpLogs = () => {
 
   const fetchSerilogFileContent = async (fileName: string) => {
     const token = getToken();
-
-    if (!token) {
-      return;
-    }
-
+    if (!token) return;
     setIsLoadingSerilogContent(true);
-
     try {
-      const response = await axios.get<SerilogFileContent>(
-        `${apiUrl}/GetSerilogLogFileContent`,
-        {
-          params: { fileName },
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "*/*",
-          },
-        }
-      );
-
+      const response = await axios.get<SerilogFileContent>(`${apiUrl}/GetSerilogLogFileContent`, {
+        params: { fileName },
+        headers: { Authorization: `Bearer ${token}`, accept: "*/*" },
+      });
       setSelectedSerilogFile(response.data);
     } catch (error) {
       console.error("Error fetching Serilog file content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to retrieve selected log file.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to retrieve selected log file.", variant: "destructive" });
     } finally {
       setIsLoadingSerilogContent(false);
     }
@@ -273,63 +207,27 @@ const HttpLogs = () => {
   const filteredLogs = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return logs.filter((log) => {
-      const matchesMethod =
-        methodFilter === "all" || log.requestType === methodFilter;
-      const matchesStatus =
-        statusFilter === "all" || log.status === statusFilter;
+      const matchesMethod = methodFilter === "all" || log.requestType === methodFilter;
+      const matchesStatus = statusFilter === "all" || log.status === statusFilter;
       const matchesQuery =
         !query ||
-        [
-          log.requestType,
-          log.requestUrl,
-          log.status,
-          log.errorMessage,
-          log.request,
-          log.response,
-          formatDate(log.createdAt),
-        ]
+        [log.requestType, log.requestUrl, log.status, log.errorMessage, log.request, log.response, formatDate(log.createdAt)]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(query));
-
       return matchesMethod && matchesStatus && matchesQuery;
     });
   }, [logs, methodFilter, searchTerm, statusFilter]);
 
   const exportLogsCsv = () => {
-    if (filteredLogs.length === 0) {
-      return;
-    }
-
+    if (filteredLogs.length === 0) return;
     const csvRows = [
-      [
-        "Date",
-        "Method",
-        "Request URL",
-        "Status",
-        "Error",
-        "Request",
-        "Response",
-      ]
-        .map(escapeCsvCell)
-        .join(","),
+      ["Date", "Method", "Request URL", "Status", "Error", "Request", "Response"].map(escapeCsvCell).join(","),
       ...filteredLogs.map((log) =>
-        [
-          formatDate(log.createdAt),
-          log.requestType || "",
-          log.requestUrl || "",
-          log.status || "",
-          log.errorMessage || "",
-          log.request || "",
-          log.response || "",
-        ]
-          .map(escapeCsvCell)
-          .join(",")
+        [formatDate(log.createdAt), log.requestType || "", log.requestUrl || "", log.status || "", log.errorMessage || "", log.request || "", log.response || ""]
+          .map(escapeCsvCell).join(",")
       ),
     ];
-
-    const blob = new Blob([csvRows.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -340,110 +238,159 @@ const HttpLogs = () => {
     URL.revokeObjectURL(url);
   };
 
+  const tabs = [
+    { id: "database" as const, label: "HTTP Request / Response", icon: Activity },
+    { id: "files" as const, label: "Raw Serilog Files", icon: FolderOpen },
+  ];
+
+  const logColumns: Column<HttpLogEntry>[] = [
+    { key: "date", header: "Date", cell: (l) => <span className="text-xs text-slate-600">{formatDate(l.createdAt)}</span> },
+    {
+      key: "method", header: "Method",
+      cell: (l) => l.requestType ? (
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold font-mono ${methodBadgeClass(l.requestType)}`}>
+          {l.requestType}
+        </span>
+      ) : <span className="text-slate-400">—</span>
+    },
+    { key: "url", header: "Request URL", className: "max-w-[360px] truncate font-mono text-xs", cell: (l) => l.requestUrl || "-" },
+    { key: "status", header: "Status", cell: (l) => l.status || "-" },
+    { key: "error", header: "Error", className: "max-w-[240px] truncate text-xs text-red-600", cell: (l) => l.errorMessage || "-" },
+    {
+      key: "actions", header: "Actions",
+      cell: (l) => (
+        <button
+          onClick={() => setSelectedLog(l)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#0F172A] shadow-sm transition-colors hover:bg-slate-50"
+        >
+          <Eye className="h-3.5 w-3.5" />View
+        </button>
+      ),
+    },
+  ];
+
+  const serilogColumns: Column<SerilogFileEntry>[] = [
+    { key: "name", header: "File Name", cell: (f) => <span className="font-mono text-xs">{f.fileName}</span> },
+    { key: "modified", header: "Last Modified", cell: (f) => formatDate(f.lastModified) },
+    { key: "size", header: "Size", cell: (f) => formatSize(f.sizeBytes) },
+    {
+      key: "actions", header: "Actions",
+      cell: (f) => (
+        <button
+          onClick={() => fetchSerilogFileContent(f.fileName)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#0F172A] shadow-sm transition-colors hover:bg-slate-50"
+        >
+          <FileText className="h-3.5 w-3.5" />Open
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">HTTP Logs</h1>
-        <p className="text-muted-foreground">
-          Retrieve and inspect outbound HTTP requests and responses by date range.
-        </p>
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">Admin</span>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">HTTP Logs</h1>
+            <p className="text-sm text-blue-200/80">Retrieve and inspect outbound HTTP requests and responses by date range.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-center">
+              <p className="text-xs text-blue-200/70">Total Logs</p>
+              <p className="text-2xl font-bold">{logs.length}</p>
+            </div>
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-center">
+              <p className="text-xs text-blue-200/70">Filtered</p>
+              <p className="text-2xl font-bold">{filteredLogs.length}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Custom Tabs */}
+      <div className="flex gap-1 rounded-xl border border-[#E2E8F0] bg-slate-50 p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${activeTab === t.id ? "bg-white shadow-sm text-[#1D4ED8]" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            <t.icon className="h-4 w-4" />{t.label}
+          </button>
+        ))}
       </div>
 
-      <Tabs defaultValue="database" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="database">HTTP Request / Response</TabsTrigger>
-          <TabsTrigger value="files">Raw Serilog Files</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="database" className="space-y-4">
-          <Card className="p-4 space-y-4">
+      {/* HTTP Logs Tab */}
+      {activeTab === "database" && (
+        <div className="space-y-4">
+          {/* Filters Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="grid gap-4 md:grid-cols-[repeat(2,minmax(0,180px))_repeat(2,minmax(0,180px))_minmax(0,1fr)_auto]">
-              <div className="space-y-2">
-                <Label htmlFor="start-date">Start date</Label>
-                <Input
-                  id="start-date"
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Start date</label>
+                <input
                   type="date"
+                  className={inputCls}
                   value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
+                  onChange={(e) => setStartDate(e.target.value)}
                   max={endDate || undefined}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="end-date">End date</Label>
-                <Input
-                  id="end-date"
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">End date</label>
+                <input
                   type="date"
+                  className={inputCls}
                   value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
+                  onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Method</Label>
-                <Select value={methodFilter} onValueChange={setMethodFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All methods" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All methods</SelectItem>
-                    {availableMethods.map((method) => (
-                      <SelectItem key={method} value={method!}>
-                        {method}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Method</label>
+                <select className={selCls} value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)}>
+                  <option value="all">All methods</option>
+                  {availableMethods.map((method) => (
+                    <option key={method} value={method!}>{method}</option>
+                  ))}
+                </select>
               </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {availableStatuses.map((status) => (
-                      <SelectItem key={status} value={status!}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Status</label>
+                <select className={selCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="all">All statuses</option>
+                  {availableStatuses.map((status) => (
+                    <option key={status} value={status!}>{status}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex items-end gap-2">
-                <Button onClick={fetchLogs} className="w-full md:w-auto">
+                <button
+                  onClick={fetchLogs}
+                  className="h-11 flex-1 rounded-xl bg-[#1D4ED8] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1E40AF]"
+                >
                   Retrieve Logs
-                </Button>
-                <Button
-                  variant="outline"
+                </button>
+                <button
                   onClick={exportLogsCsv}
                   disabled={filteredLogs.length === 0}
+                  className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-[#0F172A] shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
+                  <Download className="h-4 w-4" />Export CSV
+                </button>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="p-4">
+          {/* Logs Table */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <DataTable
               data={filteredLogs}
-              columns={[
-                { key: "date", header: "Date", cell: (l) => formatDate(l.createdAt) },
-                { key: "method", header: "Method", cell: (l) => l.requestType || "-" },
-                { key: "url", header: "Request URL", className: "max-w-[360px] truncate", cell: (l) => l.requestUrl || "-" },
-                { key: "status", header: "Status", cell: (l) => l.status || "-" },
-                { key: "error", header: "Error", className: "max-w-[240px] truncate", cell: (l) => l.errorMessage || "-" },
-                {
-                  key: "actions", header: "Actions",
-                  cell: (l) => (
-                    <Button variant="outline" size="sm" onClick={() => setSelectedLog(l)}>
-                      <Eye className="mr-2 h-4 w-4" />View
-                    </Button>
-                  ),
-                },
-              ]}
+              columns={logColumns}
               loading={isLoading}
               searchValue={searchTerm}
               onSearchChange={setSearchTerm}
@@ -452,138 +399,170 @@ const HttpLogs = () => {
               emptyMessage="No request/response logs found for the selected criteria"
               minWidth="860px"
             />
-          </Card>
-        </TabsContent>
+          </div>
+        </div>
+      )}
 
-        <TabsContent value="files" className="space-y-4">
-          <Card className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Serilog Files</h2>
-                <p className="text-sm text-muted-foreground">
-                  Browse raw API file logs written to the backend logs folder.
-                </p>
-              </div>
-              <Button variant="outline" onClick={fetchSerilogFiles}>
-                Retrieve Files
-              </Button>
+      {/* Serilog Tab */}
+      {activeTab === "files" && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#0F172A]">Serilog Files</h2>
+              <p className="text-sm text-slate-500">Browse raw API file logs written to the backend logs folder.</p>
             </div>
+            <button
+              onClick={fetchSerilogFiles}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-semibold text-[#0F172A] shadow-sm transition-colors hover:bg-slate-50"
+            >
+              <Server className="h-4 w-4" />Retrieve Files
+            </button>
+          </div>
+          <DataTable
+            data={serilogFiles}
+            columns={serilogColumns}
+            loading={isLoadingSerilogFiles}
+            label="file"
+            emptyMessage="No raw Serilog log files were found"
+          />
+        </div>
+      )}
 
-            <DataTable
-              data={serilogFiles}
-              columns={[
-                { key: "name", header: "File Name", cell: (f) => f.fileName },
-                { key: "modified", header: "Last Modified", cell: (f) => formatDate(f.lastModified) },
-                { key: "size", header: "Size", cell: (f) => formatSize(f.sizeBytes) },
-                {
-                  key: "actions", header: "Actions",
-                  cell: (f) => (
-                    <Button variant="outline" size="sm" onClick={() => fetchSerilogFileContent(f.fileName)}>
-                      <FileText className="mr-2 h-4 w-4" />Open
-                    </Button>
-                  ),
-                },
-              ]}
-              loading={isLoadingSerilogFiles}
-              label="file"
-              emptyMessage="No raw Serilog log files were found"
-            />
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Log Details</DialogTitle>
-          </DialogHeader>
-          {selectedLog && (
-            <div className="space-y-5">
-              {/* Metadata strip */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                {[
-                  { label: "Date", value: formatDate(selectedLog.createdAt) },
-                  { label: "Method", value: selectedLog.requestType || "—" },
-                  { label: "Status", value: selectedLog.status || "—" },
-                  { label: "Error", value: selectedLog.errorMessage || "None" },
-                ].map(({ label, value }) => (
-                  <div key={label} className="rounded-lg border bg-muted/40 px-3 py-2">
-                    <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-                    <p className="font-medium truncate text-slate-800">{value}</p>
-                  </div>
-                ))}
+      {/* Log Detail Modal */}
+      <AnimatePresence>
+        {selectedLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
+            >
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
+                <h2 className="text-lg font-bold">Log Details</h2>
+                <button onClick={() => setSelectedLog(null)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              {/* URL row */}
-              <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
-                <p className="text-xs text-muted-foreground mb-0.5">Request URL</p>
-                <p className="font-mono text-slate-800 break-all">{selectedLog.requestUrl || "—"}</p>
-              </div>
-
-              {/* Request & Response */}
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-700">Request Body</h3>
-                    {selectedLog.request && <CopyButton text={prettyJson(selectedLog.request)} />}
-                  </div>
-                  <pre className="max-h-[380px] overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-950 p-4 text-xs text-slate-50 leading-relaxed">
-                    {prettyJson(selectedLog.request) || <span className="text-slate-500 italic">No request payload recorded.</span>}
-                  </pre>
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                {/* Metadata strip */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  {[
+                    { label: "Date", value: formatDate(selectedLog.createdAt) },
+                    {
+                      label: "Method",
+                      value: selectedLog.requestType ? (
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold font-mono ${methodBadgeClass(selectedLog.requestType)}`}>
+                          {selectedLog.requestType}
+                        </span>
+                      ) : "—"
+                    },
+                    { label: "Status", value: selectedLog.status || "—" },
+                    { label: "Error", value: selectedLog.errorMessage || "None" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-0.5">{label}</p>
+                      <p className="font-medium text-slate-800">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* URL row */}
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-0.5">Request URL</p>
+                  <p className="font-mono text-slate-800 break-all">{selectedLog.requestUrl || "—"}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-700">Response Body</h3>
-                    {selectedLog.response && <CopyButton text={prettyJson(selectedLog.response)} />}
+                {/* Request & Response */}
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-700">Request Body</h3>
+                      {selectedLog.request && <CopyButton text={prettyJson(selectedLog.request)} />}
+                    </div>
+                    <pre className="max-h-[380px] overflow-auto whitespace-pre-wrap break-all rounded-xl bg-slate-950 p-4 text-xs text-slate-50 leading-relaxed">
+                      {prettyJson(selectedLog.request) || <span className="text-slate-500 italic">No request payload recorded.</span>}
+                    </pre>
                   </div>
-                  <pre className="max-h-[380px] overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-950 p-4 text-xs text-slate-50 leading-relaxed">
-                    {prettyJson(selectedLog.response) || <span className="text-slate-500 italic">No response payload recorded.</span>}
-                  </pre>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-700">Response Body</h3>
+                      {selectedLog.response && <CopyButton text={prettyJson(selectedLog.response)} />}
+                    </div>
+                    <pre className="max-h-[380px] overflow-auto whitespace-pre-wrap break-all rounded-xl bg-slate-950 p-4 text-xs text-slate-50 leading-relaxed">
+                      {prettyJson(selectedLog.response) || <span className="text-slate-500 italic">No response payload recorded.</span>}
+                    </pre>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={!!selectedSerilogFile || isLoadingSerilogContent}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedSerilogFile(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedSerilogFile?.fileName || "Raw Serilog Log File"}
-            </DialogTitle>
-          </DialogHeader>
-          {isLoadingSerilogContent ? (
-            <div className="py-8 text-center text-muted-foreground">Loading file content...</div>
-          ) : selectedSerilogFile ? (
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card className="p-4 text-sm">
-                  <span className="font-medium">File:</span> {selectedSerilogFile.fileName}
-                </Card>
-                <Card className="p-4 text-sm">
-                  <span className="font-medium">Modified:</span> {formatDate(selectedSerilogFile.lastModified)}
-                </Card>
-                <Card className="p-4 text-sm">
-                  <span className="font-medium">Size:</span> {formatSize(selectedSerilogFile.sizeBytes)}
-                </Card>
+              <div className="shrink-0 border-t border-slate-100 px-6 py-4 flex justify-end gap-2">
+                <button
+                  onClick={() => setSelectedLog(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
               </div>
-              <Card className="p-4">
-                <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
-                  {selectedSerilogFile.content || "No file content available."}
-                </pre>
-              </Card>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Serilog File Content Modal */}
+      <AnimatePresence>
+        {(!!selectedSerilogFile || isLoadingSerilogContent) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
+            >
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
+                <h2 className="text-lg font-bold">{selectedSerilogFile?.fileName || "Raw Serilog Log File"}</h2>
+                <button
+                  onClick={() => setSelectedSerilogFile(null)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                {isLoadingSerilogContent ? (
+                  <div className="py-8 text-center text-slate-500">Loading file content...</div>
+                ) : selectedSerilogFile ? (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      {[
+                        { label: "File", value: selectedSerilogFile.fileName },
+                        { label: "Modified", value: formatDate(selectedSerilogFile.lastModified) },
+                        { label: "Size", value: formatSize(selectedSerilogFile.sizeBytes) },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm">
+                          <span className="font-semibold text-slate-700">{label}: </span>
+                          <span className="text-slate-600">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap break-all rounded-xl bg-slate-950 p-4 text-xs text-slate-50">
+                      {selectedSerilogFile.content || "No file content available."}
+                    </pre>
+                  </>
+                ) : null}
+              </div>
+              <div className="shrink-0 border-t border-slate-100 px-6 py-4 flex justify-end gap-2">
+                <button
+                  onClick={() => setSelectedSerilogFile(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

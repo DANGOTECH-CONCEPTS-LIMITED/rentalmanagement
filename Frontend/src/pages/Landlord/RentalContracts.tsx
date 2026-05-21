@@ -1,58 +1,123 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, Edit, Trash2, Eye, Filter, Download, FilePlus,
   X, Calendar, User, Home, DollarSign, AlertTriangle,
-  CheckCircle2, Clock, XCircle,
+  CheckCircle2, Clock, XCircle, Loader2, RefreshCw, Phone, CreditCard, ScrollText,
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { DataTable, Column } from '@/components/ui/data-table';
+import { useToast } from '@/hooks/use-toast';
 import ContractGenerator from '@/components/contract/ContractGenerator';
 
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
+const inputCls =
+  'h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] ' +
+  'placeholder:text-[#94A3B8] shadow-sm outline-none transition-all ' +
+  'focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10';
+
+const selCls =
+  'h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] ' +
+  'shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer';
+
+// ── API contract shape (matches backend RentalContract entity) ────────────────
 interface Contract {
-  id: string;
-  tenant: string;
-  property: string;
+  id: number;
+  contractNumber: string;
+  tenantId?: number;
+  tenantName: string;
+  tenantEmail: string;
+  tenantPhone: string;
+  propertyId?: number;
+  propertyName: string;
+  unitId?: number;
+  unitName: string;
   startDate: string;
   endDate: string;
   rentAmount: number;
-  status: 'active' | 'expired' | 'pending';
+  currency: string;
+  securityDeposit: number;
+  status: string;
+  terms?: string;
+  createdAt: string;
 }
 
-const emptyForm: Omit<Contract, 'id'> = {
-  tenant: '', property: '', startDate: '', endDate: '', rentAmount: 0, status: 'active',
+interface Tenant {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+}
+
+interface Property {
+  id: number;
+  name: string;
+  address?: string;
+}
+
+interface PropertyUnit {
+  id: number;
+  propertyId: number;
+  unitNumber: string;
+  monthlyAmount: number;
+  securityDeposit: number;
+  status: string;
+}
+
+interface CreateContractDto {
+  tenantId?: number;
+  tenantName: string;
+  tenantEmail: string;
+  tenantPhone: string;
+  propertyId?: number;
+  propertyName: string;
+  unitId?: number;
+  unitName: string;
+  startDate: string;
+  endDate: string;
+  rentAmount: number;
+  currency: string;
+  securityDeposit: number;
+  status: string;
+  terms: string;
+  ownerId: number;
+}
+
+const emptyForm: CreateContractDto = {
+  tenantId: undefined, tenantName: '', tenantEmail: '', tenantPhone: '',
+  propertyId: undefined, propertyName: '', unitId: undefined, unitName: '',
+  startDate: '', endDate: '',
+  rentAmount: 0, currency: 'UGX', securityDeposit: 0,
+  status: 'pending', terms: '', ownerId: 0,
 };
 
-// ── Status badge ─────────────────────────────────────────────────────────────
+// ── Status badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }: { status: string }) => {
-  if (status === 'active')
+  const s = status?.toLowerCase();
+  if (s === 'active')
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
         <CheckCircle2 className="h-3 w-3" /> Active
       </span>
     );
-  if (status === 'expired')
+  if (s === 'expired' || s === 'terminated')
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-red-100 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-        <XCircle className="h-3 w-3" /> Expired
+        <XCircle className="h-3 w-3" /> {status}
       </span>
     );
-  if (status === 'pending')
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-        <Clock className="h-3 w-3" /> Pending
-      </span>
-    );
-  return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+      <Clock className="h-3 w-3" /> Pending
+    </span>
+  );
 };
 
-// ── KPI card ─────────────────────────────────────────────────────────────────
-interface KpiProps {
+// ── KPI card ──────────────────────────────────────────────────────────────────
+const KpiCard = ({ label, value, icon: Icon, iconBg, iconColor, accent }: {
   label: string; value: number; icon: React.ElementType;
   iconBg: string; iconColor: string; accent: string;
-}
-const KpiCard = ({ label, value, icon: Icon, iconBg, iconColor, accent }: KpiProps) => (
+}) => (
   <div className={`rounded-2xl border-l-4 border border-slate-200 bg-white p-5 shadow-sm ${accent}`}>
     <div className="flex items-start justify-between gap-3">
       <div>
@@ -67,9 +132,7 @@ const KpiCard = ({ label, value, icon: Icon, iconBg, iconColor, accent }: KpiPro
 );
 
 // ── Detail row ────────────────────────────────────────────────────────────────
-const DetailRow = ({
-  icon: Icon, label, value,
-}: {
+const DetailRow = ({ icon: Icon, label, value }: {
   icon: React.ElementType; label: string; value: React.ReactNode;
 }) => (
   <div className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-0">
@@ -83,111 +146,401 @@ const DetailRow = ({
   </div>
 );
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmtDate = (d: string) => {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+// ── Contract form fields (module-level so React never remounts it) ────────────
+const ContractFields = ({
+  form, setForm, tenants, properties, token,
+}: {
+  form: CreateContractDto;
+  setForm: React.Dispatch<React.SetStateAction<CreateContractDto>>;
+  tenants: Tenant[];
+  properties: Property[];
+  token: string;
+}) => {
+  const [units, setUnits] = useState<PropertyUnit[]>([]);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+
+  const fetchUnits = async (propertyId: number) => {
+    setLoadingUnits(true);
+    try {
+      const res = await fetch(`${apiUrl}/GetPropertyUnitsByPropertyId/${propertyId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setUnits(await res.json());
+    } finally {
+      setLoadingUnits(false);
+    }
+  };
+
+  // When editing a contract that already has a property selected, load its units on mount
+  useEffect(() => {
+    if (form.propertyId) fetchUnits(form.propertyId);
+  }, []);
+
+  const selectedTenant = tenants.find(t => t.id === form.tenantId);
+
+  const handleTenantChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    const t = tenants.find(x => x.id === id);
+    if (t) {
+      setForm(f => ({ ...f, tenantId: t.id, tenantName: t.fullName, tenantEmail: t.email, tenantPhone: t.phoneNumber }));
+    } else {
+      setForm(f => ({ ...f, tenantId: undefined, tenantName: '', tenantEmail: '', tenantPhone: '' }));
+    }
+  };
+
+  const handlePropertyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    const p = properties.find(x => x.id === id);
+    setUnits([]);
+    if (p) {
+      setForm(f => ({ ...f, propertyId: p.id, propertyName: p.name, unitId: undefined, unitName: '' }));
+      fetchUnits(p.id);
+    } else {
+      setForm(f => ({ ...f, propertyId: undefined, propertyName: '', unitId: undefined, unitName: '' }));
+    }
+  };
+
+  const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value);
+    const u = units.find(x => x.id === id);
+    if (u) {
+      setForm(f => ({
+        ...f,
+        unitId: u.id,
+        unitName: u.unitNumber,
+        rentAmount: u.monthlyAmount,
+        securityDeposit: u.securityDeposit,
+      }));
+    } else {
+      setForm(f => ({ ...f, unitId: undefined, unitName: '' }));
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Tenant *</label>
+        <select className={selCls} value={form.tenantId ?? ''} onChange={handleTenantChange}>
+          <option value="">— Select tenant —</option>
+          {tenants.map(t => (
+            <option key={t.id} value={t.id}>{t.fullName}</option>
+          ))}
+        </select>
+        {selectedTenant && (
+          <div className="mt-2 flex flex-wrap gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
+              <Phone className="h-3 w-3 shrink-0 text-slate-400" />
+              {selectedTenant.phoneNumber || '—'}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">
+              <User className="h-3 w-3 shrink-0 text-slate-400" />
+              {selectedTenant.email || '—'}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Property *</label>
+          <select className={selCls} value={form.propertyId ?? ''} onChange={handlePropertyChange}>
+            <option value="">— Select property —</option>
+            {properties.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Unit</label>
+          <select
+            className={selCls}
+            value={form.unitId ?? ''}
+            onChange={handleUnitChange}
+            disabled={!form.propertyId || loadingUnits}
+          >
+            <option value="">
+              {loadingUnits ? 'Loading…' : form.propertyId ? '— Select unit —' : '— Select property first —'}
+            </option>
+            {units.map(u => (
+              <option key={u.id} value={u.id}>
+                {u.unitNumber} — {form.currency} {u.monthlyAmount.toLocaleString()}/mo
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Start Date *</label>
+          <input type="date" className={inputCls} value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">End Date *</label>
+          <input type="date" className={inputCls} value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Monthly Rent *</label>
+          <input type="number" min={0} className={inputCls} value={form.rentAmount || ''} onChange={e => setForm(f => ({ ...f, rentAmount: Number(e.target.value) }))} placeholder="0" />
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Security Deposit</label>
+          <input type="number" min={0} className={inputCls} value={form.securityDeposit || ''} onChange={e => setForm(f => ({ ...f, securityDeposit: Number(e.target.value) }))} placeholder="0" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Currency</label>
+          <select className={selCls} value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
+            <option value="UGX">UGX</option>
+            <option value="USD">USD</option>
+            <option value="KES">KES</option>
+            <option value="TZS">TZS</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Status</label>
+          <select className={selCls} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+            <option value="pending">Pending</option>
+            <option value="active">Active</option>
+            <option value="expired">Expired</option>
+            <option value="terminated">Terminated</option>
+          </select>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Terms &amp; Conditions</label>
+        <textarea
+          rows={4}
+          className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 resize-none"
+          value={form.terms}
+          onChange={e => setForm(f => ({ ...f, terms: e.target.value }))}
+          placeholder="Describe the rental terms, utilities, pet policy, etc."
+        />
+      </div>
+    </div>
+  );
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 const RentalContracts = () => {
-  const [isLoading] = useState(false);
+  const { toast } = useToast();
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const token = userData?.token;
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showContractGenerator, setShowContractGenerator] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const [viewContract, setViewContract] = useState<Contract | null>(null);
   const [editContract, setEditContract] = useState<Contract | null>(null);
-  const [editForm, setEditForm] = useState<Omit<Contract, 'id'>>(emptyForm);
+  const [editForm, setEditForm] = useState<CreateContractDto>(emptyForm);
+  const [addForm, setAddForm] = useState<CreateContractDto>({ ...emptyForm, ownerId: userData?.id ?? 0 });
   const [deleteContract, setDeleteContract] = useState<Contract | null>(null);
 
-  const [contracts, setContracts] = useState<Contract[]>([
-    { id: 'RC-001', tenant: 'John Smith', property: 'Sunset Apartments - Unit 101', startDate: '2023-01-01', endDate: '2023-12-31', rentAmount: 1200, status: 'active' },
-    { id: 'RC-002', tenant: 'Sarah Johnson', property: 'Bayview Condos - Unit 305', startDate: '2023-03-15', endDate: '2024-03-14', rentAmount: 1500, status: 'active' },
-    { id: 'RC-003', tenant: 'Michael Williams', property: 'Westside Heights - Unit 210', startDate: '2022-06-01', endDate: '2023-05-31', rentAmount: 1350, status: 'expired' },
-    { id: 'RC-004', tenant: 'Emily Davis', property: 'Sunset Apartments - Unit 102', startDate: '2023-08-01', endDate: '2024-07-31', rentAmount: 1250, status: 'active' },
-    { id: 'RC-005', tenant: 'Robert Miller', property: 'Parkview Residences - Unit 405', startDate: '2023-06-15', endDate: '2023-12-14', rentAmount: 1100, status: 'pending' },
-  ]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+
+  // ── Fetch tenants ─────────────────────────────────────────────────────────
+  const fetchTenants = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/GetAllTenants`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setTenants(await res.json());
+    } catch {
+      // non-critical
+    }
+  };
+
+  // ── Fetch properties ──────────────────────────────────────────────────────
+  const fetchProperties = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setProperties(await res.json());
+    } catch {
+      // non-critical
+    }
+  };
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+  const fetchContracts = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${apiUrl}/GetContractsByOwnerId/${userData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to load contracts');
+      setContracts(await res.json());
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchContracts(); fetchTenants(); fetchProperties(); }, []);
+
+  // ── Create ────────────────────────────────────────────────────────────────
+  const handleCreate = async () => {
+    if (!addForm.tenantId || !addForm.propertyName || !addForm.startDate || !addForm.endDate) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property, start and end date.' });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${apiUrl}/CreateContract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...addForm, ownerId: userData.id }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: 'Contract created', description: 'The rental agreement has been saved.' });
+      setShowAddModal(false);
+      setAddForm({ ...emptyForm, ownerId: userData?.id ?? 0 });
+      fetchContracts();
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ── Update ────────────────────────────────────────────────────────────────
+  const handleEditSave = async () => {
+    if (!editContract) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${apiUrl}/UpdateContract`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: editContract.id, ...editForm }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: 'Contract updated', description: 'Changes saved successfully.' });
+      setEditContract(null);
+      fetchContracts();
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!deleteContract) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${apiUrl}/DeleteContract/${deleteContract.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: 'Contract deleted' });
+      setDeleteContract(null);
+      fetchContracts();
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openEdit = (c: Contract) => {
+    setEditContract(c);
+    setEditForm({
+      tenantId: c.tenantId, tenantName: c.tenantName, tenantEmail: c.tenantEmail, tenantPhone: c.tenantPhone,
+      propertyId: c.propertyId, propertyName: c.propertyName,
+      unitId: c.unitId, unitName: c.unitName,
+      startDate: c.startDate?.slice(0, 10) ?? '', endDate: c.endDate?.slice(0, 10) ?? '',
+      rentAmount: c.rentAmount, currency: c.currency, securityDeposit: c.securityDeposit,
+      status: c.status, terms: c.terms ?? '', ownerId: userData?.id ?? 0,
+    });
+  };
 
   const filteredContracts = contracts.filter(c =>
-    (c.tenant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (filterStatus === 'all' || c.status === filterStatus)
+    (c.tenantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.contractNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (filterStatus === 'all' || c.status?.toLowerCase() === filterStatus)
   );
 
-  const openEdit = (contract: Contract) => {
-    setEditContract(contract);
-    setEditForm({ tenant: contract.tenant, property: contract.property, startDate: contract.startDate, endDate: contract.endDate, rentAmount: contract.rentAmount, status: contract.status });
-  };
-
-  const handleEditSave = () => {
-    if (!editContract) return;
-    setContracts(prev => prev.map(c => c.id === editContract.id ? { ...c, ...editForm } : c));
-    setEditContract(null);
-  };
-
-  const handleDelete = () => {
-    if (!deleteContract) return;
-    setContracts(prev => prev.filter(c => c.id !== deleteContract.id));
-    setDeleteContract(null);
-  };
-
-  const activeCount  = contracts.filter(c => c.status === 'active').length;
-  const expiredCount = contracts.filter(c => c.status === 'expired').length;
-  const pendingCount = contracts.filter(c => c.status === 'pending').length;
+  const activeCount  = contracts.filter(c => c.status?.toLowerCase() === 'active').length;
+  const expiredCount = contracts.filter(c => ['expired', 'terminated'].includes(c.status?.toLowerCase())).length;
+  const pendingCount = contracts.filter(c => c.status?.toLowerCase() === 'pending').length;
 
   const selectCls =
     'h-9 rounded-xl border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] shadow-sm ' +
     'outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer';
 
+  // ── Table columns ─────────────────────────────────────────────────────────
   const contractColumns: Column<Contract>[] = [
     {
-      key: 'id',
+      key: 'contractNumber',
       header: 'Contract ID',
       cell: (c) => (
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#1D4ED8]/10">
             <FileText className="h-3.5 w-3.5 text-[#1D4ED8]" />
           </div>
-          <span className="font-mono text-xs font-semibold text-[#0F172A]">{c.id}</span>
+          <span className="font-mono text-xs font-semibold text-[#0F172A]">{c.contractNumber}</span>
         </div>
       ),
     },
     {
-      key: 'tenant',
+      key: 'tenantName',
       header: 'Tenant',
       cell: (c) => (
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-[#1D4ED8]">
-            {c.tenant.charAt(0)}
+            {c.tenantName.charAt(0)}
           </span>
-          <span className="text-sm font-medium text-[#0F172A]">{c.tenant}</span>
+          <span className="text-sm font-medium text-[#0F172A]">{c.tenantName}</span>
         </div>
       ),
     },
     {
-      key: 'property',
-      header: 'Property',
+      key: 'propertyName',
+      header: 'Property / Unit',
       cell: (c) => (
         <span className="flex items-center gap-1.5 text-sm text-slate-600">
           <Home className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          {c.property}
+          {c.propertyName}{c.unitName ? ` — ${c.unitName}` : ''}
         </span>
       ),
     },
     {
-      key: 'period',
+      key: 'startDate',
       header: 'Period',
       cell: (c) => (
         <span className="flex items-center gap-1.5 text-sm text-slate-500">
           <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          {c.startDate} → {c.endDate}
+          {fmtDate(c.startDate)} → {fmtDate(c.endDate)}
         </span>
       ),
     },
     {
-      key: 'rent',
+      key: 'rentAmount',
       header: 'Rent/mo',
       headerClassName: 'text-right',
       className: 'text-right',
       cell: (c) => (
         <span className="text-sm font-semibold text-[#0F172A]">
-          ${c.rentAmount.toLocaleString()}
+          {c.currency} {c.rentAmount.toLocaleString()}
         </span>
       ),
     },
@@ -203,28 +556,16 @@ const RentalContracts = () => {
       className: 'text-right',
       cell: (c) => (
         <div className="flex items-center justify-end gap-1">
-          <button
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors"
-            onClick={() => setViewContract(c)} title="View"
-          >
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors" onClick={() => setViewContract(c)} title="View">
             <Eye className="h-4 w-4" />
           </button>
-          <button
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-            onClick={() => openEdit(c)} title="Edit"
-          >
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" onClick={() => openEdit(c)} title="Edit">
             <Edit className="h-4 w-4" />
           </button>
-          <button
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors"
-            title="Download"
-          >
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors" title="Download (AI)">
             <Download className="h-4 w-4" />
           </button>
-          <button
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-            onClick={() => setDeleteContract(c)} title="Delete"
-          >
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" onClick={() => setDeleteContract(c)} title="Delete">
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
@@ -248,7 +589,6 @@ const RentalContracts = () => {
               <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Rental Contracts</h1>
               <p className="mt-1 text-sm text-blue-200">Search, review, and generate rental agreements in one place.</p>
             </div>
-            {/* Inline stats */}
             <div className="flex flex-wrap gap-3 pt-1">
               {[
                 { label: 'Total', value: contracts.length },
@@ -264,13 +604,30 @@ const RentalContracts = () => {
             </div>
           </div>
 
-          <button
-            className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white px-5 py-2.5 text-sm font-bold text-[#1D4ED8] shadow-sm transition-colors hover:bg-blue-50 shrink-0"
-            onClick={() => setShowContractGenerator(true)}
-          >
-            <FilePlus className="h-4 w-4" />
-            Add New Contract
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={fetchContracts}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white px-5 py-2.5 text-sm font-bold text-[#1D4ED8] shadow-sm hover:bg-blue-50 transition-colors"
+            >
+              <FilePlus className="h-4 w-4" />
+              New Contract
+            </button>
+            <button
+              onClick={() => setShowContractGenerator(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
+            >
+              <ScrollText className="h-4 w-4" />
+              AI Generator
+            </button>
+          </div>
         </div>
       </section>
 
@@ -299,210 +656,205 @@ const RentalContracts = () => {
             <select className={selectCls} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
               <option value="all">All Status</option>
               <option value="active">Active</option>
-              <option value="expired">Expired</option>
               <option value="pending">Pending</option>
+              <option value="expired">Expired</option>
+              <option value="terminated">Terminated</option>
             </select>
           </div>
         }
       />
 
-      {/* ── Add New Contract dialog ── */}
-      <Dialog open={showContractGenerator} onOpenChange={setShowContractGenerator}>
-        <DialogContent className="max-w-5xl rounded-[28px] border border-border/70 bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
-          <ContractGenerator onClose={() => setShowContractGenerator(false)} />
-        </DialogContent>
-      </Dialog>
+      {/* ── AI Contract Generator modal ── */}
+      <AnimatePresence>
+        {showContractGenerator && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            >
+              <ContractGenerator onClose={() => setShowContractGenerator(false)} />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-      {/* ── View Modal ── */}
-      {viewContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-          >
-            {/* Modal gradient header */}
-            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Contract Details</p>
-                  <h2 className="mt-0.5 text-xl font-bold">{viewContract.id}</h2>
-                </div>
-                <button
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
-                  onClick={() => setViewContract(null)}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-3">
-                <StatusBadge status={viewContract.status} />
-              </div>
-            </div>
-
-            <div className="px-6 py-4">
-              <DetailRow icon={User}      label="Tenant"          value={viewContract.tenant} />
-              <DetailRow icon={Home}      label="Property / Unit" value={viewContract.property} />
-              <DetailRow icon={Calendar}  label="Contract Period"  value={`${viewContract.startDate} → ${viewContract.endDate}`} />
-              <DetailRow icon={DollarSign} label="Monthly Rent"   value={`$${viewContract.rentAmount.toLocaleString()}/mo`} />
-              <DetailRow icon={FileText}  label="Status"          value={<StatusBadge status={viewContract.status} />} />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                onClick={() => setViewContract(null)}
-              >
-                Close
-              </button>
-              <button
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
-                onClick={() => { setViewContract(null); openEdit(viewContract); }}
-              >
-                <Edit className="h-3.5 w-3.5" /> Edit Contract
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ── Edit Modal ── */}
-      {editContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
-          >
-            <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Edit Contract</p>
-                  <h2 className="mt-0.5 text-xl font-bold">{editContract.id}</h2>
-                </div>
-                <button
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
-                  onClick={() => setEditContract(null)}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tenant Name</label>
-                <Input value={editForm.tenant} onChange={e => setEditForm(f => ({ ...f, tenant: e.target.value }))} placeholder="Tenant full name" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Property / Unit</label>
-                <Input value={editForm.property} onChange={e => setEditForm(f => ({ ...f, property: e.target.value }))} placeholder="Property and unit" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Start Date</label>
-                  <Input type="date" value={editForm.startDate} onChange={e => setEditForm(f => ({ ...f, startDate: e.target.value }))} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">End Date</label>
-                  <Input type="date" value={editForm.endDate} onChange={e => setEditForm(f => ({ ...f, endDate: e.target.value }))} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Rent ($)</label>
-                <Input
-                  type="number"
-                  value={editForm.rentAmount}
-                  onChange={e => setEditForm(f => ({ ...f, rentAmount: Number(e.target.value) }))}
-                  placeholder="0" min={0}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Status</label>
-                <select
-                  className="h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10"
-                  value={editForm.status}
-                  onChange={e => setEditForm(f => ({ ...f, status: e.target.value as Contract['status'] }))}
-                >
-                  <option value="active">Active</option>
-                  <option value="expired">Expired</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="shrink-0 flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                onClick={() => setEditContract(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
-                onClick={handleEditSave}
-              >
-                Save Changes
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ── Delete Confirmation ── */}
-      {deleteContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
-          >
-            <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-5 text-white">
-              <div className="flex items-center justify-between">
+      {/* ── Add Contract modal ── */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[92vh]"
+            >
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
-                    <AlertTriangle className="h-5 w-5" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+                    <FilePlus className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-red-200">Confirm Action</p>
-                    <h2 className="text-lg font-bold">Delete Contract</h2>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">New Agreement</p>
+                    <h2 className="text-lg font-bold">Create Rental Contract</h2>
                   </div>
                 </div>
-                <button
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
-                  onClick={() => setDeleteContract(null)}
-                >
+                <button onClick={() => setShowAddModal(false)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <ContractFields form={addForm} setForm={setAddForm} tenants={tenants} properties={properties} token={token} />
+              </div>
+              <div className="shrink-0 border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2">
+                <button onClick={() => setShowAddModal(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={handleCreate} disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 transition-colors">
+                  {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Create Contract'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-            <div className="px-6 py-5">
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Are you sure you want to delete contract{' '}
-                <span className="font-semibold text-[#0F172A]">{deleteContract.id}</span> for{' '}
-                <span className="font-semibold text-[#0F172A]">{deleteContract.tenant}</span>?
-                This action cannot be undone.
-              </p>
-            </div>
+      {/* ── View Modal ── */}
+      <AnimatePresence>
+        {viewContract && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            >
+              <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Contract Details</p>
+                    <h2 className="mt-0.5 text-xl font-bold">{viewContract.contractNumber}</h2>
+                  </div>
+                  <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" onClick={() => setViewContract(null)}>
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mt-3"><StatusBadge status={viewContract.status} /></div>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                <DetailRow icon={User}        label="Tenant"          value={viewContract.tenantName} />
+                <DetailRow icon={Phone}       label="Phone"           value={viewContract.tenantPhone || '—'} />
+                <DetailRow icon={Home}        label="Property / Unit" value={`${viewContract.propertyName}${viewContract.unitName ? ` — ${viewContract.unitName}` : ''}`} />
+                <DetailRow icon={Calendar}    label="Contract Period"  value={`${fmtDate(viewContract.startDate)} → ${fmtDate(viewContract.endDate)}`} />
+                <DetailRow icon={DollarSign}  label="Monthly Rent"    value={`${viewContract.currency} ${viewContract.rentAmount.toLocaleString()}/mo`} />
+                <DetailRow icon={CreditCard}  label="Security Deposit" value={`${viewContract.currency} ${viewContract.securityDeposit.toLocaleString()}`} />
+                {viewContract.terms && (
+                  <DetailRow icon={ScrollText} label="Terms" value={<span className="whitespace-pre-wrap text-xs leading-relaxed">{viewContract.terms}</span>} />
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setViewContract(null)}>
+                  Close
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                  onClick={() => { setViewContract(null); openEdit(viewContract); }}
+                >
+                  <Edit className="h-3.5 w-3.5" /> Edit Contract
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-            <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
-              <button
-                className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                onClick={() => setDeleteContract(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="flex-1 rounded-xl bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
-                onClick={handleDelete}
-              >
-                Yes, Delete
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* ── Edit Modal ── */}
+      <AnimatePresence>
+        {editContract && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[92vh]"
+            >
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Edit Contract</p>
+                  <h2 className="mt-0.5 text-xl font-bold">{editContract.contractNumber}</h2>
+                </div>
+                <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" onClick={() => setEditContract(null)}>
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <ContractFields form={editForm} setForm={setEditForm} tenants={tenants} properties={properties} token={token} />
+              </div>
+              <div className="shrink-0 flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setEditContract(null)}>
+                  Cancel
+                </button>
+                <button onClick={handleEditSave} disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 transition-colors">
+                  {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Save Changes'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete Confirmation ── */}
+      <AnimatePresence>
+        {deleteContract && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+            >
+              <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-5 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-red-200">Confirm Action</p>
+                      <h2 className="text-lg font-bold">Delete Contract</h2>
+                    </div>
+                  </div>
+                  <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" onClick={() => setDeleteContract(null)}>
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="px-6 py-5">
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Are you sure you want to delete contract{' '}
+                  <span className="font-semibold text-[#0F172A]">{deleteContract.contractNumber}</span> for{' '}
+                  <span className="font-semibold text-[#0F172A]">{deleteContract.tenantName}</span>?
+                  This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
+                <button className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setDeleteContract(null)}>
+                  Cancel
+                </button>
+                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors">
+                  {isDeleting ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</> : 'Yes, Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -36,6 +36,8 @@ namespace Infrastructure.Data
         public DbSet<AuditTrailEntry> AuditTrailEntries { get; set; } = null!;
         public DbSet<MpesaCallbackAudit> MpesaCallbackAudits { get; set; } = null!;
         public DbSet<MeterToken> MeterTokens { get; set; }
+        public DbSet<RentalContract> RentalContracts { get; set; } = null!;
+        public DbSet<SmsLog> SmsLogs { get; set; } = null!;
 
         #region USSD
         public DbSet<UssdMenu> UssdMenus { get; set; }

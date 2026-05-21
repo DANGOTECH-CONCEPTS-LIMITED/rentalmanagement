@@ -33,6 +33,8 @@ import SubmitComplaint from "./pages/Tenant/SubmitComplaint";
 import CashTransactions from "./pages/Tenant/CashTransaction";
 import MyProfile from "./pages/Tenant/MyProfile";
 import TenantInvoices from "./pages/Tenant/TenantInvoices";
+import TenantContracts from "./pages/Tenant/TenantContracts";
+import TenantMessages from "./pages/Tenant/TenantMessages";
 
 // Landlord Pages
 import RegisterTenants from "./pages/Landlord/RegisterTenants";
@@ -180,6 +182,8 @@ const App = () => (
                 <Route path="send-sms" element={<SendSMSForm />} />
                 <Route path="my-profile" element={<MyProfile />} />
                 <Route path="invoices" element={<TenantInvoices />} />
+                <Route path="tenant-contracts" element={<TenantContracts />} />
+                <Route path="messages" element={<TenantMessages />} />
               </Route>
             </Route>
 

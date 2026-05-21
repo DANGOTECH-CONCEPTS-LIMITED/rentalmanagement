@@ -199,8 +199,14 @@ namespace Infrastructure.Services.UserServices
                 if (tenant == null)
                     throw new Exception("User has a role of tenant but not registered in tenants");
 
-                //assign userid as a tenant
+                //assign userid as a tenant and carry over photo/name from tenant record
                 user.Id = tenant.Id;
+                if (!string.IsNullOrEmpty(tenant.PassportPhoto))
+                    user.PassportPhoto = tenant.PassportPhoto;
+                if (!string.IsNullOrEmpty(tenant.FullName))
+                    user.FullName = tenant.FullName;
+                if (!string.IsNullOrEmpty(tenant.PhoneNumber))
+                    user.PhoneNumber = tenant.PhoneNumber;
             }
 
             // Retrieve JWT configuration settings
@@ -423,10 +429,7 @@ namespace Infrastructure.Services.UserServices
                 .Include(m => m.User) // include landlord details
                 .ToListAsync();
 
-            if (meters == null || meters.Count == 0)
-                throw new Exception("No utility meters found.");
-
-            return meters;
+            return meters ?? [];
         }
 
         public async Task UpdateUtilityMeterAsync(UtilityMeterDto utilityMeter, int id)

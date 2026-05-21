@@ -1,22 +1,19 @@
-"use client";
-
 import { useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
-import { Upload, X, ImageIcon } from "lucide-react";
+  Upload,
+  X,
+  ImageIcon,
+  Search,
+  Building2,
+  MapPin,
+  Home,
+  CircleDollarSign,
+  User,
+  FileText,
+  Loader2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
 
 interface PropertyPhoto {
   file: File;
@@ -47,6 +44,14 @@ interface RegionDistrictsMap {
   Northern: string[];
   Western: string[];
 }
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
+const selCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer";
+const textareaCls =
+  "w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 resize-none";
+
 const RegisterProperty = () => {
   const [formData, setFormData] = useState({
     Name: "",
@@ -65,130 +70,31 @@ const RegisterProperty = () => {
 
   const districtsByRegion: RegionDistrictsMap = {
     Central: [
-      "Buikwe",
-      "Bukomansimbi",
-      "Butambala",
-      "Buvuma",
-      "Gomba",
-      "Kalangala",
-      "Kalungu",
-      "Kampala",
-      "Kayunga",
-      "Kiboga",
-      "Kyankwanzi",
-      "Luweero",
-      "Lwengo",
-      "Lyantonde",
-      "Masaka",
-      "Mityana",
-      "Mpigi",
-      "Mubende",
-      "Mukono",
-      "Nakaseke",
-      "Nakasongola",
-      "Rakai",
-      "Sembabule",
-      "Wakiso",
+      "Buikwe", "Bukomansimbi", "Butambala", "Buvuma", "Gomba", "Kalangala",
+      "Kalungu", "Kampala", "Kayunga", "Kiboga", "Kyankwanzi", "Luweero",
+      "Lwengo", "Lyantonde", "Masaka", "Mityana", "Mpigi", "Mubende",
+      "Mukono", "Nakaseke", "Nakasongola", "Rakai", "Sembabule", "Wakiso",
     ],
     Eastern: [
-      "Amuria",
-      "Budaka",
-      "Bududa",
-      "Bugiri",
-      "Bukedea",
-      "Bukwa",
-      "Bulambuli",
-      "Busia",
-      "Butaleja",
-      "Buyende",
-      "Iganga",
-      "Jinja",
-      "Kaberamaido",
-      "Kaliro",
-      "Kamuli",
-      "Kapchorwa",
-      "Katakwi",
-      "Kibuku",
-      "Kumi",
-      "Kween",
-      "Luuka",
-      "Manafwa",
-      "Mayuge",
-      "Mbale",
-      "Namayingo",
-      "Namisindwa",
-      "Namutumba",
-      "Ngora",
-      "Pallisa",
-      "Serere",
-      "Sironko",
-      "Soroti",
-      "Tororo",
+      "Amuria", "Budaka", "Bududa", "Bugiri", "Bukedea", "Bukwa", "Bulambuli",
+      "Busia", "Butaleja", "Buyende", "Iganga", "Jinja", "Kaberamaido",
+      "Kaliro", "Kamuli", "Kapchorwa", "Katakwi", "Kibuku", "Kumi", "Kween",
+      "Luuka", "Manafwa", "Mayuge", "Mbale", "Namayingo", "Namisindwa",
+      "Namutumba", "Ngora", "Pallisa", "Serere", "Sironko", "Soroti", "Tororo",
     ],
     Northern: [
-      "Abim",
-      "Adjumani",
-      "Agago",
-      "Alebtong",
-      "Amolatar",
-      "Amudat",
-      "Amuru",
-      "Apac",
-      "Arua",
-      "Dokolo",
-      "Gulu",
-      "Kaabong",
-      "Kitgum",
-      "Koboko",
-      "Kole",
-      "Kotido",
-      "Lamwo",
-      "Lira",
-      "Maracha",
-      "Moroto",
-      "Moyo",
-      "Nakapiripirit",
-      "Napak",
-      "Nebbi",
-      "Nwoya",
-      "Omoro",
-      "Otuke",
-      "Oyam",
-      "Pader",
-      "Pakwach",
-      "Yumbe",
-      "Zombo",
+      "Abim", "Adjumani", "Agago", "Alebtong", "Amolatar", "Amudat", "Amuru",
+      "Apac", "Arua", "Dokolo", "Gulu", "Kaabong", "Kitgum", "Koboko", "Kole",
+      "Kotido", "Lamwo", "Lira", "Maracha", "Moroto", "Moyo", "Nakapiripirit",
+      "Napak", "Nebbi", "Nwoya", "Omoro", "Otuke", "Oyam", "Pader", "Pakwach",
+      "Yumbe", "Zombo",
     ],
     Western: [
-      "Buhweju",
-      "Buliisa",
-      "Bundibugyo",
-      "Bushenyi",
-      "Hoima",
-      "Ibanda",
-      "Isingiro",
-      "Kabale",
-      "Kabarole",
-      "Kagadi",
-      "Kakumiro",
-      "Kamwenge",
-      "Kanungu",
-      "Kasese",
-      "Kibaale",
-      "Kiruhura",
-      "Kiryandongo",
-      "Kisoro",
-      "Kyegegwa",
-      "Kyenjojo",
-      "Masindi",
-      "Mitooma",
-      "Ntoroko",
-      "Ntungamo",
-      "Rubanda",
-      "Rubirizi",
-      "Rukiga",
-      "Rukungiri",
-      "Sheema",
+      "Buhweju", "Buliisa", "Bundibugyo", "Bushenyi", "Hoima", "Ibanda",
+      "Isingiro", "Kabale", "Kabarole", "Kagadi", "Kakumiro", "Kamwenge",
+      "Kanungu", "Kasese", "Kibaale", "Kiruhura", "Kiryandongo", "Kisoro",
+      "Kyegegwa", "Kyenjojo", "Masindi", "Mitooma", "Ntoroko", "Ntungamo",
+      "Rubanda", "Rubirizi", "Rukiga", "Rukungiri", "Sheema",
     ],
   };
 
@@ -198,14 +104,12 @@ const RegisterProperty = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Filter districts based on search term
   const filteredDistricts: string[] = selectedRegion
     ? districtsByRegion[selectedRegion].filter((district) =>
         district.toLowerCase().startsWith(searchTerm.toLowerCase())
       )
     : [];
 
-  // Handle clicking outside the dropdown to close it
   useEffect(() => {
     function handleClickOutside(event: MouseEvent): void {
       if (
@@ -215,30 +119,24 @@ const RegisterProperty = () => {
         setIsDropdownOpen(false);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [dropdownRef]);
 
-  // Handle region change
-  const handleRegionChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
+  const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
     setSelectedRegion(e.target.value as Region | "");
     setSelectedDistrict("");
     setSearchTerm("");
   };
 
-  // Handle district selection
   const selectDistrict = (district: string): void => {
     setSelectedDistrict(district);
     setSearchTerm(district);
     setIsDropdownOpen(false);
   };
 
-  // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
     setIsDropdownOpen(true);
@@ -248,26 +146,28 @@ const RegisterProperty = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
-  const user = localStorage.getItem("user") || null;
-
-  const token = JSON.parse(user).token;
-  if (!token) {
-    toast({
-      title: "Error",
-      description: "User token not found. Please log in again.",
-      variant: "destructive",
-    });
-    return;
-  }
-
   const navigate = useNavigate();
+
+  const user = localStorage.getItem("user") || null;
+  const token = user ? JSON.parse(user).token : null;
+
+  useEffect(() => {
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "User token not found. Please log in again.",
+        variant: "destructive",
+      });
+    }
+  }, [token]);
+
   const handleNavigate = () => {
     navigate("admin-dashboard/register-property");
   };
 
   useEffect(() => {
-    fetchLandlords();
-  }, []);
+    if (token) fetchLandlords();
+  }, [token]);
 
   const fetchLandlords = async () => {
     setIsLoadingLandlords(true);
@@ -300,7 +200,7 @@ const RegisterProperty = () => {
       console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
-        description: "Failed to load landlordda information",
+        description: "Failed to load landlord information",
         variant: "destructive",
       });
     } finally {
@@ -384,11 +284,11 @@ const RegisterProperty = () => {
       formDataToSend.append("Description", formData.Description);
       formDataToSend.append("Occupied", formData.Occupied);
 
-      propertyPhotos.forEach((photo, index) => {
+      propertyPhotos.forEach((photo) => {
         formDataToSend.append("files", photo.file);
       });
 
-      for (let [key, value] of formDataToSend.entries()) {
+      for (const [key, value] of formDataToSend.entries()) {
         console.log(`${key}:`, value);
       }
 
@@ -465,7 +365,7 @@ const RegisterProperty = () => {
 
       toast({
         title: "Error",
-        description: error.response.data,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -474,297 +374,368 @@ const RegisterProperty = () => {
   };
 
   return (
-    <div>
-      <div className="my-4">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Register New Property
-        </h1>
-        <p className="text-muted-foreground" onClick={handleNavigate}>
-          Add a new property to the management system
-        </p>
-      </div>
+    <div className="space-y-6">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+              Admin
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Register New Property
+            </h1>
+            <p className="text-sm text-blue-200/80" onClick={handleNavigate}>
+              Add a new property to the management system
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <Card>
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="Name">Property Name*</Label>
-              <Input
-                id="Name"
-                name="Name"
-                value={formData.Name}
-                onChange={handleInputChange}
-                required
-              />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Property Details */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <Building2 className="h-3.5 w-3.5 text-blue-600" />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="Type">Property Type*</Label>
-              <Select
-                value={formData.Type}
-                onValueChange={(value) => handleSelectChange("Type", value)}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select property type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Apartment">Apartment</SelectItem>
-                  <SelectItem value="Studio">Studio Room</SelectItem>
-                  <SelectItem value="House">House</SelectItem>
-                  <SelectItem value="Condo">Condominium</SelectItem>
-                  <SelectItem value="Commercial">Commercial</SelectItem>
-                </SelectContent>
-              </Select>
+            <h3 className="text-sm font-bold text-[#0F172A]">Property Details</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Property Name *
+                </label>
+                <input
+                  id="Name"
+                  name="Name"
+                  type="text"
+                  value={formData.Name}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  placeholder="Enter property name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Property Type *
+                </label>
+                <select
+                  value={formData.Type}
+                  onChange={(e) => handleSelectChange("Type", e.target.value)}
+                  className={selCls}
+                  required
+                >
+                  <option value="">Select property type</option>
+                  <option value="Apartment">Apartment</option>
+                  <option value="Studio">Studio Room</option>
+                  <option value="House">House</option>
+                  <option value="Condo">Condominium</option>
+                  <option value="Commercial">Commercial</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Number of Rooms *
+                </label>
+                <input
+                  id="NumberOfRooms"
+                  name="NumberOfRooms"
+                  type="number"
+                  min="0"
+                  value={formData.NumberOfRooms}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Occupied Status *
+                </label>
+                <select
+                  value={formData.Occupied}
+                  onChange={(e) => handleSelectChange("Occupied", e.target.value)}
+                  className={selCls}
+                  required
+                >
+                  <option value="true">Occupied</option>
+                  <option value="false">Vacant</option>
+                </select>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="region">Select Region</Label>
-
-              <select
-                id="region"
-                value={selectedRegion}
-                onChange={handleRegionChange}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
-              >
-                <option value="">-- Select Region --</option>
-                {Object.keys(districtsByRegion).map((region) => (
-                  <option key={region} value={region}>
-                    {region} Region
-                  </option>
-                ))}
-              </select>
+        {/* Location */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <MapPin className="h-3.5 w-3.5 text-blue-600" />
             </div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Location</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Region
+                </label>
+                <select
+                  id="region"
+                  value={selectedRegion}
+                  onChange={handleRegionChange}
+                  className={selCls}
+                >
+                  <option value="">-- Select Region --</option>
+                  {Object.keys(districtsByRegion).map((region) => (
+                    <option key={region} value={region}>
+                      {region} Region
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* District Selection with Search */}
-            {selectedRegion && (
-              <div className="space-y-2 relative" ref={dropdownRef}>
-                <Label htmlFor="district">
-                  Select District in {selectedRegion} Region*
-                </Label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
+              {selectedRegion && (
+                <div className="relative" ref={dropdownRef}>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                    District in {selectedRegion} Region *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Search className="h-4 w-4 text-[#94A3B8]" />
+                    </div>
+                    <input
+                      type="text"
+                      id="district"
+                      placeholder="Type to search districts..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      onClick={() => setIsDropdownOpen(true)}
+                      className="h-11 w-full rounded-xl border border-[#E2E8F0] bg-white pl-10 pr-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    id="district"
-                    placeholder="Type to search districts..."
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    onClick={() => setIsDropdownOpen(true)}
-                    className="pl-10 w-full px-3 py-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
-                  />
-                </div>
-
-                {isDropdownOpen && filteredDistricts.length > 0 && (
-                  <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {filteredDistricts.map((district) => (
-                      <li
-                        key={district}
-                        onClick={() => selectDistrict(district)}
-                        className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-                      >
-                        {district}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {isDropdownOpen &&
-                  searchTerm &&
-                  filteredDistricts.length === 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-center text-gray-500">
+                  {isDropdownOpen && filteredDistricts.length > 0 && (
+                    <ul className="absolute z-10 w-full mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                      {filteredDistricts.map((district) => (
+                        <li
+                          key={district}
+                          onClick={() => selectDistrict(district)}
+                          className="px-4 py-2.5 text-sm text-[#0F172A] hover:bg-blue-50 hover:text-[#1D4ED8] cursor-pointer transition-colors"
+                        >
+                          {district}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {isDropdownOpen && searchTerm && filteredDistricts.length === 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-lg p-4 text-center text-sm text-slate-500">
                       No districts found starting with "{searchTerm}"
                     </div>
                   )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Street Address *
+                </label>
+                <input
+                  id="Address"
+                  name="Address"
+                  type="text"
+                  value={formData.Address}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  placeholder="Enter street address"
+                  required
+                />
               </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="Address">Street Address*</Label>
-              <Input
-                id="Address"
-                name="Address"
-                value={formData.Address}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="Zipcode">ZIP Code*</Label>
-              <Input
-                id="Zipcode"
-                name="Zipcode"
-                value={formData.Zipcode}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="NumberOfRooms">Number of Rooms*</Label>
-              <Input
-                id="NumberOfRooms"
-                name="NumberOfRooms"
-                type="number"
-                min="0"
-                value={formData.NumberOfRooms}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="OwnerId">Landlord*</Label>
-              <Select
-                value={formData.OwnerId}
-                onValueChange={(value) => handleSelectChange("OwnerId", value)}
-                disabled={isLoadingLandlords}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      isLoadingLandlords
-                        ? "Loading landlords..."
-                        : "Select a landlord"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {landlords.map((landlord) => (
-                    <SelectItem
-                      key={landlord.id}
-                      value={landlord.id.toString()}
-                    >
-                      {landlord.fullName} ({landlord.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="Price">Price*</Label>
-              <Input
-                id="Price"
-                name="Price"
-                type="text"
-                value={formData.Price}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="Currency">Currency*</Label>
-              <Select
-                value={formData.Currency}
-                onValueChange={(value) => handleSelectChange("Currency", value)}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="UGX">UGX</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="Occupied">Occupied Status*</Label>
-              <Select
-                value={formData.Occupied}
-                onValueChange={(value) => handleSelectChange("Occupied", value)}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select occupancy status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Occupied</SelectItem>
-                  <SelectItem value="false">Vacant</SelectItem>
-                </SelectContent>
-              </Select>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  ZIP Code *
+                </label>
+                <input
+                  id="Zipcode"
+                  name="Zipcode"
+                  type="text"
+                  value={formData.Zipcode}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  placeholder="Enter ZIP code"
+                  required
+                />
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <Label>Property Photos* (Maximum 3)</Label>
+        {/* Pricing & Ownership */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <CircleDollarSign className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Pricing & Ownership</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Price *
+                </label>
+                <input
+                  id="Price"
+                  name="Price"
+                  type="text"
+                  value={formData.Price}
+                  onChange={handleInputChange}
+                  className={inputCls}
+                  placeholder="0"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Currency *
+                </label>
+                <select
+                  value={formData.Currency}
+                  onChange={(e) => handleSelectChange("Currency", e.target.value)}
+                  className={selCls}
+                  required
+                >
+                  <option value="UGX">UGX</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Landlord *
+                </label>
+                <select
+                  value={formData.OwnerId}
+                  onChange={(e) => handleSelectChange("OwnerId", e.target.value)}
+                  disabled={isLoadingLandlords}
+                  className={selCls}
+                  required
+                >
+                  <option value="0">
+                    {isLoadingLandlords ? "Loading landlords..." : "Select a landlord"}
+                  </option>
+                  {landlords.map((landlord) => (
+                    <option key={landlord.id} value={landlord.id.toString()}>
+                      {landlord.fullName} ({landlord.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Property Photos */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <Home className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Property Photos</h3>
+            <span className="ml-auto text-xs text-slate-400">{propertyPhotos.length}/3 uploaded</span>
+          </div>
+          <div className="p-5">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {propertyPhotos.map((photo, index) => (
                 <div
                   key={index}
-                  className="relative h-40 border rounded-md overflow-hidden"
+                  className="relative h-40 overflow-hidden rounded-xl border border-[#E2E8F0]"
                 >
                   <img
                     src={photo.preview}
                     alt={`Property ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "/placeholder-property.jpg";
+                      (e.target as HTMLImageElement).src = "/placeholder-property.jpg";
                     }}
                   />
                   <button
                     type="button"
                     onClick={() => removePhoto(index)}
-                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow"
                   >
-                    <X size={16} />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
 
               {propertyPhotos.length < 3 && (
-                <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
-                  <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                      <p className="mb-2 text-sm text-gray-500">
-                        <span className="font-semibold">Click to upload</span>{" "}
-                        or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        PNG, JPG, WEBP (MAX. 3)
-                      </p>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      multiple
-                      onChange={handlePhotoUpload}
-                    />
-                  </label>
-                </div>
+                <label className="flex flex-col items-center justify-center w-full h-40 rounded-xl border-2 border-dashed border-[#E2E8F0] bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <div className="flex flex-col items-center gap-1">
+                    <ImageIcon className="h-6 w-6 text-slate-400" />
+                    <span className="text-xs text-slate-500 font-semibold">Click to upload</span>
+                    <span className="text-[10px] text-slate-400">PNG, JPG, WEBP (max 3)</span>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                  />
+                </label>
               )}
             </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="Description">Property Description*</Label>
-            <Textarea
+        {/* Description */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-5 py-3.5 flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <FileText className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <h3 className="text-sm font-bold text-[#0F172A]">Description</h3>
+          </div>
+          <div className="p-5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+              Property Description *
+            </label>
+            <textarea
               id="Description"
               name="Description"
               value={formData.Description}
               onChange={handleInputChange}
               rows={4}
+              className={textareaCls}
+              placeholder="Describe the property, amenities, and any special features..."
               required
             />
           </div>
+        </div>
 
-          <div className="flex justify-end">
-            <Button type="submit" isLoading={isSubmitting}>
-              Register Property
-            </Button>
-          </div>
-        </form>
-      </Card>
+        {/* Actions */}
+        <div className="flex justify-end gap-3 pb-4">
+          <button
+            type="button"
+            className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+            onClick={() => navigate(-1)}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+          >
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Registering…" : "Register Property"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

@@ -1,43 +1,14 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getImageUrl } from "@/lib/imageUrl";
-import { Input } from "@/components/ui/input";
 import { DataTable, Column } from "@/components/ui/data-table";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  House,
-  Search,
-  Eye,
-  Edit,
-  Trash2,
-  X,
-  ImageIcon,
-  Building2,
-  MapPin,
-  BedDouble,
-  CircleDollarSign,
-  User,
-  Mail,
-  Phone,
-  Plus,
-  Loader2,
+  House, Search, Eye, Edit, Trash2, X, ImageIcon, Building2,
+  MapPin, BedDouble, CircleDollarSign, User, Mail, Phone, Plus,
+  Loader2, Home, Tag, DollarSign, Hash,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import Modal from "@/components/common/Model";
 
 interface Property {
   ownerId: string | Blob;
@@ -54,12 +25,7 @@ interface Property {
   price: number;
   currency: string;
   occupied: boolean;
-  owner: {
-    id: number;
-    fullName: string;
-    email: string;
-    phoneNumber: string;
-  };
+  owner: { id: number; fullName: string; email: string; phoneNumber: string };
 }
 
 interface PropertyPhoto {
@@ -86,7 +52,33 @@ interface Landlord {
   systemRole: { id: number; name: string; description: string };
 }
 
-const propertyTypes = ["Apartment", "House", "Villa", "Condo", "Townhouse", "Commercial"];
+const propertyTypes = ["Apartment", "Studio", "House", "Condo", "Townhouse", "Commercial"];
+
+const inputCls =
+  "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
+
+const selCls =
+  "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
+
+const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
+  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-1.5">
+    {children}{required && <span className="text-red-400 ml-0.5">*</span>}
+  </label>
+);
+
+const SectionPanel = ({ icon: Icon, title, color, children }: {
+  icon: React.ElementType; title: string; color: string; children: React.ReactNode;
+}) => (
+  <div className="rounded-xl border border-[#E2E8F0] bg-slate-50/60 p-4">
+    <div className="flex items-center gap-2 mb-4">
+      <div className={`flex h-6 w-6 items-center justify-center rounded-md ${color}`}>
+        <Icon className="h-3.5 w-3.5 text-white" />
+      </div>
+      <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">{title}</span>
+    </div>
+    {children}
+  </div>
+);
 
 const typeBadge = (type: string) => {
   const map: Record<string, string> = {
@@ -96,6 +88,7 @@ const typeBadge = (type: string) => {
     Condo: "bg-indigo-50 text-indigo-700 border-indigo-100",
     Townhouse: "bg-amber-50 text-amber-700 border-amber-100",
     Commercial: "bg-slate-100 text-slate-700 border-slate-200",
+    Studio: "bg-pink-50 text-pink-700 border-pink-100",
   };
   const cls = map[type] ?? "bg-slate-100 text-slate-600 border-slate-200";
   return (
@@ -105,15 +98,7 @@ const typeBadge = (type: string) => {
   );
 };
 
-const DetailRow = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: React.ReactNode;
-}) => (
+const DetailRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) => (
   <div className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-0">
     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100">
       <Icon className="h-3.5 w-3.5 text-slate-500" />
@@ -125,26 +110,86 @@ const DetailRow = ({
   </div>
 );
 
+const PhotoUploadZone = ({
+  photos, onUpload, onRemove,
+}: {
+  photos: PropertyPhoto[];
+  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove: (i: number) => void;
+}) => (
+  <div className="grid grid-cols-3 gap-3">
+    {photos.map((photo, i) => (
+      <div key={i} className="relative h-28 overflow-hidden rounded-xl border border-[#E2E8F0]">
+        <img src={photo.preview} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+        <button
+          type="button"
+          onClick={() => onRemove(i)}
+          className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+        >
+          <X size={10} />
+        </button>
+        <div className="absolute bottom-0 left-0 right-0 bg-black/30 px-2 py-1">
+          <span className="text-[10px] text-white font-medium">Photo {i + 1}</span>
+        </div>
+      </div>
+    ))}
+    {photos.length < 3 && (
+      <label className="flex h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E2E8F0] bg-white hover:border-[#1D4ED8] hover:bg-blue-50/30 transition-colors">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+          <ImageIcon className="h-4 w-4 text-[#94A3B8]" />
+        </div>
+        <p className="text-center text-[11px] text-[#94A3B8]">
+          <span className="font-semibold text-[#1D4ED8]">Upload</span><br />
+          PNG / JPG
+        </p>
+        <input type="file" className="hidden" accept="image/*" multiple onChange={onUpload} />
+      </label>
+    )}
+    {photos.length === 0 && (
+      <div className="col-span-2 flex items-center">
+        <p className="text-xs text-[#94A3B8]">Upload up to 3 photos. First photo will be the cover image.</p>
+      </div>
+    )}
+  </div>
+);
+
+// ── Modal overlay (must be at module level to avoid remount on every render) ──
+const ModalOverlay = ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4"
+    onClick={(e) => e.target === e.currentTarget && onClose()}
+  >
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 12 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 12 }}
+      transition={{ duration: 0.2 }}
+      className="w-full max-w-2xl rounded-2xl overflow-hidden bg-white shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] max-h-[92vh] flex flex-col"
+    >
+      {children}
+    </motion.div>
+  </div>
+);
+
 // ── Component ─────────────────────────────────────────────────────────────────
 const Properties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [searchTerm1, setSearchTerm1] = useState<string>("");
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm1, setSearchTerm1] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [addProperty, setAddProperty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
-  const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
   const [formData, setFormData] = useState({
     Name: "", Address: "", Region: "", District: "", Zipcode: "",
     Type: "", NumberOfRooms: "0", Description: "", OwnerId: "0",
-    Price: "0", Currency: "UGX", Occupied: "true",
+    Price: "0", Currency: "UGX", Occupied: "false",
   });
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
@@ -157,17 +202,17 @@ const Properties = () => {
     Western: ["Buhweju","Buliisa","Bundibugyo","Bushenyi","Hoima","Ibanda","Isingiro","Kabale","Kabarole","Kagadi","Kakumiro","Kamwenge","Kanungu","Kasese","Kibaale","Kiruhura","Kiryandongo","Kisoro","Kyegegwa","Kyenjojo","Masindi","Mitooma","Ntoroko","Ntungamo","Rubanda","Rubirizi","Rukiga","Rukungiri","Sheema"],
   };
 
-  const userData = JSON.parse(user);
+  const userData = JSON.parse(user!);
   const token = userData.token;
   if (!token) {
     toast({ title: "Error", description: "User token not found. Please log in again.", variant: "destructive" });
-    return;
+    return null;
   }
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const navigate = useNavigate();
 
-  const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+  const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedRegion(e.target.value as Region | "");
     setSelectedDistrict("");
     setSearchTerm1("");
@@ -196,17 +241,14 @@ const Properties = () => {
   };
 
   const fetchLandlords = async () => {
-    setIsLoadingLandlords(true);
     try {
       const response = await fetch(`${apiUrl}/GetLandlords`, {
         headers: { accept: "*/*", Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error("Failed to fetch landlords");
       setLandlords(await response.json());
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to fetch landlords", variant: "destructive" });
-    } finally {
-      setIsLoadingLandlords(false);
     }
   };
 
@@ -226,7 +268,7 @@ const Properties = () => {
       if (!response.ok) throw new Error("Failed to delete property");
       setProperties((prev) => prev.filter((p) => p.id !== id));
       toast({ title: "Success", description: "Property deleted successfully" });
-    } catch (err) {
+    } catch {
       toast({ title: "Error", description: "Failed to delete property", variant: "destructive" });
     }
   };
@@ -255,28 +297,17 @@ const Properties = () => {
     });
   };
 
-  const removePhoto = (index: number) => {
-    setPropertyPhotos((prev) => prev.filter((_, i) => i !== index));
-  };
+  const removePhoto = (index: number) => setPropertyPhotos((prev) => prev.filter((_, i) => i !== index));
 
   const handleAddInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const selectDistrict = (district: string): void => {
+  const selectDistrict = (district: string) => {
     setSelectedDistrict(district);
     setSearchTerm1(district);
     setIsDropdownOpen(false);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    setSearchTerm1(e.target.value);
-    setIsDropdownOpen(true);
   };
 
   const filteredDistricts: string[] = selectedRegion
@@ -326,12 +357,12 @@ const Properties = () => {
       fetchProperties();
       toast({ title: "Property Registered", description: `Successfully registered: ${formData.Name}` });
       setAddProperty(false);
-      setFormData({ Name: "", Address: "", Region: "", District: "", Zipcode: "", Type: "", NumberOfRooms: "0", Description: "", OwnerId: "0", Price: "0", Currency: "UGX", Occupied: "true" });
+      setFormData({ Name: "", Address: "", Region: "", District: "", Zipcode: "", Type: "", NumberOfRooms: "0", Description: "", OwnerId: "0", Price: "0", Currency: "UGX", Occupied: "false" });
       setSelectedDistrict("");
       setSelectedRegion("");
       setPropertyPhotos([]);
     } catch (error) {
-      toast({ title: "Error", description: (error as any)?.response?.data ?? "Failed to register property.", variant: "destructive" });
+      toast({ title: "Error", description: (error as any)?.message ?? "Failed to register property.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -398,9 +429,6 @@ const Properties = () => {
   const occupiedCount = properties.filter((p) => p.occupied).length;
   const vacantCount = properties.length - occupiedCount;
 
-  const inputCls =
-    "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-sm text-[#0F172A] " +
-    "placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
 
   return (
     <div className="space-y-6">
@@ -415,8 +443,8 @@ const Properties = () => {
               Property Registry
             </span>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Landlord Properties</h1>
-              <p className="mt-1 text-sm text-blue-200">View and manage all properties registered in the system</p>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">My Properties</h1>
+              <p className="mt-1 text-sm text-blue-200">View and manage all your registered properties</p>
             </div>
             <div className="flex flex-wrap gap-3 pt-1">
               {[
@@ -453,8 +481,7 @@ const Properties = () => {
           data={filteredProperties}
           columns={[
             {
-              key: "name",
-              header: "Property Name",
+              key: "name", header: "Property Name",
               cell: (p) => (
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1D4ED8]/10">
@@ -465,33 +492,24 @@ const Properties = () => {
               ),
             },
             {
-              key: "address",
-              header: "Address",
+              key: "address", header: "Address",
               cell: (p) => (
                 <span className="flex items-center gap-1.5 text-sm text-slate-500">
-                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  {p.address}
+                  <MapPin className="h-3.5 w-3.5 text-slate-400" />{p.address}
                 </span>
               ),
             },
+            { key: "type", header: "Type", cell: (p) => typeBadge(p.type) },
             {
-              key: "type",
-              header: "Type",
-              cell: (p) => typeBadge(p.type),
-            },
-            {
-              key: "rooms",
-              header: "Rooms",
+              key: "rooms", header: "Rooms",
               cell: (p) => (
                 <span className="flex items-center gap-1.5 text-sm text-slate-600">
-                  <BedDouble className="h-3.5 w-3.5 text-slate-400" />
-                  {p.numberOfRooms}
+                  <BedDouble className="h-3.5 w-3.5 text-slate-400" />{p.numberOfRooms}
                 </span>
               ),
             },
             {
-              key: "landlord",
-              header: "Landlord",
+              key: "landlord", header: "Landlord",
               cell: (p) => (
                 <div className="flex items-center gap-2">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">
@@ -502,45 +520,24 @@ const Properties = () => {
               ),
             },
             {
-              key: "status",
-              header: "Status",
-              cell: (p) =>
-                p.occupied ? (
-                  <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                    Occupied
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                    Vacant
-                  </span>
-                ),
+              key: "status", header: "Status",
+              cell: (p) => p.occupied ? (
+                <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Occupied</span>
+              ) : (
+                <span className="inline-flex items-center rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Vacant</span>
+              ),
             },
             {
-              key: "actions",
-              header: "Actions",
-              headerClassName: "text-right",
-              className: "text-right",
+              key: "actions", header: "Actions", headerClassName: "text-right", className: "text-right",
               cell: (p) => (
                 <div className="flex items-center justify-end gap-1">
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors"
-                    onClick={() => setSelectedProperty(p)}
-                    title="View"
-                  >
+                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors" onClick={() => setSelectedProperty(p)} title="View">
                     <Eye className="h-4 w-4" />
                   </button>
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-                    onClick={() => handleEditProperty(p)}
-                    title="Edit"
-                  >
+                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" onClick={() => handleEditProperty(p)} title="Edit">
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                    onClick={() => handleDeleteProperty(p.id)}
-                    title="Delete"
-                  >
+                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" onClick={() => handleDeleteProperty(p.id)} title="Delete">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -558,393 +555,368 @@ const Properties = () => {
       )}
 
       {/* ── View Property Modal ── */}
-      {selectedProperty && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="relative bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Property Details</p>
-                  <h2 className="mt-0.5 text-xl font-bold">{selectedProperty.name}</h2>
-                  <p className="mt-1 flex items-center gap-1 text-sm text-blue-200">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {selectedProperty.address}
-                  </p>
+      <AnimatePresence>
+        {selectedProperty && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            >
+              <div className="relative bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white shrink-0">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Property Details</p>
+                    <h2 className="mt-0.5 text-xl font-bold">{selectedProperty.name}</h2>
+                    <p className="mt-1 flex items-center gap-1 text-sm text-blue-200">
+                      <MapPin className="h-3.5 w-3.5" />{selectedProperty.address}
+                    </p>
+                  </div>
+                  <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" onClick={() => setSelectedProperty(null)}>
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <button
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
-                  onClick={() => setSelectedProperty(null)}
-                >
-                  <X className="h-4 w-4" />
+                <div className="mt-3 flex gap-2">
+                  {typeBadge(selectedProperty.type)}
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${selectedProperty.occupied ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"}`}>
+                    {selectedProperty.occupied ? "Occupied" : "Vacant"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-1 gap-0 sm:grid-cols-2">
+                  <div className="border-r border-slate-100 px-6 py-4">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property Info</p>
+                    <DetailRow icon={BedDouble} label="Rooms" value={selectedProperty.numberOfRooms} />
+                    <DetailRow icon={CircleDollarSign} label="Rent" value={`${selectedProperty.currency} ${selectedProperty.price.toLocaleString()}`} />
+                    <DetailRow icon={MapPin} label="District" value={`${selectedProperty.district}, ${selectedProperty.region}`} />
+                    {selectedProperty.description && <DetailRow icon={Building2} label="Description" value={selectedProperty.description} />}
+                    <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Landlord</p>
+                    <DetailRow icon={User} label="Name" value={selectedProperty.owner.fullName} />
+                    <DetailRow icon={Mail} label="Email" value={selectedProperty.owner.email} />
+                    <DetailRow icon={Phone} label="Phone" value={selectedProperty.owner.phoneNumber} />
+                  </div>
+                  <div className="px-6 py-4">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property Image</p>
+                    <div className="overflow-hidden rounded-xl border border-slate-100">
+                      <img src={getImageUrl(selectedProperty.imageUrl)} alt={selectedProperty.name} className="h-52 w-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder-property.jpg"; }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 shrink-0">
+                <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setSelectedProperty(null)}>Close</button>
+                <button className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                  onClick={() => { sessionStorage.setItem("propertyId", selectedProperty.id.toString()); navigate("/admin-dashboard/transactions"); }}>
+                  Transactions
+                </button>
+                <button className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                  onClick={() => { setSelectedProperty(null); handleEditProperty(selectedProperty); }}>
+                  Edit Property
                 </button>
               </div>
-              <div className="mt-3 flex gap-2">
-                {typeBadge(selectedProperty.type)}
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${selectedProperty.occupied ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"}`}>
-                  {selectedProperty.occupied ? "Occupied" : "Vacant"}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-1 gap-0 sm:grid-cols-2">
-                <div className="border-r border-slate-100 px-6 py-4">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property Info</p>
-                  <DetailRow icon={BedDouble} label="Rooms" value={selectedProperty.numberOfRooms} />
-                  <DetailRow icon={CircleDollarSign} label="Rent" value={`${selectedProperty.currency} ${selectedProperty.price.toLocaleString()}`} />
-                  <DetailRow icon={MapPin} label="District" value={`${selectedProperty.district}, ${selectedProperty.region}`} />
-                  {selectedProperty.description && (
-                    <DetailRow icon={Building2} label="Description" value={selectedProperty.description} />
-                  )}
-                  <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Landlord</p>
-                  <DetailRow icon={User} label="Name" value={selectedProperty.owner.fullName} />
-                  <DetailRow icon={Mail} label="Email" value={selectedProperty.owner.email} />
-                  <DetailRow icon={Phone} label="Phone" value={selectedProperty.owner.phoneNumber} />
-                </div>
-                <div className="px-6 py-4">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property Image</p>
-                  <div className="overflow-hidden rounded-xl border border-slate-100">
-                    <img
-                      src={getImageUrl(selectedProperty.imageUrl)}
-                      alt={selectedProperty.name}
-                      className="h-52 w-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder-property.jpg"; }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                onClick={() => setSelectedProperty(null)}
-              >
-                Close
-              </button>
-              <button
-                className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
-                onClick={() => {
-                  sessionStorage.setItem("propertyId", selectedProperty.id.toString());
-                  navigate("/admin-dashboard/transactions");
-                }}
-              >
-                Transactions
-              </button>
-              <button
-                className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
-                onClick={() => { setSelectedProperty(null); handleEditProperty(selectedProperty); }}
-              >
-                Edit Property
-              </button>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* ── Add Property Modal ── */}
-      {addProperty && (
-        <Modal isOpen={addProperty} onClose={() => setAddProperty(false)} title="Add Property" size="xl">
-          <div className="sm:max-w-2xl max-h-[80vh] overflow-y-auto px-2">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="Name">Property Name*</Label>
-                  <Input id="Name" name="Name" value={formData.Name} onChange={handleAddInputChange} required />
+      <AnimatePresence>
+        {addProperty && (
+          <ModalOverlay onClose={() => setAddProperty(false)}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+                  <Home className="h-5 w-5 text-white" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="Type">Property Type*</Label>
-                  <Select value={formData.Type} onValueChange={(v) => handleAddSelectChange("Type", v)} required>
-                    <SelectTrigger><SelectValue placeholder="Select property type" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Apartment">Apartment</SelectItem>
-                      <SelectItem value="Studio">Studio Room</SelectItem>
-                      <SelectItem value="House">House</SelectItem>
-                      <SelectItem value="Condo">Condominium</SelectItem>
-                      <SelectItem value="Commercial">Commercial</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Add New Property</h3>
+                  <p className="text-[11px] text-blue-200/70">Fill in the details to register a property</p>
                 </div>
+              </div>
+              <button onClick={() => setAddProperty(false)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="region">Select Region</Label>
-                  <select
-                    id="region"
-                    value={selectedRegion}
-                    onChange={handleRegionChange}
-                    className={inputCls}
-                  >
-                    <option value="">-- Select Region --</option>
-                    {Object.keys(districtsByRegion).map((r) => (
-                      <option key={r} value={r}>{r} Region</option>
-                    ))}
-                  </select>
-                </div>
+            {/* Form body */}
+            <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
+              <div className="p-6 space-y-5">
 
-                {selectedRegion && (
-                  <div className="space-y-2 relative" ref={dropdownRef}>
-                    <Label htmlFor="district">District in {selectedRegion} Region*</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                      <input
-                        type="text"
-                        id="district"
-                        placeholder="Type to search districts…"
-                        value={searchTerm1}
-                        onChange={handleSearchChange}
-                        onClick={() => setIsDropdownOpen(true)}
-                        className={`${inputCls} pl-9`}
-                      />
+                {/* Property Identity */}
+                <SectionPanel icon={Building2} title="Property Identity" color="bg-blue-500">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <FieldLabel required>Property Name</FieldLabel>
+                      <input name="Name" value={formData.Name} onChange={handleAddInputChange} required placeholder="e.g. Sunset Apartments" className={inputCls} />
                     </div>
-                    {isDropdownOpen && filteredDistricts.length > 0 && (
-                      <ul className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                        {filteredDistricts.map((d) => (
-                          <li key={d} onClick={() => selectDistrict(d)} className="px-4 py-2.5 text-sm hover:bg-blue-50 hover:text-[#1D4ED8] cursor-pointer transition-colors">
-                            {d}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {isDropdownOpen && searchTerm1 && filteredDistricts.length === 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-4 text-center text-sm text-slate-400">
-                        No districts found starting with "{searchTerm1}"
+                    <div>
+                      <FieldLabel required>Property Type</FieldLabel>
+                      <select value={formData.Type} onChange={(e) => setFormData((p) => ({ ...p, Type: e.target.value }))} required className={selCls}>
+                        <option value="">Select property type</option>
+                        {propertyTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </SectionPanel>
+
+                {/* Location */}
+                <SectionPanel icon={MapPin} title="Location" color="bg-emerald-500">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <FieldLabel>Region</FieldLabel>
+                      <select value={selectedRegion} onChange={handleRegionChange} className={selCls}>
+                        <option value="">-- Select Region --</option>
+                        {Object.keys(districtsByRegion).map((r) => <option key={r} value={r}>{r} Region</option>)}
+                      </select>
+                    </div>
+
+                    {selectedRegion && (
+                      <div className="relative" ref={dropdownRef}>
+                        <FieldLabel required>District in {selectedRegion}</FieldLabel>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8] pointer-events-none" />
+                          <input
+                            type="text"
+                            placeholder="Type to search districts…"
+                            value={searchTerm1}
+                            onChange={(e) => { setSearchTerm1(e.target.value); setIsDropdownOpen(true); }}
+                            onClick={() => setIsDropdownOpen(true)}
+                            className={`${inputCls} pl-9`}
+                          />
+                        </div>
+                        {isDropdownOpen && filteredDistricts.length > 0 && (
+                          <ul className="absolute z-20 w-full mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                            {filteredDistricts.map((d) => (
+                              <li key={d} onClick={() => selectDistrict(d)} className="px-4 py-2.5 text-sm hover:bg-blue-50 hover:text-[#1D4ED8] cursor-pointer transition-colors">{d}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {isDropdownOpen && searchTerm1 && filteredDistricts.length === 0 && (
+                          <div className="absolute z-20 w-full mt-1 bg-white border border-[#E2E8F0] rounded-xl shadow-lg p-4 text-center text-sm text-[#94A3B8]">
+                            No districts found
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    <div className={selectedRegion ? "" : "sm:col-span-2"}>
+                      <FieldLabel required>Street Address</FieldLabel>
+                      <input name="Address" value={formData.Address} onChange={handleAddInputChange} required placeholder="e.g. Plot 12, Kampala Road" className={inputCls} />
+                    </div>
+                    <div>
+                      <FieldLabel required>ZIP / Postal Code</FieldLabel>
+                      <input name="Zipcode" value={formData.Zipcode} onChange={handleAddInputChange} required placeholder="e.g. 00256" className={inputCls} />
+                    </div>
                   </div>
-                )}
+                </SectionPanel>
 
-                <div className="space-y-2">
-                  <Label htmlFor="Address">Street Address*</Label>
-                  <Input id="Address" name="Address" value={formData.Address} onChange={handleAddInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="Zipcode">ZIP Code*</Label>
-                  <Input id="Zipcode" name="Zipcode" value={formData.Zipcode} onChange={handleAddInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="NumberOfRooms">Number of Rooms*</Label>
-                  <Input id="NumberOfRooms" name="NumberOfRooms" type="number" min="0" value={formData.NumberOfRooms} onChange={handleAddInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="Price">Price*</Label>
-                  <Input id="Price" name="Price" type="text" value={formData.Price} onChange={handleAddInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="Currency">Currency*</Label>
-                  <Select value={formData.Currency} onValueChange={(v) => handleAddSelectChange("Currency", v)} required>
-                    <SelectTrigger><SelectValue placeholder="Select currency" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UGX">UGX</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="Occupied">Occupied Status*</Label>
-                  <Select value={formData.Occupied} onValueChange={(v) => handleAddSelectChange("Occupied", v)} required>
-                    <SelectTrigger><SelectValue placeholder="Select occupancy status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Occupied</SelectItem>
-                      <SelectItem value="false">Vacant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Photo upload */}
-              <div className="space-y-2">
-                <Label>Property Photos* (Maximum 3)</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {propertyPhotos.map((photo, index) => (
-                    <div key={index} className="relative h-40 overflow-hidden rounded-xl border border-slate-200">
-                      <img src={photo.preview} alt={`Property ${index + 1}`} className="h-full w-full object-cover" />
-                      <button type="button" onClick={() => removePhoto(index)} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
-                        <X size={12} />
-                      </button>
+                {/* Details & Pricing */}
+                <SectionPanel icon={Tag} title="Details & Pricing" color="bg-violet-500">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <FieldLabel required>Rooms</FieldLabel>
+                      <input name="NumberOfRooms" type="number" min="0" value={formData.NumberOfRooms} onChange={handleAddInputChange} required className={inputCls} />
                     </div>
-                  ))}
-                  {propertyPhotos.length < 3 && (
-                    <div className="flex h-40 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 hover:border-[#1D4ED8] transition-colors">
-                      <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2">
-                        <ImageIcon className="h-8 w-8 text-slate-300" />
-                        <p className="text-center text-xs text-slate-400">
-                          <span className="font-semibold text-[#1D4ED8]">Click to upload</span>
-                          <br />PNG, JPG, WEBP (max 3)
-                        </p>
-                        <input type="file" className="hidden" accept="image/*" multiple onChange={handlePhotoUpload} />
-                      </label>
+                    <div>
+                      <FieldLabel required>Occupied?</FieldLabel>
+                      <select value={formData.Occupied} onChange={(e) => setFormData((p) => ({ ...p, Occupied: e.target.value }))} className={selCls}>
+                        <option value="false">Vacant</option>
+                        <option value="true">Occupied</option>
+                      </select>
                     </div>
-                  )}
+                    <div>
+                      <FieldLabel required>Rent Price</FieldLabel>
+                      <input name="Price" type="text" value={formData.Price} onChange={handleAddInputChange} required placeholder="0" className={inputCls} />
+                    </div>
+                    <div>
+                      <FieldLabel required>Currency</FieldLabel>
+                      <select value={formData.Currency} onChange={(e) => setFormData((p) => ({ ...p, Currency: e.target.value }))} className={selCls}>
+                        <option value="UGX">UGX</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                      </select>
+                    </div>
+                  </div>
+                </SectionPanel>
+
+                {/* Photos */}
+                <SectionPanel icon={ImageIcon} title="Property Photos (max 3)" color="bg-amber-500">
+                  <PhotoUploadZone photos={propertyPhotos} onUpload={handlePhotoUpload} onRemove={removePhoto} />
+                </SectionPanel>
+
+                {/* Description */}
+                <div>
+                  <FieldLabel required>Property Description</FieldLabel>
+                  <textarea
+                    name="Description"
+                    value={formData.Description}
+                    onChange={handleAddInputChange}
+                    rows={3}
+                    required
+                    placeholder="Describe the property, amenities, and any special features…"
+                    className={`${inputCls} resize-none`}
+                  />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="Description">Property Description*</Label>
-                <Textarea id="Description" name="Description" value={formData.Description} onChange={handleAddInputChange} rows={4} required />
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
-                  disabled={isSubmitting}
-                >
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 border-t border-[#E2E8F0] px-6 py-4 shrink-0">
+                <button type="button" onClick={() => setAddProperty(false)} className="rounded-lg border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors">
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Register Property
                 </button>
               </div>
             </form>
-          </div>
-        </Modal>
-      )}
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
 
-      {/* ── Edit Property Dialog ── */}
-      {editingProperty && (
-        <Dialog open={!!editingProperty} onOpenChange={() => setEditingProperty(null)}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Property</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmitEdit} className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Property Name*</Label>
-                  <Input id="name" name="name" value={editingProperty.name} onChange={handleInputChange} required />
+      {/* ── Edit Property Modal ── */}
+      <AnimatePresence>
+        {editingProperty && (
+          <ModalOverlay onClose={() => setEditingProperty(null)}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+                  <Edit className="h-5 w-5 text-white" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Property Type*</Label>
-                  <Select value={editingProperty.type} onValueChange={(v) => handleSelectChange("type", v)} required>
-                    <SelectTrigger><SelectValue placeholder="Select property type" /></SelectTrigger>
-                    <SelectContent>
-                      {propertyTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Edit Property</h3>
+                  <p className="text-[11px] text-blue-200/70 truncate max-w-[240px]">{editingProperty.name}</p>
                 </div>
               </div>
+              <button onClick={() => setEditingProperty(null)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Address*</Label>
-                <Input id="address" name="address" value={editingProperty.address} onChange={handleInputChange} required />
-              </div>
+            <form onSubmit={handleSubmitEdit} className="overflow-y-auto flex-1">
+              <div className="p-6 space-y-5">
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="region">Region*</Label>
-                  <Input id="region" name="region" value={editingProperty.region} onChange={handleInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="district">District*</Label>
-                  <Input id="district" name="district" value={editingProperty.district} onChange={handleInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zipcode">Zip Code*</Label>
-                  <Input id="zipcode" name="zipcode" value={editingProperty.zipcode} onChange={handleInputChange} required />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="numberOfRooms">Number of Rooms*</Label>
-                  <Input id="numberOfRooms" name="numberOfRooms" type="number" min="0" value={editingProperty.numberOfRooms} onChange={handleInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="occupied">Occupied Status*</Label>
-                  <Select value={editingProperty.occupied ? "true" : "false"} onValueChange={(v) => handleSelectChange("occupied", v)} required>
-                    <SelectTrigger><SelectValue placeholder="Select occupancy status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Occupied</SelectItem>
-                      <SelectItem value="false">Vacant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price*</Label>
-                  <Input id="price" name="price" type="number" min="0" value={editingProperty.price} onChange={handleInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="currency">Currency*</Label>
-                  <Select value={editingProperty.currency} onValueChange={(v) => handleSelectChange("currency", v)} required>
-                    <SelectTrigger><SelectValue placeholder="Select currency" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UGX">UGX</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Existing + new photos */}
-              <div className="space-y-2">
-                <Label>Property Photos (Maximum 3)</Label>
-                {editingProperty.imageUrl && (
-                  <div className="mb-3">
-                    <p className="text-xs text-slate-400 mb-2">Current image</p>
-                    <div className="h-36 w-full overflow-hidden rounded-xl border border-slate-200 sm:w-1/2">
-                      <img src={getImageUrl(editingProperty.imageUrl)} alt={editingProperty.name} className="h-full w-full object-cover" />
+                {/* Identity */}
+                <SectionPanel icon={Building2} title="Property Identity" color="bg-blue-500">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <FieldLabel required>Property Name</FieldLabel>
+                      <input name="name" value={editingProperty.name} onChange={handleInputChange} required className={inputCls} />
+                    </div>
+                    <div>
+                      <FieldLabel required>Property Type</FieldLabel>
+                      <select value={editingProperty.type} onChange={(e) => handleSelectChange("type", e.target.value)} className={selCls}>
+                        {propertyTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
                     </div>
                   </div>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {propertyPhotos.map((photo, index) => (
-                    <div key={index} className="relative h-40 overflow-hidden rounded-xl border border-slate-200">
-                      <img src={photo.preview} alt={`Property ${index + 1}`} className="h-full w-full object-cover" />
-                      <button type="button" onClick={() => removePhoto(index)} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
-                        <X size={12} />
-                      </button>
+                </SectionPanel>
+
+                {/* Location */}
+                <SectionPanel icon={MapPin} title="Location" color="bg-emerald-500">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <FieldLabel required>Street Address</FieldLabel>
+                      <input name="address" value={editingProperty.address} onChange={handleInputChange} required className={inputCls} />
                     </div>
-                  ))}
-                  {propertyPhotos.length < 3 && (
-                    <div className="flex h-40 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 hover:border-[#1D4ED8] transition-colors">
-                      <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2">
-                        <ImageIcon className="h-8 w-8 text-slate-300" />
-                        <p className="text-center text-xs text-slate-400">
-                          <span className="font-semibold text-[#1D4ED8]">Click to upload</span>
-                          <br />PNG, JPG, WEBP (max 3)
-                        </p>
-                        <input type="file" className="hidden" accept="image/*" multiple onChange={handlePhotoUpload} />
-                      </label>
+                    <div>
+                      <FieldLabel required>Region</FieldLabel>
+                      <input name="region" value={editingProperty.region} onChange={handleInputChange} required className={inputCls} />
+                    </div>
+                    <div>
+                      <FieldLabel required>District</FieldLabel>
+                      <input name="district" value={editingProperty.district} onChange={handleInputChange} required className={inputCls} />
+                    </div>
+                    <div>
+                      <FieldLabel required>ZIP / Postal Code</FieldLabel>
+                      <input name="zipcode" value={editingProperty.zipcode} onChange={handleInputChange} required className={inputCls} />
+                    </div>
+                  </div>
+                </SectionPanel>
+
+                {/* Details & Pricing */}
+                <SectionPanel icon={Tag} title="Details & Pricing" color="bg-violet-500">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <FieldLabel required>Rooms</FieldLabel>
+                      <input name="numberOfRooms" type="number" min="0" value={editingProperty.numberOfRooms} onChange={handleInputChange} required className={inputCls} />
+                    </div>
+                    <div>
+                      <FieldLabel required>Occupied?</FieldLabel>
+                      <select value={editingProperty.occupied ? "true" : "false"} onChange={(e) => handleSelectChange("occupied", e.target.value)} className={selCls}>
+                        <option value="false">Vacant</option>
+                        <option value="true">Occupied</option>
+                      </select>
+                    </div>
+                    <div>
+                      <FieldLabel required>Rent Price</FieldLabel>
+                      <input name="price" type="number" min="0" value={editingProperty.price} onChange={handleInputChange} required className={inputCls} />
+                    </div>
+                    <div>
+                      <FieldLabel required>Currency</FieldLabel>
+                      <select value={editingProperty.currency} onChange={(e) => handleSelectChange("currency", e.target.value)} className={selCls}>
+                        <option value="UGX">UGX</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                      </select>
+                    </div>
+                  </div>
+                </SectionPanel>
+
+                {/* Photos */}
+                <SectionPanel icon={ImageIcon} title="Property Photos" color="bg-amber-500">
+                  {editingProperty.imageUrl && propertyPhotos.length === 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-[#94A3B8] mb-2">Current cover image</p>
+                      <div className="h-28 w-40 overflow-hidden rounded-xl border border-[#E2E8F0]">
+                        <img src={getImageUrl(editingProperty.imageUrl)} alt={editingProperty.name} className="h-full w-full object-cover" />
+                      </div>
                     </div>
                   )}
+                  <PhotoUploadZone photos={propertyPhotos} onUpload={handlePhotoUpload} onRemove={removePhoto} />
+                  {propertyPhotos.length === 0 && editingProperty.imageUrl && (
+                    <p className="mt-2 text-xs text-[#94A3B8]">Upload new photos only to replace the existing ones.</p>
+                  )}
+                </SectionPanel>
+
+                {/* Description */}
+                <div>
+                  <FieldLabel required>Property Description</FieldLabel>
+                  <textarea
+                    name="description"
+                    value={editingProperty.description}
+                    onChange={handleInputChange}
+                    rows={3}
+                    required
+                    className={`${inputCls} resize-none`}
+                  />
                 </div>
-                <p className="text-xs text-slate-400">
-                  {propertyPhotos.length === 0
-                    ? "Upload new photos only if you want to replace existing ones."
-                    : "New photos will replace existing ones."}
-                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Property Description*</Label>
-                <Textarea id="description" name="description" value={editingProperty.description} onChange={handleInputChange} rows={4} required />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
-                  onClick={() => setEditingProperty(null)}
-                  disabled={isSubmitting}
-                >
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 border-t border-[#E2E8F0] px-6 py-4 shrink-0">
+                <button type="button" onClick={() => setEditingProperty(null)} disabled={isSubmitting} className="rounded-lg border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#64748B] hover:bg-slate-50 disabled:opacity-60 transition-colors">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
-                  disabled={isSubmitting}
-                >
+                <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors">
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Save Changes
                 </button>
               </div>
             </form>
-          </DialogContent>
-        </Dialog>
-      )}
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

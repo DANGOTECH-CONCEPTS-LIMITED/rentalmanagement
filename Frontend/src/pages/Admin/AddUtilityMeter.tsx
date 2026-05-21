@@ -1,32 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Cable, Check, ChevronsUpDown, MapPin, UserRound, Waves } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { Cable, MapPin, UserRound, Waves } from 'lucide-react';
+
+const inputCls =
+  'h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10';
+const selCls =
+  'h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer';
 
 const meterSchema = z.object({
   meterType: z.string().min(1, { message: 'Meter type is required' }),
@@ -51,7 +34,8 @@ const AddUtilityMeter = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [userPickerOpen, setUserPickerOpen] = useState(false);
+  const [landlordSearch, setLandlordSearch] = useState('');
+  const [showLandlordDrop, setShowLandlordDrop] = useState(false);
   const { toast } = useToast();
 
   let token = '';
@@ -69,7 +53,14 @@ const AddUtilityMeter = () => {
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const form = useForm<z.infer<typeof meterSchema>>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setValue,
+    watch,
+  } = useForm<z.infer<typeof meterSchema>>({
     resolver: zodResolver(meterSchema),
     defaultValues: {
       meterType: '',
@@ -80,14 +71,17 @@ const AddUtilityMeter = () => {
     },
   });
 
+  const watchedLandLordId = watch('landLordId');
+
   useEffect(() => {
     setIsLoadingUsers(true);
-    axios.get(`${apiUrl}/GetAllUsers`, {
-      headers: {
-        accept: '*/*',
-        Authorization: `Bearer ${token}`,
-      },
-    })
+    axios
+      .get(`${apiUrl}/GetAllUsers`, {
+        headers: {
+          accept: '*/*',
+          Authorization: `Bearer ${token}`,
+        },
+      })
       .then((res) => {
         setUsers(res.data);
       })
@@ -106,15 +100,27 @@ const AddUtilityMeter = () => {
       users
         .filter((user) => {
           const normalizedRole = user.systemRole?.name?.trim().toLowerCase() ?? '';
-          return normalizedRole === 'landlord' || normalizedRole === 'utility payment' || normalizedRole === 'utililty payment';
+          return (
+            normalizedRole === 'landlord' ||
+            normalizedRole === 'utility payment' ||
+            normalizedRole === 'utililty payment'
+          );
         })
         .sort((left, right) => left.fullName.localeCompare(right.fullName)),
     [users]
   );
 
+  const filteredLandlords = useMemo(
+    () =>
+      selectableUsers.filter((u) =>
+        u.fullName.toLowerCase().includes(landlordSearch.toLowerCase())
+      ),
+    [selectableUsers, landlordSearch]
+  );
+
   const selectedUser = useMemo(
-    () => selectableUsers.find((user) => user.id.toString() === form.watch('landLordId')),
-    [form, selectableUsers]
+    () => selectableUsers.find((user) => user.id.toString() === watchedLandLordId),
+    [watchedLandLordId, selectableUsers]
   );
 
   const onSubmit = async (values: z.infer<typeof meterSchema>) => {
@@ -141,13 +147,13 @@ const AddUtilityMeter = () => {
         description: 'Utility meter added successfully',
       });
 
-      form.reset();
+      reset();
+      setLandlordSearch('');
     } catch (error) {
       let errorMessage = 'Failed to add utility meter';
       if (axios.isAxiosError(error)) {
         errorMessage = error.response?.data?.message || errorMessage;
       }
-
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -159,219 +165,217 @@ const AddUtilityMeter = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <section className="page-hero">
-        <div className="max-w-3xl space-y-3">
-          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            Utility Setup
+    <div className="space-y-6">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative space-y-2">
+          <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+            Utilities
           </span>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-            Add a new utility meter
-          </h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Add Utility Meter</h1>
+          <p className="text-sm text-blue-200/80">
             Register a meter against the correct landlord with a cleaner, more balanced form layout.
           </p>
         </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="form-shell border-none shadow-none">
-          <CardHeader>
-            <CardTitle>Add New Utility Meter</CardTitle>
-            <CardDescription>
-              Fill in the details below to register and assign a utility meter.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid gap-5 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="landLordId"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>User</FormLabel>
-                      <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              role="combobox"
-                              disabled={isLoadingUsers}
-                              className={cn(
-                                'w-full justify-between font-normal',
-                                !field.value && 'text-muted-foreground'
-                              )}
-                            >
-                              {selectedUser
-                                ? `${selectedUser.fullName} (${selectedUser.systemRole?.name ?? 'User'})`
-                                : isLoadingUsers
-                                  ? 'Loading users...'
-                                  : 'Search landlord or utility payment user'}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search by name, email, or role" />
-                            <CommandList>
-                              <CommandEmpty>No landlord or utility payment user found.</CommandEmpty>
-                              <CommandGroup>
-                                {selectableUsers.map((user) => (
-                                  <CommandItem
-                                    key={user.id}
-                                    value={`${user.fullName} ${user.email} ${user.systemRole?.name ?? ''}`}
-                                    onSelect={() => {
-                                      field.onChange(user.id.toString());
-                                      setUserPickerOpen(false);
-                                    }}
-                                    className="flex items-start gap-3 py-3"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        'mt-0.5 h-4 w-4',
-                                        field.value === user.id.toString() ? 'opacity-100' : 'opacity-0'
-                                      )}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate font-medium text-slate-900">{user.fullName}</p>
-                                      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {user.systemRole?.name ?? 'User'}
-                                        {user.verified ? ' • Verified' : ''}
-                                      </p>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormDescription>
-                        Search and select only landlord and utility payment users.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+        {/* Form Panel */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-6 py-4 flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+              <Cable className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0F172A]">Meter Details</h3>
+              <p className="text-xs text-[#64748B]">Fill in the fields below to register a utility meter.</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+            {/* Landlord Searchable Dropdown */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                Landlord / User *
+              </label>
+              <div className="relative">
+                <input
+                  className={inputCls}
+                  placeholder={isLoadingUsers ? 'Loading users...' : 'Search landlord or utility payment user...'}
+                  value={landlordSearch || (selectedUser ? `${selectedUser.fullName} (${selectedUser.systemRole?.name ?? 'User'})` : '')}
+                  onChange={(e) => {
+                    setLandlordSearch(e.target.value);
+                    setShowLandlordDrop(true);
+                    if (!e.target.value) {
+                      setValue('landLordId', '');
+                    }
+                  }}
+                  onFocus={() => setShowLandlordDrop(true)}
+                  onBlur={() => setTimeout(() => setShowLandlordDrop(false), 150)}
+                  disabled={isLoadingUsers}
                 />
+                {showLandlordDrop && filteredLandlords.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-xl border border-[#E2E8F0] bg-white shadow-lg max-h-48 overflow-y-auto">
+                    {filteredLandlords.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onMouseDown={() => {
+                          setValue('landLordId', u.id.toString());
+                          setLandlordSearch('');
+                          setShowLandlordDrop(false);
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm text-[#0F172A] hover:bg-slate-50 transition-colors"
+                      >
+                        <span className="font-medium">{u.fullName}</span>
+                        <span className="ml-2 text-xs text-[#64748B]">
+                          ({u.systemRole?.name ?? 'User'})
+                          {u.verified ? ' • Verified' : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {errors.landLordId && (
+                <p className="text-xs text-red-500">{errors.landLordId.message}</p>
+              )}
+              <p className="text-xs text-[#94A3B8]">
+                Search and select only landlord and utility payment users.
+              </p>
+            </div>
 
-                <FormField
-                  control={form.control}
-                  name="meterType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meter Type</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Electricity, Water" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            <div className="grid gap-5 md:grid-cols-2">
+              {/* Meter Type */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                  Meter Type *
+                </label>
+                <input
+                  className={inputCls}
+                  placeholder="e.g., Electricity, Water"
+                  {...register('meterType')}
                 />
+                {errors.meterType && (
+                  <p className="text-xs text-red-500">{errors.meterType.message}</p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="meterNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meter Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter meter number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Meter Number */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                  Meter Number *
+                </label>
+                <input
+                  className={inputCls}
+                  placeholder="Enter meter number"
+                  {...register('meterNumber')}
                 />
+                {errors.meterNumber && (
+                  <p className="text-xs text-red-500">{errors.meterNumber.message}</p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="nwscAccount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>NWSC Account</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter NWSC account number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* NWSC Account */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                  NWSC Account *
+                </label>
+                <input
+                  className={inputCls}
+                  placeholder="Enter NWSC account number"
+                  {...register('nwscAccount')}
                 />
+                {errors.nwscAccount && (
+                  <p className="text-xs text-red-500">{errors.nwscAccount.message}</p>
+                )}
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="locationOfNwscMeter"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Location of NWSC Meter</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter location of NWSC meter" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              {/* Location */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+                  Location of NWSC Meter *
+                </label>
+                <input
+                  className={inputCls}
+                  placeholder="Enter location of NWSC meter"
+                  {...register('locationOfNwscMeter')}
                 />
-                </div>
+                {errors.locationOfNwscMeter && (
+                  <p className="text-xs text-red-500">{errors.locationOfNwscMeter.message}</p>
+                )}
+              </div>
+            </div>
 
-                <div className="flex flex-col gap-3 border-t border-border/70 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Review the selected account and meter identifiers before saving.
-                  </p>
-                  <Button type="submit" isLoading={isSubmitting} className="min-w-36">
-                    Add Meter
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+            <div className="flex flex-col gap-3 border-t border-[#E2E8F0] pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-[#64748B]">
+                Review the selected account and meter identifiers before saving.
+              </p>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex min-w-36 items-center justify-center rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1e40af] disabled:opacity-60"
+              >
+                {isSubmitting ? 'Saving...' : 'Add Meter'}
+              </button>
+            </div>
+          </form>
+        </div>
 
-        <div className="space-y-6">
-          <Card className="data-surface">
-            <CardHeader>
-              <CardTitle className="text-lg">What this captures</CardTitle>
-              <CardDescription>
+        {/* Info Panel */}
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
+            <div className="border-b border-[#E2E8F0] bg-slate-50/60 px-6 py-4">
+              <h3 className="text-sm font-bold text-[#0F172A]">What this captures</h3>
+              <p className="text-xs text-[#64748B] mt-0.5">
                 Keep submissions clean and consistent across all utility records.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <UserRound className="mt-0.5 h-5 w-5 text-primary" />
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                <UserRound className="mt-0.5 h-5 w-5 text-[#1D4ED8]" />
                 <div>
-                  <p className="font-medium text-slate-900">Verified landlord</p>
-                  <p className="text-sm text-muted-foreground">Assign each meter to the right user account owner.</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">Verified landlord</p>
+                  <p className="text-xs text-[#64748B] mt-0.5">
+                    Assign each meter to the right user account owner.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <Cable className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                <Cable className="mt-0.5 h-5 w-5 text-[#1D4ED8]" />
                 <div>
-                  <p className="font-medium text-slate-900">Meter identity</p>
-                  <p className="text-sm text-muted-foreground">Store the meter type and meter number in a consistent format.</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">Meter identity</p>
+                  <p className="text-xs text-[#64748B] mt-0.5">
+                    Store the meter type and meter number in a consistent format.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <Waves className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                <Waves className="mt-0.5 h-5 w-5 text-[#1D4ED8]" />
                 <div>
-                  <p className="font-medium text-slate-900">Billing reference</p>
-                  <p className="text-sm text-muted-foreground">The NWSC account makes reconciliation much easier later.</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">Billing reference</p>
+                  <p className="text-xs text-[#64748B] mt-0.5">
+                    The NWSC account makes reconciliation much easier later.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <MapPin className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                <MapPin className="mt-0.5 h-5 w-5 text-[#1D4ED8]" />
                 <div>
-                  <p className="font-medium text-slate-900">Installation location</p>
-                  <p className="text-sm text-muted-foreground">Use a clear location label so support and admins can identify the unit fast.</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">Installation location</p>
+                  <p className="text-xs text-[#64748B] mt-0.5">
+                    Use a clear location label so support and admins can identify the unit fast.
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default AddUtilityMeter; 
+export default AddUtilityMeter;

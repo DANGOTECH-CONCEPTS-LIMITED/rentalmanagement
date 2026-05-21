@@ -145,6 +145,7 @@ const RegisterTenants = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
+  const [units, setUnits] = useState<{ id: number; unitNumber: string }[]>([]);
 
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
@@ -183,6 +184,23 @@ const RegisterTenants = () => {
     };
     if (token) fetchProperties();
   }, [toast, token]);
+
+  useEffect(() => {
+    if (!formData.PropertyId) { setUnits([]); return; }
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const fetchUnits = async () => {
+      try {
+        const res = await fetch(`${apiUrl}/GetPropertyUnitsByPropertyId/${formData.PropertyId}`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        });
+        if (res.ok) setUnits(await res.json());
+        else setUnits([]);
+      } catch {
+        setUnits([]);
+      }
+    };
+    fetchUnits();
+  }, [formData.PropertyId, token]);
 
   useEffect(() => {
     return () => {
@@ -261,7 +279,7 @@ const RegisterTenants = () => {
       form.append("PropertyId", formData.PropertyId);
       form.append("Password", formData.Password);
       form.append("Active", formData.Active);
-      form.append("UnitId", formData.UnitId);
+      if (formData.UnitId) form.append("PropertyUnitId", formData.UnitId);
       form.append("WaterMeterNo", formData.WaterMeterNo);
       form.append("TenantStatus", formData.TenantStatus);
       form.append("Occupation", formData.Occupation);
@@ -510,8 +528,8 @@ const RegisterTenants = () => {
                       onChange={handleInputChange}
                     >
                       <option value="">Select unit</option>
-                      {["A1", "A2", "B1", "B2", "C1", "C2"].map((u) => (
-                        <option key={u} value={u}>{u}</option>
+                      {units.map((u) => (
+                        <option key={u.id} value={u.id}>{u.unitNumber}</option>
                       ))}
                     </select>
                   </div>

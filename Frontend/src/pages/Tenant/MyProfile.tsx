@@ -19,7 +19,8 @@ interface TenantProfile {
   passportPhoto?: string;
   active: boolean;
   dateMovedIn: string;
-  unitId?: string;
+  propertyUnitId?: number;
+  unit?: { id: number; unitNumber: string };
   waterMeterNo?: string;
   nextOfKinName?: string;
   nextOfKinPhone?: string;
@@ -238,7 +239,7 @@ const MyProfile = () => {
             <div className="flex items-center gap-0 border-t border-[#E2E8F0] divide-x divide-[#E2E8F0]">
               {[
                 { icon: Phone, label: "Phone", value: tenant.phoneNumber },
-                { icon: DoorOpen, label: "Unit", value: tenant.unitId || "—" },
+                { icon: DoorOpen, label: "Unit", value: tenant.unit?.unitNumber || "—" },
                 { icon: Droplets, label: "Meter No.", value: tenant.waterMeterNo || "—" },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex-1 flex items-center gap-2 px-4 py-3">
@@ -282,7 +283,7 @@ const MyProfile = () => {
             <>
               <DetailRow icon={Home} label="Property" value={tenant?.property?.name} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
               <DetailRow icon={Home} label="Property Type" value={tenant?.property?.type} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-              <DetailRow icon={DoorOpen} label="Unit / Room" value={tenant?.unitId} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+              <DetailRow icon={DoorOpen} label="Unit / Room" value={tenant?.unit?.unitNumber} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
               <DetailRow icon={Droplets} label="Water Meter No." value={tenant?.waterMeterNo} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
               <DetailRow
                 icon={Calendar}

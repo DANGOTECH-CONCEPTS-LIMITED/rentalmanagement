@@ -5,49 +5,18 @@ import {
   ArrowRightLeft,
   ArrowUpRight,
   Check,
-  ChevronsUpDown,
+  CircleDollarSign,
+  CreditCard,
   Download,
   FileText,
   Loader2,
   RefreshCw,
+  Search,
   SendHorizontal,
   Wallet,
+  X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { motion, AnimatePresence } from "framer-motion";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +26,11 @@ import {
 } from "@/lib/wallet-statement-export";
 import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import { cn } from "@/lib/utils";
+
+const inputCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
+const selCls =
+  "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 cursor-pointer";
 
 interface StoredUser {
   id: string | number;
@@ -182,6 +156,7 @@ const AdminWalletManagement = () => {
   const [listSearchTerm, setListSearchTerm] = useState("");
   const [statementSearchTerm, setStatementSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [accountPickerSearch, setAccountPickerSearch] = useState("");
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [transferTargetOpen, setTransferTargetOpen] = useState(false);
   const [debitDialogOpen, setDebitDialogOpen] = useState(false);
@@ -674,85 +649,135 @@ const AdminWalletManagement = () => {
     );
   }, [transferTargetSearchTerm, transferTargets]);
 
+  const filteredAccountPickerUsers = useMemo(() => {
+    const s = accountPickerSearch.trim().toLowerCase();
+    if (!s) return selectableUsers;
+    return selectableUsers.filter((u) =>
+      [u.fullName, u.email, getRoleLabel(u)].join(" ").toLowerCase().includes(s)
+    );
+  }, [accountPickerSearch, selectableUsers]);
+
   return (
-    <div className="space-y-8">
-      <section className="page-hero">
-        <div className="max-w-4xl space-y-3">
-          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            Wallet Control
-          </span>
+    <div className="space-y-6">
+      {/* Hero Banner */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#1E3A5F] to-[#1D4ED8] px-8 py-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-8 left-1/3 h-40 w-40 rounded-full bg-white/5" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Admin wallet management
-            </h1>
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-              Review wallet balances for all landlords and utility payment users, inspect statements, debit wallets with a reason, and transfer funds between wallets.
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
+              Admin
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Admin Wallet Management</h1>
+            <p className="text-sm text-blue-200/80">
+              Review balances for all landlords and utility payment users, inspect statements, debit wallets, and transfer funds between accounts.
             </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
+              <Wallet className="h-7 w-7 text-blue-200" />
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="data-surface border-none shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Tracked wallets</CardDescription>
-            <CardTitle className="text-3xl font-semibold text-slate-950">
-              {walletBalances.length}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="data-surface border-none shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Total balance in scope</CardDescription>
-            <CardTitle className="text-3xl font-semibold text-slate-950">
-              {formatCurrency(totalTrackedBalance)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="data-surface border-none shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Statement rows for selected wallet</CardDescription>
-            <CardTitle className="text-3xl font-semibold text-slate-950">
-              {selectedUser ? filteredStatementEntries.length : 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="data-surface border-none shadow-none">
-          <CardHeader className="pb-3">
-            <CardDescription>Active filter</CardDescription>
-            <CardTitle className="text-lg font-semibold text-slate-950">
-              {selectedRoleFilter}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-blue-500 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tracked Wallets</p>
+              <p className="mt-1.5 text-2xl font-bold text-[#0F172A]">{walletBalances.length}</p>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+              <Wallet className="h-5 w-5 text-blue-600" />
+            </div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-emerald-500 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Balance in Scope</p>
+              <p className="mt-1.5 text-2xl font-bold text-[#0F172A]">{formatCurrency(totalTrackedBalance)}</p>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
+              <CircleDollarSign className="h-5 w-5 text-emerald-600" />
+            </div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-violet-500 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Statement Rows (Selected)</p>
+              <p className="mt-1.5 text-2xl font-bold text-[#0F172A]">{selectedUser ? filteredStatementEntries.length : 0}</p>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50">
+              <CreditCard className="h-5 w-5 text-violet-600" />
+            </div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 border-l-4 border-l-amber-500 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Filter</p>
+              <p className="mt-1.5 text-lg font-bold text-[#0F172A]">{selectedRoleFilter}</p>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50">
+              <ArrowRightLeft className="h-5 w-5 text-amber-600" />
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Wallet Balances + Selected Wallet Panel */}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <Card className="data-surface border-none shadow-none">
-          <CardHeader className="space-y-4">
+        {/* Wallet Balances Table */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <CardTitle>Wallet balances</CardTitle>
-                <CardDescription>
-                  Search all landlord and utility payment wallets and open any statement from the same view.
-                </CardDescription>
+                <h2 className="text-base font-bold text-[#0F172A]">Wallet Balances</h2>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  Search all landlord and utility payment wallets and open any statement.
+                </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={() => refreshWalletBalances(selectableUsers)}
                 disabled={isLoadingBalances || selectableUsers.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
               >
                 {isLoadingBalances ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" />
                 )}
-                Refresh balances
-              </Button>
+                Refresh
+              </button>
             </div>
-          </CardHeader>
-          <CardContent>
+            {/* Search + Filter row */}
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  className={cn(inputCls, "pl-9")}
+                  placeholder="Search by name, email, or role"
+                  value={listSearchTerm}
+                  onChange={(e) => setListSearchTerm(e.target.value)}
+                />
+              </div>
+              <select
+                className={cn(selCls, "w-full sm:w-48")}
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+              >
+                <option value="all">All roles</option>
+                <option value="landlord">Landlords</option>
+                <option value="utility payment">Utility payment</option>
+                <option value="utililty payment">Utililty payment</option>
+              </select>
+            </div>
+          </div>
+          <div className="p-4">
             {(() => {
               const walletBalanceColumns: Column<WalletBalanceRecord>[] = [
                 {
@@ -761,13 +786,13 @@ const AdminWalletManagement = () => {
                   cell: (record) => (
                     <div
                       className={cn(
-                        "cursor-pointer space-y-1",
-                        selectedUserId === String(record.user.id) && "text-primary"
+                        "cursor-pointer space-y-0.5",
+                        selectedUserId === String(record.user.id) && "text-[#1D4ED8]"
                       )}
                       onClick={() => setSelectedUserId(String(record.user.id))}
                     >
-                      <p className="font-medium text-slate-950">{record.user.fullName}</p>
-                      <p className="text-xs text-muted-foreground">{record.user.email}</p>
+                      <p className="font-semibold text-[#0F172A]">{record.user.fullName}</p>
+                      <p className="text-xs text-slate-500">{record.user.email}</p>
                     </div>
                   ),
                 },
@@ -775,7 +800,9 @@ const AdminWalletManagement = () => {
                   key: "role",
                   header: "Role",
                   cell: (record) => (
-                    <Badge variant="secondary">{getRoleLabel(record.user)}</Badge>
+                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                      {getRoleLabel(record.user)}
+                    </span>
                   ),
                 },
                 {
@@ -795,7 +822,7 @@ const AdminWalletManagement = () => {
                   key: "balance",
                   header: "Balance",
                   headerClassName: "text-right",
-                  className: "text-right font-semibold text-slate-950",
+                  className: "text-right font-semibold text-[#0F172A]",
                   cell: (record) =>
                     record.error ? (
                       <span className="text-sm font-medium text-red-600">Unavailable</span>
@@ -815,114 +842,120 @@ const AdminWalletManagement = () => {
                   searchPlaceholder="Search by name, email, or role"
                   label="wallet"
                   emptyMessage="No wallet records match the current filters."
-                  headerRight={
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filter by role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All roles</SelectItem>
-                        <SelectItem value="landlord">Landlords</SelectItem>
-                        <SelectItem value="utility payment">Utility payment</SelectItem>
-                        <SelectItem value="utililty payment">Utililty payment</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  }
                 />
               );
             })()}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="data-surface border-none shadow-none">
-          <CardHeader className="space-y-4">
-            <div>
-              <CardTitle>Selected wallet</CardTitle>
-              <CardDescription>
-                Pick a wallet to review its balance, open the full statement, or perform admin actions.
-              </CardDescription>
+        {/* Selected Wallet Panel */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-5">
+            <h2 className="text-base font-bold text-[#0F172A]">Selected Wallet</h2>
+            <p className="mt-0.5 text-sm text-slate-500">
+              Pick a wallet to review its balance, open the full statement, or perform admin actions.
+            </p>
+            {/* Account Picker */}
+            <div className="mt-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                Landlord or utility user
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={selectableUsers.length === 0}
+                  onClick={() => setAccountPickerOpen((o) => !o)}
+                  className="h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 flex items-center justify-between disabled:opacity-50 cursor-pointer"
+                >
+                  <span className="truncate text-left">
+                    {selectedUser
+                      ? `${selectedUser.fullName} (${getRoleLabel(selectedUser)})`
+                      : selectableUsers.length > 0
+                        ? "Search a landlord or utility wallet"
+                        : "No wallets available"}
+                  </span>
+                  <Search className="h-4 w-4 shrink-0 text-slate-400 ml-2" />
+                </button>
+                <AnimatePresence>
+                  {accountPickerOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg"
+                    >
+                      <div className="p-2">
+                        <input
+                          className={inputCls}
+                          placeholder="Search by name, email, or role"
+                          value={accountPickerSearch}
+                          onChange={(e) => setAccountPickerSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto px-2 pb-2">
+                        {filteredAccountPickerUsers.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-slate-400">No wallet account found.</p>
+                        ) : (
+                          filteredAccountPickerUsers.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedUserId(String(user.id));
+                                setAccountPickerOpen(false);
+                                setAccountPickerSearch("");
+                              }}
+                              className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
+                            >
+                              <Check
+                                className={cn(
+                                  "mt-0.5 h-4 w-4 shrink-0 text-[#1D4ED8]",
+                                  selectedUserId === String(user.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-[#0F172A]">{user.fullName}</p>
+                                <p className="truncate text-xs text-slate-500">{user.email}</p>
+                                <p className="text-xs text-slate-400">{getRoleLabel(user)}</p>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-wallet-account-picker">Landlord or utility user</Label>
-              <Popover open={accountPickerOpen} onOpenChange={setAccountPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="admin-wallet-account-picker"
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    disabled={selectableUsers.length === 0}
-                    className="h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm"
-                  >
-                    <span className="truncate">
-                      {selectedUser
-                        ? `${selectedUser.fullName} (${getRoleLabel(selectedUser)})`
-                        : selectableUsers.length > 0
-                          ? "Search a landlord or utility wallet"
-                          : "No wallets available"}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search by name, email, or role" />
-                    <CommandList>
-                      <CommandEmpty>No wallet account found.</CommandEmpty>
-                      <CommandGroup>
-                        {selectableUsers.map((user) => (
-                          <CommandItem
-                            key={user.id}
-                            value={`${user.fullName} ${user.email} ${getRoleLabel(user)}`}
-                            onSelect={() => {
-                              setSelectedUserId(String(user.id));
-                              setAccountPickerOpen(false);
-                            }}
-                            className="flex items-start gap-3 py-3"
-                          >
-                            <Check
-                              className={cn(
-                                "mt-0.5 h-4 w-4",
-                                selectedUserId === String(user.id) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-slate-900">{user.fullName}</p>
-                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-6">
             {!selectedUser || !selectedBalanceRecord ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-6 py-10 text-center text-sm text-slate-500">
                 Select a wallet from the table or search control to inspect its statement.
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="rounded-[28px] border border-border/70 bg-white/95 p-5 shadow-sm">
+              <div className="space-y-5">
+                {/* User Summary */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-lg font-semibold text-slate-950">{selectedUser.fullName}</p>
-                      <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                    <div className="space-y-0.5">
+                      <p className="text-base font-bold text-[#0F172A]">{selectedUser.fullName}</p>
+                      <p className="text-sm text-slate-500">{selectedUser.email}</p>
                     </div>
-                    <Badge variant="secondary">{getRoleLabel(selectedUser)}</Badge>
+                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                      {getRoleLabel(selectedUser)}
+                    </span>
                   </div>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Wallet balance</p>
-                      <p className="mt-2 text-2xl font-semibold text-slate-950">{selectedBalanceRecord.balanceLabel}</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-white border border-slate-100 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Wallet Balance</p>
+                      <p className="mt-1.5 text-xl font-bold text-[#0F172A]">{selectedBalanceRecord.balanceLabel}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Latest statement entry</p>
-                      <p className="mt-2 text-sm font-medium text-slate-950">
+                    <div className="rounded-xl bg-white border border-slate-100 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Latest Statement Entry</p>
+                      <p className="mt-1.5 text-sm font-semibold text-[#0F172A]">
                         {selectedBalanceRecord.lastStatementAt
                           ? new Date(selectedBalanceRecord.lastStatementAt).toLocaleString()
                           : "No statement activity yet"}
@@ -931,78 +964,84 @@ const AdminWalletManagement = () => {
                   </div>
                 </div>
 
+                {/* Action Buttons */}
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Button onClick={() => setDebitDialogOpen(true)} className="h-11 rounded-xl">
-                    <Wallet className="mr-2 h-4 w-4" />
-                    Debit wallet
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setTransferDialogOpen(true)}
-                    className="h-11 rounded-xl"
+                  <button
+                    onClick={() => setDebitDialogOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1e40af]"
                   >
-                    <ArrowRightLeft className="mr-2 h-4 w-4" />
-                    Transfer to another wallet
-                  </Button>
+                    <Wallet className="h-4 w-4" />
+                    Debit Wallet
+                  </button>
+                  <button
+                    onClick={() => setTransferDialogOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                    Transfer to Another
+                  </button>
                 </div>
 
-                <div className="rounded-[28px] border border-border/70 bg-slate-50/80 p-4 text-sm text-muted-foreground">
+                <p className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-500">
                   Debits and transfers send the reason as both the reason and description fields so the backend can record them in the wallet statement alongside credits and withdrawals.
-                </div>
+                </p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <Card className="data-surface border-none shadow-none">
-        <CardHeader className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      {/* Wallet Statement */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-6 py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <CardTitle>Wallet statement</CardTitle>
-              <CardDescription>
+              <h2 className="text-base font-bold text-[#0F172A]">Wallet Statement</h2>
+              <p className="mt-0.5 text-sm text-slate-500">
                 {selectedUser
                   ? `Full statement for ${selectedUser.fullName}`
                   : "Select a wallet to inspect statement activity."}
-              </CardDescription>
+              </p>
             </div>
+            {/* Statement Stats */}
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-border/70 bg-white/90 px-4 py-3 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Rows</p>
-                <p className="mt-2 text-xl font-semibold text-slate-950">{filteredStatementEntries.length}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Rows</p>
+                <p className="mt-1.5 text-xl font-bold text-[#0F172A]">{filteredStatementEntries.length}</p>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-white/90 px-4 py-3 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Credits</p>
-                <p className="mt-2 text-xl font-semibold text-green-600">{statementCredits.length}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Credits</p>
+                <p className="mt-1.5 text-xl font-bold text-emerald-600">{statementCredits.length}</p>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-white/90 px-4 py-3 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Debits</p>
-                <p className="mt-2 text-xl font-semibold text-red-600">{statementDebits.length}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Debits</p>
+                <p className="mt-1.5 text-xl font-bold text-red-600">{statementDebits.length}</p>
               </div>
             </div>
           </div>
-          <div className="flex gap-2 md:self-start">
-            <Button
-              variant="outline"
+          {/* Export Buttons */}
+          <div className="mt-4 flex gap-2">
+            <button
               onClick={exportStatement}
               disabled={!selectedUser || filteredStatementEntries.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="h-4 w-4" />
               Export CSV
-            </Button>
-            <Button
-              variant="outline"
+            </button>
+            <button
               onClick={exportStatementPdf}
               disabled={!selectedUser || filteredStatementEntries.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              <FileText className="mr-2 h-4 w-4" />
+              <FileText className="h-4 w-4" />
               Export PDF
-            </Button>
+            </button>
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="p-4">
           {!selectedUser ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-6 py-10 text-center text-sm text-slate-500">
               Choose a wallet first to load its statement.
             </div>
           ) : (
@@ -1018,7 +1057,7 @@ const AdminWalletManagement = () => {
                   header: "Description",
                   className: "min-w-[280px]",
                   cell: (entry) => (
-                    <div className="font-medium text-slate-950">
+                    <div className="font-semibold text-[#0F172A]">
                       {entry.description || "Wallet transaction"}
                     </div>
                   ),
@@ -1031,13 +1070,13 @@ const AdminWalletManagement = () => {
                     return (
                       <div className="flex items-center gap-2">
                         {flow === "credit" ? (
-                          <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                          <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
                         ) : flow === "debit" ? (
                           <ArrowUpRight className="h-4 w-4 text-red-600" />
                         ) : (
                           <SendHorizontal className="h-4 w-4 text-slate-500" />
                         )}
-                        <span className="capitalize">{flow}</span>
+                        <span className="capitalize text-sm">{flow}</span>
                       </div>
                     );
                   },
@@ -1052,7 +1091,7 @@ const AdminWalletManagement = () => {
                       <span
                         className={cn(
                           "font-semibold",
-                          flow === "credit" && "text-green-600",
+                          flow === "credit" && "text-emerald-600",
                           flow === "debit" && "text-red-600"
                         )}
                       >
@@ -1066,7 +1105,7 @@ const AdminWalletManagement = () => {
                   key: "runningBalance",
                   header: "Running balance",
                   headerClassName: "text-right",
-                  className: "text-right font-semibold text-slate-950",
+                  className: "text-right font-semibold text-[#0F172A]",
                   cell: (entry) =>
                     (entry as any).runningBalance !== null && (entry as any).runningBalance !== undefined
                       ? formatCurrency((entry as any).runningBalance)
@@ -1088,194 +1127,243 @@ const AdminWalletManagement = () => {
               );
             })()
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Dialog open={debitDialogOpen} onOpenChange={setDebitDialogOpen}>
-        <DialogContent className="rounded-[28px] sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Debit wallet</DialogTitle>
-            <DialogDescription>
-              Remove funds from the selected wallet and record the reason in the statement.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="admin-wallet-debit-amount">Amount</Label>
-              <Input
-                id="admin-wallet-debit-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={debitAmount}
-                onChange={(event) => setDebitAmount(event.target.value)}
-                placeholder="Enter amount to debit"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-wallet-debit-reason">Reason</Label>
-              <Textarea
-                id="admin-wallet-debit-reason"
-                value={debitReason}
-                onChange={(event) => setDebitReason(event.target.value)}
-                placeholder="Explain why this wallet is being debited"
-              />
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDebitDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={submitDebit} disabled={isSubmittingDebit}>
-                {isSubmittingDebit ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Debiting...
-                  </>
-                ) : (
-                  "Confirm debit"
-                )}
-              </Button>
-            </div>
+      {/* Debit Dialog */}
+      <AnimatePresence>
+        {debitDialogOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
+            >
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Debit Wallet</h2>
+                  <p className="text-sm text-blue-200/80 mt-0.5">Remove funds from the selected wallet and record the reason.</p>
+                </div>
+                <button
+                  onClick={() => setDebitDialogOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Amount</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={inputCls}
+                    value={debitAmount}
+                    onChange={(e) => setDebitAmount(e.target.value)}
+                    placeholder="Enter amount to debit"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Reason</label>
+                  <textarea
+                    className="h-24 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 resize-none"
+                    value={debitReason}
+                    onChange={(e) => setDebitReason(e.target.value)}
+                    placeholder="Explain why this wallet is being debited"
+                  />
+                </div>
+              </div>
+              <div className="shrink-0 border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setDebitDialogOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitDebit}
+                  disabled={isSubmittingDebit}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+                >
+                  {isSubmittingDebit ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Debiting...
+                    </>
+                  ) : (
+                    "Confirm Debit"
+                  )}
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </AnimatePresence>
 
-      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
-        <DialogContent className="rounded-[28px] sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Transfer between wallets</DialogTitle>
-            <DialogDescription>
-              Move funds from the selected wallet to another landlord or utility payment wallet and preserve the reason in the statement.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Destination wallet</Label>
-              <Popover
-                open={transferTargetOpen}
-                onOpenChange={(open) => {
-                  setTransferTargetOpen(open);
-                  if (!open) {
-                    setTransferTargetSearchTerm("");
-                  }
-                }}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    disabled={transferTargets.length === 0}
-                    className="h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm"
-                  >
-                    <span className="truncate text-left">
-                      {transferTargetUserId
-                        ? (() => {
-                            const target = transferTargets.find(
-                              (user) => String(user.id) === transferTargetUserId
-                            );
-
-                            return target
-                              ? `${target.fullName} (${getRoleLabel(target)})`
-                              : "Search destination wallet";
-                          })()
-                        : transferTargets.length > 0
-                          ? "Search destination wallet"
-                          : "No destination wallets available"}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-3" align="start">
-                  <div className="space-y-3">
-                    <Input
-                      value={transferTargetSearchTerm}
-                      onChange={(event) => setTransferTargetSearchTerm(event.target.value)}
-                      placeholder="Search by name, email, or role"
-                    />
-                    <div className="max-h-64 space-y-1 overflow-y-auto">
-                      {filteredTransferTargets.length === 0 ? (
-                        <div className="rounded-lg px-3 py-6 text-center text-sm text-muted-foreground">
-                          No destination wallet found.
-                        </div>
-                      ) : (
-                        filteredTransferTargets.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            onClick={() => {
-                              setTransferTargetUserId(String(user.id));
-                              setTransferTargetOpen(false);
-                              setTransferTargetSearchTerm("");
-                            }}
-                            className={cn(
-                              "flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground",
-                              transferTargetUserId === String(user.id) && "bg-accent text-accent-foreground"
-                            )}
-                          >
-                            <Check
-                              className={cn(
-                                "mt-0.5 h-4 w-4 shrink-0",
-                                transferTargetUserId === String(user.id) ? "opacity-100" : "opacity-0"
-                              )}
+      {/* Transfer Dialog */}
+      <AnimatePresence>
+        {transferDialogOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
+            >
+              <div className="shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Transfer Between Wallets</h2>
+                  <p className="text-sm text-blue-200/80 mt-0.5">Move funds from the selected wallet to another account.</p>
+                </div>
+                <button
+                  onClick={() => setTransferDialogOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                {/* Destination Picker */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Destination Wallet</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      disabled={transferTargets.length === 0}
+                      onClick={() => setTransferTargetOpen((o) => !o)}
+                      className="h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 flex items-center justify-between disabled:opacity-50 cursor-pointer"
+                    >
+                      <span className="truncate text-left">
+                        {transferTargetUserId
+                          ? (() => {
+                              const target = transferTargets.find(
+                                (user) => String(user.id) === transferTargetUserId
+                              );
+                              return target
+                                ? `${target.fullName} (${getRoleLabel(target)})`
+                                : "Search destination wallet";
+                            })()
+                          : transferTargets.length > 0
+                            ? "Search destination wallet"
+                            : "No destination wallets available"}
+                      </span>
+                      <Search className="h-4 w-4 shrink-0 text-slate-400 ml-2" />
+                    </button>
+                    <AnimatePresence>
+                      {transferTargetOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg"
+                        >
+                          <div className="p-2">
+                            <input
+                              className={inputCls}
+                              placeholder="Search by name, email, or role"
+                              value={transferTargetSearchTerm}
+                              onChange={(e) => setTransferTargetSearchTerm(e.target.value)}
+                              autoFocus
                             />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium">{user.fullName}</p>
-                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
-                            </div>
-                          </button>
-                        ))
+                          </div>
+                          <div className="max-h-56 overflow-y-auto px-2 pb-2">
+                            {filteredTransferTargets.length === 0 ? (
+                              <p className="py-4 text-center text-sm text-slate-400">No destination wallet found.</p>
+                            ) : (
+                              filteredTransferTargets.map((user) => (
+                                <button
+                                  key={user.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setTransferTargetUserId(String(user.id));
+                                    setTransferTargetOpen(false);
+                                    setTransferTargetSearchTerm("");
+                                  }}
+                                  className={cn(
+                                    "flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-slate-50",
+                                    transferTargetUserId === String(user.id) && "bg-blue-50"
+                                  )}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mt-0.5 h-4 w-4 shrink-0 text-[#1D4ED8]",
+                                      transferTargetUserId === String(user.id) ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="truncate font-semibold text-[#0F172A]">{user.fullName}</p>
+                                    <p className="truncate text-xs text-slate-500">{user.email}</p>
+                                    <p className="text-xs text-slate-400">{getRoleLabel(user)}</p>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </motion.div>
                       )}
-                    </div>
+                    </AnimatePresence>
                   </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="admin-wallet-transfer-amount">Amount</Label>
-                <Input
-                  id="admin-wallet-transfer-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={transferAmount}
-                  onChange={(event) => setTransferAmount(event.target.value)}
-                  placeholder="Enter amount to transfer"
-                />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Amount</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className={inputCls}
+                      value={transferAmount}
+                      onChange={(e) => setTransferAmount(e.target.value)}
+                      placeholder="Enter amount to transfer"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                    Transfers debit the source wallet and should credit the destination wallet when the backend endpoint supports paired statement entries.
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">Reason</label>
+                  <textarea
+                    className="h-24 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 resize-none"
+                    value={transferReason}
+                    onChange={(e) => setTransferReason(e.target.value)}
+                    placeholder="Explain why the funds are moving between wallets"
+                  />
+                </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-slate-50 px-4 py-3 text-sm text-muted-foreground">
-                Transfers debit the source wallet and should credit the destination wallet when the backend endpoint supports paired statement entries.
+              <div className="shrink-0 border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setTransferDialogOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitTransfer}
+                  disabled={isSubmittingTransfer}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+                >
+                  {isSubmittingTransfer ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Transferring...
+                    </>
+                  ) : (
+                    "Confirm Transfer"
+                  )}
+                </button>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-wallet-transfer-reason">Reason</Label>
-              <Textarea
-                id="admin-wallet-transfer-reason"
-                value={transferReason}
-                onChange={(event) => setTransferReason(event.target.value)}
-                placeholder="Explain why the funds are moving between wallets"
-              />
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={submitTransfer} disabled={isSubmittingTransfer}>
-                {isSubmittingTransfer ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Transferring...
-                  </>
-                ) : (
-                  "Confirm transfer"
-                )}
-              </Button>
-            </div>
+            </motion.div>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
