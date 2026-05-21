@@ -38,6 +38,7 @@ namespace Infrastructure.Data
         public DbSet<MeterToken> MeterTokens { get; set; }
         public DbSet<RentalContract> RentalContracts { get; set; } = null!;
         public DbSet<SmsLog> SmsLogs { get; set; } = null!;
+        public DbSet<ViewingRequest> ViewingRequests { get; set; } = null!;
 
         #region USSD
         public DbSet<UssdMenu> UssdMenus { get; set; }
