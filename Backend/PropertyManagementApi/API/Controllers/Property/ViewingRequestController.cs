@@ -72,6 +72,23 @@ namespace API.Controllers.Property
             return Ok(requests);
         }
 
+        [HttpGet("/GetViewingRequestsByLandlordId/{landlordId}")]
+        [Authorize]
+        public async Task<IActionResult> GetByLandlord(int landlordId)
+        {
+            var propertyIds = await _context.LandLordProperties
+                .Where(p => p.OwnerId == landlordId)
+                .Select(p => p.Id)
+                .ToListAsync();
+
+            var requests = await _context.ViewingRequests
+                .Include(r => r.Property)
+                .Where(r => propertyIds.Contains(r.PropertyId))
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+            return Ok(requests);
+        }
+
         [HttpGet("/GetAllViewingRequests")]
         [Authorize]
         public async Task<IActionResult> GetAll()

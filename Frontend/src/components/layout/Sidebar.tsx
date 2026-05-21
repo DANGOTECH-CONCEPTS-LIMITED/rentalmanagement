@@ -25,6 +25,7 @@ import {
   Zap,
   Smartphone,
   Inbox,
+  Eye,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -403,6 +404,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Utility Charge Config",
         icon: <Zap size={18} />,
         path: "/landlord-dashboard/utility-charge",
+      },
+      {
+        label: "Viewing Requests",
+        icon: <Eye size={18} />,
+        path: "/landlord-dashboard/viewing-requests",
       },
     ];
   }

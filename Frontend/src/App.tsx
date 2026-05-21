@@ -71,6 +71,7 @@ import AllComplaints from "./pages/Admin/AllComplaints";
 import CollectoPayments from "./pages/Admin/CollectoPayments";
 import MeterTokenGenerator from "./pages/Admin/MeterTokenGenerator";
 import UtilityChargeConfig from "./pages/Landlord/UtilityChargeConfig";
+import ViewingRequests from "./pages/Landlord/ViewingRequests";
 
 const queryClient = new QueryClient();
 
@@ -164,6 +165,7 @@ const App = () => (
                 <Route path="expenses" element={<ExpenseManagement />} />
                 <Route path="reports" element={<LandlordReports />} />
                 <Route path="utility-charge" element={<UtilityChargeConfig />} />
+                <Route path="viewing-requests" element={<ViewingRequests />} />
               </Route>
             </Route>
 

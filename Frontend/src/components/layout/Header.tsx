@@ -15,6 +15,7 @@ import {
   AlertCircle,
   CheckCheck,
   Loader2,
+  Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -24,7 +25,7 @@ import Button from "../ui/button/Button";
 
 interface NotifItem {
   id: string;
-  type: "invoice" | "payment" | "complaint" | "sms";
+  type: "invoice" | "payment" | "complaint" | "sms" | "viewing";
   title: string;
   subtitle: string;
   time: string;
@@ -51,6 +52,7 @@ const typeIcon: Record<NotifItem["type"], React.ReactNode> = {
   payment: <CreditCard className="h-4 w-4 text-emerald-600" />,
   complaint: <AlertCircle className="h-4 w-4 text-amber-600" />,
   sms: <MessageSquare className="h-4 w-4 text-violet-600" />,
+  viewing: <Eye className="h-4 w-4 text-indigo-600" />,
 };
 
 const typeBg: Record<NotifItem["type"], string> = {
@@ -58,6 +60,7 @@ const typeBg: Record<NotifItem["type"], string> = {
   payment: "bg-emerald-50",
   complaint: "bg-amber-50",
   sms: "bg-violet-50",
+  viewing: "bg-indigo-50",
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -174,6 +177,7 @@ const Header = () => {
           axios.get(`${apiUrl}/GetAllTenantComplaintsByLandlordId/${user.id}`, { headers: authHeader }),
           axios.get(`${apiUrl}/GetInvoicesByLandLordId/${user.id}`, { headers: authHeader }),
           axios.get(`${apiUrl}/GetMySmsSentLogs`, { headers: authHeader }),
+          axios.get(`${apiUrl}/GetViewingRequestsByLandlordId/${user.id}`, { headers: authHeader }),
         ]);
 
         // Complaints
@@ -219,6 +223,22 @@ const Header = () => {
               subtitle: s.message.slice(0, 60) + (s.message.length > 60 ? "…" : ""),
               time: s.sentAt,
               isNew: s.sentAt ? new Date(s.sentAt) > lastSeenDate : false,
+            });
+          });
+        }
+
+        // Viewing requests (pending only)
+        if (results[3].status === "fulfilled") {
+          const viewings: any[] = results[3].value.data ?? [];
+          viewings.filter((v: any) => v.status === "Pending").slice(0, 10).forEach((v: any) => {
+            const t = v.createdAt;
+            items.push({
+              id: `view-${v.id}`,
+              type: "viewing",
+              title: `Viewing Request — ${v.tenantName}`,
+              subtitle: `${v.property?.name ?? `Property #${v.propertyId}`} · ${new Date(v.preferredDate).toLocaleDateString("en-UG", { day: "numeric", month: "short" })}`,
+              time: t,
+              isNew: t ? new Date(t) > lastSeenDate : false,
             });
           });
         }
