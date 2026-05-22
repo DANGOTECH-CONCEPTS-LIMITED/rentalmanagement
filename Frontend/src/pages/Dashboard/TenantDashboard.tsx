@@ -1,17 +1,15 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Home, Calendar, DollarSign, FileText, CreditCard, Smartphone,
   Wallet, ArrowRight, Clock, CheckCircle2, ChevronRight, Building2,
   TrendingUp, AlertCircle,
 } from "lucide-react";
-import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { toast } from "@/hooks/use-toast";
 import axios from "axios";
-import { exportDashboardPdf, exportDashboardWorkbook } from "@/lib/dashboard-export";
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -72,7 +70,6 @@ const PaymentMethodCard = ({
 const TenantDashboard = () => {
   const navigate = useNavigate();
   const formatCurrency = useCurrencyFormatter();
-  const dashboardRef = useRef<HTMLDivElement>(null);
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -116,56 +113,8 @@ const TenantDashboard = () => {
   const isUrgent = days !== null && days <= 3;
   const isSoon = days !== null && days <= 7 && days > 3;
 
-  const handleExportPdf = async () => {
-    if (!dashboardRef.current) return;
-    try {
-      await exportDashboardPdf(dashboardRef.current, { fileNamePrefix: "tenant-dashboard-overview" });
-      toast({ title: "Export Successful", description: "Dashboard exported to PDF." });
-    } catch (error) {
-      toast({ title: "Export Failed", description: error instanceof Error ? error.message : "Export failed.", variant: "destructive" });
-    }
-  };
-
-  const handleExportExcel = async () => {
-    try {
-      await exportDashboardWorkbook({
-        title: "Tenant Dashboard",
-        fileNamePrefix: "tenant-dashboard-overview",
-        metadata: [
-          { label: "Tenant Name", value: tenant?.fullName ?? userData?.fullName ?? "N/A" },
-          { label: "Property Name", value: propertyName },
-          { label: "Next Payment Date", value: nextPayment?.split("T")[0] ?? "N/A" },
-        ],
-        summary: [
-          { label: "Current Property", value: 1 },
-          { label: "Monthly Rent", value: rent },
-          { label: "Currency", value: currency },
-        ],
-        sections: [
-          {
-            sheetName: "Tenant Details",
-            columns: ["Field", "Value"],
-            rows: [
-              ["Tenant ID", tenant?.id ?? userData?.id ?? "N/A"],
-              ["Name", tenant?.fullName ?? userData?.fullName ?? "N/A"],
-              ["Email", tenant?.email ?? userData?.email ?? "N/A"],
-              ["Phone", tenant?.phoneNumber ?? "N/A"],
-              ["Property", propertyName],
-              ["Monthly Rent", rent],
-              ["Currency", currency],
-              ["Next Payment Date", nextPayment?.split("T")[0] ?? "N/A"],
-            ],
-          },
-        ],
-      });
-      toast({ title: "Export Successful", description: "Dashboard exported to Excel." });
-    } catch (error) {
-      toast({ title: "Export Failed", description: error instanceof Error ? error.message : "Export failed.", variant: "destructive" });
-    }
-  };
-
   return (
-    <div ref={dashboardRef} className="space-y-8">
+    <div className="space-y-8">
       {/* Welcome Banner */}
       <div className="relative overflow-hidden rounded-3xl p-7 text-white shadow-xl" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
         <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
@@ -197,11 +146,6 @@ const TenantDashboard = () => {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Export toolbar */}
-      <div className="flex justify-end">
-        <DashboardExportToolbar onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} />
       </div>
 
       {/* KPI Cards */}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users, Home, Wallet, TrendingUp, MessageSquare, BarChart3,
   Settings, UserPlus, Building2, ChevronRight, ArrowUpRight,
@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "@/hooks/use-toast";
-import { exportDashboardPdf, exportDashboardWorkbook } from "@/lib/dashboard-export";
 
 const inputCls =
   "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
@@ -87,7 +86,6 @@ const QuickActionCard = ({
 );
 
 const AdminDashboard = () => {
-  const dashboardRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const [properties, setProperties] = useState<any[]>([]);
@@ -201,48 +199,6 @@ const AdminDashboard = () => {
     fetchLandlords();
   }, []);
 
-  const handleExportPdf = async () => {
-    if (!dashboardRef.current) return;
-    try {
-      await exportDashboardPdf(dashboardRef.current, { fileNamePrefix: "admin-dashboard-overview" });
-      toast({ title: "Export Successful", description: "Dashboard exported to PDF." });
-    } catch (error) {
-      toast({ title: "Export Failed", description: error instanceof Error ? error.message : "Export failed.", variant: "destructive" });
-    }
-  };
-
-  const handleExportExcel = async () => {
-    try {
-      await exportDashboardWorkbook({
-        title: "Admin Dashboard Overview",
-        fileNamePrefix: "admin-dashboard-overview",
-        metadata: [
-          { label: "Balance Type", value: balanceType || "Not selected" },
-          { label: "Balance", value: balance?.message || "N/A" },
-        ],
-        summary: [
-          { label: "Total Properties", value: properties.length },
-          { label: "Total Landlords", value: landlords.length },
-        ],
-        sections: [
-          {
-            sheetName: "Quick Actions",
-            columns: ["Title", "Path"],
-            rows: [
-              ["Register Landlord", "/admin-dashboard/register-landlord"],
-              ["Register Property", "/admin-dashboard/register-property"],
-              ["View Reports", "/admin-dashboard/reports"],
-              ["System Settings", "/admin-dashboard/system-settings"],
-            ],
-          },
-        ],
-      });
-      toast({ title: "Export Successful", description: "Dashboard exported to Excel." });
-    } catch (error) {
-      toast({ title: "Export Failed", description: error instanceof Error ? error.message : "Export failed.", variant: "destructive" });
-    }
-  };
-
   const balanceTabs: { type: BalanceType; label: string }[] = [
     { type: "SMS", label: "SMS" },
     { type: "BULK", label: "Bulk" },
@@ -250,7 +206,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div ref={dashboardRef} className="space-y-8">
+    <div className="space-y-8">
       {/* Welcome Banner */}
       <div className="relative overflow-hidden rounded-3xl p-7 text-white shadow-xl" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
         <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
@@ -271,16 +227,6 @@ const AdminDashboard = () => {
                 <p className="text-lg font-bold">{landlords.length}</p>
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleExportExcel} className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-colors">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              Export Excel
-            </button>
-            <button onClick={handleExportPdf} className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-colors">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              Export PDF
-            </button>
           </div>
         </div>
       </div>

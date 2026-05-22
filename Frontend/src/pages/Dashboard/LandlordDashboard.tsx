@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Loader2, Home, Users, TrendingUp, Wallet, ArrowUpRight,
   ArrowDownLeft, ChevronDown, CircleDollarSign, Download,
@@ -6,11 +6,9 @@ import {
   Activity, Banknote, PiggyBank, X, History,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import DashboardExportToolbar from "@/components/common/DashboardExportToolbar";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
 import { exportWalletStatementCsv, exportWalletStatementPdf } from "@/lib/wallet-statement-export";
-import { exportDashboardPdf, exportDashboardWorkbook } from "@/lib/dashboard-export";
 import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import axios from "axios";
 import {
@@ -86,7 +84,6 @@ const KpiCard = ({
 const LandlordDashboard = () => {
   const formatCurrency = useCurrencyFormatter();
   const { toast } = useToast();
-  const dashboardRef = useRef<HTMLDivElement>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -203,34 +200,10 @@ const LandlordDashboard = () => {
     exportWalletStatementPdf(statementRows, { title: "Landlord Wallet Statement", fileNamePrefix: "landlord-wallet-statement", accountName: userData?.fullName, formatAmount: formatCurrency });
     toast({ title: "Exported", description: "Wallet statement exported to PDF." });
   };
-  const handleExportPdf = async () => {
-    if (!dashboardRef.current) return;
-    try { await exportDashboardPdf(dashboardRef.current, { fileNamePrefix: "landlord-dashboard" }); toast({ title: "Exported" }); }
-    catch (e: any) { toast({ title: "Export Failed", description: e.message, variant: "destructive" }); }
-  };
-  const handleExportExcel = async () => {
-    try {
-      await exportDashboardWorkbook({
-        title: "Landlord Dashboard", fileNamePrefix: "landlord-dashboard",
-        metadata: [{ label: "Account", value: userData?.fullName }, { label: "Balance", value: balance !== null ? formatCurrency(balance) : "--" }],
-        summary: [
-          { label: "Properties", value: properties.length }, { label: "Tenants", value: tenants.length },
-          { label: "Utility Meters", value: utilityStats?.totalMeters ?? 0 }, { label: "Utility Payments", value: utilityStats?.totalUtilityPayments ?? 0 },
-        ],
-        sections: [{
-          sheetName: "Wallet Statement",
-          columns: ["Date", "Description", "Amount", "Running Balance"],
-          rows: statementRows.map((r) => [new Date(r.transactionDate).toLocaleString(), r.description || "Wallet transaction", r.amount, r.runningBalance ?? ""]),
-        }],
-      });
-      toast({ title: "Exported" });
-    } catch (e: any) { toast({ title: "Export Failed", description: e.message, variant: "destructive" }); }
-  };
-
   const occupancyPct = dummyStats.totalRooms > 0 ? Math.round((dummyStats.occupiedRooms / dummyStats.totalRooms) * 100) : 0;
 
   return (
-    <div ref={dashboardRef} className="space-y-7">
+    <div className="space-y-7">
 
       {/* ── Welcome banner ── */}
       <div className="relative overflow-hidden rounded-2xl px-7 py-6 text-white shadow-lg" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
@@ -279,10 +252,6 @@ const LandlordDashboard = () => {
           </div>
         </div>
 
-        {/* Export toolbar */}
-        <div className="relative mt-4 flex justify-end">
-          <DashboardExportToolbar onExportExcel={handleExportExcel} onExportPdf={handleExportPdf} />
-        </div>
       </div>
 
       {/* ── Withdraw modal ── */}
