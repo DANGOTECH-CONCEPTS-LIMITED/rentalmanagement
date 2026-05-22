@@ -150,23 +150,23 @@
   /* ── Grid button — dark navy bg with yellow square-grid overlay ── */
   .btn-grid {
     background-image:
-      linear-gradient(rgba(250, 204, 21, 0.13) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(250, 204, 21, 0.13) 1px, transparent 1px),
+      linear-gradient(rgba(250, 204, 21, 0.45) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(250, 204, 21, 0.45) 1px, transparent 1px),
       linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%);
     background-size: 16px 16px, 16px 16px, 100% 100%;
     color: #fff;
-    border: 1px solid rgba(250, 204, 21, 0.2);
+    border: 1px solid rgba(250, 204, 21, 0.5);
     transition: background-image 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
   }
 
   .btn-grid:hover:not(:disabled) {
     background-image:
-      linear-gradient(rgba(250, 204, 21, 0.22) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(250, 204, 21, 0.22) 1px, transparent 1px),
+      linear-gradient(rgba(250, 204, 21, 0.65) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(250, 204, 21, 0.65) 1px, transparent 1px),
       linear-gradient(135deg, #0d1427 0%, #142a60 45%, #1e4480 100%);
     background-size: 16px 16px, 16px 16px, 100% 100%;
-    box-shadow: 0 8px 24px -8px rgba(15, 32, 68, 0.55);
-    border-color: rgba(250, 204, 21, 0.35);
+    box-shadow: 0 8px 24px -8px rgba(250, 204, 21, 0.25);
+    border-color: rgba(250, 204, 21, 0.7);
   }
 
   .btn-grid:disabled {
