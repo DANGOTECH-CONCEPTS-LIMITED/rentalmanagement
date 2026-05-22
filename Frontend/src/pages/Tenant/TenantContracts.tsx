@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import {
   FileText, CheckCircle2, Clock, XCircle, Eye, Download,
@@ -148,7 +148,7 @@ const TenantContracts = () => {
   const [confirmContract, setConfirmContract] = useState<Contract | null>(null);
   const [acknowledging, setAcknowledging] = useState(false);
 
-  const fetchContracts = async () => {
+  const fetchContracts = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
@@ -163,9 +163,9 @@ const TenantContracts = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, toast]);
 
-  useEffect(() => { fetchContracts(); }, [user?.id]);
+  useEffect(() => { fetchContracts(); }, [fetchContracts]);
 
   const handleAcknowledge = async () => {
     if (!confirmContract) return;
