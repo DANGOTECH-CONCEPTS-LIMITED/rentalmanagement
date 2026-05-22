@@ -466,7 +466,7 @@ const ManageUtilityMeters = () => {
                 <button
                   type="submit"
                   form="edit-meter-form"
-                  className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                  className="btn-grid rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
                 >
                   Update Meter
                 </button>
@@ -519,7 +519,7 @@ const ManageUtilityMeters = () => {
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-60"
+                  className="btn-grid rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-60"
                 >
                   {isDeleting ? "Deleting..." : "Delete"}
                 </button>

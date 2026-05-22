@@ -305,7 +305,7 @@ const MakePayment = () => {
                           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Secured with 256-bit SSL
                         </p>
                         <button type="submit" disabled={isLoading}
-                          className="flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60">
+                          className="btn-grid flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60">
                           {isLoading ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Processing…</> : <><CreditCard className="h-4 w-4" /> Pay Now</>}
                         </button>
                       </div>
@@ -358,7 +358,7 @@ const MakePayment = () => {
                           <AlertCircle className="h-3.5 w-3.5 text-amber-500" /> Confirmation sent on success
                         </p>
                         <button type="submit" disabled={isLoading}
-                          className="flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-600 transition-colors disabled:opacity-60">
+                          className="btn-grid flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-600 transition-colors disabled:opacity-60">
                           {isLoading ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Processing…</> : <><Smartphone className="h-4 w-4" /> Proceed</>}
                         </button>
                       </div>
@@ -387,7 +387,7 @@ const MakePayment = () => {
                           <AlertCircle className="h-3.5 w-3.5 text-amber-500" /> Complete transfer within 24 hours
                         </p>
                         <button type="submit" disabled={isLoading}
-                          className="flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-60">
+                          className="btn-grid flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-60">
                           {isLoading ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Processing…</> : <><Wallet className="h-4 w-4" /> Complete Transfer</>}
                         </button>
                       </div>

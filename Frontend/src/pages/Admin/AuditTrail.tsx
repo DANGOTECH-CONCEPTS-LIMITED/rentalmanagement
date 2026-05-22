@@ -293,7 +293,7 @@ const AuditTrail = () => {
           <div className="flex flex-col justify-end gap-2">
             <button
               onClick={fetchAuditTrail}
-              className="h-11 rounded-xl bg-[#1D4ED8] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
+              className="btn-grid h-11 rounded-xl bg-[#1D4ED8] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
             >
               Refresh
             </button>

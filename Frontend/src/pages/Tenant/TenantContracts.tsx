@@ -363,7 +363,7 @@ const TenantContracts = () => {
               </button>
               {viewContract.status?.toLowerCase() === 'pending' && (
                 <button
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                  className="btn-grid inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                   onClick={() => { setViewContract(null); setConfirmContract(viewContract); }}
                 >
                   <PenLine className="h-3.5 w-3.5" /> Sign & Accept
@@ -427,7 +427,7 @@ const TenantContracts = () => {
                 Cancel
               </button>
               <button
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                className="btn-grid flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                 onClick={handleAcknowledge}
                 disabled={acknowledging}
               >

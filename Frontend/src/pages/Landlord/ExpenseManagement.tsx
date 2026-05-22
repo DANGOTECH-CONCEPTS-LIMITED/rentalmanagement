@@ -564,7 +564,7 @@ const ExpenseManagement = () => {
               </div>
               <button
                 onClick={fetchExpenses}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1D4ED8] text-white hover:bg-blue-700 transition-colors"
+                className="btn-grid px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1D4ED8] text-white hover:bg-blue-700 transition-colors"
               >
                 Apply
               </button>
@@ -618,7 +618,7 @@ const ExpenseManagement = () => {
               <button
                 onClick={handleSave}
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                className="btn-grid inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {editExpense ? "Save Changes" : "Add Expense"}
@@ -670,7 +670,7 @@ const ExpenseManagement = () => {
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                className="btn-grid px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
                 Delete Expense
               </button>

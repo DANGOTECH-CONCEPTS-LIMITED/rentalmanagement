@@ -626,7 +626,7 @@ const Header = () => {
           <button
             ref={bellRef}
             onClick={handleBellClick}
-            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
+            className="btn-grid relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#0F172A]"
             aria-label="Notifications"
           >
             <Bell size={16} />

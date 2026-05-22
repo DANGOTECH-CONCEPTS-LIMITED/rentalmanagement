@@ -337,7 +337,7 @@ const LandlordDashboard = () => {
                   <button
                     onClick={handleWithdraw}
                     disabled={isWithdrawing}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
+                    className="btn-grid flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
                   >
                     {isWithdrawing ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</> : "Confirm"}
                   </button>

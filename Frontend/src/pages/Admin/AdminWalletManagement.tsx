@@ -1186,7 +1186,7 @@ const AdminWalletManagement = () => {
                 <button
                   onClick={submitDebit}
                   disabled={isSubmittingDebit}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+                  className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
                 >
                   {isSubmittingDebit ? (
                     <>
@@ -1348,7 +1348,7 @@ const AdminWalletManagement = () => {
                 <button
                   onClick={submitTransfer}
                   disabled={isSubmittingTransfer}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+                  className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
                 >
                   {isSubmittingTransfer ? (
                     <>

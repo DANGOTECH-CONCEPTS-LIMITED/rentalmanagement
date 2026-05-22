@@ -316,7 +316,7 @@ const AddUtilityMeter = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex min-w-36 items-center justify-center rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1e40af] disabled:opacity-60"
+                className="btn-grid inline-flex min-w-36 items-center justify-center rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1e40af] disabled:opacity-60"
               >
                 {isSubmitting ? 'Saving...' : 'Add Meter'}
               </button>

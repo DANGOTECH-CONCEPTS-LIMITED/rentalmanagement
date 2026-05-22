@@ -219,7 +219,7 @@ Based on your specifications provided on ${new Date().toLocaleDateString()}`;
           <button
             onClick={generateContract}
             disabled={isGenerating || !prompt.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn-grid inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isGenerating ? (
               <>
@@ -236,7 +236,7 @@ Based on your specifications provided on ${new Date().toLocaleDateString()}`;
         ) : (
           <button
             onClick={downloadContract}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+            className="btn-grid inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
           >
             <Download className="h-4 w-4" />
             Download Contract

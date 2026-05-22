@@ -631,7 +631,7 @@ const ManageTenants = () => {
               </button>
               <div className="flex items-center gap-2">
                 <button
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                  className="btn-grid inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                   onClick={() => {
                     setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split("T")[0], paymentMethod: "Cash", referenceNo: "", notes: "" });
                     setPaymentModalOpen(true);
@@ -674,7 +674,7 @@ const ManageTenants = () => {
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
@@ -863,7 +863,7 @@ const ManageTenants = () => {
                 Cancel
               </button>
               <button
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                className="btn-grid inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
                 disabled={isSubmittingPayment}
                 onClick={handleRecordPayment}
               >

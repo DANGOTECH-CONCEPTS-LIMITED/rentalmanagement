@@ -729,7 +729,7 @@ const RegisterProperty = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+            className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#1e40af] transition-colors disabled:opacity-60"
           >
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {isSubmitting ? "Registering…" : "Register Property"}

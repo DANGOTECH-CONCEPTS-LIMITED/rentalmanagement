@@ -696,7 +696,7 @@ const RegisterTenants = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors shadow-lg shadow-blue-500/20"
+                  className="btn-grid inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors shadow-lg shadow-blue-500/20"
                 >
                   {isSubmitting ? (
                     <>

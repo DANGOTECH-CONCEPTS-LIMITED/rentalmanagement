@@ -371,7 +371,7 @@ const HttpLogs = () => {
               <div className="flex items-end gap-2">
                 <button
                   onClick={fetchLogs}
-                  className="h-11 flex-1 rounded-xl bg-[#1D4ED8] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1E40AF]"
+                  className="btn-grid h-11 flex-1 rounded-xl bg-[#1D4ED8] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1E40AF]"
                 >
                   Retrieve Logs
                 </button>

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -oE \"\\\\`[^\\\\`]+\\(api|Api|URL\\)[^\\\\`]*\\\\`|'\\\\''[^'\\\\'']+\\(api|Api|URL\\)[^'\\\\'']+'\\\\''\")",
+      "Bash(sed \"s/[''\\\\`]//g\")",
+      "Bash(grep -oE \"\\\\`[^\\\\`]*\\\\`\")",
+      "Bash(sed 's/[`]//g')",
+      "Bash(grep -E \"^\\(http|\\\\/|\\\\\\\\$\\)\")",
+      "Bash(brew list *)",
+      "Bash(mysql --version)",
+      "Bash(dotnet --version)",
+      "Bash(brew services *)",
+      "Bash(mysql -u root --connect-timeout=3 -e \"SHOW DATABASES;\")",
+      "Bash(mysql -u root --connect-timeout=5 -e \"SHOW DATABASES;\")",
+      "Bash(mysql_config --socket)",
+      "Read(//opt/homebrew/var/mysql/**)",
+      "Read(//opt/homebrew/var/run/**)"
+    ]
+  }
+}

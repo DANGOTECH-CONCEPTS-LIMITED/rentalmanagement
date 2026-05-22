@@ -122,7 +122,7 @@ const MeterTokenGenerator = () => {
             <button
               disabled={isSubmitting}
               onClick={handleGenerate}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Zap className="h-4 w-4" />
               {isSubmitting ? "Generating..." : "Generate Tokens"}

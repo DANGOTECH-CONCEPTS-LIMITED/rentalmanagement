@@ -338,7 +338,7 @@ const CollectoWithdrawLogs = () => {
           <div className="flex items-end">
             <button
               onClick={fetchHistory}
-              className="h-11 w-full rounded-xl bg-[#1D4ED8] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90"
+              className="btn-grid h-11 w-full rounded-xl bg-[#1D4ED8] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90"
             >
               Retrieve Logs
             </button>

@@ -615,7 +615,7 @@ const Properties = () => {
                   onClick={() => { sessionStorage.setItem("propertyId", selectedProperty.id.toString()); navigate("/admin-dashboard/transactions"); }}>
                   Transactions
                 </button>
-                <button className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                <button className="btn-grid rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
                   onClick={() => { setSelectedProperty(null); handleEditProperty(selectedProperty); }}>
                   Edit Property
                 </button>
@@ -772,7 +772,7 @@ const Properties = () => {
                 <button type="button" onClick={() => setAddProperty(false)} className="rounded-lg border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors">
+                <button type="submit" disabled={isSubmitting} className="btn-grid inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors">
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Register Property
                 </button>
@@ -908,7 +908,7 @@ const Properties = () => {
                 <button type="button" onClick={() => setEditingProperty(null)} disabled={isSubmitting} className="rounded-lg border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#64748B] hover:bg-slate-50 disabled:opacity-60 transition-colors">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors">
+                <button type="submit" disabled={isSubmitting} className="btn-grid inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors">
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Save Changes
                 </button>

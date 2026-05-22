@@ -253,7 +253,7 @@ const CollectoPayments = () => {
             <button
               disabled={rtpLoading}
               onClick={handleRequestToPay}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
             >
               <Send className="h-4 w-4" />
               {rtpLoading ? "Sending..." : "Send Request to Pay"}
@@ -294,7 +294,7 @@ const CollectoPayments = () => {
             <button
               disabled={statusLoading}
               onClick={handleCheckStatus}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
             >
               <RefreshCw className={`h-4 w-4 ${statusLoading ? "animate-spin" : ""}`} />
               {statusLoading ? "Checking..." : "Check Status"}
@@ -383,7 +383,7 @@ const CollectoPayments = () => {
             <button
               disabled={spLoading}
               onClick={handleServicePayment}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
             >
               <Send className="h-4 w-4" />
               {spLoading ? "Processing..." : "Initiate Service Payment"}
@@ -424,7 +424,7 @@ const CollectoPayments = () => {
             <button
               disabled={spStatusLoading}
               onClick={handleServicePaymentStatus}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8]/90 disabled:opacity-60"
             >
               <RefreshCw className={`h-4 w-4 ${spStatusLoading ? "animate-spin" : ""}`} />
               {spStatusLoading ? "Checking..." : "Check Service Status"}

@@ -436,7 +436,7 @@ const AdminDashboard = () => {
                   <button
                     onClick={handleCollectoWithdraw}
                     disabled={isSubmittingWithdraw}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors"
+                    className="btn-grid flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60 transition-colors"
                   >
                     {isSubmittingWithdraw ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>

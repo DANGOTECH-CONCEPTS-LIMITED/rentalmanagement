@@ -424,7 +424,7 @@ const UpdateTransaction = () => {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+                    className="btn-grid rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60 inline-flex items-center gap-2"
                   >
                     {saving && (
                       <RefreshCw className="h-3.5 w-3.5 animate-spin" />

@@ -926,7 +926,7 @@ const ManageUsers = () => {
               type="submit"
               form="userForm"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
             >
               {isSubmitting ? "Submitting…" : "Add User"}
             </button>
@@ -1028,7 +1028,7 @@ const ManageUsers = () => {
               type="submit"
               form="editUserForm"
               disabled={isUpdating}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
+              className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-50"
             >
               {isUpdating ? "Saving…" : "Update User"}
             </button>

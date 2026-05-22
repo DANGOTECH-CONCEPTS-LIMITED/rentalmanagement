@@ -713,7 +713,7 @@ const RentalContracts = () => {
                 <button onClick={() => setShowAddModal(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
                   Cancel
                 </button>
-                <button onClick={handleCreate} disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 transition-colors">
+                <button onClick={handleCreate} disabled={isSaving} className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 transition-colors">
                   {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Create Contract'}
                 </button>
               </div>
@@ -761,7 +761,7 @@ const RentalContracts = () => {
                   Close
                 </button>
                 <button
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                  className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
                   onClick={() => { setViewContract(null); openEdit(viewContract); }}
                 >
                   <Edit className="h-3.5 w-3.5" /> Edit Contract
@@ -799,7 +799,7 @@ const RentalContracts = () => {
                 <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setEditContract(null)}>
                   Cancel
                 </button>
-                <button onClick={handleEditSave} disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 transition-colors">
+                <button onClick={handleEditSave} disabled={isSaving} className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50 transition-colors">
                   {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Save Changes'}
                 </button>
               </div>
@@ -847,7 +847,7 @@ const RentalContracts = () => {
                 <button className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setDeleteContract(null)}>
                   Cancel
                 </button>
-                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors">
+                <button onClick={handleDelete} disabled={isDeleting} className="btn-grid flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors">
                   {isDeleting ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</> : 'Yes, Delete'}
                 </button>
               </div>

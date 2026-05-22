@@ -456,7 +456,7 @@ const ComplaintsTable = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+          className="btn-grid inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
         >
           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           {submitLabel}
@@ -578,7 +578,7 @@ const ComplaintsTable = () => {
                 </p>
                 <button
                   onClick={closeModal}
-                  className="mt-6 px-5 py-2.5 rounded-xl bg-[#1D4ED8] text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  className="btn-grid mt-6 px-5 py-2.5 rounded-xl bg-[#1D4ED8] text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
                 >
                   Close
                 </button>
@@ -642,7 +642,7 @@ const ComplaintsTable = () => {
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                className="btn-grid px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>

@@ -489,7 +489,7 @@ const UnitsManagement = () => {
               <button
                 onClick={handleSave}
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                className="btn-grid inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {editUnit ? "Save Changes" : "Add Unit"}
@@ -542,7 +542,7 @@ const UnitsManagement = () => {
               <button
                 onClick={handleAssignTenant}
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                className="btn-grid inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 Assign Tenant
@@ -583,7 +583,7 @@ const UnitsManagement = () => {
               </button>
               <button
                 onClick={handleRemoveTenant}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                className="btn-grid px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
               >
                 Remove Tenant
               </button>
@@ -623,7 +623,7 @@ const UnitsManagement = () => {
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                className="btn-grid px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
                 Delete Unit
               </button>

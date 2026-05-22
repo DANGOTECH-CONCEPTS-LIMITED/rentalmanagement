@@ -404,7 +404,7 @@ const UtilityPayments = () => {
                   type="submit"
                   form="edit-payment-form"
                   disabled={editLoading}
-                  className="rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
+                  className="btn-grid rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors disabled:opacity-60"
                 >
                   {editLoading ? "Saving..." : "Save"}
                 </button>

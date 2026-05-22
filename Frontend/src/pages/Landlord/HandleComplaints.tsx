@@ -496,7 +496,7 @@ const HandleComplaints = () => {
                     </button>
                     <button
                       disabled={updating}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                      className="btn-grid inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
                       onClick={() => updateComplaintStatus(selectedComplaint, "RESOLVED")}
                     >
                       <CheckCircle className="h-3.5 w-3.5" /> Resolve
