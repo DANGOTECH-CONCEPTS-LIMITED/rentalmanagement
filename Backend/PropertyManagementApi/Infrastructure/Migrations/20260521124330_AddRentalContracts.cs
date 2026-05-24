@@ -13,7 +13,7 @@ namespace Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "RentalContracts",
+                name: "rentalcontracts",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -49,24 +49,9 @@ namespace Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RentalContracts", x => x.Id);
+                    table.PrimaryKey("PK_rentalcontracts", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_RentalContracts_LandLordProperties_PropertyId",
-                        column: x => x.PropertyId,
-                        principalTable: "LandLordProperties",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_RentalContracts_PropertyUnits_UnitId",
-                        column: x => x.UnitId,
-                        principalTable: "PropertyUnits",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_RentalContracts_Tenants_TenantId",
-                        column: x => x.TenantId,
-                        principalTable: "Tenants",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_RentalContracts_Users_OwnerId",
+                        name: "FK_rentalcontracts_Users_OwnerId",
                         column: x => x.OwnerId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -75,31 +60,16 @@ namespace Infrastructure.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RentalContracts_OwnerId",
-                table: "RentalContracts",
+                name: "IX_rentalcontracts_OwnerId",
+                table: "rentalcontracts",
                 column: "OwnerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RentalContracts_PropertyId",
-                table: "RentalContracts",
-                column: "PropertyId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RentalContracts_TenantId",
-                table: "RentalContracts",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RentalContracts_UnitId",
-                table: "RentalContracts",
-                column: "UnitId");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "RentalContracts");
+                name: "rentalcontracts");
         }
     }
 }

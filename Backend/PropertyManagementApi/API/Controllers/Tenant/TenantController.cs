@@ -36,22 +36,32 @@ namespace API.Controllers.Tenant
 
         [HttpPut("/UpdateTenant")]
         [Authorize]
-        public async Task<IActionResult> UpdateTenant(
-            [FromForm] IFormFile? passportPhoto,
-            [FromForm] IFormFile? idFront,
-            [FromForm] IFormFile? idBack,
-            [FromForm] TenantDto tenant,
-            [FromForm] int tenantid)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateTenant([FromForm] UpdateTenantRequest request)
         {
             try
             {
-                await _tenantService.UpdateTenantAsync(passportPhoto, idFront, idBack, tenant, tenantid);
+                await _tenantService.UpdateTenantAsync(
+                    request.PassportPhoto,
+                    request.IdFront,
+                    request.IdBack,
+                    request.Tenant,
+                    request.TenantId);
                 return Ok("Tenant updated successfully.");
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        public sealed class UpdateTenantRequest
+        {
+            public IFormFile? PassportPhoto { get; set; }
+            public IFormFile? IdFront { get; set; }
+            public IFormFile? IdBack { get; set; }
+            public TenantDto Tenant { get; set; } = new();
+            public int TenantId { get; set; }
         }
 
         [HttpDelete("/DeleteTenant/{id}")]

@@ -228,6 +228,28 @@ namespace Infrastructure.Data
             modelBuilder.Entity<ServiceLogs>()
                 .HasIndex(x => x.LogDate);
 
+            modelBuilder.Entity<RentalContract>(e =>
+            {
+                e.ToTable("rentalcontracts");
+
+                e.HasOne(x => x.Owner)
+                    .WithMany()
+                    .HasForeignKey(x => x.OwnerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.Property)
+                    .WithMany()
+                    .HasForeignKey(x => x.PropertyId);
+
+                e.HasOne(x => x.Unit)
+                    .WithMany()
+                    .HasForeignKey(x => x.UnitId);
+
+                e.HasOne(x => x.Tenant)
+                    .WithMany()
+                    .HasForeignKey(x => x.TenantId);
+            });
+
             modelBuilder.Entity<ServiceLogs>()
                 .HasIndex(x => x.EventHash)
                 .IsUnique();
