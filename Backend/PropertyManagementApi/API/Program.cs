@@ -275,7 +275,7 @@ builder.Services.AddSwaggerGen(options =>
 
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Property Management API",
+        Title = "Test Property Management API",
         Version = "v1"
     });
 });
@@ -284,7 +284,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 var app = builder.Build();
-
+app.UsePathBase("/TestPropertyApi");
 app.UseStaticFiles(); // wwwroot
 
 // Serve uploaded files at /uploads/{filename}
@@ -338,10 +338,23 @@ app.MapPost("/ussd", async (HttpRequest req, IUssdService engine, IConfiguration
 .Accepts<IFormCollection>("application/x-www-form-urlencoded");
 
 // Swagger
-app.UseSwagger();
+app.UseSwagger(c =>
+{
+    c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
+    {
+        swaggerDoc.Servers = new List<OpenApiServer>
+        {
+            new OpenApiServer
+            {
+                Url = $"{httpReq.Scheme}://{httpReq.Host.Value}/TestPropertyApi"
+            }
+        };
+    });
+});
+
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Property Management API v1");
+    c.SwaggerEndpoint("swagger/v1/swagger.json", "Test Property Management API v1");
     c.RoutePrefix = string.Empty;
 });
 
