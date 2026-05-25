@@ -10,6 +10,22 @@ namespace Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Some environments can be missing tables due to partial migration history.
+            // Ensure required dependency tables exist before applying changes that reference them.
+            migrationBuilder.Sql(@"
+CREATE TABLE IF NOT EXISTS `PropertyUnits` (
+    `Id` int NOT NULL AUTO_INCREMENT,
+    `PropertyId` int NOT NULL,
+    `UnitNumber` longtext CHARACTER SET utf8mb4 NOT NULL,
+    `SecurityDeposit` double NOT NULL,
+    `MonthlyAmount` double NOT NULL,
+    `Status` longtext CHARACTER SET utf8mb4 NOT NULL,
+    `CreatedAt` datetime(6) NOT NULL,
+    `UpdatedAt` datetime(6) NULL,
+    CONSTRAINT `PK_PropertyUnits` PRIMARY KEY (`Id`)
+) CHARACTER SET=utf8mb4;
+");
+
             migrationBuilder.Sql(@"
 SET @fk := (
     SELECT rc.CONSTRAINT_NAME
