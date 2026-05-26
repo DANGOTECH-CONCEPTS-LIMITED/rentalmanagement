@@ -556,5 +556,72 @@ namespace API.Controllers.UserControllers
                 return BadRequest("An error occurred while retrieving landlord statistics.");
             }
         }
+
+        [HttpGet("/GetLandlordInvoiceSettings/{landlordId}")]
+        [Authorize]
+        public async Task<IActionResult> GetLandlordInvoiceSettings(int landlordId)
+        {
+            try
+            {
+                var landlord = await _db.Users
+                    .AsNoTracking()
+                    .Where(u => u.Id == landlordId)
+                    .Select(u => new { u.Id, u.InvoiceGenerationDay, u.InvoiceDueDays })
+                    .FirstOrDefaultAsync();
+
+                if (landlord == null)
+                    return NotFound("Landlord not found.");
+
+                return Ok(new
+                {
+                    landlordId = landlord.Id,
+                    generationDay = landlord.InvoiceGenerationDay ?? 1,
+                    dueDays = landlord.InvoiceDueDays ?? 7
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving invoice settings for landlord {LandlordId}", landlordId);
+                return BadRequest("An error occurred while retrieving invoice settings.");
+            }
+        }
+
+        [HttpPut("/UpdateLandlordInvoiceSettings")]
+        [Authorize]
+        public async Task<IActionResult> UpdateLandlordInvoiceSettings([FromBody] LandlordInvoiceSettingsDto request)
+        {
+            try
+            {
+                if (request == null)
+                    return BadRequest("Request is required.");
+
+                if (request.GenerationDay < 1 || request.GenerationDay > 28)
+                    return BadRequest("Generation day must be between 1 and 28.");
+
+                if (request.DueDays < 1 || request.DueDays > 90)
+                    return BadRequest("Due days must be between 1 and 90.");
+
+                var landlord = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.LandlordId);
+                if (landlord == null)
+                    return NotFound("Landlord not found.");
+
+                landlord.InvoiceGenerationDay = request.GenerationDay;
+                landlord.InvoiceDueDays = request.DueDays;
+                _db.Users.Update(landlord);
+                await _db.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    landlordId = landlord.Id,
+                    generationDay = landlord.InvoiceGenerationDay,
+                    dueDays = landlord.InvoiceDueDays
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating invoice settings for landlord {LandlordId}", request?.LandlordId);
+                return BadRequest("An error occurred while updating invoice settings.");
+            }
+        }
     }
 }

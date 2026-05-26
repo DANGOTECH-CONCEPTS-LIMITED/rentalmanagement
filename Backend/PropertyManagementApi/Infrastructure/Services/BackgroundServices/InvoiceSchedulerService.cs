@@ -36,15 +36,12 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("InvoiceSchedulerService started.");
 
-            // Check once per hour; actually generate only on the configured day-of-month.
+            // Check once per hour; generate invoices for any landlord whose configured day matches today.
             using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 try
                 {
-                    var targetDay = _config.GetValue<int>("InvoiceScheduler:GenerationDayOfMonth", 1);
-                    if (DateTime.UtcNow.Day != targetDay) continue;
-
                     await GenerateMonthlyInvoicesAsync();
                 }
                 catch (OperationCanceledException)
@@ -67,7 +64,7 @@ namespace Infrastructure.Services.BackgroundServices
             var sms = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
 
             var today = DateTime.UtcNow;
-            var dueDays = _config.GetValue<int>("InvoiceScheduler:DueDays", 7);
+            var globalDueDays = _config.GetValue<int>("InvoiceScheduler:DueDays", 7);
 
             var contracts = await db.RentalContracts
                 .AsNoTracking()
@@ -75,9 +72,25 @@ namespace Infrastructure.Services.BackgroundServices
                 .Where(c => c.Status.ToLower() == "active" && c.TenantId != null && c.TenantId > 0)
                 .ToListAsync();
 
+            // Load per-landlord invoice settings keyed by OwnerId
+            var ownerIds = contracts.Select(c => c.OwnerId).Distinct().ToList();
+            var landlordSettings = await db.Users
+                .AsNoTracking()
+                .Where(u => ownerIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.InvoiceGenerationDay, u.InvoiceDueDays })
+                .ToDictionaryAsync(u => u.Id);
+
             int created = 0;
             foreach (var contract in contracts)
             {
+                // Resolve per-landlord settings, fall back to global config
+                var settings = landlordSettings.TryGetValue(contract.OwnerId, out var s) ? s : null;
+                var generationDay = settings?.InvoiceGenerationDay ?? _config.GetValue<int>("InvoiceScheduler:GenerationDayOfMonth", 1);
+                var dueDays = settings?.InvoiceDueDays ?? globalDueDays;
+
+                // Only generate on the landlord's configured day-of-month
+                if (today.Day != generationDay) continue;
+
                 // Skip if a Rent invoice already exists for this tenant this month
                 bool alreadyInvoiced = await db.TenantInvoices.AnyAsync(i =>
                     i.TenantId == contract.TenantId &&

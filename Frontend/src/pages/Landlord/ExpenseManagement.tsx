@@ -5,6 +5,7 @@ import {
   Calendar, Home, DoorOpen, User, TrendingDown, Tag,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -335,9 +336,8 @@ const ExpenseManagement = () => {
         </div>
         <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Amount (UGX) *</label>
-          <Input
-            type="number"
-            placeholder="e.g. 85000"
+          <MoneyInput
+            placeholder="e.g. 85,000"
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
@@ -607,7 +607,7 @@ const ExpenseManagement = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <FormBody />
+            {FormBody()}
             <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
               <button
                 onClick={() => { setAddOpen(false); setEditExpense(null); }}

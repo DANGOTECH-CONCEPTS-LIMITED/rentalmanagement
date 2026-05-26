@@ -72,6 +72,7 @@ import AllComplaints from "./pages/Admin/AllComplaints";
 import CollectoPayments from "./pages/Admin/CollectoPayments";
 import MeterTokenGenerator from "./pages/Admin/MeterTokenGenerator";
 import UtilityChargeConfig from "./pages/Landlord/UtilityChargeConfig";
+import LandlordInvoiceSettings from "./pages/Landlord/LandlordInvoiceSettings";
 import ViewingRequests from "./pages/Landlord/ViewingRequests";
 import UserProfile from "./pages/shared/UserProfile";
 
@@ -169,6 +170,7 @@ const App = () => (
                 <Route path="expenses" element={<ExpenseManagement />} />
                 <Route path="reports" element={<LandlordReports />} />
                 <Route path="utility-charge" element={<UtilityChargeConfig />} />
+                <Route path="invoice-settings" element={<LandlordInvoiceSettings />} />
                 <Route path="viewing-requests" element={<ViewingRequests />} />
                 <Route path="my-profile" element={<UserProfile />} />
               </Route>

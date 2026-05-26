@@ -358,11 +358,11 @@ const ContractFields = ({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Monthly Rent *</label>
-          <input type="number" min={0} className={inputCls} value={form.rentAmount || ''} onChange={e => setForm(f => ({ ...f, rentAmount: Number(e.target.value) }))} placeholder="0" />
+          <input type="text" inputMode="numeric" className={inputCls} value={form.rentAmount ? form.rentAmount.toLocaleString('en-US') : ''} onChange={e => { const d = e.target.value.replace(/[^0-9]/g,''); setForm(f => ({ ...f, rentAmount: d ? Number(d) : 0 })); }} placeholder="0" />
         </div>
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Security Deposit</label>
-          <input type="number" min={0} className={inputCls} value={form.securityDeposit || ''} onChange={e => setForm(f => ({ ...f, securityDeposit: Number(e.target.value) }))} placeholder="0" />
+          <input type="text" inputMode="numeric" className={inputCls} value={form.securityDeposit ? form.securityDeposit.toLocaleString('en-US') : ''} onChange={e => { const d = e.target.value.replace(/[^0-9]/g,''); setForm(f => ({ ...f, securityDeposit: d ? Number(d) : 0 })); }} placeholder="0" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">

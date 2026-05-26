@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getImageUrl as buildImageUrl } from "@/lib/imageUrl";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Users, Eye, Edit, Trash2, Calendar, Home, CreditCard,
@@ -847,7 +848,7 @@ const ManageTenants = () => {
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Amount ({selectedTenant.property.currency}) *
                 </label>
-                <Input type="number" placeholder="e.g. 350000" value={paymentForm.amount}
+                <MoneyInput placeholder="e.g. 350,000" value={paymentForm.amount}
                   onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-4">

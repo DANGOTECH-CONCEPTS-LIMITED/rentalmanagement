@@ -733,7 +733,7 @@ const Properties = () => {
                     </div>
                     <div>
                       <FieldLabel required>Rent Price</FieldLabel>
-                      <input name="Price" type="text" value={formData.Price} onChange={handleAddInputChange} required placeholder="0" className={inputCls} />
+                      <input name="Price" type="text" inputMode="numeric" value={formData.Price ? Number(formData.Price.replace(/[^0-9]/g,'')||0).toLocaleString('en-US') : ''} onChange={e => { const d = e.target.value.replace(/[^0-9]/g,''); setFormData(p => ({ ...p, Price: d })); }} required placeholder="0" className={inputCls} />
                     </div>
                     <div>
                       <FieldLabel required>Currency</FieldLabel>
@@ -859,7 +859,7 @@ const Properties = () => {
                     </div>
                     <div>
                       <FieldLabel required>Rent Price</FieldLabel>
-                      <input name="price" type="number" min="0" value={editingProperty.price} onChange={handleInputChange} required className={inputCls} />
+                      <input name="price" type="text" inputMode="numeric" value={editingProperty.price ? editingProperty.price.toLocaleString('en-US') : ''} onChange={e => { const d = e.target.value.replace(/[^0-9]/g,''); setEditingProperty(p => p ? { ...p, price: d ? Number(d) : 0 } : null); }} required placeholder="0" className={inputCls} />
                     </div>
                     <div>
                       <FieldLabel required>Currency</FieldLabel>

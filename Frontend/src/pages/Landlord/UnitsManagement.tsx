@@ -5,6 +5,7 @@ import {
   Loader2, Building2, Home, Shield, X, AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { useToast } from "@/hooks/use-toast";
 import { DataTable, Column } from "@/components/ui/data-table";
 import axios from "axios";
@@ -304,68 +305,6 @@ const UnitsManagement = () => {
     },
   ];
 
-  const UnitFormBody = () => (
-    <div className="p-6 space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Room Number *</label>
-          <Input
-            placeholder="e.g. A1"
-            value={form.unitNumber}
-            onChange={(e) => setForm({ ...form, unitNumber: e.target.value })}
-            className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Property *</label>
-          <select
-            className={selCls}
-            value={form.propertyId}
-            onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
-          >
-            <option value="">Select property</option>
-            {properties.map((p) => (
-              <option key={p.id} value={String(p.id)}>{p.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Security Deposit (UGX) *</label>
-          <Input
-            type="number"
-            placeholder="e.g. 150000"
-            value={form.securityDeposit}
-            onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })}
-            className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Monthly Amount (UGX) *</label>
-          <Input
-            type="number"
-            placeholder="e.g. 300000"
-            value={form.monthlyAmount}
-            onChange={(e) => setForm({ ...form, monthlyAmount: e.target.value })}
-            className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
-          />
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Status</label>
-        <select
-          className={selCls}
-          value={form.status}
-          onChange={(e) => setForm({ ...form, status: e.target.value })}
-        >
-          <option value="Available">Available</option>
-          <option value="Occupied">Occupied</option>
-        </select>
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       {/* Hero Banner */}
@@ -478,7 +417,63 @@ const UnitsManagement = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <UnitFormBody />
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Room Number *</label>
+                  <Input
+                    placeholder="e.g. A1"
+                    value={form.unitNumber}
+                    onChange={(e) => setForm({ ...form, unitNumber: e.target.value })}
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Property *</label>
+                  <select
+                    className={selCls}
+                    value={form.propertyId}
+                    onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
+                  >
+                    <option value="">Select property</option>
+                    {properties.map((p) => (
+                      <option key={p.id} value={String(p.id)}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Security Deposit (UGX) *</label>
+                  <MoneyInput
+                    placeholder="e.g. 150,000"
+                    value={form.securityDeposit}
+                    onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })}
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Monthly Amount (UGX) *</label>
+                  <MoneyInput
+                    placeholder="e.g. 300,000"
+                    value={form.monthlyAmount}
+                    onChange={(e) => setForm({ ...form, monthlyAmount: e.target.value })}
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Status</label>
+                <select
+                  className={selCls}
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                >
+                  <option value="Available">Available</option>
+                  <option value="Occupied">Occupied</option>
+                </select>
+              </div>
+            </div>
             <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
               <button
                 onClick={() => { setAddOpen(false); setEditUnit(null); }}

@@ -6,7 +6,7 @@ import { useIsMobile } from "../../hooks/use-mobile";
 import {
   Home, Users, FileText, Settings, BarChart3, Menu, LogOut, ChevronRight,
   House, MessageSquare, CreditCard, Plus, X, FileSearch, DoorOpen, Receipt,
-  TrendingDown, UserCircle, Zap, Smartphone, Inbox, Eye,
+  TrendingDown, UserCircle, Zap, Smartphone, Inbox, Eye, Calendar,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -372,6 +372,7 @@ function getNavEntries(role: number): NavEntry[] {
         children: [
           { label: "Track Payments", icon: <CreditCard size={16} />, path: "/landlord-dashboard/payments" },
           { label: "Invoices", icon: <Receipt size={16} />, path: "/landlord-dashboard/invoices" },
+          { label: "Invoice Schedule", icon: <Calendar size={16} />, path: "/landlord-dashboard/invoice-settings" },
           { label: "Expenses", icon: <TrendingDown size={16} />, path: "/landlord-dashboard/expenses" },
         ],
       },

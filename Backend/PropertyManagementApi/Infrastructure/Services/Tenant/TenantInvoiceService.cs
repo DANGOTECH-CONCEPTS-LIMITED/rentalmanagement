@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Application.Interfaces.SMS;
 using Application.Interfaces.Tenant;
 using Domain.Dtos.Tenant;
 using Domain.Dtos.Tenant.Invoice;
@@ -14,10 +15,12 @@ namespace Infrastructure.Services.Tenant
     public class TenantInvoiceService : ITenantInvoiceService
     {
         private readonly AppDbContext _db;
+        private readonly ISmsProcessor _sms;
 
-        public TenantInvoiceService(AppDbContext db)
+        public TenantInvoiceService(AppDbContext db, ISmsProcessor sms)
         {
             _db = db;
+            _sms = sms;
         }
 
         public async Task<TenantInvoice> CreateInvoiceAsync(CreateTenantInvoiceDto dto)
@@ -84,6 +87,15 @@ namespace Infrastructure.Services.Tenant
 
             _db.TenantInvoices.Add(invoice);
             await _db.SaveChangesAsync();
+
+            // Notify tenant via SMS
+            if (!string.IsNullOrWhiteSpace(tenant.PhoneNumber))
+            {
+                var msg = $"Dear {tenant.FullName}, a {invoice.Type} invoice of UGX {invoice.Amount:N0} " +
+                          $"has been raised and is due on {invoice.DueDate:dd MMM yyyy}. " +
+                          $"Invoice: {invoice.InvoiceNumber}. Thank you.";
+                await _sms.SendAsync(tenant.PhoneNumber, msg);
+            }
 
             return invoice;
         }

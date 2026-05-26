@@ -30,6 +30,8 @@ namespace Domain.Entities.PropertyMgt
         public double? UtilityChargePercentage { get; set; }
         public double? UtilityChargeFlatFee { get; set; }
         public string? UtilityChargeTiersJson { get; set; }
+        public int? InvoiceGenerationDay { get; set; }
+        public int? InvoiceDueDays { get; set; }
         [ForeignKey("SystemRole")]
         public int SystemRoleId { get; set; }
 
