@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Settings, Bell, Shield, Plug, Save, Building2, Mail, Phone,
-  DollarSign, Clock, Calendar,
+  DollarSign, Clock, Calendar, ImagePlus, X,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useBranding } from "@/context/BrandingContext";
 
 const inputCls =
   "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10";
@@ -83,15 +84,18 @@ const tabs = [
 
 const SystemSettings = () => {
   const [activeTab, setActiveTab] = useState("general");
+  const { branding, updateBranding } = useBranding();
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [generalSettings, setGeneralSettings] = useState({
-    companyName: "Property Management Co.",
+    companyName: branding.companyName || "Property Management Co.",
     supportEmail: "support@property-mgmt.com",
     contactPhone: "256-123-4567",
     currency: "USD",
     timeZone: "America/New_York",
     dateFormat: "MM/DD/YYYY",
   });
+  const [logoPreview, setLogoPreview] = useState<string>(branding.logoDataUrl || "");
 
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
@@ -120,7 +124,18 @@ const SystemSettings = () => {
     }));
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const saveSettings = (settingType: string) => {
+    if (settingType === "General") {
+      updateBranding({ companyName: generalSettings.companyName, logoDataUrl: logoPreview });
+    }
     toast({
       title: "Settings Updated",
       description: `${settingType} settings have been saved successfully.`,
@@ -184,6 +199,37 @@ const SystemSettings = () => {
               </div>
             </div>
             <div className="p-6">
+              {/* Logo upload */}
+              <div className="mb-6">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                  Company Logo
+                </label>
+                <div className="flex items-center gap-4">
+                  {logoPreview ? (
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                      <img src={logoPreview} alt="Logo preview" className="h-full w-full object-contain p-1.5" />
+                      <button
+                        onClick={() => { setLogoPreview(""); if (logoInputRef.current) logoInputRef.current.value = ""; }}
+                        className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-300">
+                      <ImagePlus className="h-7 w-7" />
+                    </div>
+                  )}
+                  <label className="flex-1 cursor-pointer rounded-xl border border-dashed border-[#1D4ED8]/40 bg-blue-50/50 px-4 py-3 text-center hover:bg-blue-50 transition-colors">
+                    <p className="text-sm font-semibold text-[#1D4ED8]">
+                      {logoPreview ? "Change logo" : "Upload logo"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">PNG, JPG, SVG — used in PDF headers and app</p>
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">

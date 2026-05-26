@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import { useBranding } from '@/context/BrandingContext';
 import {
   FileText, CheckCircle2, Clock, XCircle, Eye, Download,
   X, Calendar, Home, DollarSign, CreditCard, ScrollText,
@@ -90,56 +92,243 @@ const DetailRow = ({ icon: Icon, label, value }: {
   </div>
 );
 
-// ── PDF download (HTML blob, no external dependency) ──────────────────────────
-const downloadContractPdf = (c: Contract) => {
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Contract ${c.contractNumber}</title>
-    <style>
-      body{font-family:Arial,sans-serif;margin:40px;color:#0f172a}
-      h1{font-size:22px;font-weight:bold;margin-bottom:4px}
-      .sub{font-size:13px;color:#64748b;margin-bottom:28px}
-      .row{display:flex;margin-bottom:10px;font-size:13px}
-      .lbl{font-weight:600;width:180px;color:#475569;flex-shrink:0}
-      .divider{border:none;border-top:1px dashed #cbd5e1;margin:20px 0}
-      .terms{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;font-size:12px;line-height:1.6;white-space:pre-wrap}
-      .footer{margin-top:40px;font-size:11px;color:#94a3b8;text-align:center}
-      .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600;
-             background:${c.status?.toLowerCase()==='active'?'#dcfce7':c.status?.toLowerCase()==='pending'?'#fef9c3':'#fee2e2'};
-             color:${c.status?.toLowerCase()==='active'?'#166534':c.status?.toLowerCase()==='pending'?'#854d0e':'#991b1b'}}
-    </style></head><body>
-    <h1>Rental Contract</h1>
-    <div class="sub">${c.contractNumber}</div>
-    <div class="row"><span class="lbl">Status</span><span class="badge">${c.status}</span></div>
-    <hr class="divider">
-    <div class="row"><span class="lbl">Tenant</span><span>${c.tenantName}</span></div>
-    <div class="row"><span class="lbl">Email</span><span>${c.tenantEmail || '—'}</span></div>
-    <div class="row"><span class="lbl">Phone</span><span>${c.tenantPhone || '—'}</span></div>
-    <hr class="divider">
-    <div class="row"><span class="lbl">Property</span><span>${c.propertyName}</span></div>
-    <div class="row"><span class="lbl">Unit</span><span>${c.unitName || '—'}</span></div>
-    <div class="row"><span class="lbl">Start Date</span><span>${fmtDate(c.startDate)}</span></div>
-    <div class="row"><span class="lbl">End Date</span><span>${fmtDate(c.endDate)}</span></div>
-    <hr class="divider">
-    <div class="row"><span class="lbl">Monthly Rent</span><span>${c.currency} ${fmt(c.rentAmount)}</span></div>
-    <div class="row"><span class="lbl">Security Deposit</span><span>${c.currency} ${fmt(c.securityDeposit)}</span></div>
-    ${c.terms ? `<hr class="divider"><p style="font-weight:600;font-size:13px;margin-bottom:8px">Terms &amp; Conditions</p><div class="terms">${c.terms}</div>` : ''}
-    <div class="footer">Generated ${new Date().toLocaleDateString()} &mdash; Property Management System</div>
-    </body></html>`;
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Contract_${c.contractNumber}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+// ── PDF download (jsPDF — matches landlord design) ────────────────────────────
+const downloadContractPdf = (c: Contract, branding: { companyName?: string; logoDataUrl?: string } = {}) => {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 16;
+  const cW = pageW - margin * 2;
+  let y = 0;
+  const isOpen = !c.endDate || c.endDate.startsWith('0001') || c.endDate === '';
+
+  const drawFooter = (pageNum: number, totalPages: number) => {
+    doc.setFillColor(10, 18, 40);
+    doc.rect(0, pageH - 11, pageW, 11, 'F');
+    doc.setFillColor(29, 78, 216);
+    doc.rect(0, pageH - 11, 3, 11, 'F');
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    const co = branding.companyName || 'Property Management System';
+    doc.text(`${c.contractNumber}  ·  ${co}  ·  Generated ${new Date().toLocaleDateString('en-GB')}`, margin, pageH - 4);
+    doc.text(`Page ${pageNum} / ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' });
+  };
+
+  const checkNewPage = (need = 20) => { if (y + need > pageH - 18) { doc.addPage(); y = 20; } };
+
+  // Header
+  doc.setFillColor(10, 18, 40);
+  doc.rect(0, 0, pageW, 54, 'F');
+  doc.setFillColor(29, 78, 216);
+  doc.rect(0, 50, pageW, 4, 'F');
+  doc.setFillColor(234, 179, 8);
+  doc.rect(0, 0, 4, 54, 'F');
+
+  // Logo or initials
+  const logoX = margin + 2;
+  const logoY = 9;
+  if (branding.logoDataUrl) {
+    try { doc.addImage(branding.logoDataUrl, 'PNG', logoX, logoY, 26, 26); } catch { /* skip */ }
+  } else if (branding.companyName) {
+    doc.setFillColor(29, 78, 216);
+    doc.roundedRect(logoX, logoY, 26, 26, 4, 4, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    const ini = branding.companyName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+    doc.text(ini, logoX + 13, logoY + 17, { align: 'center' });
+  }
+  if (branding.companyName) {
+    const hx = logoX + 30;
+    doc.setTextColor(234, 179, 8);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(branding.companyName.toUpperCase(), hx, 16);
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Property Management', hx, 22);
+  }
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RENTAL AGREEMENT', pageW - margin, branding.companyName ? 20 : 22, { align: 'right' });
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Contract:  ${c.contractNumber}`, pageW - margin, 30, { align: 'right' });
+  doc.text(`Issued:      ${fmtDate(c.createdAt)}`, pageW - margin, 36, { align: 'right' });
+  doc.text(`Period:     ${fmtDate(c.startDate)} → ${isOpen ? 'Open-ended' : fmtDate(c.endDate)}`, pageW - margin, 42, { align: 'right' });
+
+  const sActive = c.status?.toLowerCase() === 'active';
+  const sExpired = ['expired', 'terminated'].includes(c.status?.toLowerCase());
+  if (sActive) doc.setFillColor(16, 185, 129);
+  else if (sExpired) doc.setFillColor(239, 68, 68);
+  else doc.setFillColor(245, 158, 11);
+  doc.roundedRect(pageW - margin - 32, 43, 32, 8, 2, 2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(c.status.toUpperCase(), pageW - margin - 16, 48.5, { align: 'center' });
+
+  y = 62;
+
+  const sectionBar = (title: string) => {
+    checkNewPage(16);
+    doc.setFillColor(15, 23, 42);
+    doc.roundedRect(margin, y, cW, 8.5, 1.5, 1.5, 'F');
+    doc.setFillColor(234, 179, 8);
+    doc.roundedRect(margin, y, 3, 8.5, 1, 1, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, margin + 7, y + 6);
+    y += 13;
+  };
+
+  const card = (x: number, cy: number, w: number, h: number, fill: [number, number, number] = [248, 250, 252]) => {
+    doc.setFillColor(...fill);
+    doc.roundedRect(x, cy, w, h, 2, 2, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(x, cy, w, h, 2, 2, 'S');
+  };
+
+  const fieldRow = (label: string, value: string, last = false) => {
+    checkNewPage(9);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, y, cW, 8.5, 'F');
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(label, margin + 4, y + 5.8);
+    doc.setTextColor(15, 23, 42);
+    doc.setFont('helvetica', 'bold');
+    doc.text(value || '—', margin + 52, y + 5.8);
+    if (!last) { doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.15); doc.line(margin, y + 8.5, margin + cW, y + 8.5); }
+    y += 8.5;
+  };
+
+  // 01 Parties
+  sectionBar('01  PARTIES TO THIS AGREEMENT');
+  const halfW = (cW - 4) / 2;
+  const partyH = 28;
+  card(margin, y, halfW, partyH, [238, 242, 255]);
+  doc.setFillColor(29, 78, 216); doc.roundedRect(margin, y, 3, partyH, 1, 1, 'F');
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('TENANT', margin + 6, y + 7);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.text(c.tenantName, margin + 6, y + 15);
+  if (c.tenantPhone) { doc.setTextColor(100, 116, 139); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.text(`Tel: ${c.tenantPhone}`, margin + 6, y + 22); }
+
+  card(margin + halfW + 4, y, halfW, partyH);
+  doc.setFillColor(234, 179, 8); doc.roundedRect(margin + halfW + 4, y, 3, partyH, 1, 1, 'F');
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('PROPERTY', margin + halfW + 10, y + 7);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.text(`${c.propertyName}${c.unitName ? ` — ${c.unitName}` : ''}`, margin + halfW + 10, y + 15);
+  y += partyH + 7;
+
+  // 02 Property
+  checkNewPage(40);
+  sectionBar('02  PROPERTY DETAILS');
+  fieldRow('Property Name', c.propertyName);
+  fieldRow('Unit / Room', c.unitName || 'Not specified', true);
+  y += 6;
+
+  // 03 Financial
+  checkNewPage(50);
+  sectionBar('03  FINANCIAL TERMS');
+  const thirdW = (cW - 8) / 3;
+  const finH = 30;
+  card(margin, y, thirdW, finH, [238, 242, 255]);
+  doc.setFillColor(29, 78, 216); doc.roundedRect(margin, y, 3, finH, 1, 1, 'F');
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.text('MONTHLY RENT', margin + 6, y + 8);
+  doc.setTextColor(29, 78, 216); doc.setFontSize(12); doc.text(`${c.currency} ${fmt(c.rentAmount)}`, margin + 6, y + 20);
+  card(margin + thirdW + 4, y, thirdW, finH);
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.text('SECURITY DEPOSIT', margin + thirdW + 8, y + 8);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.text(`${c.currency} ${fmt(c.securityDeposit)}`, margin + thirdW + 8, y + 20);
+  card(margin + (thirdW + 4) * 2, y, thirdW, finH);
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.text('CURRENCY', margin + (thirdW + 4) * 2 + 4, y + 8);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(12); doc.text(c.currency, margin + (thirdW + 4) * 2 + 4, y + 20);
+  y += finH + 7;
+
+  // 04 Period
+  checkNewPage(50);
+  sectionBar('04  CONTRACT PERIOD');
+  const dateH = 24;
+  card(margin, y, halfW, dateH, [240, 253, 244]);
+  doc.setFillColor(16, 185, 129); doc.roundedRect(margin, y, 3, dateH, 1, 1, 'F');
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.text('START DATE', margin + 6, y + 8);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.text(fmtDate(c.startDate), margin + 6, y + 18);
+  card(margin + halfW + 4, y, halfW, dateH, isOpen ? [255, 251, 235] : [248, 250, 252]);
+  doc.setFillColor(isOpen ? 245 : 100, isOpen ? 158 : 116, isOpen ? 11 : 139);
+  doc.roundedRect(margin + halfW + 4, y, 3, dateH, 1, 1, 'F');
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.text('END DATE', margin + halfW + 10, y + 8);
+  doc.setTextColor(isOpen ? 180 : 15, isOpen ? 83 : 23, isOpen ? 9 : 42); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+  doc.text(isOpen ? 'Open-ended' : fmtDate(c.endDate), margin + halfW + 10, y + 18);
+  y += dateH + 4;
+  if (!isOpen) {
+    const months = Math.round((new Date(c.endDate).getTime() - new Date(c.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+    if (months > 0) {
+      doc.setFillColor(238, 242, 255); doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
+      doc.setTextColor(29, 78, 216); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      doc.text(`Duration: ${months} month${months !== 1 ? 's' : ''}`, margin + 5, y + 5.5);
+      y += 8;
+    }
+  }
+  y += 7;
+
+  // 05 Terms
+  if (c.terms) {
+    checkNewPage(30);
+    sectionBar('05  TERMS & CONDITIONS');
+    const termLines = doc.splitTextToSize(c.terms, cW - 10);
+    card(margin, y, cW, Math.min(termLines.length * 5.5 + 8, pageH - y - 20));
+    let ty = y + 7;
+    doc.setTextColor(51, 65, 85); doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+    termLines.forEach((line: string) => { checkNewPage(8); doc.text(line, margin + 5, ty); ty += 5.5; y = ty; });
+    y += 10;
+  }
+
+  // 06 Signatures
+  checkNewPage(70);
+  sectionBar('06  SIGNATURES & ACKNOWLEDGEMENT');
+  doc.setFillColor(255, 251, 235); doc.roundedRect(margin, y, cW, 12, 2, 2, 'F');
+  doc.setFillColor(234, 179, 8); doc.roundedRect(margin, y, 3, 12, 1, 1, 'F');
+  doc.setTextColor(120, 80, 0); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+  const ackLines = doc.splitTextToSize('By signing below, both parties confirm they have read, understood, and agree to all terms of this rental agreement.', cW - 10);
+  ackLines.forEach((l: string, i: number) => doc.text(l, margin + 7, y + 5 + i * 5.5));
+  y += 18;
+
+  const sigH = 38;
+  card(margin, y, halfW, sigH);
+  doc.setFillColor(29, 78, 216); doc.roundedRect(margin, y, 3, sigH, 1, 1, 'F');
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.text('LANDLORD / OWNER', margin + 7, y + 8);
+  doc.setDrawColor(200, 210, 225); doc.setLineWidth(0.4); doc.line(margin + 7, y + 28, margin + halfW - 6, y + 28);
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('Signature', margin + 7, y + 33); doc.text('Date: ________________', margin + halfW / 2, y + 33);
+
+  const s2x = margin + halfW + 4;
+  card(s2x, y, halfW, sigH);
+  doc.setFillColor(234, 179, 8); doc.roundedRect(s2x, y, 3, sigH, 1, 1, 'F');
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.text('TENANT', s2x + 7, y + 8);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.text(c.tenantName, s2x + 7, y + 16);
+  doc.setDrawColor(200, 210, 225); doc.line(s2x + 7, y + 28, s2x + halfW - 6, y + 28);
+  doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('Signature', s2x + 7, y + 33); doc.text('Date: ________________', s2x + halfW / 2, y + 33);
+
+  const total = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= total; i++) { doc.setPage(i); drawFooter(i, total); }
+
+  doc.save(`${c.contractNumber}-${c.tenantName.replace(/\s+/g, '-')}.pdf`);
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const TenantContracts = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { branding } = useBranding();
 
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -249,7 +438,7 @@ const TenantContracts = () => {
             <Eye className="h-3.5 w-3.5" /> View
           </button>
           <button
-            onClick={() => downloadContractPdf(c)}
+            onClick={() => downloadContractPdf(c, branding)}
             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
           >
             <Download className="h-3.5 w-3.5" /> PDF
@@ -357,7 +546,7 @@ const TenantContracts = () => {
             <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
               <button
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                onClick={() => { downloadContractPdf(viewContract); }}
+                onClick={() => { downloadContractPdf(viewContract, branding); }}
               >
                 <Download className="h-3.5 w-3.5" /> Download
               </button>

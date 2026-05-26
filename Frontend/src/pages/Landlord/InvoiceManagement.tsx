@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import jsPDF from "jspdf";
 import {
   Plus, Eye, FileText, CheckCircle, Clock, AlertCircle, Loader2,
-  User, Home, Calendar, CreditCard, X,
+  User, Home, Calendar, CreditCard, X, Receipt, Download,
 } from "lucide-react";
+import { useBranding } from "@/context/BrandingContext";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +35,7 @@ interface Tenant {
   id: number;
   fullName: string;
   propertyId: number;
+  propertyUnitId?: number;
 }
 
 interface Property {
@@ -127,6 +130,7 @@ const TABS = [
 
 const InvoiceManagement = () => {
   const { toast } = useToast();
+  const { branding } = useBranding();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const userData = getLoggedInUser();
 
@@ -153,6 +157,9 @@ const InvoiceManagement = () => {
     notes: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingInvoices, setPendingInvoices] = useState<Invoice[]>([]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [isLoadingPendingInvoices, setIsLoadingPendingInvoices] = useState(false);
 
   const fetchInvoices = async () => {
     setIsLoading(true);
@@ -201,6 +208,22 @@ const InvoiceManagement = () => {
     fetchUnits();
   }, []);
 
+  useEffect(() => {
+    if (!addOpen || !form.tenantId || form.type !== "Manual Payment") {
+      setPendingInvoices([]);
+      setSelectedInvoiceId(null);
+      return;
+    }
+    setIsLoadingPendingInvoices(true);
+    axios
+      .get<Invoice[]>(`${apiUrl}/GetInvoicesByTenantId/${form.tenantId}`)
+      .then(({ data }) =>
+        setPendingInvoices(data.filter((inv) => inv.status === "Pending" || inv.status === "Overdue"))
+      )
+      .catch(() => {})
+      .finally(() => setIsLoadingPendingInvoices(false));
+  }, [form.tenantId, form.type, addOpen]);
+
   const tenantName = (id: number) => tenants.find((t) => t.id === id)?.fullName ?? `Tenant #${id}`;
   const propertyName = (id: number) => properties.find((p) => p.id === id)?.name ?? `Property #${id}`;
   const unitName = (id?: number) =>
@@ -233,6 +256,8 @@ const InvoiceManagement = () => {
       dueDate: "",
       notes: "",
     });
+    setPendingInvoices([]);
+    setSelectedInvoiceId(null);
     setAddOpen(true);
   };
 
@@ -257,6 +282,9 @@ const InvoiceManagement = () => {
         CreatedByName: userData.fullName || "",
       };
       await axios.post(`${apiUrl}/CreateTenantInvoice`, body);
+      if (selectedInvoiceId) {
+        await axios.put(`${apiUrl}/UpdateInvoiceStatus/${selectedInvoiceId}`, { Status: "Paid" });
+      }
       toast({ title: "Invoice Created", description: "Invoice created successfully." });
       setAddOpen(false);
       fetchInvoices();
@@ -283,6 +311,159 @@ const InvoiceManagement = () => {
   };
 
   const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
+
+  const handleDownloadPDF = (inv: Invoice) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const mg = 16;
+    const cW = pageW - mg * 2;
+    let y = 0;
+
+    const fmtDate = (d: string) =>
+      d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+    const tName = tenantName(inv.tenantId);
+    const pName = propertyName(inv.propertyId);
+    const uName = inv.propertyUnitId ? unitName(inv.propertyUnitId) : "";
+
+    const drawFooter = (pageNum: number, totalPages: number) => {
+      doc.setFillColor(10, 18, 40);
+      doc.rect(0, pageH - 11, pageW, 11, "F");
+      doc.setFillColor(29, 78, 216);
+      doc.rect(0, pageH - 11, 3, 11, "F");
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      const co = branding.companyName || "Property Management System";
+      doc.text(`${inv.invoiceNumber}  ·  ${co}  ·  Generated ${new Date().toLocaleDateString("en-GB")}`, mg, pageH - 4);
+      doc.text(`Page ${pageNum} / ${totalPages}`, pageW - mg, pageH - 4, { align: "right" });
+    };
+
+    const checkNewPage = (need = 20) => { if (y + need > pageH - 18) { doc.addPage(); y = 20; } };
+
+    // Header
+    doc.setFillColor(10, 18, 40); doc.rect(0, 0, pageW, 54, "F");
+    doc.setFillColor(29, 78, 216); doc.rect(0, 50, pageW, 4, "F");
+    doc.setFillColor(234, 179, 8); doc.rect(0, 0, 4, 54, "F");
+
+    const logoX = mg + 2, logoY = 9;
+    if (branding.logoDataUrl) {
+      try { doc.addImage(branding.logoDataUrl, "PNG", logoX, logoY, 26, 26); } catch { /* skip */ }
+    } else if (branding.companyName) {
+      doc.setFillColor(29, 78, 216); doc.roundedRect(logoX, logoY, 26, 26, 4, 4, "F");
+      doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont("helvetica", "bold");
+      const ini = branding.companyName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+      doc.text(ini, logoX + 13, logoY + 17, { align: "center" });
+    }
+    if (branding.companyName) {
+      const hx = logoX + 30;
+      doc.setTextColor(234, 179, 8); doc.setFontSize(9); doc.setFont("helvetica", "bold");
+      doc.text(branding.companyName.toUpperCase(), hx, 16);
+      doc.setTextColor(148, 163, 184); doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+      doc.text("Invoice System", hx, 22);
+    }
+    doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", pageW - mg, branding.companyName ? 20 : 22, { align: "right" });
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(148, 163, 184);
+    doc.text(`Invoice:  ${inv.invoiceNumber}`, pageW - mg, 28, { align: "right" });
+    doc.text(`Issued:   ${fmtDate(inv.invoiceDate)}`, pageW - mg, 34, { align: "right" });
+    doc.text(`Due:      ${fmtDate(inv.dueDate)}`, pageW - mg, 40, { align: "right" });
+
+    const s = inv.status;
+    if (s === "Paid") doc.setFillColor(16, 185, 129);
+    else if (s === "Overdue") doc.setFillColor(239, 68, 68);
+    else doc.setFillColor(245, 158, 11);
+    doc.roundedRect(pageW - mg - 28, 43, 28, 8, 2, 2, "F");
+    doc.setTextColor(255, 255, 255); doc.setFontSize(7.5); doc.setFont("helvetica", "bold");
+    doc.text(s.toUpperCase(), pageW - mg - 14, 48.5, { align: "center" });
+
+    y = 62;
+
+    const sectionBar = (title: string) => {
+      checkNewPage(16);
+      doc.setFillColor(15, 23, 42); doc.roundedRect(mg, y, cW, 8.5, 1.5, 1.5, "F");
+      doc.setFillColor(234, 179, 8); doc.roundedRect(mg, y, 3, 8.5, 1, 1, "F");
+      doc.setTextColor(255, 255, 255); doc.setFontSize(8.5); doc.setFont("helvetica", "bold");
+      doc.text(title, mg + 7, y + 6); y += 13;
+    };
+
+    const card = (x: number, cy: number, w: number, h: number, fill: [number,number,number] = [248, 250, 252]) => {
+      doc.setFillColor(...fill); doc.roundedRect(x, cy, w, h, 2, 2, "F");
+      doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.2); doc.roundedRect(x, cy, w, h, 2, 2, "S");
+    };
+
+    const fieldRow = (label: string, value: string, last = false) => {
+      checkNewPage(9);
+      doc.setFillColor(248, 250, 252); doc.rect(mg, y, cW, 8.5, "F");
+      doc.setTextColor(100, 116, 139); doc.setFontSize(8); doc.setFont("helvetica", "normal");
+      doc.text(label, mg + 4, y + 5.8);
+      doc.setTextColor(15, 23, 42); doc.setFont("helvetica", "bold");
+      doc.text(value || "—", mg + 52, y + 5.8);
+      if (!last) { doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.15); doc.line(mg, y + 8.5, mg + cW, y + 8.5); }
+      y += 8.5;
+    };
+
+    // 01 Bill To
+    sectionBar("01  BILL TO");
+    const halfW = (cW - 4) / 2;
+    const partyH = uName ? 32 : 24;
+    card(mg, y, halfW, partyH, [238, 242, 255]);
+    doc.setFillColor(29, 78, 216); doc.roundedRect(mg, y, 3, partyH, 1, 1, "F");
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.text("TENANT", mg + 6, y + 7);
+    doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(tName, mg + 6, y + 16);
+
+    card(mg + halfW + 4, y, halfW, partyH);
+    doc.setFillColor(234, 179, 8); doc.roundedRect(mg + halfW + 4, y, 3, partyH, 1, 1, "F");
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.text("PROPERTY / UNIT", mg + halfW + 10, y + 7);
+    doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(pName, mg + halfW + 10, y + 16);
+    if (uName) { doc.setTextColor(100, 116, 139); doc.setFontSize(7.5); doc.setFont("helvetica", "normal"); doc.text(`Unit: ${uName}`, mg + halfW + 10, y + 24); }
+    y += partyH + 7;
+
+    // 02 Invoice Details
+    checkNewPage(50);
+    sectionBar("02  INVOICE DETAILS");
+    fieldRow("Invoice Number", inv.invoiceNumber);
+    fieldRow("Type", inv.type);
+    fieldRow("Date Issued", fmtDate(inv.invoiceDate));
+    fieldRow("Due Date", fmtDate(inv.dueDate), true);
+    y += 6;
+
+    // 03 Amount Due
+    checkNewPage(44);
+    sectionBar("03  AMOUNT DUE");
+    const amtH = 32;
+    card(mg, y, (cW - 4) * 0.6, amtH, [238, 242, 255]);
+    doc.setFillColor(29, 78, 216); doc.roundedRect(mg, y, 3, amtH, 1, 1, "F");
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.text("TOTAL AMOUNT", mg + 6, y + 8);
+    doc.setTextColor(29, 78, 216); doc.setFontSize(15); doc.setFont("helvetica", "bold"); doc.text(formatUGX(inv.amount), mg + 6, y + 22);
+
+    const statusW = (cW - 4) * 0.4;
+    card(mg + (cW - 4) * 0.6 + 4, y, statusW, amtH);
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.text("PAYMENT STATUS", mg + (cW - 4) * 0.6 + 8, y + 8);
+    const sc: [number,number,number] = s === "Paid" ? [16, 185, 129] : s === "Overdue" ? [239, 68, 68] : [245, 158, 11];
+    doc.setTextColor(...sc); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(s, mg + (cW - 4) * 0.6 + 8, y + 22);
+    y += amtH + 7;
+
+    // 04 Notes
+    if (inv.notes) {
+      checkNewPage(30);
+      sectionBar("04  NOTES");
+      const noteLines = doc.splitTextToSize(inv.notes, cW - 10);
+      const noteH = noteLines.length * 5.5 + 12;
+      card(mg, y, cW, noteH, [255, 251, 235]);
+      doc.setFillColor(234, 179, 8); doc.roundedRect(mg, y, 3, noteH, 1, 1, "F");
+      doc.setTextColor(120, 80, 0); doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
+      let ny = y + 8;
+      noteLines.forEach((line: string) => { checkNewPage(8); doc.text(line, mg + 7, ny); ny += 5.5; });
+      y = ny + 6;
+    }
+
+    const total = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= total; i++) { doc.setPage(i); drawFooter(i, total); }
+    doc.save(`${inv.invoiceNumber}.pdf`);
+    toast({ title: "Invoice Downloaded", description: `${inv.invoiceNumber} saved as PDF.` });
+  };
   const totalPaid = invoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0);
   const totalPending = invoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
   const totalOverdue = invoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
@@ -366,6 +547,13 @@ const InvoiceManagement = () => {
             title="View"
           >
             <Eye className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => handleDownloadPDF(i)}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-[#1D4ED8] transition-colors"
+            title="Download PDF"
+          >
+            <Download className="h-4 w-4" />
           </button>
           <button
             onClick={() => { setUpdateStatusInvoice(i); setNewStatus(i.status as InvoiceStatus); }}
@@ -528,7 +716,13 @@ const InvoiceManagement = () => {
                     value={form.tenantId}
                     onChange={(e) => {
                       const t = tenants.find((t) => t.id === Number(e.target.value));
-                      setForm({ ...form, tenantId: e.target.value, propertyId: t ? String(t.propertyId) : form.propertyId });
+                      setSelectedInvoiceId(null);
+                      setForm({
+                        ...form,
+                        tenantId: e.target.value,
+                        propertyId: t ? String(t.propertyId) : form.propertyId,
+                        propertyUnitId: t?.propertyUnitId ? String(t.propertyUnitId) : "",
+                      });
                     }}
                   >
                     <option value="">Select tenant</option>
@@ -566,6 +760,76 @@ const InvoiceManagement = () => {
                   </select>
                 </div>
               )}
+
+              {/* Pending invoices — shown only for Manual Payment */}
+              {form.type === "Manual Payment" && form.tenantId && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs uppercase tracking-wider text-slate-400 font-medium flex items-center gap-1.5">
+                      <Receipt className="h-3.5 w-3.5" />
+                      Pending Invoices
+                    </label>
+                    {isLoadingPendingInvoices && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
+                  </div>
+                  {!isLoadingPendingInvoices && pendingInvoices.length === 0 && (
+                    <p className="text-xs text-slate-400 italic py-2 text-center border border-dashed border-slate-200 rounded-lg">
+                      No pending invoices for this tenant
+                    </p>
+                  )}
+                  {pendingInvoices.length > 0 && (
+                    <div className="space-y-2 max-h-44 overflow-y-auto pr-0.5">
+                      {pendingInvoices.map((inv) => {
+                        const isSelected = selectedInvoiceId === inv.id;
+                        return (
+                          <button
+                            key={inv.id}
+                            type="button"
+                            onClick={() => {
+                              const next = isSelected ? null : inv.id;
+                              setSelectedInvoiceId(next);
+                              setForm((f) => ({
+                                ...f,
+                                amount: next ? String(inv.amount) : "",
+                                status: next ? "Paid" : "Pending",
+                              }));
+                            }}
+                            className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all ${
+                              isSelected
+                                ? "border-[#1D4ED8] bg-blue-50 ring-1 ring-[#1D4ED8]/30"
+                                : "border-[#E2E8F0] hover:border-slate-300 bg-white"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className={`h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected ? "border-[#1D4ED8] bg-[#1D4ED8]" : "border-slate-300"}`}>
+                                  {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                                </div>
+                                <span className="font-mono text-xs font-semibold text-[#0F172A]">{inv.invoiceNumber}</span>
+                                {inv.status === "Overdue" ? (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium">Overdue</span>
+                                ) : (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200 font-medium">Pending</span>
+                                )}
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <p className="text-sm font-bold text-[#0F172A]">{formatUGX(inv.amount)}</p>
+                                <p className="text-[10px] text-slate-400">Due {new Date(inv.dueDate).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {selectedInvoiceId && (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      Amount auto-filled · Invoice will be marked Paid on submit
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Amount (UGX) *</label>
@@ -740,6 +1004,12 @@ const InvoiceManagement = () => {
                 className="px-4 py-2 rounded-lg text-sm font-medium border border-[#E2E8F0] text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Close
+              </button>
+              <button
+                onClick={() => handleDownloadPDF(viewInvoice)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-[#1D4ED8] text-[#1D4ED8] hover:bg-blue-50 transition-colors"
+              >
+                <Download className="h-4 w-4" /> Download PDF
               </button>
               <button
                 onClick={() => {

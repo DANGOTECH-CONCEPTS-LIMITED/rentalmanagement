@@ -8,6 +8,8 @@ import {
 import { DataTable, Column } from '@/components/ui/data-table';
 import { useToast } from '@/hooks/use-toast';
 import ContractGenerator from '@/components/contract/ContractGenerator';
+import jsPDF from 'jspdf';
+import { useBranding } from '@/context/BrandingContext';
 
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -47,6 +49,8 @@ interface Tenant {
   fullName: string;
   email: string;
   phoneNumber: string;
+  propertyId?: number;
+  propertyUnitId?: number;
 }
 
 interface Property {
@@ -75,6 +79,7 @@ interface CreateContractDto {
   unitName: string;
   startDate: string;
   endDate: string;
+  openEnded?: boolean;
   rentAmount: number;
   currency: string;
   securityDeposit: number;
@@ -148,8 +153,14 @@ const DetailRow = ({ icon: Icon, label, value }: {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtDate = (d: string) => {
-  if (!d) return '—';
+  if (!d || d.startsWith('0001')) return '—';
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const fmtPeriod = (startDate: string, endDate: string) => {
+  const start = fmtDate(startDate);
+  const isOpen = !endDate || endDate.startsWith('0001') || endDate === '';
+  return isOpen ? `${start} → Open-ended` : `${start} → ${fmtDate(endDate)}`;
 };
 
 // ── Contract form fields (module-level so React never remounts it) ────────────
@@ -165,13 +176,28 @@ const ContractFields = ({
   const [units, setUnits] = useState<PropertyUnit[]>([]);
   const [loadingUnits, setLoadingUnits] = useState(false);
 
-  const fetchUnits = async (propertyId: number) => {
+  const fetchUnits = async (propertyId: number, autoSelectUnitId?: number) => {
     setLoadingUnits(true);
     try {
       const res = await fetch(`${apiUrl}/GetPropertyUnitsByPropertyId/${propertyId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) setUnits(await res.json());
+      if (res.ok) {
+        const data: PropertyUnit[] = await res.json();
+        setUnits(data);
+        if (autoSelectUnitId) {
+          const u = data.find(x => x.id === autoSelectUnitId);
+          if (u) {
+            setForm(f => ({
+              ...f,
+              unitId: u.id,
+              unitName: u.unitNumber,
+              rentAmount: u.monthlyAmount || f.rentAmount,
+              securityDeposit: u.securityDeposit || f.securityDeposit,
+            }));
+          }
+        }
+      }
     } finally {
       setLoadingUnits(false);
     }
@@ -188,9 +214,25 @@ const ContractFields = ({
     const id = Number(e.target.value);
     const t = tenants.find(x => x.id === id);
     if (t) {
-      setForm(f => ({ ...f, tenantId: t.id, tenantName: t.fullName, tenantEmail: t.email, tenantPhone: t.phoneNumber }));
+      const p = properties.find(x => x.id === t.propertyId);
+      setForm(f => ({
+        ...f,
+        tenantId: t.id,
+        tenantName: t.fullName,
+        tenantEmail: t.email,
+        tenantPhone: t.phoneNumber,
+        propertyId: t.propertyId ?? f.propertyId,
+        propertyName: p?.name ?? f.propertyName,
+        unitId: undefined,
+        unitName: '',
+      }));
+      if (t.propertyId) {
+        setUnits([]);
+        fetchUnits(t.propertyId, t.propertyUnitId);
+      }
     } else {
-      setForm(f => ({ ...f, tenantId: undefined, tenantName: '', tenantEmail: '', tenantPhone: '' }));
+      setForm(f => ({ ...f, tenantId: undefined, tenantName: '', tenantEmail: '', tenantPhone: '', propertyId: undefined, propertyName: '', unitId: undefined, unitName: '' }));
+      setUnits([]);
     }
   };
 
@@ -266,12 +308,20 @@ const ContractFields = ({
             <option value="">
               {loadingUnits ? 'Loading…' : form.propertyId ? '— Select unit —' : '— Select property first —'}
             </option>
-            {units.map(u => (
-              <option key={u.id} value={u.id}>
-                {u.unitNumber} — {form.currency} {u.monthlyAmount.toLocaleString()}/mo
-              </option>
-            ))}
+            {units.map(u => {
+              const isCurrent = u.id === form.unitId;
+              const isOccupied = !isCurrent && u.status?.toLowerCase() === 'occupied';
+              if (isOccupied) return null;
+              return (
+                <option key={u.id} value={u.id}>
+                  {u.unitNumber} — {form.currency} {u.monthlyAmount.toLocaleString()}/mo{isCurrent ? ' (current)' : ''}
+                </option>
+              );
+            })}
           </select>
+          {form.propertyId && !loadingUnits && units.filter(u => u.status?.toLowerCase() !== 'occupied').length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">All units in this property are currently occupied.</p>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -280,10 +330,27 @@ const ContractFields = ({
           <input type="date" className={inputCls} value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
         </div>
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">End Date *</label>
-          <input type="date" className={inputCls} value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+            End Date {form.openEnded ? <span className="normal-case font-normal text-slate-400 ml-1">(open-ended)</span> : '*'}
+          </label>
+          <input
+            type="date"
+            className={`${inputCls} ${form.openEnded ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
+            value={form.endDate}
+            onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+            disabled={!!form.openEnded}
+          />
         </div>
       </div>
+      <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300 text-[#1D4ED8] accent-[#1D4ED8]"
+          checked={!!form.openEnded}
+          onChange={e => setForm(f => ({ ...f, openEnded: e.target.checked, endDate: e.target.checked ? '' : f.endDate }))}
+        />
+        <span className="text-sm text-slate-600">Open-ended contract <span className="text-slate-400 text-xs">(no fixed end date)</span></span>
+      </label>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Monthly Rent *</label>
@@ -352,6 +419,8 @@ const RentalContracts = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
 
+  const { branding } = useBranding();
+
   // ── Fetch tenants ─────────────────────────────────────────────────────────
   const fetchTenants = async () => {
     try {
@@ -396,8 +465,8 @@ const RentalContracts = () => {
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!addForm.tenantId || !addForm.propertyName || !addForm.startDate || !addForm.endDate) {
-      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property, start and end date.' });
+    if (!addForm.tenantId || !addForm.propertyName || !addForm.startDate || (!addForm.openEnded && !addForm.endDate)) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property, start date, and end date (or mark as open-ended).' });
       return;
     }
     setIsSaving(true);
@@ -467,9 +536,378 @@ const RentalContracts = () => {
       propertyId: c.propertyId, propertyName: c.propertyName,
       unitId: c.unitId, unitName: c.unitName,
       startDate: c.startDate?.slice(0, 10) ?? '', endDate: c.endDate?.slice(0, 10) ?? '',
+      openEnded: !c.endDate || c.endDate.startsWith('0001'),
       rentAmount: c.rentAmount, currency: c.currency, securityDeposit: c.securityDeposit,
       status: c.status, terms: c.terms ?? '', ownerId: userData?.id ?? 0,
     });
+  };
+
+  const downloadContractPDF = (c: Contract, branding: { companyName?: string; logoDataUrl?: string } = {}) => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW  = doc.internal.pageSize.getWidth();
+    const pageH  = doc.internal.pageSize.getHeight();
+    const margin = 16;
+    const cW     = pageW - margin * 2;
+    let y = 0;
+
+    const landlordName = userData?.fullName || 'Property Owner';
+    const isOpen = !c.endDate || c.endDate.startsWith('0001') || c.endDate === '';
+
+    // ── Reusable footer (drawn on every page at end) ─────────────────────────
+    const drawFooter = (pageNum: number, totalPages: number) => {
+      doc.setFillColor(10, 18, 40);
+      doc.rect(0, pageH - 11, pageW, 11, 'F');
+      doc.setFillColor(29, 78, 216);
+      doc.rect(0, pageH - 11, 3, 11, 'F');
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      const co = branding.companyName || 'Rental Management System';
+      doc.text(`${c.contractNumber}  ·  ${co}  ·  Generated ${new Date().toLocaleDateString('en-GB')}`, margin, pageH - 4);
+      doc.text(`Page ${pageNum} / ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' });
+    };
+
+    const checkNewPage = (need = 20) => {
+      if (y + need > pageH - 18) { doc.addPage(); y = 20; }
+    };
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HEADER
+    // ════════════════════════════════════════════════════════════════════════
+    // Dark background
+    doc.setFillColor(10, 18, 40);
+    doc.rect(0, 0, pageW, 54, 'F');
+    // Blue accent strip at bottom of header
+    doc.setFillColor(29, 78, 216);
+    doc.rect(0, 50, pageW, 4, 'F');
+    // Left gold accent bar
+    doc.setFillColor(234, 179, 8);
+    doc.rect(0, 0, 4, 54, 'F');
+
+    // Logo or initials circle
+    const logoX = margin + 2;
+    const logoY = 9;
+    if (branding.logoDataUrl) {
+      try {
+        doc.addImage(branding.logoDataUrl, 'PNG', logoX, logoY, 26, 26);
+      } catch { /* skip */ }
+    } else if (branding.companyName) {
+      doc.setFillColor(29, 78, 216);
+      doc.roundedRect(logoX, logoY, 26, 26, 4, 4, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      const ini = branding.companyName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+      doc.text(ini, logoX + 13, logoY + 17, { align: 'center' });
+    }
+
+    const headerTextX = (branding.logoDataUrl || branding.companyName) ? logoX + 30 : margin + 2;
+
+    if (branding.companyName) {
+      doc.setTextColor(234, 179, 8);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(branding.companyName.toUpperCase(), headerTextX, 16);
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Property Management', headerTextX, 22);
+    }
+
+    // Title block (right-aligned)
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RENTAL AGREEMENT', pageW - margin, branding.companyName ? 20 : 22, { align: 'right' });
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Contract:  ${c.contractNumber}`, pageW - margin, 28, { align: 'right' });
+    doc.text(`Issued:      ${fmtDate(c.createdAt)}`, pageW - margin, 34, { align: 'right' });
+    doc.text(`Period:     ${fmtPeriod(c.startDate, c.endDate)}`, pageW - margin, 40, { align: 'right' });
+
+    // Status badge
+    const sActive  = c.status?.toLowerCase() === 'active';
+    const sExpired = ['expired', 'terminated'].includes(c.status?.toLowerCase());
+    if (sActive)       doc.setFillColor(16, 185, 129);
+    else if (sExpired) doc.setFillColor(239, 68, 68);
+    else               doc.setFillColor(245, 158, 11);
+    doc.roundedRect(pageW - margin - 32, 43, 32, 8, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(c.status.toUpperCase(), pageW - margin - 16, 48.5, { align: 'center' });
+
+    y = 62;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ════════════════════════════════════════════════════════════════════════
+    const sectionBar = (title: string) => {
+      checkNewPage(16);
+      doc.setFillColor(15, 23, 42);
+      doc.roundedRect(margin, y, cW, 8.5, 1.5, 1.5, 'F');
+      doc.setFillColor(234, 179, 8);
+      doc.roundedRect(margin, y, 3, 8.5, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title, margin + 7, y + 6);
+      y += 13;
+    };
+
+    const card = (x: number, cardY: number, w: number, h: number, fill: [number,number,number] = [248,250,252]) => {
+      doc.setFillColor(...fill);
+      doc.roundedRect(x, cardY, w, h, 2, 2, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, cardY, w, h, 2, 2, 'S');
+    };
+
+    const cardLabel = (label: string, x: number, cy: number) => {
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text(label.toUpperCase(), x, cy);
+    };
+
+    const cardValue = (value: string, x: number, cy: number, large = false, color: [number,number,number] = [15,23,42]) => {
+      doc.setTextColor(...color);
+      doc.setFontSize(large ? 12 : 9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(value || '—', x, cy);
+    };
+
+    const fieldRow = (label: string, value: string, lastRow = false) => {
+      checkNewPage(9);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(margin, y, cW, 8.5, 'F');
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(label, margin + 4, y + 5.8);
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.text(value || '—', margin + 52, y + 5.8);
+      if (!lastRow) {
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.15);
+        doc.line(margin, y + 8.5, margin + cW, y + 8.5);
+      }
+      y += 8.5;
+    };
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 1. PARTIES
+    // ════════════════════════════════════════════════════════════════════════
+    sectionBar('01  PARTIES TO THIS AGREEMENT');
+
+    const halfW = (cW - 4) / 2;
+    const partyH = 34;
+    card(margin, y, halfW, partyH, [238, 242, 255]);
+    doc.setFillColor(29, 78, 216);
+    doc.roundedRect(margin, y, 3, partyH, 1, 1, 'F');
+    cardLabel('Tenant', margin + 6, y + 7);
+    cardValue(c.tenantName, margin + 6, y + 15);
+    if (c.tenantPhone) {
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Tel: ${c.tenantPhone}`, margin + 6, y + 22);
+    }
+    if (c.tenantEmail) {
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Email: ${c.tenantEmail}`, margin + 6, y + 28);
+    }
+
+    card(margin + halfW + 4, y, halfW, partyH);
+    doc.setFillColor(234, 179, 8);
+    doc.roundedRect(margin + halfW + 4, y, 3, partyH, 1, 1, 'F');
+    cardLabel('Landlord / Owner', margin + halfW + 10, y + 7);
+    cardValue(landlordName, margin + halfW + 10, y + 15);
+
+    y += partyH + 7;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 2. PROPERTY
+    // ════════════════════════════════════════════════════════════════════════
+    checkNewPage(40);
+    sectionBar('02  PROPERTY DETAILS');
+    fieldRow('Property Name', c.propertyName);
+    fieldRow('Unit / Room', c.unitName || 'Not specified', true);
+    y += 6;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 3. FINANCIAL TERMS
+    // ════════════════════════════════════════════════════════════════════════
+    checkNewPage(50);
+    sectionBar('03  FINANCIAL TERMS');
+
+    const thirdW = (cW - 8) / 3;
+    const finH = 30;
+
+    // Monthly rent — highlighted card
+    card(margin, y, thirdW, finH, [238, 242, 255]);
+    doc.setFillColor(29, 78, 216);
+    doc.roundedRect(margin, y, 3, finH, 1, 1, 'F');
+    cardLabel('Monthly Rent', margin + 6, y + 8);
+    cardValue(`${c.currency} ${c.rentAmount.toLocaleString()}`, margin + 6, y + 20, true, [29, 78, 216]);
+
+    // Security deposit
+    card(margin + thirdW + 4, y, thirdW, finH);
+    cardLabel('Security Deposit', margin + thirdW + 8, y + 8);
+    cardValue(`${c.currency} ${c.securityDeposit.toLocaleString()}`, margin + thirdW + 8, y + 20);
+
+    // Currency
+    card(margin + (thirdW + 4) * 2, y, thirdW, finH);
+    cardLabel('Currency', margin + (thirdW + 4) * 2 + 4, y + 8);
+    cardValue(c.currency, margin + (thirdW + 4) * 2 + 4, y + 20, true);
+
+    y += finH + 7;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 4. CONTRACT PERIOD
+    // ════════════════════════════════════════════════════════════════════════
+    checkNewPage(50);
+    sectionBar('04  CONTRACT PERIOD');
+
+    const dateH = 24;
+    card(margin, y, halfW, dateH, [240, 253, 244]);
+    doc.setFillColor(16, 185, 129);
+    doc.roundedRect(margin, y, 3, dateH, 1, 1, 'F');
+    cardLabel('Start Date', margin + 6, y + 8);
+    cardValue(fmtDate(c.startDate), margin + 6, y + 18);
+
+    card(margin + halfW + 4, y, halfW, dateH, isOpen ? [255, 251, 235] : [248, 250, 252]);
+    doc.setFillColor(isOpen ? 245 : 100, isOpen ? 158 : 116, isOpen ? 11 : 139);
+    doc.roundedRect(margin + halfW + 4, y, 3, dateH, 1, 1, 'F');
+    cardLabel(isOpen ? 'End Date' : 'End Date', margin + halfW + 10, y + 8);
+    cardValue(isOpen ? 'Open-ended' : fmtDate(c.endDate), margin + halfW + 10, y + 18, false, isOpen ? [180, 83, 9] : [15, 23, 42]);
+
+    y += dateH + 4;
+
+    if (!isOpen) {
+      const ms = new Date(c.endDate).getTime() - new Date(c.startDate).getTime();
+      const months = Math.round(ms / (1000 * 60 * 60 * 24 * 30.44));
+      if (months > 0) {
+        doc.setFillColor(238, 242, 255);
+        doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
+        doc.setTextColor(29, 78, 216);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Duration: ${months} month${months !== 1 ? 's' : ''}`, margin + 5, y + 5.5);
+        y += 8;
+      }
+    } else {
+      doc.setFillColor(255, 251, 235);
+      doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
+      doc.setTextColor(180, 83, 9);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('This is an open-ended contract with no fixed termination date. Either party may terminate with proper notice.', margin + 5, y + 5.5);
+      y += 8;
+    }
+    y += 7;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 5. TERMS & CONDITIONS
+    // ════════════════════════════════════════════════════════════════════════
+    if (c.terms) {
+      checkNewPage(30);
+      sectionBar('05  TERMS & CONDITIONS');
+      doc.setFillColor(248, 250, 252);
+      const termsLines = doc.splitTextToSize(c.terms, cW - 10);
+      const termsH = termsLines.length * 5.5 + 8;
+      card(margin, y, cW, Math.min(termsH, pageH - y - 20));
+      let ty = y + 7;
+      doc.setTextColor(51, 65, 85);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      termsLines.forEach((line: string) => {
+        checkNewPage(8);
+        doc.text(line, margin + 5, ty);
+        ty += 5.5;
+        y = ty;
+      });
+      y += 10;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 6. ACKNOWLEDGEMENT & SIGNATURES
+    // ════════════════════════════════════════════════════════════════════════
+    checkNewPage(70);
+    sectionBar('06  SIGNATURES & ACKNOWLEDGEMENT');
+
+    // Acknowledgement text
+    doc.setFillColor(255, 251, 235);
+    doc.roundedRect(margin, y, cW, 12, 2, 2, 'F');
+    doc.setFillColor(234, 179, 8);
+    doc.roundedRect(margin, y, 3, 12, 1, 1, 'F');
+    doc.setTextColor(120, 80, 0);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    const ackLines = doc.splitTextToSize(
+      'By signing below, both parties confirm they have read, understood, and agree to all terms of this rental agreement.',
+      cW - 10
+    );
+    ackLines.forEach((l: string, i: number) => doc.text(l, margin + 7, y + 5 + i * 5.5));
+    y += 18;
+
+    // Signature boxes
+    const sigW = halfW;
+    const sigH = 40;
+
+    // Landlord box
+    card(margin, y, sigW, sigH);
+    doc.setFillColor(29, 78, 216);
+    doc.roundedRect(margin, y, 3, sigH, 1, 1, 'F');
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('LANDLORD / OWNER', margin + 7, y + 8);
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(9);
+    doc.text(landlordName, margin + 7, y + 16);
+    doc.setDrawColor(200, 210, 225);
+    doc.setLineWidth(0.4);
+    doc.line(margin + 7, y + 30, margin + sigW - 6, y + 30);
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Signature', margin + 7, y + 35);
+    doc.text('Date: ____________________', margin + sigW / 2, y + 35);
+
+    // Tenant box
+    const sig2X = margin + sigW + 4;
+    card(sig2X, y, sigW, sigH);
+    doc.setFillColor(234, 179, 8);
+    doc.roundedRect(sig2X, y, 3, sigH, 1, 1, 'F');
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TENANT', sig2X + 7, y + 8);
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(9);
+    doc.text(c.tenantName, sig2X + 7, y + 16);
+    doc.setDrawColor(200, 210, 225);
+    doc.line(sig2X + 7, y + 30, sig2X + sigW - 6, y + 30);
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Signature', sig2X + 7, y + 35);
+    doc.text('Date: ____________________', sig2X + sigW / 2, y + 35);
+
+    // ── Draw footer on all pages ─────────────────────────────────────────────
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      drawFooter(i, totalPages);
+    }
+
+    doc.save(`${c.contractNumber}-${c.tenantName.replace(/\s+/g, '-')}.pdf`);
   };
 
   const filteredContracts = contracts.filter(c =>
@@ -529,7 +967,7 @@ const RentalContracts = () => {
       cell: (c) => (
         <span className="flex items-center gap-1.5 text-sm text-slate-500">
           <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          {fmtDate(c.startDate)} → {fmtDate(c.endDate)}
+          {fmtPeriod(c.startDate, c.endDate)}
         </span>
       ),
     },
@@ -562,7 +1000,7 @@ const RentalContracts = () => {
           <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" onClick={() => openEdit(c)} title="Edit">
             <Edit className="h-4 w-4" />
           </button>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors" title="Download (AI)">
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors" title="Download PDF" onClick={() => downloadContractPDF(c, branding)}>
             <Download className="h-4 w-4" />
           </button>
           <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors" onClick={() => setDeleteContract(c)} title="Delete">
@@ -749,7 +1187,7 @@ const RentalContracts = () => {
                 <DetailRow icon={User}        label="Tenant"          value={viewContract.tenantName} />
                 <DetailRow icon={Phone}       label="Phone"           value={viewContract.tenantPhone || '—'} />
                 <DetailRow icon={Home}        label="Property / Unit" value={`${viewContract.propertyName}${viewContract.unitName ? ` — ${viewContract.unitName}` : ''}`} />
-                <DetailRow icon={Calendar}    label="Contract Period"  value={`${fmtDate(viewContract.startDate)} → ${fmtDate(viewContract.endDate)}`} />
+                <DetailRow icon={Calendar}    label="Contract Period"  value={fmtPeriod(viewContract.startDate, viewContract.endDate)} />
                 <DetailRow icon={DollarSign}  label="Monthly Rent"    value={`${viewContract.currency} ${viewContract.rentAmount.toLocaleString()}/mo`} />
                 <DetailRow icon={CreditCard}  label="Security Deposit" value={`${viewContract.currency} ${viewContract.securityDeposit.toLocaleString()}`} />
                 {viewContract.terms && (
@@ -759,6 +1197,12 @@ const RentalContracts = () => {
               <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
                 <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setViewContract(null)}>
                   Close
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#1D4ED8] px-4 py-2 text-sm font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
+                  onClick={() => { downloadContractPDF(viewContract, branding); setViewContract(null); }}
+                >
+                  <Download className="h-3.5 w-3.5" /> Download PDF
                 </button>
                 <button
                   className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
@@ -855,6 +1299,7 @@ const RentalContracts = () => {
           </div>
         )}
       </AnimatePresence>
+
     </div>
   );
 };

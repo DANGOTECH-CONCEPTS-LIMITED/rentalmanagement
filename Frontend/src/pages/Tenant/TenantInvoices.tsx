@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import jsPDF from "jspdf";
 import {
   FileText, CheckCircle2, Clock, AlertCircle, Eye, Download,
-  Hash, Tag, Building2, DollarSign, Calendar, StickyNote, X,
+  Hash, Building2, Calendar, StickyNote, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
+import { useBranding } from "@/context/BrandingContext";
 
 type InvoiceStatus = "Paid" | "Pending" | "Overdue";
 
@@ -75,6 +76,7 @@ const KpiCard = ({ label, amount, count, icon: Icon, iconBg, iconColor, amountCo
 
 const TenantInvoices = () => {
   const { toast } = useToast();
+  const { branding } = useBranding();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const [tab, setTab] = useState("all");
@@ -130,30 +132,202 @@ const TenantInvoices = () => {
   const totalOverdue = invoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
 
   const handleDownload = (inv: Invoice) => {
-    const html = `<html><head><title>Invoice ${inv.invoiceNo}</title>
-      <style>body{font-family:Arial,sans-serif;margin:24px}.header{text-align:center;margin-bottom:20px}.title{font-size:22px;font-weight:bold}.row{display:flex;margin-bottom:8px}.label{font-weight:bold;width:160px}.divider{border-top:1px dashed #000;margin:16px 0}.footer{text-align:center;font-size:12px;margin-top:32px}</style>
-      </head><body>
-      <div class="header"><div class="title">INVOICE</div><div>${inv.invoiceNo}</div></div>
-      <div class="divider"></div>
-      <div class="row"><div class="label">Tenant:</div><div>${tenant?.fullName ?? ""}</div></div>
-      <div class="row"><div class="label">Property:</div><div>${propertyName}</div></div>
-      <div class="row"><div class="label">Unit:</div><div>${unitNumber || "—"}</div></div>
-      <div class="row"><div class="label">Type:</div><div>${inv.type}</div></div>
-      <div class="row"><div class="label">Amount:</div><div>${currency} ${inv.amount.toLocaleString()}</div></div>
-      <div class="row"><div class="label">Generated:</div><div>${new Date(inv.generatedDate).toLocaleDateString()}</div></div>
-      <div class="row"><div class="label">Due Date:</div><div>${new Date(inv.dueDate).toLocaleDateString()}</div></div>
-      <div class="row"><div class="label">Status:</div><div>${inv.status}</div></div>
-      ${inv.notes ? `<div class="row"><div class="label">Notes:</div><div>${inv.notes}</div></div>` : ""}
-      <div class="divider"></div>
-      <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
-      </body></html>`;
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `invoice_${inv.invoiceNo}.html`;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
-    toast({ title: "Invoice Downloaded", description: `${inv.invoiceNo} saved.` });
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 16;
+    const cW = pageW - margin * 2;
+    let y = 0;
+
+    const fmtDate = (d: string) =>
+      d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+    const drawFooter = (pageNum: number, totalPages: number) => {
+      doc.setFillColor(10, 18, 40);
+      doc.rect(0, pageH - 11, pageW, 11, "F");
+      doc.setFillColor(29, 78, 216);
+      doc.rect(0, pageH - 11, 3, 11, "F");
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      const co = branding.companyName || "Property Management System";
+      doc.text(`${inv.invoiceNo}  ·  ${co}  ·  Generated ${new Date().toLocaleDateString("en-GB")}`, margin, pageH - 4);
+      doc.text(`Page ${pageNum} / ${totalPages}`, pageW - margin, pageH - 4, { align: "right" });
+    };
+
+    const checkNewPage = (need = 20) => { if (y + need > pageH - 18) { doc.addPage(); y = 20; } };
+
+    // ── Header ────────────────────────────────────────────────────────────────
+    doc.setFillColor(10, 18, 40);
+    doc.rect(0, 0, pageW, 54, "F");
+    doc.setFillColor(29, 78, 216);
+    doc.rect(0, 50, pageW, 4, "F");
+    doc.setFillColor(234, 179, 8);
+    doc.rect(0, 0, 4, 54, "F");
+
+    // Logo or initials
+    const logoX = margin + 2;
+    const logoY = 9;
+    if (branding.logoDataUrl) {
+      try { doc.addImage(branding.logoDataUrl, "PNG", logoX, logoY, 26, 26); } catch { /* skip */ }
+    } else if (branding.companyName) {
+      doc.setFillColor(29, 78, 216);
+      doc.roundedRect(logoX, logoY, 26, 26, 4, 4, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      const ini = branding.companyName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+      doc.text(ini, logoX + 13, logoY + 17, { align: "center" });
+    }
+    if (branding.companyName) {
+      const hx = logoX + 30;
+      doc.setTextColor(234, 179, 8);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text(branding.companyName.toUpperCase(), hx, 16);
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.text("Invoice System", hx, 22);
+    }
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", pageW - margin, branding.companyName ? 20 : 22, { align: "right" });
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Invoice:  ${inv.invoiceNo}`, pageW - margin, 28, { align: "right" });
+    doc.text(`Issued:   ${fmtDate(inv.generatedDate)}`, pageW - margin, 34, { align: "right" });
+    doc.text(`Due:      ${fmtDate(inv.dueDate)}`, pageW - margin, 40, { align: "right" });
+
+    // Status badge
+    const s = inv.status;
+    if (s === "Paid") doc.setFillColor(16, 185, 129);
+    else if (s === "Overdue") doc.setFillColor(239, 68, 68);
+    else doc.setFillColor(245, 158, 11);
+    doc.roundedRect(pageW - margin - 28, 43, 28, 8, 2, 2, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.text(s.toUpperCase(), pageW - margin - 14, 48.5, { align: "center" });
+
+    y = 62;
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    const sectionBar = (title: string) => {
+      checkNewPage(16);
+      doc.setFillColor(15, 23, 42);
+      doc.roundedRect(margin, y, cW, 8.5, 1.5, 1.5, "F");
+      doc.setFillColor(234, 179, 8);
+      doc.roundedRect(margin, y, 3, 8.5, 1, 1, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.text(title, margin + 7, y + 6);
+      y += 13;
+    };
+
+    const card = (x: number, cy: number, w: number, h: number, fill: [number, number, number] = [248, 250, 252]) => {
+      doc.setFillColor(...fill);
+      doc.roundedRect(x, cy, w, h, 2, 2, "F");
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, cy, w, h, 2, 2, "S");
+    };
+
+    const fieldRow = (label: string, value: string, last = false) => {
+      checkNewPage(9);
+      doc.setFillColor(last ? 248 : 248, 250, 252);
+      doc.rect(margin, y, cW, 8.5, "F");
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(label, margin + 4, y + 5.8);
+      doc.setTextColor(15, 23, 42);
+      doc.setFont("helvetica", "bold");
+      doc.text(value || "—", margin + 52, y + 5.8);
+      if (!last) { doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.15); doc.line(margin, y + 8.5, margin + cW, y + 8.5); }
+      y += 8.5;
+    };
+
+    // ── 01 Bill To ────────────────────────────────────────────────────────────
+    sectionBar("01  BILL TO");
+    const halfW = (cW - 4) / 2;
+    const partyH = unitNumber ? 32 : 24;
+    card(margin, y, halfW, partyH, [238, 242, 255]);
+    doc.setFillColor(29, 78, 216);
+    doc.roundedRect(margin, y, 3, partyH, 1, 1, "F");
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold");
+    doc.text("TENANT", margin + 6, y + 7);
+    doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.setFont("helvetica", "bold");
+    doc.text(tenant?.fullName ?? "—", margin + 6, y + 16);
+
+    card(margin + halfW + 4, y, halfW, partyH);
+    doc.setFillColor(234, 179, 8);
+    doc.roundedRect(margin + halfW + 4, y, 3, partyH, 1, 1, "F");
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold");
+    doc.text("PROPERTY / UNIT", margin + halfW + 10, y + 7);
+    doc.setTextColor(15, 23, 42); doc.setFontSize(9); doc.setFont("helvetica", "bold");
+    doc.text(propertyName || "—", margin + halfW + 10, y + 16);
+    if (unitNumber) {
+      doc.setTextColor(100, 116, 139); doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+      doc.text(`Unit: ${unitNumber}`, margin + halfW + 10, y + 24);
+    }
+    y += partyH + 7;
+
+    // ── 02 Invoice Details ────────────────────────────────────────────────────
+    checkNewPage(50);
+    sectionBar("02  INVOICE DETAILS");
+    fieldRow("Invoice Number", inv.invoiceNo);
+    fieldRow("Type", inv.type);
+    fieldRow("Date Issued", fmtDate(inv.generatedDate));
+    fieldRow("Due Date", fmtDate(inv.dueDate), true);
+    y += 6;
+
+    // ── 03 Amount ─────────────────────────────────────────────────────────────
+    checkNewPage(44);
+    sectionBar("03  AMOUNT DUE");
+    const amtH = 32;
+    card(margin, y, (cW - 4) * 0.6, amtH, [238, 242, 255]);
+    doc.setFillColor(29, 78, 216);
+    doc.roundedRect(margin, y, 3, amtH, 1, 1, "F");
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold");
+    doc.text("TOTAL AMOUNT", margin + 6, y + 8);
+    doc.setTextColor(29, 78, 216); doc.setFontSize(15); doc.setFont("helvetica", "bold");
+    doc.text(`${currency} ${inv.amount.toLocaleString()}`, margin + 6, y + 22);
+
+    const statusW = (cW - 4) * 0.4;
+    card(margin + (cW - 4) * 0.6 + 4, y, statusW, amtH);
+    doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold");
+    doc.text("PAYMENT STATUS", margin + (cW - 4) * 0.6 + 8, y + 8);
+    const sc = s === "Paid" ? [16, 185, 129] as [number,number,number] : s === "Overdue" ? [239, 68, 68] as [number,number,number] : [245, 158, 11] as [number,number,number];
+    doc.setTextColor(...sc); doc.setFontSize(11); doc.setFont("helvetica", "bold");
+    doc.text(s, margin + (cW - 4) * 0.6 + 8, y + 22);
+    y += amtH + 7;
+
+    // ── 04 Notes ──────────────────────────────────────────────────────────────
+    if (inv.notes) {
+      checkNewPage(30);
+      sectionBar("04  NOTES");
+      const noteLines = doc.splitTextToSize(inv.notes, cW - 10);
+      const noteH = noteLines.length * 5.5 + 12;
+      card(margin, y, cW, noteH, [255, 251, 235]);
+      doc.setFillColor(234, 179, 8);
+      doc.roundedRect(margin, y, 3, noteH, 1, 1, "F");
+      doc.setTextColor(120, 80, 0); doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
+      let ny = y + 8;
+      noteLines.forEach((line: string) => { checkNewPage(8); doc.text(line, margin + 7, ny); ny += 5.5; });
+      y = ny + 6;
+    }
+
+    // ── Footer on all pages ───────────────────────────────────────────────────
+    const total = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= total; i++) { doc.setPage(i); drawFooter(i, total); }
+
+    doc.save(`${inv.invoiceNo}.pdf`);
+    toast({ title: "Invoice Downloaded", description: `${inv.invoiceNo} saved as PDF.` });
   };
 
   const columns: Column<Invoice>[] = [
