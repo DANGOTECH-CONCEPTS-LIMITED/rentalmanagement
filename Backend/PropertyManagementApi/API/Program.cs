@@ -146,6 +146,7 @@ builder.Services.AddHostedService<ProcessPendingTokenTransactions>();
 //builder.Services.AddHostedService<MpesaCallbackProcessor>();
 builder.Services.AddHostedService<ProcessMpesaPayments>();
 builder.Services.AddHostedService<MeterTokenGeneratorService>();
+builder.Services.AddHostedService<InvoiceSchedulerService>();
 
 
 builder.Services.AddControllers(options =>

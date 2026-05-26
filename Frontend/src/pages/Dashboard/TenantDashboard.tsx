@@ -72,6 +72,7 @@ const TenantDashboard = () => {
   const formatCurrency = useCurrencyFormatter();
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState<any[]>([]);
 
   const user = localStorage.getItem("user");
   if (!user) throw new Error("No user found in localStorage");
@@ -80,6 +81,7 @@ const TenantDashboard = () => {
 
   useEffect(() => {
     fetchTenant();
+    fetchInvoices();
   }, []);
 
   const fetchTenant = async () => {
@@ -98,6 +100,19 @@ const TenantDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInvoices = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const token = userData?.token;
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetInvoicesByTenantId/${userData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setInvoices(Array.isArray(data) ? data : []);
+    } catch {
+      // silently ignore — invoices section will just be empty
     }
   };
 
@@ -190,6 +205,63 @@ const TenantDashboard = () => {
           iconColor="text-violet-600"
         />
       </div>
+
+      {/* Outstanding Invoices */}
+      {invoices.filter(i => i.status === "Pending" || i.status === "Overdue").length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Outstanding Invoices</p>
+                <p className="text-xs text-slate-400">Invoices awaiting payment</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/tenant-dashboard/invoices")}
+              className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
+              View all <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {invoices
+              .filter(i => i.status === "Pending" || i.status === "Overdue")
+              .slice(0, 3)
+              .map((inv: any) => {
+                const isOverdue = inv.status === "Overdue";
+                const due = new Date(inv.dueDate);
+                const daysLeft = Math.ceil((due.getTime() - Date.now()) / 86400000);
+                return (
+                  <div key={inv.id} className="flex items-center justify-between px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isOverdue ? "bg-red-50" : "bg-amber-50"}`}>
+                        <FileText className={`h-5 w-5 ${isOverdue ? "text-red-500" : "text-amber-500"}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{inv.invoiceNumber ?? inv.invoiceNo}</p>
+                        <p className="text-xs text-slate-400">{inv.type ?? "Invoice"} · {due.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-slate-900">UGX {Number(inv.amount).toLocaleString()}</p>
+                        <p className={`text-xs font-medium ${isOverdue ? "text-red-500" : daysLeft <= 3 ? "text-red-500" : daysLeft <= 7 ? "text-amber-500" : "text-slate-400"}`}>
+                          {isOverdue ? "Overdue" : daysLeft === 0 ? "Due today" : daysLeft < 0 ? "Overdue" : `Due in ${daysLeft}d`}
+                        </p>
+                      </div>
+                      <Badge className={isOverdue ? "bg-red-50 text-red-600 border-red-200" : "bg-amber-50 text-amber-600 border-amber-200"}>
+                        {inv.status}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Payment Methods */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
