@@ -383,6 +383,23 @@ namespace API.Controllers.Payments
                 }
             }
 
+        [HttpPost("/Admin/BulkAddUtilityPayments")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> BulkAddUtilityPayments([FromBody] List<UtilityPayment> payments)
+        {
+            try
+            {
+                if (payments == null || payments.Count == 0)
+                    return BadRequest(new { error = "No payments provided." });
+                var inserted = await _paymentService.BulkAddUtilityPaymentsAsync(payments);
+                return Ok(new { inserted, message = $"{inserted} record(s) added." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = $"Error inserting payments: {ex.Message}" });
+            }
+        }
+
         [HttpPut("/Admin/UpdatePaymentStatus")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdatePaymentStatus([FromBody] UpdatePaymentStatusDto dto)

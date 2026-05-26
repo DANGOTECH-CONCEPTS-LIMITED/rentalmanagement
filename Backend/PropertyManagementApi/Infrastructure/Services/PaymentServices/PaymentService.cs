@@ -936,5 +936,18 @@ namespace Infrastructure.Services.PaymentServices
             _context.MpesaCallbackAudits.Update(payment);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<int> BulkAddUtilityPaymentsAsync(IEnumerable<UtilityPayment> payments)
+        {
+            var list = payments.ToList();
+            var existing = await _context.UtilityPayments
+                .Select(p => p.TransactionID)
+                .ToListAsync();
+            var toInsert = list.Where(p => !existing.Contains(p.TransactionID)).ToList();
+            if (toInsert.Count == 0) return 0;
+            await _context.UtilityPayments.AddRangeAsync(toInsert);
+            await _context.SaveChangesAsync();
+            return toInsert.Count;
+        }
     }
 }

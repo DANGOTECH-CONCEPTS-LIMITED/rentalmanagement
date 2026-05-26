@@ -64,5 +64,7 @@ namespace Application.Interfaces.PaymentService
         Task UpdateMpesaProcessedPaymt(string vendortranid, string transactionId);
 
         Task<decimal> GetWalletBalanceAsync(int landlordId);
+
+        Task<int> BulkAddUtilityPaymentsAsync(IEnumerable<UtilityPayment> payments);
     }
 }
