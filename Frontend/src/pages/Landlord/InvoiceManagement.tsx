@@ -274,7 +274,7 @@ const InvoiceManagement = () => {
         TenantId: Number(form.tenantId),
         PropertyId: Number(form.propertyId),
         PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
-        Amount: Number(form.amount),
+        Amount: Number(form.amount.replace(/,/g, "")),
         InvoiceDate: new Date(form.invoiceDate).toISOString(),
         DueDate: new Date(form.dueDate).toISOString(),
         Notes: form.notes || null,
@@ -789,7 +789,7 @@ const InvoiceManagement = () => {
                               setSelectedInvoiceId(next);
                               setForm((f) => ({
                                 ...f,
-                                amount: next ? String(inv.amount) : "",
+                                amount: next ? Number(inv.amount).toLocaleString("en-US") : "",
                                 status: next ? "Paid" : "Pending",
                               }));
                             }}
@@ -834,10 +834,15 @@ const InvoiceManagement = () => {
                 <div className="space-y-1.5">
                   <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Amount (UGX) *</label>
                   <Input
-                    type="number"
-                    placeholder="e.g. 300000"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="e.g. 300,000"
                     value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/[^0-9]/g, "");
+                      const formatted = digits ? Number(digits).toLocaleString("en-US") : "";
+                      setForm({ ...form, amount: formatted });
+                    }}
                     className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
                   />
                 </div>
