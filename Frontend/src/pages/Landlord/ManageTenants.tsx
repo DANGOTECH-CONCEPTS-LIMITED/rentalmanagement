@@ -5,7 +5,7 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Users, Eye, Edit, Trash2, Calendar, Home, CreditCard,
   X, PhoneIcon, Upload, Camera, Check, Key, Mail, Phone,
-  User, Banknote, Loader2, UserCheck, UserX, DollarSign,
+  User, Banknote, Loader2, UserCheck, UserX, DollarSign, FileText,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,7 @@ import { Property } from "./RegisterTenants";
 import { motion } from "framer-motion";
 import axios from "axios";
 import ConfirmDeleteModal from "@/components/common/DeleteModal";
+import TenantStatementModal from "./TenantStatementModal";
 
 interface Tenant {
   idFront: string;
@@ -103,7 +104,7 @@ const ManageTenants = () => {
   const { toast } = useToast();
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
-  const [units, setUnits] = useState<{ id: number; unitNumber: string }[]>([]);
+  const [units, setUnits] = useState<{ id: number; unitNumber: string; status: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
@@ -115,6 +116,7 @@ const ManageTenants = () => {
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
   const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [statementTenant, setStatementTenant] = useState<Tenant | null>(null);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     amount: "",
@@ -178,15 +180,13 @@ const ManageTenants = () => {
 
   useEffect(() => {
     if (!formData.PropertyId) { setUnits([]); return; }
-    const fetchUnits = async () => {
-      try {
-        const { data } = await axios.get(`${apiUrl}/GetPropertyUnitsByPropertyId/${formData.PropertyId}`);
-        setUnits(data);
-      } catch {
-        setUnits([]);
-      }
-    };
-    fetchUnits();
+    axios
+      .get(`${apiUrl}/GetPropertyUnitsByPropertyId/${formData.PropertyId}`)
+      .then((res) => setUnits((res.data || []).filter((u: any) =>
+        u.status?.toLowerCase() === 'available' ||
+        (formData.UnitId && String(u.id) === String(formData.UnitId))
+      )))
+      .catch(() => setUnits([]));
   }, [formData.PropertyId, apiUrl]);
 
   useEffect(() => {
@@ -463,6 +463,13 @@ const ManageTenants = () => {
             <Eye className="h-4 w-4" />
           </button>
           <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+            onClick={() => setStatementTenant(t)}
+            title="Statement"
+          >
+            <FileText className="h-4 w-4" />
+          </button>
+          <button
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
             onClick={() => openEdit(t)}
             title="Edit"
@@ -631,6 +638,12 @@ const ManageTenants = () => {
               </button>
               <div className="flex items-center gap-2">
                 <button
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 transition-colors"
+                  onClick={() => setStatementTenant(selectedTenant)}
+                >
+                  <FileText className="h-4 w-4" /> Statement
+                </button>
+                <button
                   className="btn-grid inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                   onClick={() => {
                     setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split("T")[0], paymentMethod: "Cash", referenceNo: "", notes: "" });
@@ -732,8 +745,19 @@ const ManageTenants = () => {
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Unit / Room</label>
                     <select name="UnitId" className={selectCls} value={formData.UnitId} onChange={handleInputChange}>
                       <option value="">Select unit</option>
-                      {units.map((u) => <option key={u.id} value={u.id}>{u.unitNumber}</option>)}
+                      {units.map((u) => {
+                        const isCurrent = String(u.id) === String(formData.UnitId);
+                        const occupied = !isCurrent && u.status?.toLowerCase() === "occupied";
+                        return (
+                          <option key={u.id} value={u.id} disabled={occupied}>
+                            {u.unitNumber}{occupied ? " — Taken" : isCurrent ? " (current)" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
+                    {units.some((u) => !String(u.id).includes(formData.UnitId) && u.status?.toLowerCase() === "occupied") && (
+                      <p className="text-[10px] text-slate-400 mt-1">Units marked "Taken" are already occupied.</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Water Meter No.</label>
@@ -882,6 +906,13 @@ const ManageTenants = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={() => { if (deleteTenant) handleDeleteTenant(deleteTenant.id); }}
       />
+
+      {statementTenant && (
+        <TenantStatementModal
+          tenant={statementTenant}
+          onClose={() => setStatementTenant(null)}
+        />
+      )}
     </div>
   );
 };

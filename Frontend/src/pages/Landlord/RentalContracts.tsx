@@ -184,7 +184,11 @@ const ContractFields = ({
       });
       if (res.ok) {
         const data: PropertyUnit[] = await res.json();
-        setUnits(data);
+        // Show only available units, plus the currently-assigned unit when editing
+        setUnits(data.filter(u =>
+          u.status?.toLowerCase() === 'available' ||
+          (autoSelectUnitId && u.id === autoSelectUnitId)
+        ));
         if (autoSelectUnitId) {
           const u = data.find(x => x.id === autoSelectUnitId);
           if (u) {
@@ -973,7 +977,7 @@ const RentalContracts = () => {
     },
     {
       key: 'rentAmount',
-      header: 'Rent/mo',
+      header: 'Rent Per Room/mo',
       headerClassName: 'text-right',
       className: 'text-right',
       cell: (c) => (

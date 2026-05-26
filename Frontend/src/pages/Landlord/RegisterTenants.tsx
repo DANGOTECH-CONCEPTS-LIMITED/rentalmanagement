@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
 export interface Property {
   rentAmount: number;
@@ -145,7 +146,8 @@ const RegisterTenants = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
-  const [units, setUnits] = useState<{ id: number; unitNumber: string }[]>([]);
+  const [units, setUnits] = useState<{ id: number; unitNumber: string; status: string }[]>([]);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(false);
 
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
@@ -188,19 +190,13 @@ const RegisterTenants = () => {
   useEffect(() => {
     if (!formData.PropertyId) { setUnits([]); return; }
     const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    const fetchUnits = async () => {
-      try {
-        const res = await fetch(`${apiUrl}/GetPropertyUnitsByPropertyId/${formData.PropertyId}`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        });
-        if (res.ok) setUnits(await res.json());
-        else setUnits([]);
-      } catch {
-        setUnits([]);
-      }
-    };
-    fetchUnits();
-  }, [formData.PropertyId, token]);
+    setIsLoadingUnits(true);
+    axios
+      .get(`${apiUrl}/GetPropertyUnitsByPropertyId/${formData.PropertyId}`)
+      .then((res) => setUnits((res.data || []).filter((u: any) => u.status?.toLowerCase() === 'available')))
+      .catch(() => toast({ title: "Error", description: "Failed to load units.", variant: "destructive" }))
+      .finally(() => setIsLoadingUnits(false));
+  }, [formData.PropertyId]);
 
   useEffect(() => {
     return () => {
@@ -527,12 +523,29 @@ const RegisterTenants = () => {
                       className={selCls}
                       value={formData.UnitId}
                       onChange={handleInputChange}
+                      disabled={isLoadingUnits}
                     >
-                      <option value="">Select unit</option>
-                      {units.map((u) => (
-                        <option key={u.id} value={u.id}>{u.unitNumber}</option>
-                      ))}
+                      <option value="">
+                        {!formData.PropertyId
+                          ? "Select a property first"
+                          : isLoadingUnits
+                          ? "Loading units…"
+                          : units.length === 0
+                          ? "No units found"
+                          : "Select unit"}
+                      </option>
+                      {units.map((u) => {
+                        const occupied = u.status?.toLowerCase() === "occupied";
+                        return (
+                          <option key={u.id} value={u.id} disabled={occupied}>
+                            {u.unitNumber}{occupied ? " — Taken" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
+                    {!formData.PropertyId && (
+                      <p className="text-[10px] text-amber-500 mt-1">Choose a property above to see available units.</p>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
