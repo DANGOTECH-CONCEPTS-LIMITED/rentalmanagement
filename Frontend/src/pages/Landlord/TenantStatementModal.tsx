@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import {
   X, Printer, RefreshCw, FileText, Banknote, AlertTriangle,
-  Building2, User, Phone, Calendar, Home, Key,
+  Building2, User, Phone, Calendar, Home, Key, AlertCircle,
 } from "lucide-react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { useBranding } from "@/context/BrandingContext";
+import { generateDemandNotePdf } from "@/utils/demandNotePdf";
 
 interface Tenant {
   id: number;
@@ -602,6 +603,28 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
             >
               Close
             </button>
+            {closingBalance > 0 && (
+              <button
+                onClick={() => {
+                  const unpaidRows = ledger.filter((r) => r.type === "Invoice" && r.debit > 0);
+                  generateDemandNotePdf({
+                    tenant,
+                    outstandingAmount: closingBalance,
+                    invoices: unpaidRows.map((r) => ({
+                      reference: r.reference,
+                      date: r.date,
+                      description: r.description,
+                      amount: r.debit,
+                    })),
+                    branding,
+                  });
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+              >
+                <AlertCircle className="h-4 w-4" />
+                Demand Note
+              </button>
+            )}
             <button
               onClick={handlePrint}
               disabled={ledger.length === 0}

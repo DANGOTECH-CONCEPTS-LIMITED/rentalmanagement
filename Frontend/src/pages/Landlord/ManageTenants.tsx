@@ -6,7 +6,7 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Users, Eye, Edit, Trash2, Calendar, Home, CreditCard,
   X, PhoneIcon, Upload, Camera, Check, Key, Mail, Phone,
-  User, Banknote, Loader2, UserCheck, UserX, DollarSign, FileText, Zap,
+  User, Banknote, Loader2, UserCheck, UserX, DollarSign, FileText, Zap, AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,8 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import ConfirmDeleteModal from "@/components/common/DeleteModal";
 import TenantStatementModal from "./TenantStatementModal";
+import { useBranding } from "@/context/BrandingContext";
+import { generateDemandNotePdf } from "@/utils/demandNotePdf";
 
 interface Tenant {
   idFront: string;
@@ -105,6 +107,7 @@ const ManageTenants = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
+  const { branding } = useBranding();
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<{ id: number; unitNumber: string; status: string }[]>([]);
@@ -506,6 +509,15 @@ const ManageTenants = () => {
           >
             <FileText className="h-4 w-4" />
           </button>
+          {t.balanceDue > 0 && (
+            <button
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              title="Demand Note"
+              onClick={() => generateDemandNotePdf({ tenant: t, outstandingAmount: t.balanceDue, branding })}
+            >
+              <AlertCircle className="h-4 w-4" />
+            </button>
+          )}
           <button
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
             onClick={() => openEdit(t)}
@@ -720,6 +732,20 @@ const ManageTenants = () => {
                 >
                   <FileText className="h-4 w-4" /> Statement
                 </button>
+                {selectedTenant.balanceDue > 0 && (
+                  <button
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+                    onClick={() =>
+                      generateDemandNotePdf({
+                        tenant: selectedTenant,
+                        outstandingAmount: selectedTenant.balanceDue,
+                        branding,
+                      })
+                    }
+                  >
+                    <AlertCircle className="h-4 w-4" /> Demand Note
+                  </button>
+                )}
                 <button
                   className="btn-grid inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                   onClick={() => {
