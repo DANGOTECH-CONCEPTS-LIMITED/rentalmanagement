@@ -132,5 +132,40 @@ namespace API.Controllers.Accounts
                 expenseBreakdown,
             });
         }
+
+        // GET: /api/accounting/dashboard-kpis/1
+        [HttpGet("dashboard-kpis/{landlordId:int}")]
+        [Authorize]
+        public async Task<IActionResult> GetDashboardKpis(int landlordId)
+        {
+            if (landlordId <= 0) return BadRequest("landlordId is required.");
+
+            var now = DateTime.UtcNow;
+            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+            // Active contracts → monthly rent expected + security deposits
+            var contracts = await _db.RentalContracts
+                .AsNoTracking()
+                .Where(c => c.OwnerId == landlordId && c.Status.ToLower() == "active")
+                .Select(c => new { c.RentAmount, c.SecurityDeposit })
+                .ToListAsync();
+
+            var revenueExpected = (decimal)contracts.Sum(c => c.RentAmount);
+            var securityDeposits = (decimal)contracts.Sum(c => c.SecurityDeposit);
+
+            // Collected: successful tenant payments this month on this landlord's properties
+            var collected = await _db.TenantPayments
+                .AsNoTracking()
+                .Include(p => p.PropertyTenant).ThenInclude(t => t.Property)
+                .Where(p => p.PropertyTenant.Property.OwnerId == landlordId
+                         && p.PaymentDate >= monthStart && p.PaymentDate <= monthEnd
+                         && p.PaymentStatus.ToLower() != "failed")
+                .SumAsync(p => (decimal)p.Amount);
+
+            var uncollected = revenueExpected > collected ? revenueExpected - collected : 0m;
+
+            return Ok(new { revenueExpected, collected, uncollected, securityDeposits });
+        }
     }
 }

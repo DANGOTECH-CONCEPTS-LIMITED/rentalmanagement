@@ -95,10 +95,9 @@ const LandlordDashboard = () => {
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [utilityStats, setUtilityStats] = useState<UtilityStats | null>(null);
+  const [revenueKpis, setRevenueKpis] = useState({ revenueExpected: 0, collected: 0, uncollected: 0, securityDeposits: 0 });
 
   const dummyStats = {
-    totalRevenueExpected: 2450000, incomeCollected: 1850000,
-    uncollectedIncome: 600000, securityDeposits: 750000,
     utilityCollected: 120000, totalRooms: 24, occupiedRooms: 20, vacantRooms: 4,
   };
 
@@ -113,6 +112,7 @@ const LandlordDashboard = () => {
     fetchProperties();
     fetchTenants();
     fetchUtilityStats();
+    fetchRevenueKpis();
   }, []);
 
   const fetchWalletData = async () => {
@@ -142,6 +142,13 @@ const LandlordDashboard = () => {
     try {
       const { data } = await axios.get(`${apiUrl}/GetLandlordUtilityStats/${userData.id}`);
       setUtilityStats(data);
+    } catch {}
+  };
+
+  const fetchRevenueKpis = async () => {
+    try {
+      const { data } = await axios.get(`${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}`);
+      setRevenueKpis(data);
     } catch {}
   };
 
@@ -450,10 +457,10 @@ const LandlordDashboard = () => {
       {/* ── Revenue summary strip ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: "Revenue Expected", value: dummyStats.totalRevenueExpected, icon: Banknote, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Collected", value: dummyStats.incomeCollected, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-          { label: "Uncollected", value: dummyStats.uncollectedIncome, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-50" },
-          { label: "Security Deposits", value: dummyStats.securityDeposits, icon: PiggyBank, color: "text-violet-600", bg: "bg-violet-50" },
+          { label: "Revenue Expected", value: revenueKpis.revenueExpected, icon: Banknote, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Collected", value: revenueKpis.collected, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Uncollected", value: revenueKpis.uncollected, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-50" },
+          { label: "Security Deposits", value: revenueKpis.securityDeposits, icon: PiggyBank, color: "text-violet-600", bg: "bg-violet-50" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}>
@@ -482,11 +489,11 @@ const LandlordDashboard = () => {
           <ResponsiveContainer width="100%" height={240}>
             <BarChart
               data={[
-                { name: "Expected", amount: dummyStats.totalRevenueExpected },
-                { name: "Collected", amount: dummyStats.incomeCollected },
-                { name: "Uncollected", amount: dummyStats.uncollectedIncome },
-                { name: "Deposits", amount: dummyStats.securityDeposits },
-                { name: "Utility", amount: dummyStats.utilityCollected },
+                { name: "Expected", amount: revenueKpis.revenueExpected },
+                { name: "Collected", amount: revenueKpis.collected },
+                { name: "Uncollected", amount: revenueKpis.uncollected },
+                { name: "Deposits", amount: revenueKpis.securityDeposits },
+                { name: "Utility", amount: utilityStats?.totalUtilityAmount ?? 0 },
               ]}
               margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
               barSize={36}
