@@ -723,7 +723,16 @@ const ManageTenants = () => {
                 <button
                   className="btn-grid inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                   onClick={() => {
-                    setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split("T")[0], paymentMethod: "Cash", referenceNo: "", notes: "" });
+                    const prefillAmount = selectedTenant.balanceDue > 0
+                      ? String(selectedTenant.balanceDue)
+                      : String(selectedTenant.property.price);
+                    setPaymentForm({
+                      amount: prefillAmount,
+                      paymentDate: new Date().toISOString().split("T")[0],
+                      paymentMethod: "Cash",
+                      referenceNo: "",
+                      notes: "",
+                    });
                     setPaymentModalOpen(true);
                   }}
                 >
@@ -925,9 +934,29 @@ const ManageTenants = () => {
 
             <div className="space-y-4 px-6 py-5">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Amount ({selectedTenant.property.currency}) *
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Amount ({selectedTenant.property.currency}) *
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {selectedTenant.balanceDue > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentForm((p) => ({ ...p, amount: String(selectedTenant.balanceDue) }))}
+                        className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                      >
+                        Balance: {formatCurrency(selectedTenant.balanceDue, selectedTenant.property.currency)}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentForm((p) => ({ ...p, amount: String(selectedTenant.property.price) }))}
+                      className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                    >
+                      Rent: {formatCurrency(selectedTenant.property.price, selectedTenant.property.currency)}
+                    </button>
+                  </div>
+                </div>
                 <MoneyInput placeholder="e.g. 350,000" value={paymentForm.amount}
                   onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} />
               </div>
