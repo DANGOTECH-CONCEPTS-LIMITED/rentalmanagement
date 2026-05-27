@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
+import { useBranding } from "@/context/BrandingContext";
 
 interface Tenant {
   id: number;
@@ -70,6 +71,7 @@ interface Props {
 
 const TenantStatementModal = ({ tenant, onClose }: Props) => {
   const { toast } = useToast();
+  const { branding } = useBranding();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -208,141 +210,198 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
   const closingBalance = ledger.length > 0 ? ledger[ledger.length - 1].balance : 0;
 
   const handlePrint = () => {
-    const content = printRef.current;
-    if (!content) return;
-    const printWin = window.open("", "_blank", "width=900,height=700");
+    const printWin = window.open("", "_blank", "width=960,height=800");
     if (!printWin) return;
-    printWin.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Tenant Statement — ${tenant.fullName}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; font-size: 12px; color: #1e293b; padding: 32px; }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 2px solid #1D4ED8; padding-bottom: 16px; }
-          .company { font-size: 20px; font-weight: 700; color: #1D4ED8; }
-          .company-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-          .print-date { font-size: 10px; color: #64748b; text-align: right; }
-          .info-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-          .info-block label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; display: block; margin-bottom: 2px; }
-          .info-block span { font-size: 12px; font-weight: 600; color: #0f172a; }
-          .period { font-size: 11px; color: #64748b; margin-bottom: 16px; }
-          .summary { display: flex; gap: 12px; margin-bottom: 20px; }
-          .summary-box { flex: 1; padding: 10px 14px; border-radius: 8px; }
-          .summary-box.invoiced { background: #fef9f0; border: 1px solid #fcd34d; }
-          .summary-box.paid { background: #f0fdf4; border: 1px solid #86efac; }
-          .summary-box.balance { background: #eff6ff; border: 1px solid #93c5fd; }
-          .summary-box label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; display: block; margin-bottom: 3px; }
-          .summary-box span { font-size: 14px; font-weight: 700; }
-          .summary-box.invoiced span { color: #d97706; }
-          .summary-box.paid span { color: #059669; }
-          .summary-box.balance span { color: #1d4ed8; }
-          table { width: 100%; border-collapse: collapse; font-size: 11px; }
-          th { background: #1e293b; color: white; padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-          th.right, td.right { text-align: right; }
-          td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
-          tr:nth-child(even) td { background: #f8fafc; }
-          tr.invoice-row td { background: #fefce8; }
-          tr.payment-row td { background: #f0fdf4; }
-          .type-badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
-          .type-invoice { background: #fef9c3; color: #a16207; }
-          .type-payment { background: #dcfce7; color: #15803d; }
-          .status-badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 600; }
-          .s-paid, .s-successful, .s-completed { background: #dcfce7; color: #15803d; }
-          .s-pending { background: #fef9c3; color: #a16207; }
-          .s-overdue, .s-failed { background: #fee2e2; color: #dc2626; }
-          .balance-positive { color: #dc2626; font-weight: 700; }
-          .balance-zero { color: #059669; font-weight: 700; }
-          tfoot td { font-weight: 700; background: #1e293b !important; color: white; padding: 8px 10px; }
-          .footer { margin-top: 24px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <div class="company">Property Management</div>
-            <div class="company-sub">Tenant Account Statement</div>
-          </div>
-          <div class="print-date">Printed on: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</div>
-        </div>
+    const companyName = branding.companyName || "Property Management";
+    const logoHtml = branding.logoDataUrl
+      ? `<img src="${branding.logoDataUrl}" alt="logo" style="height:52px;width:52px;object-fit:contain;border-radius:10px;" />`
+      : `<div style="height:52px;width:52px;background:#1D4ED8;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:white;">${companyName.charAt(0).toUpperCase()}</div>`;
+    const balanceColor = closingBalance > 0 ? "#dc2626" : "#059669";
+    printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Tenant Statement — ${tenant.fullName}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',Arial,sans-serif; font-size:12px; color:#1e293b; background:#fff; }
+    .page { padding:36px 40px; max-width:860px; margin:0 auto; }
 
-        <div class="info-section">
-          <div>
-            <div class="info-block"><label>Tenant Name</label><span>${tenant.fullName}</span></div>
-          </div>
-          <div>
-            <div class="info-block"><label>Account No.</label><span>TEN-${String(tenant.id).padStart(6, "0")}</span></div>
-          </div>
-          <div>
-            <div class="info-block"><label>Property</label><span>${tenant.property.name}</span></div>
-          </div>
-          <div>
-            <div class="info-block"><label>Unit</label><span>${tenant.unit?.unitNumber ?? "—"}</span></div>
-          </div>
-          <div>
-            <div class="info-block"><label>Phone</label><span>${tenant.phoneNumber}</span></div>
-          </div>
-          <div>
-            <div class="info-block"><label>Move-in Date</label><span>${fmtDate(tenant.dateMovedIn)}</span></div>
-          </div>
-        </div>
+    /* ── Top header bar ── */
+    .header-bar {
+      background: linear-gradient(135deg,#0f172a 0%,#1D4ED8 100%);
+      border-radius:14px;
+      padding:22px 28px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:22px;
+    }
+    .header-left { display:flex; align-items:center; gap:16px; }
+    .header-text .doc-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#93c5fd; margin-bottom:3px; }
+    .header-text .company-name { font-size:22px; font-weight:800; color:#fff; line-height:1.1; }
+    .header-text .doc-sub { font-size:11px; color:#bfdbfe; margin-top:2px; }
+    .header-right { text-align:right; }
+    .header-right .print-date { font-size:10px; color:#bfdbfe; }
+    .header-right .period-val { font-size:11px; color:#e0f2fe; margin-top:4px; font-weight:600; }
 
-        <div class="period">Statement Period: <strong>${fmtDate(from)}</strong> to <strong>${fmtDate(to)}</strong></div>
+    /* ── Tenant info card ── */
+    .info-card {
+      border:1px solid #e2e8f0; border-radius:12px;
+      background:#f8fafc; padding:16px 20px;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:14px;
+      margin-bottom:18px;
+    }
+    .info-block label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#94a3b8; display:block; margin-bottom:3px; }
+    .info-block span { font-size:12px; font-weight:600; color:#0f172a; }
 
-        <div class="summary">
-          <div class="summary-box invoiced"><label>Total Invoiced</label><span>UGX ${fmt(totalDebits)}</span></div>
-          <div class="summary-box paid"><label>Total Paid</label><span>UGX ${fmt(totalCredits)}</span></div>
-          <div class="summary-box balance"><label>Closing Balance</label><span>UGX ${fmt(Math.abs(closingBalance))}</span></div>
-        </div>
+    /* ── Summary KPIs ── */
+    .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+    .kpi { border-radius:10px; padding:12px 16px; }
+    .kpi.invoiced { background:#fffbeb; border:1.5px solid #fcd34d; }
+    .kpi.paid     { background:#f0fdf4; border:1.5px solid #86efac; }
+    .kpi.balance  { background:${closingBalance > 0 ? "#fef2f2" : "#eff6ff"}; border:1.5px solid ${closingBalance > 0 ? "#fca5a5" : "#93c5fd"}; }
+    .kpi label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:5px; }
+    .kpi.invoiced label { color:#d97706; }
+    .kpi.paid     label { color:#059669; }
+    .kpi.balance  label { color:${balanceColor}; }
+    .kpi span { font-size:16px; font-weight:800; }
+    .kpi.invoiced span { color:#d97706; }
+    .kpi.paid     span { color:#059669; }
+    .kpi.balance  span { color:${balanceColor}; }
 
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Transaction Type</th>
-              <th>Description</th>
-              <th class="right">Debit (UGX)</th>
-              <th class="right">Credit (UGX)</th>
-              <th class="right">Balance (UGX)</th>
-              <th>Reference</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ledger.map((r) => `
-              <tr class="${r.type === "Invoice" ? "invoice-row" : "payment-row"}">
-                <td>${fmtDate(r.date)}</td>
-                <td><span class="type-badge type-${r.type.toLowerCase()}">${r.type}</span></td>
-                <td>${r.description}</td>
-                <td class="right">${r.debit > 0 ? fmt(r.debit) : "—"}</td>
-                <td class="right">${r.credit > 0 ? fmt(r.credit) : "—"}</td>
-                <td class="right ${r.balance > 0 ? "balance-positive" : "balance-zero"}">${fmt(Math.abs(r.balance))}</td>
-                <td>${r.reference}</td>
-                <td><span class="status-badge s-${r.status?.toLowerCase().replace(" ", "-")}">${r.status}</span></td>
-              </tr>
-            `).join("")}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="3">TOTALS — ${ledger.length} transaction(s)</td>
-              <td class="right">UGX ${fmt(totalDebits)}</td>
-              <td class="right">UGX ${fmt(totalCredits)}</td>
-              <td class="right">UGX ${fmt(Math.abs(closingBalance))}</td>
-              <td colspan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
+    /* ── Table ── */
+    table { width:100%; border-collapse:collapse; font-size:11px; border-radius:10px; overflow:hidden; }
+    thead tr { background:#1e293b; }
+    th { padding:9px 11px; text-align:left; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#e2e8f0; }
+    th.r, td.r { text-align:right; }
+    tbody tr.inv { background:#fefce8; }
+    tbody tr.pay { background:#f0fdf4; }
+    tbody tr:hover { filter:brightness(.97); }
+    td { padding:8px 11px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+    .b-inv { background:#fef9c3; color:#a16207; }
+    .b-pay { background:#dcfce7; color:#15803d; }
+    .s-paid,.s-successful,.s-completed { background:#dcfce7; color:#15803d; }
+    .s-partial  { background:#dbeafe; color:#1d4ed8; }
+    .s-pending  { background:#fef9c3; color:#a16207; }
+    .s-settled  { background:#f0fdf4; color:#059669; }
+    .s-overdue,.s-failed { background:#fee2e2; color:#dc2626; }
+    .bal-pos { color:#dc2626; font-weight:700; }
+    .bal-neg { color:#059669; font-weight:700; }
+    tfoot tr { background:#1e293b; }
+    tfoot td { padding:9px 11px; font-weight:700; color:#fff; font-size:11px; border:none; }
 
-        <div class="footer">
-          This is a computer-generated statement. Total records: ${ledger.length}
-        </div>
-      </body>
-      </html>
-    `);
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top:24px; padding-top:14px;
+      border-top:1px solid #e2e8f0;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .doc-footer .left { font-size:10px; color:#94a3b8; }
+    .doc-footer .right { font-size:10px; color:#94a3b8; text-align:right; }
+    .doc-footer .stamp {
+      font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+      color:#1D4ED8; border:1.5px solid #1D4ED8; border-radius:6px;
+      padding:3px 10px; display:inline-block; margin-top:4px;
+    }
+
+    @media print {
+      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .page { padding:20px 24px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header-bar">
+    <div class="header-left">
+      ${logoHtml}
+      <div class="header-text">
+        <div class="doc-label">Tenant Account Statement</div>
+        <div class="company-name">${companyName}</div>
+        <div class="doc-sub">TEN-${String(tenant.id).padStart(6, "0")} &nbsp;·&nbsp; ${tenant.property.name}${tenant.unit?.unitNumber ? ` · Unit ${tenant.unit.unitNumber}` : ""}</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="print-date">Printed on: ${new Date().toLocaleDateString("en-GB", { day:"2-digit", month:"long", year:"numeric" })}</div>
+      <div class="period-val">${fmtDate(from)} — ${fmtDate(to)}</div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-block"><label>Tenant Name</label><span>${tenant.fullName}</span></div>
+    <div class="info-block"><label>Account No.</label><span>TEN-${String(tenant.id).padStart(6, "0")}</span></div>
+    <div class="info-block"><label>Phone</label><span>${tenant.phoneNumber}</span></div>
+    <div class="info-block"><label>Property</label><span>${tenant.property.name}</span></div>
+    <div class="info-block"><label>Unit</label><span>${tenant.unit?.unitNumber ?? "—"}</span></div>
+    <div class="info-block"><label>Move-in Date</label><span>${fmtDate(tenant.dateMovedIn)}</span></div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi invoiced"><label>Total Invoiced</label><span>UGX ${fmt(totalDebits)}</span></div>
+    <div class="kpi paid"><label>Total Paid</label><span>UGX ${fmt(totalCredits)}</span></div>
+    <div class="kpi balance"><label>${closingBalance > 0 ? "Outstanding Balance" : "Closing Balance"}</label><span>UGX ${fmt(Math.abs(closingBalance))}</span></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th class="r">Debit (UGX)</th>
+        <th class="r">Credit (UGX)</th>
+        <th class="r">Balance (UGX)</th>
+        <th>Reference</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${ledger.map((r) => {
+        const sc = r.status?.toLowerCase().replace(/\s+/g, "-") ?? "";
+        return `
+        <tr class="${r.type === "Invoice" ? "inv" : "pay"}">
+          <td style="white-space:nowrap">${fmtDate(r.date)}</td>
+          <td><span class="badge ${r.type === "Invoice" ? "b-inv" : "b-pay"}">${r.type}</span></td>
+          <td>${r.description}</td>
+          <td class="r" style="color:#dc2626;font-weight:600">${r.debit > 0 ? fmt(r.debit) : '<span style="color:#cbd5e1">—</span>'}</td>
+          <td class="r" style="color:#059669;font-weight:600">${r.credit > 0 ? fmt(r.credit) : '<span style="color:#cbd5e1">—</span>'}</td>
+          <td class="r ${r.balance > 0 ? "bal-pos" : "bal-neg"}">${fmt(Math.abs(r.balance))}</td>
+          <td style="font-family:monospace;font-size:10px">${r.reference}</td>
+          <td><span class="badge s-${sc}">${r.status}</span></td>
+        </tr>`;
+      }).join("")}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3">TOTALS — ${ledger.length} transaction(s)</td>
+        <td class="r" style="color:#fca5a5">UGX ${fmt(totalDebits)}</td>
+        <td class="r" style="color:#86efac">UGX ${fmt(totalCredits)}</td>
+        <td class="r" style="color:${closingBalance > 0 ? "#fca5a5" : "#86efac"}">UGX ${fmt(Math.abs(closingBalance))}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="doc-footer">
+    <div class="left">
+      This is a computer-generated statement. &nbsp;|&nbsp; Total records: <strong>${ledger.length}</strong><br/>
+      <span style="color:#1D4ED8;font-weight:600">${companyName}</span>
+    </div>
+    <div class="right">
+      <div class="stamp">Official Document</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>`);
     printWin.document.close();
     printWin.focus();
-    setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+    setTimeout(() => { printWin.print(); printWin.close(); }, 400);
   };
 
   return (
