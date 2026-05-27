@@ -73,11 +73,12 @@ namespace API.Controllers.Accounts
             var toDate = to?.Date ?? new DateTime(DateTime.UtcNow.Year, 12, 31);
             var toDateEnd = toDate.AddDays(1).AddTicks(-1);
 
-            // Income: paid invoices created by this landlord (matches InvoiceManagement page logic)
+            // Income: paid invoices on properties owned by this landlord (same join as GetInvoicesByLandlordId)
             var paidInvoices = await _db.TenantInvoices
                 .AsNoTracking()
-                .Where(i => i.CreatedByUserId == landlordId
-                         && i.Status.ToLower() == "paid"
+                .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
+                    i => i.PropertyId, p => p.Id, (i, p) => i)
+                .Where(i => i.Status.ToLower() == "paid"
                          && i.InvoiceDate >= fromDate && i.InvoiceDate <= toDateEnd)
                 .Select(i => new { i.InvoiceDate, i.Amount })
                 .ToListAsync();
@@ -153,11 +154,12 @@ namespace API.Controllers.Accounts
             var revenueExpected = (decimal)contracts.Sum(c => c.RentAmount);
             var securityDeposits = (decimal)contracts.Sum(c => c.SecurityDeposit);
 
-            // Collected: paid invoices this month created by this landlord (same source as InvoiceManagement page)
+            // Collected: paid invoices this month on this landlord's properties (same join as GetInvoicesByLandlordId)
             var collected = await _db.TenantInvoices
                 .AsNoTracking()
-                .Where(i => i.CreatedByUserId == landlordId
-                         && i.Status.ToLower() == "paid"
+                .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
+                    i => i.PropertyId, p => p.Id, (i, p) => i)
+                .Where(i => i.Status.ToLower() == "paid"
                          && i.InvoiceDate >= monthStart && i.InvoiceDate <= monthEnd)
                 .SumAsync(i => (decimal)i.Amount);
 
