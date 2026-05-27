@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, Edit, Trash2, Eye, Filter, Download, FilePlus,
-  X, Calendar, User, Home, DollarSign, AlertTriangle,
-  CheckCircle2, Clock, XCircle, Loader2, RefreshCw, Phone, CreditCard, ScrollText,
+  X, Calendar, User, Home, AlertTriangle,
+  CheckCircle2, Clock, XCircle, Loader2, RefreshCw, Phone, ScrollText, Sparkles,
 } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/data-table';
 import { useToast } from '@/hooks/use-toast';
@@ -136,20 +136,6 @@ const KpiCard = ({ label, value, icon: Icon, iconBg, iconColor, accent }: {
   </div>
 );
 
-// ── Detail row ────────────────────────────────────────────────────────────────
-const DetailRow = ({ icon: Icon, label, value }: {
-  icon: React.ElementType; label: string; value: React.ReactNode;
-}) => (
-  <div className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-0">
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-      <Icon className="h-3.5 w-3.5 text-slate-500" />
-    </div>
-    <div className="min-w-0 flex-1">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-      <div className="mt-0.5 text-sm font-medium text-[#0F172A]">{value}</div>
-    </div>
-  </div>
-);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtDate = (d: string) => {
@@ -162,6 +148,46 @@ const fmtPeriod = (startDate: string, endDate: string) => {
   const isOpen = !endDate || endDate.startsWith('0001') || endDate === '';
   return isOpen ? `${start} → Open-ended` : `${start} → ${fmtDate(endDate)}`;
 };
+
+// ── Standard T&C template ─────────────────────────────────────────────────────
+const TERMS_TEMPLATE = `1. RENT PAYMENT
+Rent is due on the 1st day of each month. A grace period of 5 days is allowed. Rent not received by the 6th of the month will attract a late payment fee of 5% of the monthly rent amount.
+
+2. SECURITY DEPOSIT
+The security deposit will be held by the Landlord for the duration of the tenancy. It will be refunded within 14 days of the end of the tenancy, less any deductions for unpaid rent, damages beyond normal wear and tear, or cleaning costs.
+
+3. UTILITIES & SERVICES
+The Tenant is responsible for payment of all utility bills (electricity, water, internet) unless otherwise agreed in writing. Meter readings will be taken at the start and end of the tenancy.
+
+4. USE OF PREMISES
+The Tenant shall use the premises solely as a private residential dwelling. The Tenant shall not carry out any business, trade, or commercial activity from the premises without prior written consent from the Landlord.
+
+5. MAINTENANCE & REPAIRS
+The Tenant agrees to keep the premises clean and in good condition. Minor repairs under UGX 50,000 are the Tenant's responsibility. The Landlord is responsible for structural repairs and major systems (plumbing, electrical, roofing). The Tenant must report any damage or required repairs to the Landlord within 48 hours of discovery.
+
+6. ALTERATIONS
+The Tenant shall not make any alterations, additions, or improvements to the premises without prior written approval from the Landlord. Any approved alterations become the property of the Landlord unless otherwise agreed.
+
+7. SUBLETTING
+The Tenant shall not sublet, assign, or otherwise transfer any interest in the premises without the prior written consent of the Landlord.
+
+8. PETS & ANIMALS
+No pets or animals are permitted on the premises without prior written consent from the Landlord. Consent may be withdrawn if a pet causes damage or nuisance.
+
+9. NOISE & NUISANCE
+The Tenant agrees not to cause any nuisance or disturbance to neighbouring occupants. Quiet hours are observed between 10:00 PM and 7:00 AM.
+
+10. ACCESS BY LANDLORD
+The Landlord reserves the right to enter the premises for inspection or repairs with at least 24 hours' written notice, except in cases of emergency where immediate access is required.
+
+11. TERMINATION NOTICE
+Either party may terminate this agreement by giving 30 days' written notice. The Tenant must surrender the premises in the same condition as received, subject to normal wear and tear.
+
+12. BREACH OF AGREEMENT
+If the Tenant breaches any term of this agreement and fails to remedy the breach within 7 days of written notice, the Landlord reserves the right to terminate the tenancy and recover possession of the premises.
+
+13. GOVERNING LAW
+This agreement shall be governed by and construed in accordance with the laws of Uganda. Any disputes shall be resolved through mediation before referral to the courts.`;
 
 // ── Contract form fields (module-level so React never remounts it) ────────────
 const ContractFields = ({
@@ -386,14 +412,28 @@ const ContractFields = ({
         </div>
       </div>
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Terms &amp; Conditions</label>
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Terms &amp; Conditions</label>
+          <button
+            type="button"
+            onClick={() => setForm(f => ({ ...f, terms: TERMS_TEMPLATE }))}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1D4ED8]/30 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-[#1D4ED8] hover:bg-blue-100 transition-colors"
+          >
+            <Sparkles className="h-3 w-3" /> Use Template
+          </button>
+        </div>
         <textarea
-          rows={4}
-          className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 resize-none"
+          rows={8}
+          className="w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 resize-y font-mono leading-relaxed"
           value={form.terms}
           onChange={e => setForm(f => ({ ...f, terms: e.target.value }))}
-          placeholder="Describe the rental terms, utilities, pet policy, etc."
+          placeholder="Describe the rental terms, utilities, pet policy, etc. — or click 'Use Template' above."
         />
+        {form.terms && (
+          <p className="text-[11px] text-slate-400">
+            {form.terms.length} characters · You can edit the template to customise it for this tenant.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -629,7 +669,8 @@ const RentalContracts = () => {
     doc.setTextColor(148, 163, 184);
     doc.text(`Contract:  ${c.contractNumber}`, pageW - margin, 28, { align: 'right' });
     doc.text(`Issued:      ${fmtDate(c.createdAt)}`, pageW - margin, 34, { align: 'right' });
-    doc.text(`Period:     ${fmtPeriod(c.startDate, c.endDate)}`, pageW - margin, 40, { align: 'right' });
+    const pdfPeriod = fmtPeriod(c.startDate, c.endDate).replace(' → ', ' - ');
+    doc.text(`Period:  ${pdfPeriod}`, pageW - margin, 40, { align: 'right' });
 
     // Status badge
     const sActive  = c.status?.toLowerCase() === 'active';
@@ -822,19 +863,15 @@ const RentalContracts = () => {
     if (c.terms) {
       checkNewPage(30);
       sectionBar('05  TERMS & CONDITIONS');
-      doc.setFillColor(248, 250, 252);
       const termsLines = doc.splitTextToSize(c.terms, cW - 10);
-      const termsH = termsLines.length * 5.5 + 8;
-      card(margin, y, cW, Math.min(termsH, pageH - y - 20));
-      let ty = y + 7;
       doc.setTextColor(51, 65, 85);
       doc.setFontSize(8.5);
       doc.setFont('helvetica', 'normal');
+      y += 4;
       termsLines.forEach((line: string) => {
         checkNewPage(8);
-        doc.text(line, margin + 5, ty);
-        ty += 5.5;
-        y = ty;
+        doc.text(line, margin + 5, y);
+        y += 5.5;
       });
       y += 10;
     }
@@ -1166,58 +1203,141 @@ const RentalContracts = () => {
 
       {/* ── View Modal ── */}
       <AnimatePresence>
-        {viewContract && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-            >
-              <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Contract Details</p>
-                    <h2 className="mt-0.5 text-xl font-bold">{viewContract.contractNumber}</h2>
+        {viewContract && (() => {
+          const s = viewContract.status?.toLowerCase();
+          const isActive  = s === 'active';
+          const isPending = s === 'pending';
+          const isExpired = s === 'expired' || s === 'terminated';
+          const headerGrad = isActive  ? 'from-emerald-700 to-emerald-500'
+                           : isPending ? 'from-amber-600 to-amber-400'
+                           : isExpired ? 'from-red-700 to-red-500'
+                           :             'from-slate-700 to-slate-500';
+          const accentColor = isActive  ? 'text-emerald-200'
+                            : isPending ? 'text-amber-100'
+                            : isExpired ? 'text-red-200'
+                            :             'text-slate-300';
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]"
+              >
+                {/* ── Gradient header ── */}
+                <div className={`bg-gradient-to-br ${headerGrad} shrink-0 px-6 pt-5 pb-8 text-white`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest ${accentColor}`}>Contract Details</p>
+                      <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{viewContract.contractNumber}</h2>
+                      <p className={`mt-0.5 text-sm font-medium ${accentColor}`}>{viewContract.propertyName}{viewContract.unitName ? ` — ${viewContract.unitName}` : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={viewContract.status} />
+                      <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 transition-colors" onClick={() => setViewContract(null)}>
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" onClick={() => setViewContract(null)}>
-                    <X className="h-4 w-4" />
+                  <div className="mt-4">
+                    <p className={`text-[10px] font-semibold uppercase tracking-widest ${accentColor}`}>Monthly Rent</p>
+                    <p className="text-3xl font-extrabold mt-0.5">{viewContract.currency} {viewContract.rentAmount.toLocaleString()}<span className={`text-base font-medium ${accentColor} ml-1`}>/mo</span></p>
+                  </div>
+                </div>
+
+                {/* ── Tenant card pulled up ── */}
+                <div className="mx-5 -mt-4 shrink-0 rounded-xl bg-white border border-slate-200 shadow-md px-4 py-3 flex items-center gap-3 z-10">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                    <User className="h-4 w-4 text-[#1D4ED8]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tenant</p>
+                    <p className="text-sm font-bold text-[#0F172A] truncate">{viewContract.tenantName}</p>
+                  </div>
+                  {viewContract.tenantPhone && (
+                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5">
+                      <Phone className="h-3 w-3 text-slate-500" />
+                      <span className="text-xs font-semibold text-slate-600">{viewContract.tenantPhone}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Scrollable body ── */}
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+
+                  {/* Period + financials grid */}
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Contract Period</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">{fmtPeriod(viewContract.startDate, viewContract.endDate)}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Rent</p>
+                      <p className="mt-1 text-base font-bold text-[#0F172A]">{viewContract.currency} {viewContract.rentAmount.toLocaleString()}</p>
+                      <p className="text-[10px] text-slate-400">per month</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Security Deposit</p>
+                      <p className="mt-1 text-base font-bold text-[#0F172A]">{viewContract.currency} {viewContract.securityDeposit.toLocaleString()}</p>
+                      <p className="text-[10px] text-slate-400">refundable</p>
+                    </div>
+                  </div>
+
+                  {/* Terms */}
+                  {viewContract.terms && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <ScrollText className="h-3.5 w-3.5 text-slate-400" />
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Terms & Conditions</p>
+                      </div>
+                      <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                        {viewContract.terms.split(/\n{2,}/).map((block, i) => {
+                          const lines = block.trim().split('\n');
+                          const isHeading = /^\d+\.\s+[A-Z]/.test(lines[0]);
+                          if (isHeading) {
+                            return (
+                              <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-[#1D4ED8] mb-1">{lines[0]}</p>
+                                {lines.slice(1).map((l, j) => l.trim() && (
+                                  <p key={j} className="text-xs text-slate-600 leading-relaxed">{l}</p>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return <p key={i} className="text-xs text-slate-600 leading-relaxed">{block.trim()}</p>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Footer ── */}
+                <div className="flex items-center gap-2 shrink-0 border-t border-slate-100 px-5 py-4">
+                  <button className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setViewContract(null)}>
+                    Close
+                  </button>
+                  <button
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-[#1D4ED8] py-2.5 text-sm font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
+                    onClick={() => { downloadContractPDF(viewContract, branding); setViewContract(null); }}
+                  >
+                    <Download className="h-3.5 w-3.5" /> Download
+                  </button>
+                  <button
+                    className="flex-1 btn-grid inline-flex items-center justify-center gap-2 rounded-xl bg-[#1D4ED8] py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
+                    onClick={() => { setViewContract(null); openEdit(viewContract); }}
+                  >
+                    <Edit className="h-3.5 w-3.5" /> Edit
                   </button>
                 </div>
-                <div className="mt-3"><StatusBadge status={viewContract.status} /></div>
-              </div>
-              <div className="flex-1 overflow-y-auto px-6 py-4">
-                <DetailRow icon={User}        label="Tenant"          value={viewContract.tenantName} />
-                <DetailRow icon={Phone}       label="Phone"           value={viewContract.tenantPhone || '—'} />
-                <DetailRow icon={Home}        label="Property / Unit" value={`${viewContract.propertyName}${viewContract.unitName ? ` — ${viewContract.unitName}` : ''}`} />
-                <DetailRow icon={Calendar}    label="Contract Period"  value={fmtPeriod(viewContract.startDate, viewContract.endDate)} />
-                <DetailRow icon={DollarSign}  label="Monthly Rent"    value={`${viewContract.currency} ${viewContract.rentAmount.toLocaleString()}/mo`} />
-                <DetailRow icon={CreditCard}  label="Security Deposit" value={`${viewContract.currency} ${viewContract.securityDeposit.toLocaleString()}`} />
-                {viewContract.terms && (
-                  <DetailRow icon={ScrollText} label="Terms" value={<span className="whitespace-pre-wrap text-xs leading-relaxed">{viewContract.terms}</span>} />
-                )}
-              </div>
-              <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-                <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors" onClick={() => setViewContract(null)}>
-                  Close
-                </button>
-                <button
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#1D4ED8] px-4 py-2 text-sm font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
-                  onClick={() => { downloadContractPDF(viewContract, branding); setViewContract(null); }}
-                >
-                  <Download className="h-3.5 w-3.5" /> Download PDF
-                </button>
-                <button
-                  className="btn-grid inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
-                  onClick={() => { setViewContract(null); openEdit(viewContract); }}
-                >
-                  <Edit className="h-3.5 w-3.5" /> Edit Contract
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* ── Edit Modal ── */}

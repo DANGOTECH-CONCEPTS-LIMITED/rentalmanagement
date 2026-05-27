@@ -111,13 +111,11 @@ namespace Infrastructure.Services.Tenant
 
         public async Task<IEnumerable<TenantInvoice>> GetInvoicesByLandlordIdAsync(int landlordId)
         {
-            // Join invoices -> tenant -> property to ensure invoices returned belong to landlord-owned properties
             return await _db.TenantInvoices
                 .AsNoTracking()
-                .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
-                    i => i.PropertyId,
-                    p => p.Id,
-                    (i, p) => i)
+                .Include(i => i.Tenant)
+                .Include(i => i.Property)
+                .Where(i => i.Property != null && i.Property.OwnerId == landlordId)
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
         }

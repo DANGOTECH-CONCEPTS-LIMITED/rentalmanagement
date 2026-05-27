@@ -4,7 +4,7 @@ import jsPDF from 'jspdf';
 import { useBranding } from '@/context/BrandingContext';
 import {
   FileText, CheckCircle2, Clock, XCircle, Eye, Download,
-  X, Calendar, Home, DollarSign, CreditCard, ScrollText,
+  X, Calendar, Home, ScrollText,
   PenLine, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/data-table';
@@ -77,20 +77,6 @@ const KpiCard = ({ label, value, icon: Icon, iconBg, iconColor, accent }: {
   </div>
 );
 
-// ── Detail row ────────────────────────────────────────────────────────────────
-const DetailRow = ({ icon: Icon, label, value }: {
-  icon: React.ElementType; label: string; value: React.ReactNode;
-}) => (
-  <div className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-0">
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-      <Icon className="h-3.5 w-3.5 text-slate-500" />
-    </div>
-    <div className="min-w-0 flex-1">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-      <div className="mt-0.5 text-sm font-medium text-[#0F172A]">{value}</div>
-    </div>
-  </div>
-);
 
 // ── PDF download (jsPDF — matches landlord design) ────────────────────────────
 const downloadContractPdf = (c: Contract, branding: { companyName?: string; logoDataUrl?: string } = {}) => {
@@ -160,7 +146,7 @@ const downloadContractPdf = (c: Contract, branding: { companyName?: string; logo
   doc.setTextColor(148, 163, 184);
   doc.text(`Contract:  ${c.contractNumber}`, pageW - margin, 30, { align: 'right' });
   doc.text(`Issued:      ${fmtDate(c.createdAt)}`, pageW - margin, 36, { align: 'right' });
-  doc.text(`Period:     ${fmtDate(c.startDate)} → ${isOpen ? 'Open-ended' : fmtDate(c.endDate)}`, pageW - margin, 42, { align: 'right' });
+  doc.text(`Period:  ${fmtDate(c.startDate)} - ${isOpen ? 'Open-ended' : fmtDate(c.endDate)}`, pageW - margin, 42, { align: 'right' });
 
   const sActive = c.status?.toLowerCase() === 'active';
   const sExpired = ['expired', 'terminated'].includes(c.status?.toLowerCase());
@@ -284,10 +270,9 @@ const downloadContractPdf = (c: Contract, branding: { companyName?: string; logo
     checkNewPage(30);
     sectionBar('05  TERMS & CONDITIONS');
     const termLines = doc.splitTextToSize(c.terms, cW - 10);
-    card(margin, y, cW, Math.min(termLines.length * 5.5 + 8, pageH - y - 20));
-    let ty = y + 7;
     doc.setTextColor(51, 65, 85); doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
-    termLines.forEach((line: string) => { checkNewPage(8); doc.text(line, margin + 5, ty); ty += 5.5; y = ty; });
+    y += 4;
+    termLines.forEach((line: string) => { checkNewPage(8); doc.text(line, margin + 5, y); y += 5.5; });
     y += 10;
   }
 
@@ -410,7 +395,7 @@ const TenantContracts = () => {
     },
     {
       key: 'rentAmount',
-      header: 'Rent/mo',
+      header: 'Rent Per Room/mo',
       headerClassName: 'text-right',
       className: 'text-right',
       cell: (c) => (
@@ -510,64 +495,128 @@ const TenantContracts = () => {
       />
 
       {/* ── View modal ── */}
-      {viewContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Contract Details</p>
-                  <h2 className="mt-0.5 text-xl font-bold">{viewContract.contractNumber}</h2>
-                  <div className="mt-2"><StatusBadge status={viewContract.status} /></div>
+      {viewContract && (() => {
+        const s = viewContract.status?.toLowerCase();
+        const isActive  = s === 'active';
+        const isPending = s === 'pending';
+        const isExpired = s === 'expired' || s === 'terminated';
+        const headerGrad = isActive  ? 'from-emerald-700 to-emerald-500'
+                         : isPending ? 'from-amber-600 to-amber-400'
+                         : isExpired ? 'from-red-700 to-red-500'
+                         :             'from-slate-700 to-slate-500';
+        const accentColor = isActive  ? 'text-emerald-200'
+                          : isPending ? 'text-amber-100'
+                          : isExpired ? 'text-red-200'
+                          :             'text-slate-300';
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[90vh]">
+
+              {/* ── Gradient header ── */}
+              <div className={`bg-gradient-to-br ${headerGrad} px-6 pt-5 pb-8 text-white relative`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest ${accentColor}`}>Contract Details</p>
+                    <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{viewContract.contractNumber}</h2>
+                    <p className={`mt-0.5 text-sm font-medium ${accentColor}`}>{viewContract.propertyName}{viewContract.unitName ? ` — ${viewContract.unitName}` : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={viewContract.status} />
+                    <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 transition-colors" onClick={() => setViewContract(null)}>
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
+                {/* Big rent amount */}
+                <div className="mt-4">
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest ${accentColor}`}>Monthly Rent</p>
+                  <p className="text-3xl font-extrabold mt-0.5">{viewContract.currency} {fmt(viewContract.rentAmount)}<span className={`text-base font-medium ${accentColor} ml-1`}>/mo</span></p>
+                </div>
+              </div>
+
+              {/* ── Property + period card pulled up ── */}
+              <div className="mx-5 -mt-4 rounded-xl bg-white border border-slate-200 shadow-md px-4 py-3 flex items-center gap-3 z-10">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                  <Home className="h-4 w-4 text-[#1D4ED8]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Contract Period</p>
+                  <p className="text-sm font-semibold text-[#0F172A] truncate">{fmtDate(viewContract.startDate)} — {fmtDate(viewContract.endDate)}</p>
+                </div>
+              </div>
+
+              {/* ── Scrollable body ── */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+
+                {/* 2-col financial grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Rent</p>
+                    <p className="mt-1 text-base font-bold text-[#0F172A]">{viewContract.currency} {fmt(viewContract.rentAmount)}</p>
+                    <p className="text-[10px] text-slate-400">per month</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Security Deposit</p>
+                    <p className="mt-1 text-base font-bold text-[#0F172A]">{viewContract.currency} {fmt(viewContract.securityDeposit)}</p>
+                    <p className="text-[10px] text-slate-400">refundable</p>
+                  </div>
+                </div>
+
+                {/* Terms */}
+                {viewContract.terms && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <ScrollText className="h-3.5 w-3.5 text-slate-400" />
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Terms & Conditions</p>
+                    </div>
+                    <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                      {viewContract.terms.split(/\n{2,}/).map((block, i) => {
+                        const lines = block.trim().split('\n');
+                        const isHeading = /^\d+\.\s+[A-Z]/.test(lines[0]);
+                        if (isHeading) {
+                          return (
+                            <div key={i} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wide text-[#1D4ED8] mb-1">{lines[0]}</p>
+                              {lines.slice(1).map((l, j) => l.trim() && (
+                                <p key={j} className="text-xs text-slate-600 leading-relaxed">{l}</p>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return <p key={i} className="text-xs text-slate-600 leading-relaxed">{block.trim()}</p>;
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Footer ── */}
+              <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-4">
                 <button
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                  onClick={() => { downloadContractPdf(viewContract, branding); }}
+                >
+                  <Download className="h-3.5 w-3.5" /> Download
+                </button>
+                {viewContract.status?.toLowerCase() === 'pending' && (
+                  <button
+                    className="flex-1 btn-grid inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                    onClick={() => { setViewContract(null); setConfirmContract(viewContract); }}
+                  >
+                    <PenLine className="h-3.5 w-3.5" /> Sign & Accept
+                  </button>
+                )}
+                <button
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                   onClick={() => setViewContract(null)}
                 >
-                  <X className="h-4 w-4" />
+                  Close
                 </button>
               </div>
             </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <DetailRow icon={Home}       label="Property / Unit" value={`${viewContract.propertyName}${viewContract.unitName ? ` — ${viewContract.unitName}` : ''}`} />
-              <DetailRow icon={Calendar}   label="Contract Period"  value={`${fmtDate(viewContract.startDate)} → ${fmtDate(viewContract.endDate)}`} />
-              <DetailRow icon={DollarSign} label="Monthly Rent"     value={`${viewContract.currency} ${fmt(viewContract.rentAmount)}/mo`} />
-              <DetailRow icon={CreditCard} label="Security Deposit" value={`${viewContract.currency} ${fmt(viewContract.securityDeposit)}`} />
-              {viewContract.terms && (
-                <DetailRow
-                  icon={ScrollText}
-                  label="Terms & Conditions"
-                  value={<span className="whitespace-pre-wrap text-xs leading-relaxed">{viewContract.terms}</span>}
-                />
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-              <button
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                onClick={() => { downloadContractPdf(viewContract, branding); }}
-              >
-                <Download className="h-3.5 w-3.5" /> Download
-              </button>
-              {viewContract.status?.toLowerCase() === 'pending' && (
-                <button
-                  className="btn-grid inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
-                  onClick={() => { setViewContract(null); setConfirmContract(viewContract); }}
-                >
-                  <PenLine className="h-3.5 w-3.5" /> Sign & Accept
-                </button>
-              )}
-              <button
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-                onClick={() => setViewContract(null)}
-              >
-                Close
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Acknowledge / sign confirmation modal ── */}
       {confirmContract && (

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   UserPlus, User, Mail, Phone, Home, Calendar, Key,
   Check, Upload, X, Camera, CreditCard, Loader2, Users,
-  Droplets, Briefcase,
+  Droplets, Briefcase, Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -137,6 +137,7 @@ const RegisterTenants = () => {
     Active: "true",
     UnitId: "",
     WaterMeterNo: "",
+    UmemeMeterNo: "",
     TenantStatus: "active",
     Occupation: "",
     NextOfKinName: "",
@@ -277,6 +278,7 @@ const RegisterTenants = () => {
       form.append("Active", formData.Active);
       if (formData.UnitId) form.append("PropertyUnitId", formData.UnitId);
       form.append("WaterMeterNo", formData.WaterMeterNo);
+      form.append("ElectricityMeterNo", formData.UmemeMeterNo);
       form.append("TenantStatus", formData.TenantStatus);
       form.append("Occupation", formData.Occupation);
       form.append("NextOfKinName", formData.NextOfKinName);
@@ -311,7 +313,7 @@ const RegisterTenants = () => {
         setFormData({
           FullName: "", Name: "", Email: "", PhoneNumber: "", NationalIdNumber: "",
           DateMovedIn: "", PropertyId: "", Password: "", Active: "true", UnitId: "",
-          WaterMeterNo: "", TenantStatus: "active", Occupation: "", NextOfKinName: "", NextOfKinPhone: "",
+          WaterMeterNo: "", UmemeMeterNo: "", TenantStatus: "active", Occupation: "", NextOfKinName: "", NextOfKinPhone: "",
         });
         clearFile("PassportPhoto");
         clearFile("IdFront");
@@ -557,6 +559,20 @@ const RegisterTenants = () => {
                         value={formData.WaterMeterNo}
                         onChange={handleInputChange}
                         placeholder="e.g. WM-00123"
+                        className={`pl-9 ${inputCls}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <FieldLabel>UMEME Meter No.</FieldLabel>
+                    <div className="relative">
+                      <Zap className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-400" />
+                      <Input
+                        name="UmemeMeterNo"
+                        value={formData.UmemeMeterNo}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 04123456"
                         className={`pl-9 ${inputCls}`}
                       />
                     </div>

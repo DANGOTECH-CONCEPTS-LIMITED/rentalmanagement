@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarIcon, XIcon, UploadIcon } from "lucide-react";
+import { CalendarIcon, XIcon, UploadIcon, Zap } from "lucide-react";
 import { format } from "date-fns";
 import {
   Popover,
@@ -144,6 +144,7 @@ const UpdateTenantModal = ({
     formData.append("PhoneNumber", (e.currentTarget as any).phoneNumber.value);
     formData.append("FullName", (e.currentTarget as any).fullName.value);
     formData.append("Email", (e.currentTarget as any).email.value);
+    formData.append("ElectricityMeterNo", (e.currentTarget as any).umemeMeterNo?.value || "");
 
     if (files.passportPhoto) formData.append("files", files.passportPhoto);
     if (files.idFront) formData.append("files", files.idFront);
@@ -224,6 +225,19 @@ const UpdateTenantModal = ({
                   id="nationalIdNumber"
                   defaultValue={tenant.nationalIdNumber}
                   required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="umemeMeterNo" className="flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-amber-400" /> UMEME Meter No.
+                </Label>
+                <Input
+                  id="umemeMeterNo"
+                  defaultValue={(tenant as any).electricityMeterNo || ""}
+                  placeholder="e.g. 04123456"
                 />
               </div>
             </div>
