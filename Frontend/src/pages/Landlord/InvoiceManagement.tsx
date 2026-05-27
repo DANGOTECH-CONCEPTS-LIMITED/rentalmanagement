@@ -266,15 +266,21 @@ const InvoiceManagement = () => {
       toast({ title: "Validation Error", description: "Tenant, property, amount and due date are required.", variant: "destructive" });
       return;
     }
+    // For Manual Payment: require a linked invoice to be selected
+    if (form.type === "Manual Payment" && pendingInvoices.length > 0 && !selectedInvoiceId) {
+      toast({ title: "Select an Invoice", description: "Please select the pending invoice this payment is for.", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
     try {
+      const paymentAmount = Number(form.amount.replace(/,/g, ""));
       const body = {
         Type: form.type,
         Status: form.status,
         TenantId: Number(form.tenantId),
         PropertyId: Number(form.propertyId),
         PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
-        Amount: Number(form.amount.replace(/,/g, "")),
+        Amount: paymentAmount,
         InvoiceDate: new Date(form.invoiceDate).toISOString(),
         DueDate: new Date(form.dueDate).toISOString(),
         Notes: form.notes || null,
@@ -282,10 +288,38 @@ const InvoiceManagement = () => {
         CreatedByName: userData.fullName || "",
       };
       await axios.post(`${apiUrl}/CreateTenantInvoice`, body);
+
       if (selectedInvoiceId) {
+        const linked = pendingInvoices.find((i) => i.id === selectedInvoiceId);
+        const invoiceAmount = linked?.amount ?? 0;
+
+        // Always mark the linked invoice as Paid (it's been addressed)
         await axios.put(`${apiUrl}/UpdateInvoiceStatus/${selectedInvoiceId}`, { Status: "Paid" });
+
+        // Partial payment: create a new Pending invoice for the remaining balance
+        if (paymentAmount < invoiceAmount) {
+          const balance = invoiceAmount - paymentAmount;
+          await axios.post(`${apiUrl}/CreateTenantInvoice`, {
+            Type: linked?.type ?? "Invoice",
+            Status: "Pending",
+            TenantId: Number(form.tenantId),
+            PropertyId: Number(form.propertyId),
+            PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
+            Amount: balance,
+            InvoiceDate: new Date(form.invoiceDate).toISOString(),
+            DueDate: linked?.dueDate ? new Date(linked.dueDate).toISOString() : new Date(form.dueDate).toISOString(),
+            Notes: `Balance of ${formatUGX(balance)} remaining after partial payment of ${formatUGX(paymentAmount)}.`,
+            CreatedByUserId: userData.id,
+            CreatedByName: userData.fullName || "",
+          });
+          toast({ title: "Partial Payment Recorded", description: `Payment of ${formatUGX(paymentAmount)} recorded. A balance invoice of ${formatUGX(balance)} has been created.` });
+        } else {
+          toast({ title: "Payment Recorded", description: "Invoice fully settled." });
+        }
+      } else {
+        toast({ title: "Invoice Created", description: "Invoice created successfully." });
       }
-      toast({ title: "Invoice Created", description: "Invoice created successfully." });
+
       setAddOpen(false);
       fetchInvoices();
     } catch (error: any) {
@@ -783,7 +817,7 @@ const InvoiceManagement = () => {
                   <div className="flex items-center justify-between">
                     <label className="text-xs uppercase tracking-wider text-slate-400 font-medium flex items-center gap-1.5">
                       <Receipt className="h-3.5 w-3.5" />
-                      Pending Invoices
+                      Which invoice is this payment for? *
                     </label>
                     {isLoadingPendingInvoices && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
                   </div>
@@ -805,7 +839,6 @@ const InvoiceManagement = () => {
                               setSelectedInvoiceId(next);
                               setForm((f) => ({
                                 ...f,
-                                amount: next ? Number(inv.amount).toLocaleString("en-US") : "",
                                 status: next ? "Paid" : "Pending",
                               }));
                             }}
@@ -837,12 +870,26 @@ const InvoiceManagement = () => {
                       })}
                     </div>
                   )}
-                  {selectedInvoiceId && (
-                    <p className="text-xs text-emerald-600 flex items-center gap-1">
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      Amount auto-filled · Invoice will be marked Paid on submit
-                    </p>
-                  )}
+                  {selectedInvoiceId && (() => {
+                    const linked = pendingInvoices.find(i => i.id === selectedInvoiceId);
+                    const paid = Number(form.amount.replace(/,/g, "")) || 0;
+                    const owed = linked?.amount ?? 0;
+                    const balance = owed - paid;
+                    if (paid > 0 && balance > 0) {
+                      return (
+                        <p className="text-xs text-amber-600 flex items-center gap-1 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                          <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                          Partial payment — a balance invoice of {formatUGX(balance)} will be created automatically.
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="text-xs text-emerald-600 flex items-center gap-1">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Invoice will be fully settled on submit.
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
 
