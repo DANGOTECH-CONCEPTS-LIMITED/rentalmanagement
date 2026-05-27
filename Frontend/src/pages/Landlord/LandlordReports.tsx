@@ -41,11 +41,17 @@ interface TrialBalanceDto {
   totalCredits: number;
 }
 
+interface BalanceSheetRow {
+  accountCode: string;
+  accountName: string;
+  balance: number;
+}
+
 interface BalanceSheetDto {
   asOf?: string;
-  assets?: Record<string, number>;
-  liabilities?: Record<string, number>;
-  equity?: Record<string, number>;
+  assets?: BalanceSheetRow[];
+  liabilities?: BalanceSheetRow[];
+  equity?: BalanceSheetRow[];
   totalAssets?: number;
   totalLiabilities?: number;
   totalEquity?: number;
@@ -1002,11 +1008,11 @@ const LandlordReports = () => {
                       <h3 className="text-sm font-semibold text-[#0F172A]">{title}</h3>
                     </div>
                     <div className="px-5 py-4 space-y-1">
-                      {data && Object.entries(data).length > 0 ? (
-                        Object.entries(data).map(([k, v]) => (
-                          <div key={k} className="flex items-center justify-between py-1.5 border-b border-[#F1F5F9] last:border-0">
-                            <span className="text-xs text-[#64748B]">{k}</span>
-                            <span className="text-xs font-medium text-[#0F172A]">{formatUGX(v as number)}</span>
+                      {data && data.length > 0 ? (
+                        data.map((row) => (
+                          <div key={row.accountCode} className="flex items-center justify-between py-1.5 border-b border-[#F1F5F9] last:border-0">
+                            <span className="text-xs text-[#64748B]">{row.accountName}</span>
+                            <span className="text-xs font-medium text-[#0F172A]">{formatUGX(row.balance)}</span>
                           </div>
                         ))
                       ) : (
