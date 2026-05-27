@@ -6,7 +6,7 @@ import { DataTable, Column } from "@/components/ui/data-table";
 import {
   Users, Eye, Edit, Trash2, Calendar, Home, CreditCard,
   X, PhoneIcon, Upload, Camera, Check, Key, Mail, Phone,
-  User, Banknote, Loader2, UserCheck, UserX, DollarSign, FileText,
+  User, Banknote, Loader2, UserCheck, UserX, DollarSign, FileText, Zap,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +36,7 @@ interface Tenant {
   propertyUnitId?: number;
   unit?: { id: number; unitNumber: string };
   waterMeterNo?: string;
+  electricityMeterNo?: string;
   occupation?: string;
   nextOfKinName?: string;
   nextOfKinPhone?: string;
@@ -133,7 +134,7 @@ const ManageTenants = () => {
     id: 0, FullName: "", Name: "", Email: "", PhoneNumber: "",
     NationalIdNumber: "", DateMovedIn: "", PropertyId: "", Active: "true",
     idFront: "", idBack: "", passportPhoto: "",
-    UnitId: "", WaterMeterNo: "", TenantStatus: "active",
+    UnitId: "", WaterMeterNo: "", ElectricityMeterNo: "", TenantStatus: "active",
     Occupation: "", NextOfKinName: "", NextOfKinPhone: "",
   });
 
@@ -238,6 +239,7 @@ const ManageTenants = () => {
       form.append("Active", formData.Active);
       if (formData.UnitId) form.append("PropertyUnitId", formData.UnitId);
       form.append("WaterMeterNo", formData.WaterMeterNo || "");
+      form.append("ElectricityMeterNo", formData.ElectricityMeterNo || "");
       form.append("Occupation", formData.Occupation || "");
       form.append("NextOfKinName", formData.NextOfKinName || "");
       form.append("NextOfKinPhone", formData.NextOfKinPhone || "");
@@ -253,7 +255,7 @@ const ManageTenants = () => {
       toast({ title: "Tenant Updated Successfully", description: `${formData.FullName} has been updated.` });
 
       setTimeout(() => {
-        setFormData({ id: 0, FullName: "", Name: "", Email: "", PhoneNumber: "", NationalIdNumber: "", DateMovedIn: "", PropertyId: "", Active: "true", idFront: "", idBack: "", passportPhoto: "", UnitId: "", WaterMeterNo: "", TenantStatus: "active", Occupation: "", NextOfKinName: "", NextOfKinPhone: "" });
+        setFormData({ id: 0, FullName: "", Name: "", Email: "", PhoneNumber: "", NationalIdNumber: "", DateMovedIn: "", PropertyId: "", Active: "true", idFront: "", idBack: "", passportPhoto: "", UnitId: "", WaterMeterNo: "", ElectricityMeterNo: "", TenantStatus: "active", Occupation: "", NextOfKinName: "", NextOfKinPhone: "" });
         clearFile("PassportPhoto"); clearFile("IdFront"); clearFile("IdBack");
         setIsSuccess(false); setIsEdit(false);
       }, 3000);
@@ -369,7 +371,7 @@ const ManageTenants = () => {
       DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0],
       PropertyId: t.propertyId, Active: String(t.active),
       idFront: t.idFront || "", idBack: t.idBack || "", passportPhoto: t.passportPhoto || "",
-      UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "",
+      UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "", ElectricityMeterNo: t.electricityMeterNo || "",
       TenantStatus: t.active ? "active" : "left",
       Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "",
     });
@@ -491,7 +493,7 @@ const ManageTenants = () => {
             onClick={() => {
               setSelectedTenant(t);
               setInvoiceDayInput(t.invoiceGenerationDay ? String(t.invoiceGenerationDay) : "");
-              setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront, idBack: t.idBack, passportPhoto: t.passportPhoto, UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
+              setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront, idBack: t.idBack, passportPhoto: t.passportPhoto, UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "", ElectricityMeterNo: t.electricityMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
             }}
             title="View"
           >
@@ -644,6 +646,7 @@ const ManageTenants = () => {
                   <DetailRow icon={Home} label="Property" value={`${selectedTenant.property.name} (${selectedTenant.property.type})`} />
                   {selectedTenant.unit?.unitNumber && <DetailRow icon={Key} label="Unit / Room" value={selectedTenant.unit.unitNumber} />}
                   {selectedTenant.waterMeterNo && <DetailRow icon={Key} label="Water Meter" value={selectedTenant.waterMeterNo} />}
+                  {selectedTenant.electricityMeterNo && <DetailRow icon={Zap} label="UMEME Meter" value={selectedTenant.electricityMeterNo} />}
                   <DetailRow icon={Banknote} label="Monthly Rent" value={<span className="font-semibold">{formatCurrency(selectedTenant.property.price, selectedTenant.property.currency)}</span>} />
                   <DetailRow
                     icon={Calendar}
@@ -836,6 +839,10 @@ const ManageTenants = () => {
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Water Meter No.</label>
                     <Input name="WaterMeterNo" value={formData.WaterMeterNo} onChange={handleInputChange} placeholder="e.g. WM-00123" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">UMEME Meter No.</label>
+                    <Input name="ElectricityMeterNo" value={formData.ElectricityMeterNo} onChange={handleInputChange} placeholder="e.g. 04-1234-5678" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tenant Status</label>

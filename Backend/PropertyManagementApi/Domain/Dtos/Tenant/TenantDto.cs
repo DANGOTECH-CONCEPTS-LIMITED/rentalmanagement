@@ -18,6 +18,7 @@ namespace Domain.Dtos.Tenant
         public DateTime? DateMovedIn { get; set; }
         public bool? Active { get; set; } = false;
         public string WaterMeterNo { get; set; } = string.Empty;
+        public string ElectricityMeterNo { get; set; } = string.Empty;
         public string Occupation { get; set; } = string.Empty;
         public string NextOfKinName { get; set; } = string.Empty;
         public string NextOfKinPhone { get; set; } = string.Empty;

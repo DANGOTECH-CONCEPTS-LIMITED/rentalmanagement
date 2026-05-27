@@ -34,6 +34,7 @@ namespace Domain.Entities.PropertyMgt
         public User? User { get; set; }
 
         public string WaterMeterNo { get; set; } = string.Empty;
+        public string ElectricityMeterNo { get; set; } = string.Empty;
         public string Occupation { get; set; } = string.Empty;
         public string NextOfKinName { get; set; } = string.Empty;
         public string NextOfKinPhone { get; set; } = string.Empty;

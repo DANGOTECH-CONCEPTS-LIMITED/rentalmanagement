@@ -66,6 +66,7 @@ namespace Infrastructure.Services.Tenant
                 DateMovedIn = tenantDto.DateMovedIn,
                 Property = property,
                 WaterMeterNo = tenantDto.WaterMeterNo ?? string.Empty,
+                ElectricityMeterNo = tenantDto.ElectricityMeterNo ?? string.Empty,
                 Occupation = tenantDto.Occupation ?? string.Empty,
                 NextOfKinName = tenantDto.NextOfKinName ?? string.Empty,
                 NextOfKinPhone = tenantDto.NextOfKinPhone ?? string.Empty,
@@ -155,6 +156,7 @@ namespace Infrastructure.Services.Tenant
             existingTenant.PropertyId = tenant.PropertyId;
             existingTenant.PropertyUnitId = tenant.PropertyUnitId;
             existingTenant.WaterMeterNo = tenant.WaterMeterNo ?? string.Empty;
+            existingTenant.ElectricityMeterNo = tenant.ElectricityMeterNo ?? string.Empty;
             existingTenant.Occupation = tenant.Occupation ?? string.Empty;
             existingTenant.NextOfKinName = tenant.NextOfKinName ?? string.Empty;
             existingTenant.NextOfKinPhone = tenant.NextOfKinPhone ?? string.Empty;
