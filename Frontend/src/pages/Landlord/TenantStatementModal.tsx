@@ -110,39 +110,65 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
         (inv) => !inv.type?.toLowerCase().includes("manual payment") && !inv.type?.toLowerCase().includes("payment")
       );
 
-      // Paid invoices that have NO matching actual payment record.
-      // Matched by: same amount and date within ±1 day. If a real payment
-      // record covers the invoice, skip the synthetic credit to avoid double-counting.
-      const invoicesCoveredByPayment = new Set<number>();
+      // When a partial payment is made, the backend marks the original invoice "Paid"
+      // and creates a new "balance remaining" invoice (e.g. notes: "Balance of UGX 450,000
+      // remaining after partial payment of UGX 250,000"). We must exclude these balance
+      // invoices from debit rows and use only the actual partial amount as the credit.
+      const parsePartialPayment = (notes?: string): number | null => {
+        const m = notes?.match(/remaining after partial payment of (?:ugx\s*)?([\d,]+)/i);
+        return m ? parseInt(m[1].replace(/,/g, ""), 10) : null;
+      };
+
+      const balanceInvoiceIds = new Set<number>();
+      const parentToPartialPayment = new Map<number, number>();
+
       chargeInvoices.forEach((inv) => {
+        const partial = parsePartialPayment(inv.notes);
+        if (partial === null) return;
+        balanceInvoiceIds.add(inv.id);
+        const parentAmount = inv.amount + partial;
+        const parent = chargeInvoices.find(
+          (p) => p.id !== inv.id && Math.abs(p.amount - parentAmount) < 1 && p.status?.toLowerCase() === "paid"
+        );
+        if (parent) parentToPartialPayment.set(parent.id, partial);
+      });
+
+      const debitInvoices = chargeInvoices.filter((inv) => !balanceInvoiceIds.has(inv.id));
+
+      // Paid invoices that have NO matching actual payment record.
+      // For partially-paid invoices, match against the partial amount (not the full invoice amount).
+      const invoicesCoveredByPayment = new Set<number>();
+      debitInvoices.forEach((inv) => {
         if (inv.status?.toLowerCase() !== "paid") return;
+        const expectedCredit = parentToPartialPayment.get(inv.id) ?? inv.amount;
         const invDate = new Date(inv.invoiceDate).getTime();
         const covered = filteredPayments.some(
-          (p) => Math.abs(p.amount - inv.amount) < 1 && Math.abs(new Date(p.paymentDate).getTime() - invDate) <= 86_400_000 * 2
+          (p) => Math.abs(p.amount - expectedCredit) < 1 && Math.abs(new Date(p.paymentDate).getTime() - invDate) <= 86_400_000 * 2
         );
         if (covered) invoicesCoveredByPayment.add(inv.id);
       });
 
       const rows: Omit<LedgerRow, "balance">[] = [
-        // Debit row for every charge invoice
-        ...chargeInvoices.map((inv) => ({
+        // Debit row for every charge invoice (balance-remaining invoices excluded)
+        ...debitInvoices.map((inv) => ({
           date: inv.invoiceDate,
           type: "Invoice" as const,
-          description: inv.notes ? `${inv.notes}` : inv.type === "Invoice" ? "Rent Invoice" : inv.type,
+          description: inv.notes ? inv.notes : inv.type === "Invoice" ? "Rent Invoice" : inv.type,
           debit: inv.amount,
           credit: 0,
           reference: inv.invoiceNumber,
           status: inv.status,
         })),
-        // Synthetic credit only for paid invoices not covered by an actual payment record
-        ...chargeInvoices
+        // Synthetic credit for paid invoices not covered by an actual payment record.
+        // Use partial payment amount for partially-paid parent invoices.
+        ...debitInvoices
           .filter((inv) => inv.status?.toLowerCase() === "paid" && !invoicesCoveredByPayment.has(inv.id))
           .map((inv) => ({
             date: inv.invoiceDate,
             type: "Payment" as const,
             description: `Invoice Settled — ${inv.invoiceNumber}`,
             debit: 0,
-            credit: inv.amount,
+            credit: parentToPartialPayment.get(inv.id) ?? inv.amount,
             reference: inv.invoiceNumber,
             status: "Settled",
           })),
