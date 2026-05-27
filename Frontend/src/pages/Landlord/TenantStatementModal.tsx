@@ -59,6 +59,7 @@ const statusColor = (s: string) => {
   const l = s?.toLowerCase();
   if (l === "paid" || l === "successful" || l === "completed") return "bg-emerald-50 text-emerald-700";
   if (l === "overdue" || l === "failed") return "bg-red-50 text-red-700";
+  if (l === "partial") return "bg-blue-50 text-blue-700";
   return "bg-amber-50 text-amber-700";
 };
 
@@ -157,7 +158,8 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
           debit: inv.amount,
           credit: 0,
           reference: inv.invoiceNumber,
-          status: inv.status,
+          // Override "Paid" to "Partial" for invoices that were only partially paid
+          status: parentToPartialPayment.has(inv.id) ? "Partial" : inv.status,
         })),
         // Synthetic credit for paid invoices not covered by an actual payment record.
         // Use partial payment amount for partially-paid parent invoices.
