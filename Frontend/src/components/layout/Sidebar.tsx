@@ -381,7 +381,7 @@ function getNavEntries(role: number): NavEntry[] {
         icon: <Zap size={18} />,
         children: [
           { label: "Utility Report", icon: <FileText size={16} />, path: "/landlord-dashboard/utility-report" },
-          { label: "Utility Charge Config", icon: <Zap size={16} />, path: "/landlord-dashboard/utility-charge" },
+          // { label: "Utility Charge Config", icon: <Zap size={16} />, path: "/landlord-dashboard/utility-charge" },
         ],
       },
       { label: "Reports", icon: <BarChart3 size={18} />, path: "/landlord-dashboard/reports" },
