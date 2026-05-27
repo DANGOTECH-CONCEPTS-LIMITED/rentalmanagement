@@ -34,7 +34,7 @@ interface Tenant {
   nextPaymentDate: string;
   dateMovedIn: string;
   propertyUnitId?: number;
-  unit?: { id: number; unitNumber: string };
+  unit?: { id: number; unitNumber: string; monthlyAmount?: number };
   waterMeterNo?: string;
   electricityMeterNo?: string;
   occupation?: string;
@@ -477,7 +477,7 @@ const ManageTenants = () => {
       key: "rent", header: "Rent/mo",
       headerClassName: "text-right",
       className: "text-right",
-      cell: (t) => <span className="text-sm font-semibold text-[#0F172A]">{formatCurrency(t.property.price, t.property.currency)}</span>,
+      cell: (t) => <span className="text-sm font-semibold text-[#0F172A]">{formatCurrency(t.unit?.monthlyAmount ?? t.property.price, t.property.currency)}</span>,
     },
     {
       key: "status", header: "Status",
@@ -647,7 +647,7 @@ const ManageTenants = () => {
                   {selectedTenant.unit?.unitNumber && <DetailRow icon={Key} label="Unit / Room" value={selectedTenant.unit.unitNumber} />}
                   {selectedTenant.waterMeterNo && <DetailRow icon={Key} label="Water Meter" value={selectedTenant.waterMeterNo} />}
                   {selectedTenant.electricityMeterNo && <DetailRow icon={Zap} label="UMEME Meter" value={selectedTenant.electricityMeterNo} />}
-                  <DetailRow icon={Banknote} label="Monthly Rent" value={<span className="font-semibold">{formatCurrency(selectedTenant.property.price, selectedTenant.property.currency)}</span>} />
+                  <DetailRow icon={Banknote} label="Monthly Rent" value={<span className="font-semibold">{formatCurrency(selectedTenant.unit?.monthlyAmount ?? selectedTenant.property.price, selectedTenant.property.currency)}</span>} />
                   <DetailRow
                     icon={Calendar}
                     label="Next Payment Due"
