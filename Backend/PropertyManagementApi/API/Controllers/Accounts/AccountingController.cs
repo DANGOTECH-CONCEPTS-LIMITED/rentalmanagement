@@ -73,14 +73,13 @@ namespace API.Controllers.Accounts
             var toDate = to?.Date ?? new DateTime(DateTime.UtcNow.Year, 12, 31);
             var toDateEnd = toDate.AddDays(1).AddTicks(-1);
 
-            // Income: successful tenant payments on properties owned by this landlord
-            var payments = await _db.TenantPayments
+            // Income: paid invoices created by this landlord (matches InvoiceManagement page logic)
+            var paidInvoices = await _db.TenantInvoices
                 .AsNoTracking()
-                .Include(p => p.PropertyTenant).ThenInclude(t => t.Property)
-                .Where(p => p.PropertyTenant.Property.OwnerId == landlordId
-                         && p.PaymentDate >= fromDate && p.PaymentDate <= toDateEnd
-                         && p.PaymentStatus.ToLower() != "failed")
-                .Select(p => new { p.PaymentDate, p.Amount })
+                .Where(i => i.CreatedByUserId == landlordId
+                         && i.Status.ToLower() == "paid"
+                         && i.InvoiceDate >= fromDate && i.InvoiceDate <= toDateEnd)
+                .Select(i => new { i.InvoiceDate, i.Amount })
                 .ToListAsync();
 
             // Expenses: property expenses recorded by this landlord
@@ -91,14 +90,14 @@ namespace API.Controllers.Accounts
                 .Select(e => new { e.Date, e.Amount, e.Category })
                 .ToListAsync();
 
-            var totalIncome = (decimal)payments.Sum(p => p.Amount);
+            var totalIncome = (decimal)paidInvoices.Sum(i => i.Amount);
             var totalExpenses = (decimal)expenses.Sum(e => e.Amount);
             var netProfit = totalIncome - totalExpenses;
 
             // Monthly breakdown for the full range
-            var paymentsByMonth = payments
-                .GroupBy(p => new { p.PaymentDate.Year, p.PaymentDate.Month })
-                .ToDictionary(g => g.Key, g => (decimal)g.Sum(p => p.Amount));
+            var paymentsByMonth = paidInvoices
+                .GroupBy(i => new { i.InvoiceDate.Year, i.InvoiceDate.Month })
+                .ToDictionary(g => g.Key, g => (decimal)g.Sum(i => i.Amount));
 
             var expensesByMonth = expenses
                 .GroupBy(e => new { e.Date.Year, e.Date.Month })
@@ -154,14 +153,13 @@ namespace API.Controllers.Accounts
             var revenueExpected = (decimal)contracts.Sum(c => c.RentAmount);
             var securityDeposits = (decimal)contracts.Sum(c => c.SecurityDeposit);
 
-            // Collected: successful tenant payments this month on this landlord's properties
-            var collected = await _db.TenantPayments
+            // Collected: paid invoices this month created by this landlord (same source as InvoiceManagement page)
+            var collected = await _db.TenantInvoices
                 .AsNoTracking()
-                .Include(p => p.PropertyTenant).ThenInclude(t => t.Property)
-                .Where(p => p.PropertyTenant.Property.OwnerId == landlordId
-                         && p.PaymentDate >= monthStart && p.PaymentDate <= monthEnd
-                         && p.PaymentStatus.ToLower() != "failed")
-                .SumAsync(p => (decimal)p.Amount);
+                .Where(i => i.CreatedByUserId == landlordId
+                         && i.Status.ToLower() == "paid"
+                         && i.InvoiceDate >= monthStart && i.InvoiceDate <= monthEnd)
+                .SumAsync(i => (decimal)i.Amount);
 
             var uncollected = revenueExpected > collected ? revenueExpected - collected : 0m;
 
