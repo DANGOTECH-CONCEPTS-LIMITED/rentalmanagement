@@ -720,7 +720,7 @@ const InvoiceManagement = () => {
                       setForm({
                         ...form,
                         tenantId: e.target.value,
-                        propertyId: t ? String(t.propertyId) : form.propertyId,
+                        propertyId: t ? String(t.propertyId) : "",
                         propertyUnitId: t?.propertyUnitId ? String(t.propertyUnitId) : "",
                       });
                     }}
@@ -733,31 +733,47 @@ const InvoiceManagement = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Property *</label>
-                  <select
-                    className={selCls}
-                    value={form.propertyId}
-                    onChange={(e) => setForm({ ...form, propertyId: e.target.value, propertyUnitId: "" })}
-                  >
-                    <option value="">Select property</option>
-                    {properties.map((p) => (
-                      <option key={p.id} value={String(p.id)}>{p.name}</option>
-                    ))}
-                  </select>
+                  {form.tenantId ? (
+                    <input
+                      readOnly
+                      value={propertyName(Number(form.propertyId))}
+                      className="w-full rounded-lg border border-[#E2E8F0] bg-slate-50 px-3 py-2 text-sm text-[#0F172A] cursor-not-allowed"
+                    />
+                  ) : (
+                    <select
+                      className={selCls}
+                      value={form.propertyId}
+                      onChange={(e) => setForm({ ...form, propertyId: e.target.value, propertyUnitId: "" })}
+                    >
+                      <option value="">Select property</option>
+                      {properties.map((p) => (
+                        <option key={p.id} value={String(p.id)}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
-              {form.propertyId && unitsForProperty(form.propertyId).length > 0 && (
+              {form.propertyId && (
                 <div className="space-y-1.5">
                   <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Unit (optional)</label>
-                  <select
-                    className={selCls}
-                    value={form.propertyUnitId}
-                    onChange={(e) => setForm({ ...form, propertyUnitId: e.target.value })}
-                  >
-                    <option value="">Select unit</option>
-                    {unitsForProperty(form.propertyId).map((u) => (
-                      <option key={u.id} value={String(u.id)}>{u.unitNumber}</option>
-                    ))}
-                  </select>
+                  {form.tenantId ? (
+                    <input
+                      readOnly
+                      value={form.propertyUnitId ? unitName(Number(form.propertyUnitId)) : "No unit assigned"}
+                      className="w-full rounded-lg border border-[#E2E8F0] bg-slate-50 px-3 py-2 text-sm text-[#0F172A] cursor-not-allowed"
+                    />
+                  ) : (
+                    <select
+                      className={selCls}
+                      value={form.propertyUnitId}
+                      onChange={(e) => setForm({ ...form, propertyUnitId: e.target.value })}
+                    >
+                      <option value="">Select unit</option>
+                      {unitsForProperty(form.propertyId).map((u) => (
+                        <option key={u.id} value={String(u.id)}>{u.unitNumber}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
 
