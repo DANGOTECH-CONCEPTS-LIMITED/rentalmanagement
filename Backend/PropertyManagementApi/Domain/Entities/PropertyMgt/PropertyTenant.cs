@@ -38,6 +38,8 @@ namespace Domain.Entities.PropertyMgt
         public string NextOfKinName { get; set; } = string.Empty;
         public string NextOfKinPhone { get; set; } = string.Empty;
 
+        public int? InvoiceGenerationDay { get; set; }
+
         public LandLordProperty? Property { get; set; } = new LandLordProperty();
 
         public PropertyUnit? Unit { get; set; }

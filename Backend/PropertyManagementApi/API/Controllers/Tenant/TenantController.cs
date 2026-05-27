@@ -96,6 +96,27 @@ namespace API.Controllers.Tenant
             }
         }
 
+        [HttpPut("/UpdateTenantInvoiceDay")]
+        [Authorize]
+        public async Task<IActionResult> UpdateTenantInvoiceDay([FromBody] UpdateTenantInvoiceDayRequest request)
+        {
+            try
+            {
+                await _tenantService.UpdateTenantInvoiceDayAsync(request.TenantId, request.InvoiceGenerationDay);
+                return Ok("Tenant invoice day updated.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        public sealed class UpdateTenantInvoiceDayRequest
+        {
+            public int TenantId { get; set; }
+            public int? InvoiceGenerationDay { get; set; }
+        }
+
         [HttpGet("/GetAllTenants")]
         [Authorize]
         public async Task<IActionResult> GetAllTenants()

@@ -39,6 +39,7 @@ interface Tenant {
   occupation?: string;
   nextOfKinName?: string;
   nextOfKinPhone?: string;
+  invoiceGenerationDay?: number | null;
   property: {
     id: number;
     name: string;
@@ -116,6 +117,8 @@ const ManageTenants = () => {
   const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(null);
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
   const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(null);
+  const [invoiceDayInput, setInvoiceDayInput] = useState<string>("");
+  const [savingInvoiceDay, setSavingInvoiceDay] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [statementTenant, setStatementTenant] = useState<Tenant | null>(null);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -273,6 +276,36 @@ const ManageTenants = () => {
 
   const formatDate = (ds: string) =>
     new Date(ds).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+  const handleSaveInvoiceDay = async () => {
+    if (!selectedTenant) return;
+    const day = invoiceDayInput === "" ? null : Number(invoiceDayInput);
+    if (day !== null && (day < 1 || day > 28)) {
+      toast({ title: "Invalid day", description: "Day must be between 1 and 28.", variant: "destructive" });
+      return;
+    }
+    setSavingInvoiceDay(true);
+    try {
+      await axios.put(`${apiUrl}/UpdateTenantInvoiceDay`,
+        { tenantId: selectedTenant.id, invoiceGenerationDay: day },
+        { headers: { Authorization: `Bearer ${getAuthToken()}` } }
+      );
+      setSelectedTenant({ ...selectedTenant, invoiceGenerationDay: day });
+      setTenants(prev => prev.map(t => t.id === selectedTenant.id ? { ...t, invoiceGenerationDay: day } : t));
+      toast({ title: "Saved", description: day ? `Invoice day set to the ${ordinal(day)} of each month.` : "Reverted to landlord default." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.response?.data ?? "Failed to save.", variant: "destructive" });
+    } finally {
+      setSavingInvoiceDay(false);
+    }
+  };
+
+  const ordinal = (n: number) => {
+    if (n === 1 || n === 21) return `${n}st`;
+    if (n === 2 || n === 22) return `${n}nd`;
+    if (n === 3 || n === 23) return `${n}rd`;
+    return `${n}th`;
+  };
 
   const handleDeleteTenant = async (tenantId: number) => {
     try {
@@ -457,6 +490,7 @@ const ManageTenants = () => {
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors"
             onClick={() => {
               setSelectedTenant(t);
+              setInvoiceDayInput(t.invoiceGenerationDay ? String(t.invoiceGenerationDay) : "");
               setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront, idBack: t.idBack, passportPhoto: t.passportPhoto, UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
             }}
             title="View"
@@ -605,7 +639,7 @@ const ManageTenants = () => {
                 </div>
 
                 {/* Right: property + payment */}
-                <div className="px-6 py-4">
+                <div className="px-6 py-4 space-y-0">
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property & Payment</p>
                   <DetailRow icon={Home} label="Property" value={`${selectedTenant.property.name} (${selectedTenant.property.type})`} />
                   {selectedTenant.unit?.unitNumber && <DetailRow icon={Key} label="Unit / Room" value={selectedTenant.unit.unitNumber} />}
@@ -625,6 +659,45 @@ const ManageTenants = () => {
                       </span>
                     }
                   />
+
+                  {/* Invoice Day Override */}
+                  <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Invoice Schedule Override</p>
+                    <p className="text-xs text-slate-500">
+                      Set a custom invoice day for this tenant. Leave blank to use your landlord default.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={28}
+                        placeholder="Day (1–28)"
+                        value={invoiceDayInput}
+                        onChange={(e) => setInvoiceDayInput(e.target.value)}
+                        className="w-28 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                      />
+                      <button
+                        onClick={handleSaveInvoiceDay}
+                        disabled={savingInvoiceDay}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                      >
+                        {savingInvoiceDay ? "Saving…" : "Save"}
+                      </button>
+                      {invoiceDayInput && (
+                        <button
+                          onClick={() => { setInvoiceDayInput(""); }}
+                          className="text-xs text-slate-400 hover:text-slate-600 underline"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    {selectedTenant.invoiceGenerationDay && (
+                      <p className="text-xs font-medium text-blue-600">
+                        Currently overridden: {ordinal(selectedTenant.invoiceGenerationDay)} of each month
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

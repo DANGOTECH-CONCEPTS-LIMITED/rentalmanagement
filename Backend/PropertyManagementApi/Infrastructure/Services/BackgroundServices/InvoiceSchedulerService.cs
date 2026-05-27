@@ -80,15 +80,26 @@ namespace Infrastructure.Services.BackgroundServices
                 .Select(u => new { u.Id, u.InvoiceGenerationDay, u.InvoiceDueDays })
                 .ToDictionaryAsync(u => u.Id);
 
+            // Load per-tenant invoice day overrides
+            var tenantIds = contracts.Where(c => c.TenantId.HasValue).Select(c => c.TenantId!.Value).Distinct().ToList();
+            var tenantOverrides = await db.Tenants
+                .AsNoTracking()
+                .Where(t => tenantIds.Contains(t.Id) && t.InvoiceGenerationDay != null)
+                .Select(t => new { t.Id, t.InvoiceGenerationDay })
+                .ToDictionaryAsync(t => t.Id);
+
             int created = 0;
             foreach (var contract in contracts)
             {
-                // Resolve per-landlord settings, fall back to global config
-                var settings = landlordSettings.TryGetValue(contract.OwnerId, out var s) ? s : null;
-                var generationDay = settings?.InvoiceGenerationDay ?? _config.GetValue<int>("InvoiceScheduler:GenerationDayOfMonth", 1);
-                var dueDays = settings?.InvoiceDueDays ?? globalDueDays;
+                // Per-tenant override takes priority → landlord setting → global config
+                var tenantOverride = contract.TenantId.HasValue && tenantOverrides.TryGetValue(contract.TenantId.Value, out var to) ? to : null;
+                var landlord = landlordSettings.TryGetValue(contract.OwnerId, out var ls) ? ls : null;
+                var generationDay = tenantOverride?.InvoiceGenerationDay
+                    ?? landlord?.InvoiceGenerationDay
+                    ?? _config.GetValue<int>("InvoiceScheduler:GenerationDayOfMonth", 1);
+                var dueDays = landlord?.InvoiceDueDays ?? globalDueDays;
 
-                // Only generate on the landlord's configured day-of-month
+                // Only generate on the resolved day-of-month
                 if (today.Day != generationDay) continue;
 
                 // Skip if a Rent invoice already exists for this tenant this month

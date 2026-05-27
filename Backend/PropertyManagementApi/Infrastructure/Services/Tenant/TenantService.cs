@@ -190,5 +190,18 @@ namespace Infrastructure.Services.Tenant
             return tenants;
         }
 
-    } 
+        public async Task UpdateTenantInvoiceDayAsync(int tenantId, int? invoiceGenerationDay)
+        {
+            if (invoiceGenerationDay.HasValue && (invoiceGenerationDay < 1 || invoiceGenerationDay > 28))
+                throw new Exception("Invoice generation day must be between 1 and 28.");
+
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId);
+            if (tenant == null)
+                throw new Exception("Tenant not found.");
+
+            tenant.InvoiceGenerationDay = invoiceGenerationDay;
+            await _context.SaveChangesAsync();
+        }
+
+    }
 }
