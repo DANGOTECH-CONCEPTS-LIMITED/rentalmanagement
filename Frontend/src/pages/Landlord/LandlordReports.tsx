@@ -91,9 +91,23 @@ interface ExpenseRecord {
   paidBy: string;
 }
 
+interface InvoiceRecord {
+  id: number;
+  invoiceNumber: string;
+  amount: number;
+  invoiceDate: string;
+  dueDate: string;
+  status: string;
+  type: string;
+  notes?: string;
+  propertyId: number;
+  tenant?: { fullName?: string };
+}
+
 interface PropertyReport {
   property: Property;
   payments: PaymentRecord[];
+  paidInvoices: InvoiceRecord[];
   expenses: ExpenseRecord[];
   totalCollections: number;
   totalExpenses: number;
@@ -153,6 +167,16 @@ const LandlordReports = () => {
     if (list.length === 0) return;
     setIsLoadingPropertyReport(true);
     try {
+      // Fetch all landlord invoices once, then filter per property
+      let allInvoices: InvoiceRecord[] = [];
+      try {
+        const invRes = await axios.get<InvoiceRecord[]>(`${apiUrl}/GetInvoicesByLandLordId/${userData.id}`);
+        allInvoices = invRes.data ?? [];
+      } catch { /* ignore if endpoint fails */ }
+
+      const fromDate = new Date(from);
+      const toDate = new Date(to + "T23:59:59");
+
       const reports = await Promise.all(
         list.map(async (prop) => {
           const [paymentsRes, expensesRes] = await Promise.allSettled([
@@ -162,19 +186,30 @@ const LandlordReports = () => {
             axios.post<ExpenseRecord[]>(`${apiUrl}/GetExpenses`, {
               OwnerId: userData.id,
               PropertyId: prop.id,
-              From: new Date(from).toISOString(),
-              To: new Date(to + "T23:59:59").toISOString(),
+              From: fromDate.toISOString(),
+              To: toDate.toISOString(),
             }),
           ]);
           const payments: PaymentRecord[] =
             paymentsRes.status === "fulfilled" ? paymentsRes.value.data ?? [] : [];
           const expenses: ExpenseRecord[] =
             expensesRes.status === "fulfilled" ? expensesRes.value.data ?? [] : [];
-          const totalCollections = payments
+
+          // Paid invoices for this property within the date range
+          const paidInvoices: InvoiceRecord[] = allInvoices.filter((inv) => {
+            if (inv.propertyId !== prop.id) return false;
+            if (inv.status?.toLowerCase() !== "paid") return false;
+            const d = new Date(inv.invoiceDate);
+            return d >= fromDate && d <= toDate;
+          });
+
+          const paymentTotal = payments
             .filter((p) => p.paymentStatus?.toLowerCase() !== "failed")
             .reduce((s, p) => s + (p.amount ?? 0), 0);
+          const invoiceTotal = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
+          const totalCollections = paymentTotal + invoiceTotal;
           const totalExpenses = expenses.reduce((s, e) => s + (e.amount ?? 0), 0);
-          return { property: prop, payments, expenses, totalCollections, totalExpenses };
+          return { property: prop, payments, paidInvoices, expenses, totalCollections, totalExpenses };
         })
       );
       setPropertyReports(reports);
@@ -752,7 +787,7 @@ const LandlordReports = () => {
 
               {/* Per-property cards */}
               <div className="space-y-3">
-                {propertyReports.map(({ property, payments, expenses, totalCollections, totalExpenses }) => {
+                {propertyReports.map(({ property, payments, paidInvoices, expenses, totalCollections, totalExpenses }) => {
                   const net = totalCollections - totalExpenses;
                   const isExpanded = expandedProperty === property.id;
                   return (
@@ -814,17 +849,17 @@ const LandlordReports = () => {
                             <div className="flex items-center gap-2 px-5 py-3 bg-slate-50/60">
                               <Banknote className="h-4 w-4 text-emerald-500" />
                               <span className="text-xs font-semibold text-[#0F172A] uppercase tracking-wide">
-                                Collections ({payments.length})
+                                Collections ({payments.length + paidInvoices.length})
                               </span>
                             </div>
-                            {payments.length === 0 ? (
+                            {payments.length === 0 && paidInvoices.length === 0 ? (
                               <p className="px-5 py-4 text-xs text-[#94A3B8]">No payments in this period.</p>
                             ) : (
                               <div className="overflow-x-auto">
                                 <table className="w-full">
                                   <thead>
                                     <tr className="border-b border-[#F1F5F9]">
-                                      {["Date", "Tenant", "Amount", "Method", "Status"].map((h) => (
+                                      {["Date", "Tenant", "Amount", "Method / Ref", "Type"].map((h) => (
                                         <th key={h} className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">{h}</th>
                                       ))}
                                     </tr>
@@ -838,7 +873,7 @@ const LandlordReports = () => {
                                         : p.paymentStatus?.toLowerCase() === "failed" ? "bg-red-50 text-red-700"
                                         : "bg-amber-50 text-amber-700";
                                       return (
-                                        <tr key={p.id} className="hover:bg-slate-50/40">
+                                        <tr key={`pay-${p.id}`} className="hover:bg-slate-50/40">
                                           <td className="px-4 py-2.5 text-xs text-[#64748B]">{p.paymentDate?.split("T")[0] ?? "—"}</td>
                                           <td className="px-4 py-2.5 text-xs font-medium text-[#0F172A]">{tenantName}</td>
                                           <td className="px-4 py-2.5 text-xs font-semibold text-emerald-600">{formatUGX(p.amount)}</td>
@@ -851,6 +886,19 @@ const LandlordReports = () => {
                                         </tr>
                                       );
                                     })}
+                                    {paidInvoices.map((inv) => (
+                                      <tr key={`inv-${inv.id}`} className="hover:bg-slate-50/40">
+                                        <td className="px-4 py-2.5 text-xs text-[#64748B]">{inv.invoiceDate?.split("T")[0] ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-xs font-medium text-[#0F172A]">{inv.tenant?.fullName ?? "—"}</td>
+                                        <td className="px-4 py-2.5 text-xs font-semibold text-emerald-600">{formatUGX(inv.amount)}</td>
+                                        <td className="px-4 py-2.5 text-xs text-[#64748B]">{inv.invoiceNumber}</td>
+                                        <td className="px-4 py-2.5">
+                                          <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-700">
+                                            Invoice
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ))}
                                   </tbody>
                                   <tfoot>
                                     <tr className="border-t border-[#E2E8F0] bg-slate-50">
