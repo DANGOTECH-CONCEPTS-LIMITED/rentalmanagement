@@ -104,20 +104,39 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
         return t >= fromMs && t <= toMs;
       });
 
+      // Payment-type invoices (type = "Manual Payment" etc.) are direct payments,
+      // not charges. Exclude them from debit rows entirely.
+      const chargeInvoices = filteredInvoices.filter(
+        (inv) => !inv.type?.toLowerCase().includes("manual payment") && !inv.type?.toLowerCase().includes("payment")
+      );
+
+      // Paid invoices that have NO matching actual payment record.
+      // Matched by: same amount and date within ±1 day. If a real payment
+      // record covers the invoice, skip the synthetic credit to avoid double-counting.
+      const invoicesCoveredByPayment = new Set<number>();
+      chargeInvoices.forEach((inv) => {
+        if (inv.status?.toLowerCase() !== "paid") return;
+        const invDate = new Date(inv.invoiceDate).getTime();
+        const covered = filteredPayments.some(
+          (p) => Math.abs(p.amount - inv.amount) < 1 && Math.abs(new Date(p.paymentDate).getTime() - invDate) <= 86_400_000 * 2
+        );
+        if (covered) invoicesCoveredByPayment.add(inv.id);
+      });
+
       const rows: Omit<LedgerRow, "balance">[] = [
-        // Debit row for every invoice
-        ...filteredInvoices.map((inv) => ({
+        // Debit row for every charge invoice
+        ...chargeInvoices.map((inv) => ({
           date: inv.invoiceDate,
           type: "Invoice" as const,
-          description: inv.type + (inv.notes ? ` — ${inv.notes}` : ""),
+          description: inv.notes ? `${inv.notes}` : inv.type === "Invoice" ? "Rent Invoice" : inv.type,
           debit: inv.amount,
           credit: 0,
           reference: inv.invoiceNumber,
           status: inv.status,
         })),
-        // Credit row for invoices manually marked as Paid (no payment record exists for them)
-        ...filteredInvoices
-          .filter((inv) => inv.status?.toLowerCase() === "paid")
+        // Synthetic credit only for paid invoices not covered by an actual payment record
+        ...chargeInvoices
+          .filter((inv) => inv.status?.toLowerCase() === "paid" && !invoicesCoveredByPayment.has(inv.id))
           .map((inv) => ({
             date: inv.invoiceDate,
             type: "Payment" as const,
@@ -131,7 +150,7 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
         ...filteredPayments.map((p) => ({
           date: p.paymentDate,
           type: "Payment" as const,
-          description: `${p.paymentMethod}${p.description ? ` — ${p.description}` : ""}`,
+          description: p.description ? p.description : p.paymentMethod ?? "Payment",
           debit: 0,
           credit: p.amount,
           reference: p.transactionId || "—",
@@ -449,7 +468,7 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
                       </td>
                       <td className={`px-4 py-3 text-right text-xs font-bold ${row.balance > 0 ? "text-red-700" : "text-emerald-700"}`}>
                         {fmt(Math.abs(row.balance))}
-                        {row.balance > 0 && (
+                        {row.balance > 0 && idx === ledger.length - 1 && (
                           <AlertTriangle className="inline h-3 w-3 ml-1 text-red-500" />
                         )}
                       </td>
