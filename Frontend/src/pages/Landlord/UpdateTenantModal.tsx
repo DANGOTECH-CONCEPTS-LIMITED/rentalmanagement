@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarIcon, XIcon, UploadIcon, Zap } from "lucide-react";
+import { CalendarIcon, XIcon, UploadIcon, Zap, Heart, Building, Users } from "lucide-react";
 import { format } from "date-fns";
 import {
   Popover,
@@ -145,6 +145,11 @@ const UpdateTenantModal = ({
     formData.append("FullName", (e.currentTarget as any).fullName.value);
     formData.append("Email", (e.currentTarget as any).email.value);
     formData.append("ElectricityMeterNo", (e.currentTarget as any).umemeMeterNo?.value || "");
+    formData.append("NextOfKinName", (e.currentTarget as any).nextOfKinName?.value || "");
+    formData.append("NextOfKinPhone", (e.currentTarget as any).nextOfKinPhone?.value || "");
+    formData.append("NextOfKinRelationship", (e.currentTarget as any).nextOfKinRelationship?.value || "");
+    formData.append("NextOfKinIdNumber", (e.currentTarget as any).nextOfKinIdNumber?.value || "");
+    formData.append("NextOfKinWorkplace", (e.currentTarget as any).nextOfKinWorkplace?.value || "");
 
     if (files.passportPhoto) formData.append("files", files.passportPhoto);
     if (files.idFront) formData.append("files", files.idFront);
@@ -294,6 +299,59 @@ const UpdateTenantModal = ({
                 onCheckedChange={setActive}
               />
               <Label htmlFor="active">Active Tenant</Label>
+            </div>
+
+            {/* Next of Kin */}
+            <div className="rounded-lg border border-purple-100 bg-purple-50/40 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 mb-3 flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" /> Next of Kin
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nextOfKinName">Full Name</Label>
+                  <Input
+                    id="nextOfKinName"
+                    defaultValue={(tenant as any).nextOfKinName || ""}
+                    placeholder="Next of kin full name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nextOfKinRelationship" className="flex items-center gap-1.5">
+                    <Heart className="h-3.5 w-3.5 text-rose-400" /> Relationship
+                  </Label>
+                  <Input
+                    id="nextOfKinRelationship"
+                    defaultValue={(tenant as any).nextOfKinRelationship || ""}
+                    placeholder="e.g. Spouse, Parent, Sibling"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nextOfKinIdNumber">National ID / Passport No.</Label>
+                  <Input
+                    id="nextOfKinIdNumber"
+                    defaultValue={(tenant as any).nextOfKinIdNumber || ""}
+                    placeholder="ID or passport number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nextOfKinPhone">Mobile No.</Label>
+                  <Input
+                    id="nextOfKinPhone"
+                    defaultValue={(tenant as any).nextOfKinPhone || ""}
+                    placeholder="Phone number"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="nextOfKinWorkplace" className="flex items-center gap-1.5">
+                    <Building className="h-3.5 w-3.5 text-slate-400" /> Workplace
+                  </Label>
+                  <Input
+                    id="nextOfKinWorkplace"
+                    defaultValue={(tenant as any).nextOfKinWorkplace || ""}
+                    placeholder="Employer or workplace name"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* File upload sections */}

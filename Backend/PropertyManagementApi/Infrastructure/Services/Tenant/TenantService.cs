@@ -70,6 +70,9 @@ namespace Infrastructure.Services.Tenant
                 Occupation = tenantDto.Occupation ?? string.Empty,
                 NextOfKinName = tenantDto.NextOfKinName ?? string.Empty,
                 NextOfKinPhone = tenantDto.NextOfKinPhone ?? string.Empty,
+                NextOfKinRelationship = tenantDto.NextOfKinRelationship ?? string.Empty,
+                NextOfKinIdNumber = tenantDto.NextOfKinIdNumber ?? string.Empty,
+                NextOfKinWorkplace = tenantDto.NextOfKinWorkplace ?? string.Empty,
             };
             //get tenant system role
             var systemRole = await _context.SystemRoles
@@ -160,6 +163,9 @@ namespace Infrastructure.Services.Tenant
             existingTenant.Occupation = tenant.Occupation ?? string.Empty;
             existingTenant.NextOfKinName = tenant.NextOfKinName ?? string.Empty;
             existingTenant.NextOfKinPhone = tenant.NextOfKinPhone ?? string.Empty;
+            existingTenant.NextOfKinRelationship = tenant.NextOfKinRelationship ?? string.Empty;
+            existingTenant.NextOfKinIdNumber = tenant.NextOfKinIdNumber ?? string.Empty;
+            existingTenant.NextOfKinWorkplace = tenant.NextOfKinWorkplace ?? string.Empty;
             existingTenant.Property = await _context.LandLordProperties
                 .Include(p => p.Owner)
                 .FirstOrDefaultAsync(p => p.Id == tenant.PropertyId);

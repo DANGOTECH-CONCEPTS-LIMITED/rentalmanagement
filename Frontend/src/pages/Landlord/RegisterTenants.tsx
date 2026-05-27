@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   UserPlus, User, Mail, Phone, Home, Calendar, Key,
   Check, Upload, X, Camera, CreditCard, Loader2, Users,
-  Droplets, Briefcase, Zap,
+  Droplets, Briefcase, Zap, Heart, Building,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -142,6 +142,9 @@ const RegisterTenants = () => {
     Occupation: "",
     NextOfKinName: "",
     NextOfKinPhone: "",
+    NextOfKinRelationship: "",
+    NextOfKinIdNumber: "",
+    NextOfKinWorkplace: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -283,6 +286,9 @@ const RegisterTenants = () => {
       form.append("Occupation", formData.Occupation);
       form.append("NextOfKinName", formData.NextOfKinName);
       form.append("NextOfKinPhone", formData.NextOfKinPhone);
+      form.append("NextOfKinRelationship", formData.NextOfKinRelationship);
+      form.append("NextOfKinIdNumber", formData.NextOfKinIdNumber);
+      form.append("NextOfKinWorkplace", formData.NextOfKinWorkplace);
       form.append("PassportPhoto", passportPhoto);
       form.append("IdFront", idFrontPhoto);
       form.append("IdBack", idBackPhoto);
@@ -313,7 +319,8 @@ const RegisterTenants = () => {
         setFormData({
           FullName: "", Name: "", Email: "", PhoneNumber: "", NationalIdNumber: "",
           DateMovedIn: "", PropertyId: "", Password: "", Active: "true", UnitId: "",
-          WaterMeterNo: "", UmemeMeterNo: "", TenantStatus: "active", Occupation: "", NextOfKinName: "", NextOfKinPhone: "",
+          WaterMeterNo: "", UmemeMeterNo: "", TenantStatus: "active", Occupation: "",
+          NextOfKinName: "", NextOfKinPhone: "", NextOfKinRelationship: "", NextOfKinIdNumber: "", NextOfKinWorkplace: "",
         });
         clearFile("PassportPhoto");
         clearFile("IdFront");
@@ -619,21 +626,49 @@ const RegisterTenants = () => {
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
-                    <FieldLabel>Next of Kin Name</FieldLabel>
+                    <FieldLabel>Full Name</FieldLabel>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
                         name="NextOfKinName"
                         value={formData.NextOfKinName}
                         onChange={handleInputChange}
-                        placeholder="Full name"
+                        placeholder="Next of kin full name"
                         className={`pl-9 ${inputCls}`}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <FieldLabel>Next of Kin Contact</FieldLabel>
+                    <FieldLabel>Relationship</FieldLabel>
+                    <div className="relative">
+                      <Heart className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        name="NextOfKinRelationship"
+                        value={formData.NextOfKinRelationship}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Spouse, Parent, Sibling"
+                        className={`pl-9 ${inputCls}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <FieldLabel>National ID / Passport No.</FieldLabel>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        name="NextOfKinIdNumber"
+                        value={formData.NextOfKinIdNumber}
+                        onChange={handleInputChange}
+                        placeholder="ID or passport number"
+                        className={`pl-9 ${inputCls}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <FieldLabel>Mobile No.</FieldLabel>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
@@ -641,6 +676,20 @@ const RegisterTenants = () => {
                         value={formData.NextOfKinPhone}
                         onChange={handleInputChange}
                         placeholder="Phone number"
+                        className={`pl-9 ${inputCls}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <FieldLabel>Workplace</FieldLabel>
+                    <div className="relative">
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        name="NextOfKinWorkplace"
+                        value={formData.NextOfKinWorkplace}
+                        onChange={handleInputChange}
+                        placeholder="Employer or workplace name"
                         className={`pl-9 ${inputCls}`}
                       />
                     </div>

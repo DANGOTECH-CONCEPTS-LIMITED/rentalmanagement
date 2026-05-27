@@ -38,6 +38,9 @@ namespace Domain.Entities.PropertyMgt
         public string Occupation { get; set; } = string.Empty;
         public string NextOfKinName { get; set; } = string.Empty;
         public string NextOfKinPhone { get; set; } = string.Empty;
+        public string NextOfKinRelationship { get; set; } = string.Empty;
+        public string NextOfKinIdNumber { get; set; } = string.Empty;
+        public string NextOfKinWorkplace { get; set; } = string.Empty;
 
         public int? InvoiceGenerationDay { get; set; }
 
