@@ -205,6 +205,15 @@ namespace Infrastructure.Services.BackgroundServices
                         phone = walletTransaction.Wallet.Landlord.PhoneNumber
                     };
 
+                    //check if bank name is wallet if it is wallet reverse the transaction and update status to failed with reason bank name cannot be wallet for bank payout
+                    if (request.bankName.ToLower() == "wallet")
+                    {
+                        walletTransaction.Status = FailedStatus;
+                        walletTransaction.Description = "Bank name cannot be wallet for bank payout";
+                        await wallet.ReverseWalletTransaction(walletTransaction);
+                        return;
+                    }
+
                     var rawResponse = await collecto.InitiateBankPayoutAsync(request);
                     if (!string.IsNullOrWhiteSpace(rawResponse))
                     {
