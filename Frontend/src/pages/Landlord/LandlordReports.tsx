@@ -209,11 +209,9 @@ const LandlordReports = () => {
             return d >= fromDate && d <= toDate;
           });
 
-          const paymentTotal = payments
-            .filter((p) => p.paymentStatus?.toLowerCase() !== "failed")
-            .reduce((s, p) => s + (p.amount ?? 0), 0);
-          const invoiceTotal = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
-          const totalCollections = paymentTotal + invoiceTotal;
+          // Paid invoices represent settled rent — use as the single source for collections.
+          // Payment records cover the same transactions so we must NOT add both.
+          const totalCollections = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
           const totalExpenses = expenses.reduce((s, e) => s + (e.amount ?? 0), 0);
           return { property: prop, payments, paidInvoices, expenses, totalCollections, totalExpenses };
         })
