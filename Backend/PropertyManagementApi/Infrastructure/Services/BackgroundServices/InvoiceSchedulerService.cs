@@ -36,13 +36,18 @@ namespace Infrastructure.Services.BackgroundServices
         {
             _logger.LogInformation("InvoiceSchedulerService started.");
 
-            // Check once per hour; generate invoices for any landlord whose configured day matches today.
+            // Run overdue check immediately on startup so stale invoices are fixed without waiting an hour.
+            try { await MarkOverdueInvoicesAsync(); }
+            catch (Exception ex) { _logger.LogError(ex, "Initial overdue check failed."); }
+
+            // Check once per hour: generate monthly invoices + mark overdue invoices.
             using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 try
                 {
                     await GenerateMonthlyInvoicesAsync();
+                    await MarkOverdueInvoicesAsync();
                 }
                 catch (OperationCanceledException)
                 {
@@ -54,6 +59,47 @@ namespace Infrastructure.Services.BackgroundServices
                     _logger.LogError(ex, "InvoiceSchedulerService encountered an error.");
                 }
             }
+        }
+
+        /// <summary>
+        /// Finds every Pending invoice whose DueDate has passed and promotes it to Overdue.
+        /// Sends an SMS reminder to the tenant.
+        /// </summary>
+        private async Task MarkOverdueInvoicesAsync()
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db  = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var sms = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
+
+            var now = DateTime.UtcNow;
+
+            var overdueInvoices = await db.TenantInvoices
+                .Include(i => i.Tenant)
+                .Where(i => i.Status == "Pending" && i.DueDate < now)
+                .ToListAsync();
+
+            if (overdueInvoices.Count == 0) return;
+
+            foreach (var inv in overdueInvoices)
+            {
+                inv.Status    = "Overdue";
+                inv.UpdatedAt = now;
+
+                // SMS notification
+                var phone = inv.Tenant?.PhoneNumber;
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    var name = inv.Tenant!.FullName;
+                    var msg  = $"Dear {name}, invoice {inv.InvoiceNumber} of UGX {inv.Amount:N0} " +
+                               $"was due on {inv.DueDate:dd MMM yyyy} and is now OVERDUE. " +
+                               $"Please settle your balance immediately to avoid further action.";
+                    try { await sms.SendAsync(phone, msg); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "SMS failed for overdue invoice {No}", inv.InvoiceNumber); }
+                }
+            }
+
+            await db.SaveChangesAsync();
+            _logger.LogInformation("MarkOverdue: {Count} invoice(s) promoted to Overdue.", overdueInvoices.Count);
         }
 
         private async Task GenerateMonthlyInvoicesAsync()
