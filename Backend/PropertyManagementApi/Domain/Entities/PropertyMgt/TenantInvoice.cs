@@ -18,6 +18,7 @@ namespace Domain.Entities.PropertyMgt
         public DateTime DueDate { get; set; }
 
         public string? Notes { get; set; }
+        public string? PaymentMethod { get; set; }
 
         [ForeignKey("Tenant")]
         public int TenantId { get; set; }

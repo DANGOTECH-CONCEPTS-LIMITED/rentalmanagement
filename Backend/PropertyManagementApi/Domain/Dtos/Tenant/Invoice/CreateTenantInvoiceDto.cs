@@ -16,6 +16,7 @@ namespace Domain.Dtos.Tenant.Invoice
         public DateTime DueDate { get; set; }
 
         public string? Notes { get; set; }
+        public string? PaymentMethod { get; set; }
 
         public int CreatedByUserId { get; set; }
         public string CreatedByName { get; set; } = string.Empty;

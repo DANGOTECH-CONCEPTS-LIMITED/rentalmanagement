@@ -81,6 +81,7 @@ namespace Infrastructure.Services.Tenant
                 InvoiceDate = dto.InvoiceDate,
                 DueDate = dto.DueDate,
                 Notes = dto.Notes,
+                PaymentMethod = dto.PaymentMethod,
                 CreatedByUserId = dto.CreatedByUserId,
                 CreatedAt = DateTime.UtcNow
             };

@@ -155,6 +155,7 @@ const InvoiceManagement = () => {
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: "",
     notes: "",
+    paymentMethod: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingInvoices, setPendingInvoices] = useState<Invoice[]>([]);
@@ -255,6 +256,7 @@ const InvoiceManagement = () => {
       invoiceDate: new Date().toISOString().split("T")[0],
       dueDate: "",
       notes: "",
+      paymentMethod: type === "Manual Payment" ? "Cash" : "",
     });
     setPendingInvoices([]);
     setSelectedInvoiceId(null);
@@ -284,6 +286,7 @@ const InvoiceManagement = () => {
         InvoiceDate: new Date(form.invoiceDate).toISOString(),
         DueDate: new Date(form.dueDate).toISOString(),
         Notes: form.notes || null,
+        PaymentMethod: form.paymentMethod || null,
         CreatedByUserId: userData.id,
         CreatedByName: userData.fullName || "",
       };
@@ -625,7 +628,7 @@ const InvoiceManagement = () => {
               onClick={() => openAdd("Manual Payment")}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium border border-white/20 transition-colors"
             >
-              <CreditCard className="h-4 w-4" />Manual Payment
+              <CreditCard className="h-4 w-4" />Create Payment
             </button>
             <button
               onClick={() => openAdd("Manual Invoice")}
@@ -708,7 +711,9 @@ const InvoiceManagement = () => {
           >
             <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">New {form.type}</h2>
+                <h2 className="text-lg font-bold text-white">
+                  {form.type === "Manual Payment" ? "Create Payment" : `New ${form.type}`}
+                </h2>
                 <p className="text-blue-200 text-xs mt-0.5">Fill in the details below</p>
               </div>
               <button onClick={() => setAddOpen(false)} className="text-white/60 hover:text-white transition-colors">
@@ -722,11 +727,14 @@ const InvoiceManagement = () => {
                   <select
                     className={selCls}
                     value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value as InvoiceType })}
+                    onChange={(e) => {
+                      const t = e.target.value as InvoiceType;
+                      setForm({ ...form, type: t, paymentMethod: t === "Manual Payment" ? "Cash" : "" });
+                    }}
                   >
                     <option value="Invoice">Invoice</option>
                     <option value="Manual Invoice">Manual Invoice</option>
-                    <option value="Manual Payment">Manual Payment</option>
+                    <option value="Manual Payment">Create Payment</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -742,6 +750,34 @@ const InvoiceManagement = () => {
                   </select>
                 </div>
               </div>
+              {form.type === "Manual Payment" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Mode of Payment *</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { value: "Cash", label: "Cash", icon: "💵" },
+                      { value: "Mobile Money", label: "Mobile Money", icon: "📱" },
+                      { value: "Bank Transfer", label: "Bank", icon: "🏦" },
+                      { value: "Cheque", label: "Cheque", icon: "📄" },
+                    ].map((m) => (
+                      <button
+                        key={m.value}
+                        type="button"
+                        onClick={() => setForm({ ...form, paymentMethod: m.value })}
+                        className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-2.5 text-xs font-semibold transition-all ${
+                          form.paymentMethod === m.value
+                            ? "border-[#1D4ED8] bg-blue-50 text-[#1D4ED8]"
+                            : "border-[#E2E8F0] bg-white text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        <span className="text-base">{m.icon}</span>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Tenant *</label>
@@ -952,7 +988,7 @@ const InvoiceManagement = () => {
                 className="btn-grid inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Create Invoice
+                {form.type === "Manual Payment" ? "Create Payment" : "Create Invoice"}
               </button>
             </div>
           </motion.div>
