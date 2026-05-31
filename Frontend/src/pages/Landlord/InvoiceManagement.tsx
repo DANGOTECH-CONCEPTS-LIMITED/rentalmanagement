@@ -501,12 +501,17 @@ const InvoiceManagement = () => {
     doc.save(`${inv.invoiceNumber}.pdf`);
     toast({ title: "Invoice Downloaded", description: `${inv.invoiceNumber} saved as PDF.` });
   };
-  const totalPaid = invoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0);
-  const totalPending = invoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
-  const totalOverdue = invoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
+  // Exclude "Manual Payment" / payment-type invoices from KPI totals.
+  // Those are payment records, not charges — counting them inflates the totals.
+  const isPaymentType = (type?: string) =>
+    type?.toLowerCase().includes("payment") ?? false;
+  const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
+  const totalPaid    = chargeInvoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0);
+  const totalPending = chargeInvoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
+  const totalOverdue = chargeInvoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
 
   const kpiCards = [
-    { label: "Total Invoices", value: invoices.length, Icon: FileText, border: "border-l-blue-500", bg: "bg-blue-50", color: "text-blue-600" },
+    { label: "Total Invoices", value: chargeInvoices.length, Icon: FileText, border: "border-l-blue-500", bg: "bg-blue-50", color: "text-blue-600" },
     { label: "Collected", value: formatUGX(totalPaid), Icon: CheckCircle, border: "border-l-emerald-500", bg: "bg-emerald-50", color: "text-emerald-600" },
     { label: "Pending", value: formatUGX(totalPending), Icon: Clock, border: "border-l-amber-500", bg: "bg-amber-50", color: "text-amber-600" },
     { label: "Overdue", value: formatUGX(totalOverdue), Icon: AlertCircle, border: "border-l-red-500", bg: "bg-red-50", color: "text-red-600" },
