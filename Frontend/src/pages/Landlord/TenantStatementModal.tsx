@@ -49,6 +49,8 @@ interface LedgerRow {
   balance: number;
   reference: string;
   status: string;
+  // false = payment already embedded in charge invoice amount, shown for history only
+  affectsBalance?: boolean;
 }
 
 const fmt = (n: number, currency = "UGX") =>
@@ -108,76 +110,42 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
         return t >= fromMs && t <= toMs;
       });
 
-      // Payment-type invoices (type = "Manual Payment" etc.) are direct payments,
-      // not charges. Exclude them from debit rows entirely.
+      // Charge invoices = debit rows (current amounts; payments are already subtracted from amount)
       const chargeInvoices = filteredInvoices.filter(
-        (inv) => !inv.type?.toLowerCase().includes("manual payment") && !inv.type?.toLowerCase().includes("payment")
+        (inv) => !inv.type?.toLowerCase().includes("payment")
       );
 
-      // When a partial payment is made, the backend marks the original invoice "Paid"
-      // and creates a new "balance remaining" invoice (e.g. notes: "Balance of UGX 450,000
-      // remaining after partial payment of UGX 250,000"). We must exclude these balance
-      // invoices from debit rows and use only the actual partial amount as the credit.
-      const parsePartialPayment = (notes?: string): number | null => {
-        const m = notes?.match(/remaining after partial payment of (?:ugx\s*)?([\d,]+)/i);
-        return m ? parseInt(m[1].replace(/,/g, ""), 10) : null;
-      };
-
-      const balanceInvoiceIds = new Set<number>();
-      const parentToPartialPayment = new Map<number, number>();
-
-      chargeInvoices.forEach((inv) => {
-        const partial = parsePartialPayment(inv.notes);
-        if (partial === null) return;
-        balanceInvoiceIds.add(inv.id);
-        const parentAmount = inv.amount + partial;
-        const parent = chargeInvoices.find(
-          (p) => p.id !== inv.id && Math.abs(p.amount - parentAmount) < 1 && p.status?.toLowerCase() === "paid"
-        );
-        if (parent) parentToPartialPayment.set(parent.id, partial);
-      });
-
-      const debitInvoices = chargeInvoices.filter((inv) => !balanceInvoiceIds.has(inv.id));
-
-      // Paid invoices that have NO matching actual payment record.
-      // For partially-paid invoices, match against the partial amount (not the full invoice amount).
-      const invoicesCoveredByPayment = new Set<number>();
-      debitInvoices.forEach((inv) => {
-        if (inv.status?.toLowerCase() !== "paid") return;
-        const expectedCredit = parentToPartialPayment.get(inv.id) ?? inv.amount;
-        const invDate = new Date(inv.invoiceDate).getTime();
-        const covered = filteredPayments.some(
-          (p) => Math.abs(p.amount - expectedCredit) < 1 && Math.abs(new Date(p.paymentDate).getTime() - invDate) <= 86_400_000 * 2
-        );
-        if (covered) invoicesCoveredByPayment.add(inv.id);
-      });
+      // Payment invoices (Manual Payment type) = credit rows for history visibility.
+      // affectsBalance = false because their amounts are already embedded in the charge invoice amounts.
+      const paymentInvoices = filteredInvoices.filter(
+        (inv) => inv.type?.toLowerCase().includes("payment")
+      );
 
       const rows: Omit<LedgerRow, "balance">[] = [
-        // Debit row for every charge invoice (balance-remaining invoices excluded)
-        ...debitInvoices.map((inv) => ({
+        // Debit row for every charge invoice (current outstanding amount)
+        ...chargeInvoices.map((inv) => ({
           date: inv.invoiceDate,
           type: "Invoice" as const,
-          description: inv.notes ? inv.notes : inv.type === "Invoice" ? "Rent Invoice" : inv.type,
+          description: inv.type === "Invoice" || inv.type === "Rent" ? "Rent Invoice" : inv.type,
           debit: inv.amount,
           credit: 0,
           reference: inv.invoiceNumber,
-          // Override "Paid" to "Partial" for invoices that were only partially paid
-          status: parentToPartialPayment.has(inv.id) ? "Partial" : inv.status,
+          status: inv.status,
+          affectsBalance: true,
         })),
-        // Synthetic credit for paid invoices not covered by an actual payment record.
-        // Use partial payment amount for partially-paid parent invoices.
-        ...debitInvoices
-          .filter((inv) => inv.status?.toLowerCase() === "paid" && !invoicesCoveredByPayment.has(inv.id))
-          .map((inv) => ({
-            date: inv.invoiceDate,
-            type: "Payment" as const,
-            description: `Invoice Settled — ${inv.invoiceNumber}`,
-            debit: 0,
-            credit: parentToPartialPayment.get(inv.id) ?? inv.amount,
-            reference: inv.invoiceNumber,
-            status: "Settled",
-          })),
-        // Actual recorded payment transactions
+        // Payment records — shown for history but do NOT change running balance
+        // (payment was already deducted from the invoice amount above)
+        ...paymentInvoices.map((inv) => ({
+          date: inv.invoiceDate,
+          type: "Payment" as const,
+          description: `${inv.paymentMethod || "Payment"} — ${inv.invoiceNumber}`,
+          debit: 0,
+          credit: inv.amount,
+          reference: inv.invoiceNumber,
+          status: "Paid",
+          affectsBalance: false,
+        })),
+        // Actual TenantPayment records (if any) — also already reflected, show for completeness
         ...filteredPayments.map((p) => ({
           date: p.paymentDate,
           type: "Payment" as const,
@@ -186,13 +154,14 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
           credit: p.amount,
           reference: p.transactionId || "—",
           status: p.paymentStatus,
+          affectsBalance: false,
         })),
       ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Calculate running balance (invoices = debit, payments = credit)
+      // Running balance only advances for charge invoice rows; payment rows are informational
       let running = 0;
       const withBalance: LedgerRow[] = rows.map((r) => {
-        running += r.debit - r.credit;
+        if (r.affectsBalance !== false) running += r.debit - r.credit;
         return { ...r, balance: running };
       });
 
@@ -207,7 +176,9 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
   useEffect(() => { fetchStatement(); }, [tenant.id]);
 
   const totalDebits = ledger.reduce((s, r) => s + r.debit, 0);
-  const totalCredits = ledger.reduce((s, r) => s + r.credit, 0);
+  // Total Paid = sum of payment credit rows only
+  const totalCredits = ledger.filter((r) => r.affectsBalance === false).reduce((s, r) => s + r.credit, 0);
+  // Outstanding balance = end of the running balance (charge-invoice debits only)
   const closingBalance = ledger.length > 0 ? ledger[ledger.length - 1].balance : 0;
 
   const handlePrint = () => {
@@ -555,10 +526,15 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
                         {row.credit > 0 ? `${fmt(row.credit)}` : <span className="text-slate-300">—</span>}
                       </td>
                       <td className={`px-4 py-3 text-right text-xs font-bold ${row.balance > 0 ? "text-red-700" : "text-emerald-700"}`}>
-                        {fmt(Math.abs(row.balance))}
-                        {row.balance > 0 && idx === ledger.length - 1 && (
-                          <AlertTriangle className="inline h-3 w-3 ml-1 text-red-500" />
-                        )}
+                        {row.affectsBalance === false
+                          ? <span className="text-slate-300 font-normal text-[10px]">applied</span>
+                          : <>
+                              {fmt(Math.abs(row.balance))}
+                              {row.balance > 0 && idx === ledger.length - 1 && (
+                                <AlertTriangle className="inline h-3 w-3 ml-1 text-red-500" />
+                              )}
+                            </>
+                        }
                       </td>
                       <td className="px-4 py-3 text-xs font-mono text-[#64748B] whitespace-nowrap">{row.reference}</td>
                       <td className="px-4 py-3">
