@@ -512,7 +512,15 @@ const InvoiceManagement = () => {
   };
   // Charge invoices only — excludes payment records from KPI totals.
   const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
-  const totalPaid    = chargeInvoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0);
+
+  // When a partial payment is recorded, the original invoice is marked Paid (full amount)
+  // and a new balance invoice is created for the remainder. Subtract those balance amounts
+  // from Collected so only the actual cash received is shown.
+  const partialBalanceTotal = chargeInvoices
+    .filter((i) => /remaining after partial payment/i.test(i.notes ?? ""))
+    .reduce((s, i) => s + i.amount, 0);
+
+  const totalPaid    = chargeInvoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0) - partialBalanceTotal;
   const totalPending = chargeInvoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
   const totalOverdue = chargeInvoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
 
