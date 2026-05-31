@@ -125,7 +125,8 @@ const TABS = [
   { key: "pending", label: "Pending" },
   { key: "paid", label: "Paid" },
   { key: "overdue", label: "Overdue" },
-  { key: "manual", label: "Manual" },
+  { key: "manual-invoice", label: "Manual Invoice" },
+  { key: "payments", label: "Payments" },
 ];
 
 const InvoiceManagement = () => {
@@ -233,15 +234,23 @@ const InvoiceManagement = () => {
   const unitsForProperty = (propertyId: string) =>
     units.filter((u) => u.propertyId === Number(propertyId));
 
+  const isPaymentType = (type?: string) =>
+    type?.toLowerCase().includes("payment") ?? false;
+
   const filtered = invoices.filter((inv) => {
     const matchSearch =
       tenantName(inv.tenantId).toLowerCase().includes(search.toLowerCase()) ||
       inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
       propertyName(inv.propertyId).toLowerCase().includes(search.toLowerCase());
     const matchTab =
-      tab === "all" ||
-      inv.status.toLowerCase() === tab ||
-      (tab === "manual" && inv.type !== "Invoice");
+      // "All" shows only charge invoices — payment records live in "Payments" tab
+      (tab === "all" && !isPaymentType(inv.type)) ||
+      // Status tabs also exclude payment-type records
+      (["pending", "paid", "overdue"].includes(tab) && inv.status.toLowerCase() === tab && !isPaymentType(inv.type)) ||
+      // Manual Invoice tab: manual charges only
+      (tab === "manual-invoice" && inv.type === "Manual Invoice") ||
+      // Payments tab: payment records only
+      (tab === "payments" && isPaymentType(inv.type));
     return matchSearch && matchTab;
   });
 
@@ -501,10 +510,7 @@ const InvoiceManagement = () => {
     doc.save(`${inv.invoiceNumber}.pdf`);
     toast({ title: "Invoice Downloaded", description: `${inv.invoiceNumber} saved as PDF.` });
   };
-  // Exclude "Manual Payment" / payment-type invoices from KPI totals.
-  // Those are payment records, not charges — counting them inflates the totals.
-  const isPaymentType = (type?: string) =>
-    type?.toLowerCase().includes("payment") ?? false;
+  // Charge invoices only — excludes payment records from KPI totals.
   const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
   const totalPaid    = chargeInvoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0);
   const totalPending = chargeInvoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
