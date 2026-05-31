@@ -220,7 +220,10 @@ const InvoiceManagement = () => {
     axios
       .get<Invoice[]>(`${apiUrl}/GetInvoicesByTenantId/${form.tenantId}`)
       .then(({ data }) =>
-        setPendingInvoices(data.filter((inv) => inv.status === "Pending" || inv.status === "Overdue"))
+        setPendingInvoices(data.filter((inv) =>
+          (inv.status === "Pending" || inv.status === "Overdue") &&
+          !inv.type?.toLowerCase().includes("payment")
+        ))
       )
       .catch(() => {})
       .finally(() => setIsLoadingPendingInvoices(false));
