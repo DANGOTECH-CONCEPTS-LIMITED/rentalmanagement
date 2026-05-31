@@ -315,9 +315,9 @@ const InvoiceManagement = () => {
 
         const remaining = Math.max(0, invoiceAmount - paymentAmount);
         if (remaining > 0) {
-          toast({ title: "Partial Payment Recorded", description: `${formatUGX(paymentAmount)} applied. Remaining balance: ${formatUGX(remaining)}.` });
+          toast({ title: "Partial Payment Recorded", description: `${formatUGX(paymentAmount)} applied. Remaining balance on invoice: ${formatUGX(remaining)}.` });
         } else {
-          toast({ title: "Payment Recorded", description: "Invoice fully settled." });
+          toast({ title: "Fully Settled", description: "Invoice has been fully paid and marked Paid." });
         }
       } else {
         toast({ title: "Invoice Created", description: "Invoice created successfully." });

@@ -159,7 +159,10 @@ namespace Infrastructure.Services.Tenant
                 throw new Exception("Payment amount must be greater than zero.");
 
             invoice.Amount = Math.Max(0, invoice.Amount - paymentAmount);
-            invoice.Status = invoice.Amount <= 0 ? "Paid" : "Pending";
+            // Only mark Paid when fully settled; otherwise keep the existing status
+            // (Overdue stays Overdue with a reduced amount — the scheduler must not flip it back)
+            if (invoice.Amount <= 0)
+                invoice.Status = "Paid";
             invoice.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
