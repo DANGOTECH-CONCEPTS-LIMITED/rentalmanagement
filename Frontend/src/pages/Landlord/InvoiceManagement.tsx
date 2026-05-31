@@ -290,7 +290,8 @@ const InvoiceManagement = () => {
       const paymentAmount = Number(form.amount.replace(/,/g, ""));
       const body = {
         Type: form.type,
-        Status: form.status,
+        // Payment records are settled immediately; charge invoices use the form's chosen status
+        Status: form.type === "Manual Payment" ? "Paid" : form.status,
         TenantId: Number(form.tenantId),
         PropertyId: Number(form.propertyId),
         PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
@@ -308,26 +309,13 @@ const InvoiceManagement = () => {
         const linked = pendingInvoices.find((i) => i.id === selectedInvoiceId);
         const invoiceAmount = linked?.amount ?? 0;
 
-        // Always mark the linked invoice as Paid (it's been addressed)
-        await axios.put(`${apiUrl}/UpdateInvoiceStatus/${selectedInvoiceId}`, { Status: "Paid" });
+        // Subtract the payment from the invoice amount.
+        // If fully paid the backend marks it Paid; if partial it stays Pending with reduced amount.
+        await axios.put(`${apiUrl}/ApplyPaymentToInvoice/${selectedInvoiceId}`, paymentAmount);
 
-        // Partial payment: create a new Pending invoice for the remaining balance
-        if (paymentAmount < invoiceAmount) {
-          const balance = invoiceAmount - paymentAmount;
-          await axios.post(`${apiUrl}/CreateTenantInvoice`, {
-            Type: linked?.type ?? "Invoice",
-            Status: "Pending",
-            TenantId: Number(form.tenantId),
-            PropertyId: Number(form.propertyId),
-            PropertyUnitId: form.propertyUnitId ? Number(form.propertyUnitId) : null,
-            Amount: balance,
-            InvoiceDate: new Date(form.invoiceDate).toISOString(),
-            DueDate: linked?.dueDate ? new Date(linked.dueDate).toISOString() : new Date(form.dueDate).toISOString(),
-            Notes: `Balance of ${formatUGX(balance)} remaining after partial payment of ${formatUGX(paymentAmount)}.`,
-            CreatedByUserId: userData.id,
-            CreatedByName: userData.fullName || "",
-          });
-          toast({ title: "Partial Payment Recorded", description: `Payment of ${formatUGX(paymentAmount)} recorded. A balance invoice of ${formatUGX(balance)} has been created.` });
+        const remaining = Math.max(0, invoiceAmount - paymentAmount);
+        if (remaining > 0) {
+          toast({ title: "Partial Payment Recorded", description: `${formatUGX(paymentAmount)} applied. Remaining balance: ${formatUGX(remaining)}.` });
         } else {
           toast({ title: "Payment Recorded", description: "Invoice fully settled." });
         }
@@ -516,14 +504,12 @@ const InvoiceManagement = () => {
   // Charge invoices only — excludes payment records from KPI totals.
   const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
 
-  // When a partial payment is recorded, the original invoice is marked Paid (full amount)
-  // and a new balance invoice is created for the remainder. Subtract those balance amounts
-  // from Collected so only the actual cash received is shown.
-  const partialBalanceTotal = chargeInvoices
-    .filter((i) => /remaining after partial payment/i.test(i.notes ?? ""))
+  // Collected = sum of payment records (Manual Payment type).
+  // These are created at the exact amount paid, so they're always accurate —
+  // even for partial payments where the original invoice is marked Paid at full value.
+  const totalPaid = invoices
+    .filter((i) => isPaymentType(i.type))
     .reduce((s, i) => s + i.amount, 0);
-
-  const totalPaid    = chargeInvoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.amount, 0) - partialBalanceTotal;
   const totalPending = chargeInvoices.filter((i) => i.status === "Pending").reduce((s, i) => s + i.amount, 0);
   const totalOverdue = chargeInvoices.filter((i) => i.status === "Overdue").reduce((s, i) => s + i.amount, 0);
 
@@ -937,7 +923,7 @@ const InvoiceManagement = () => {
                       return (
                         <p className="text-xs text-amber-600 flex items-center gap-1 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
                           <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                          Partial payment — a balance invoice of {formatUGX(balance)} will be created automatically.
+                          Partial payment — invoice balance will be reduced to {formatUGX(balance)}.
                         </p>
                       );
                     }

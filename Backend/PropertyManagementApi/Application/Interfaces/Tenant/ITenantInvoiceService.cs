@@ -13,6 +13,7 @@ namespace Application.Interfaces.Tenant
         Task<IEnumerable<TenantInvoice>> GetInvoicesByLandlordIdAsync(int landlordId);
         Task<TenantInvoice> GetInvoiceByIdAsync(int invoiceId);
         Task<TenantInvoice> UpdateInvoiceStatusAsync(int invoiceId, UpdateTenantInvoiceStatusDto dto);
+        Task<TenantInvoice> ApplyPaymentToInvoiceAsync(int invoiceId, double paymentAmount);
 
         Task<TenantProfileDto> GetTenantProfileAsync(int tenantId);
     }

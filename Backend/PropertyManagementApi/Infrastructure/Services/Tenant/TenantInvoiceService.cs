@@ -149,6 +149,23 @@ namespace Infrastructure.Services.Tenant
             return invoice;
         }
 
+        public async Task<TenantInvoice> ApplyPaymentToInvoiceAsync(int invoiceId, double paymentAmount)
+        {
+            var invoice = await _db.TenantInvoices.FirstOrDefaultAsync(i => i.Id == invoiceId);
+            if (invoice == null)
+                throw new Exception("Invoice not found.");
+
+            if (paymentAmount <= 0)
+                throw new Exception("Payment amount must be greater than zero.");
+
+            invoice.Amount = Math.Max(0, invoice.Amount - paymentAmount);
+            invoice.Status = invoice.Amount <= 0 ? "Paid" : "Pending";
+            invoice.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            return invoice;
+        }
+
         public async Task<TenantProfileDto> GetTenantProfileAsync(int tenantId)
         {
             var profile = await _db.Tenants

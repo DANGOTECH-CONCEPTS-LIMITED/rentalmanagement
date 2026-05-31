@@ -76,6 +76,21 @@ namespace API.Controllers.Tenant
             }
         }
 
+        [HttpPut("/ApplyPaymentToInvoice/{invoiceId}")]
+        [Authorize]
+        public async Task<IActionResult> ApplyPaymentToInvoice(int invoiceId, [FromBody] double paymentAmount)
+        {
+            try
+            {
+                var invoice = await _service.ApplyPaymentToInvoiceAsync(invoiceId, paymentAmount);
+                return Ok(invoice);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpPut("/UpdateInvoiceStatus/{invoiceId}")]
         [Authorize]
         public async Task<IActionResult> UpdateInvoiceStatus(int invoiceId, [FromBody] UpdateTenantInvoiceStatusDto dto)
