@@ -311,7 +311,7 @@ const InvoiceManagement = () => {
 
         // Subtract the payment from the invoice amount.
         // If fully paid the backend marks it Paid; if partial it stays Pending with reduced amount.
-        await axios.put(`${apiUrl}/ApplyPaymentToInvoice/${selectedInvoiceId}`, paymentAmount);
+        await axios.put(`${apiUrl}/ApplyPaymentToInvoice/${selectedInvoiceId}`, { paymentAmount });
 
         const remaining = Math.max(0, invoiceAmount - paymentAmount);
         if (remaining > 0) {
