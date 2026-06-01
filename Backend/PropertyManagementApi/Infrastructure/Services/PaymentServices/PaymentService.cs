@@ -524,10 +524,6 @@ namespace Infrastructure.Services.PaymentServices
                 throw new ArgumentException("Phone number is not valid", nameof(dto.PhoneNumber));
 
             var charges = await CalculateUtilityChargeAsync(dto.MeterNumber, dto.Amount);
-            if (dto.MeterNumber.Equals("0292000010952"))
-            {
-                charges = 5000;
-            }
 
             var payment = new UtilityPayment
             {
