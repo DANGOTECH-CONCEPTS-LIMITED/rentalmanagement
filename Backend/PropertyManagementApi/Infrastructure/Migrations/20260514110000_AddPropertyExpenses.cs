@@ -1,4 +1,6 @@
 using System;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -6,6 +8,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Infrastructure.Migrations
 {
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260514110000_AddPropertyExpenses")]
     public partial class AddPropertyExpenses : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

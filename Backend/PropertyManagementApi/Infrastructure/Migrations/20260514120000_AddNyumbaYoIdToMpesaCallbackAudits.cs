@@ -1,9 +1,13 @@
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Infrastructure.Migrations
 {
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260514120000_AddNyumbaYoIdToMpesaCallbackAudits")]
     public partial class AddNyumbaYoIdToMpesaCallbackAudits : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
