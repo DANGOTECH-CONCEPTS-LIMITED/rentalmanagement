@@ -2,6 +2,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
+ENV PATH=/root/.dotnet/tools:$PATH
+
 COPY ["Domain/Domain.csproj", "Domain/"]
 COPY ["Application/Application.csproj", "Application/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
@@ -13,6 +15,14 @@ COPY . .
 WORKDIR /src/API
 RUN dotnet publish "API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
+# Build a framework-dependent EF migration bundle so the runtime image does not need the SDK.
+RUN dotnet tool install --global dotnet-ef --version 8.0.13 \
+ && dotnet ef migrations bundle \
+  --project ../Infrastructure/Infrastructure.csproj \
+  --startup-project API.csproj \
+  --configuration Release \
+  --output /app/publish/efbundle
+
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
@@ -22,8 +32,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     DOTNET_RUNNING_IN_CONTAINER=true \
     DB_HOST=mysql \
     DB_PORT=3306 \
-    RUN_MIGRATIONS=true \
-    PATH=/root/.dotnet/tools:$PATH
+    RUN_MIGRATIONS=true
 
 # Install small utilities and gosu for privilege drop
 RUN apt-get update \
@@ -32,16 +41,13 @@ RUN apt-get update \
 
 # Create non-root user and app directories
 RUN (id -u app >/dev/null 2>&1 || useradd --create-home --shell /bin/bash app) \
- && mkdir -p /app/logs /app/uploads /root/.dotnet/tools \
+ && mkdir -p /app/logs /app/uploads \
  && chown -R app:app /app /app/logs /app/uploads
 
 EXPOSE 8080
 
 # Copy published app
 COPY --from=build /app/publish .
-
-# Install dotnet-ef global tool (adjust version if your EF Core version differs)
-RUN dotnet tool install --global dotnet-ef --version 9.0.0
 
 # Entrypoint: wait for DB, run migrations (optional), then start the app as non-root
 RUN cat > /usr/local/bin/entrypoint.sh <<'EOF'
@@ -80,9 +86,7 @@ chown -R app:app /app/uploads /app/logs
 # Optionally run EF Core migrations
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
   echo "Running EF Core migrations..."
-  export PATH="/root/.dotnet/tools:$PATH"
-  # Run migrations using the published app. --no-build avoids rebuilding.
-  if dotnet ef database update --no-build; then
+  if ./efbundle; then
     echo "Migrations applied successfully."
   else
     echo "Migrations failed. Exiting."
