@@ -80,6 +80,7 @@ namespace Infrastructure.Data
 
             modelBuilder.Entity<PropertyExpense>(e =>
             {
+                e.Property(x => x.Category).HasMaxLength(255);
                 e.HasIndex(x => x.OwnerId);
                 e.HasIndex(x => x.Date);
                 e.HasIndex(x => x.Category);
@@ -219,11 +220,12 @@ namespace Infrastructure.Data
                 .WithMany(w => w.Transactions)
                 .HasForeignKey(t => t.WalletId);
 
-            modelBuilder.Entity<CollectoWalletWithdrawalHistory>()
-                .HasIndex(x => x.CreatedAt);
-
-            modelBuilder.Entity<CollectoWalletWithdrawalHistory>()
-                .HasIndex(x => x.Reference);
+            modelBuilder.Entity<CollectoWalletWithdrawalHistory>(e =>
+            {
+                e.Property(x => x.Reference).HasMaxLength(255);
+                e.HasIndex(x => x.CreatedAt);
+                e.HasIndex(x => x.Reference);
+            });
 
             modelBuilder.Entity<ServiceLogs>()
                 .HasIndex(x => x.LogDate);
@@ -250,9 +252,11 @@ namespace Infrastructure.Data
                     .HasForeignKey(x => x.TenantId);
             });
 
-            modelBuilder.Entity<ServiceLogs>()
-                .HasIndex(x => x.EventHash)
-                .IsUnique();
+            modelBuilder.Entity<ServiceLogs>(e =>
+            {
+                e.Property(x => x.EventHash).HasMaxLength(255);
+                e.HasIndex(x => x.EventHash).IsUnique();
+            });
 
             modelBuilder.Entity<AuditTrailEntry>(e =>
             {
@@ -268,6 +272,7 @@ namespace Infrastructure.Data
             {
                 e.Property(x => x.Payload).HasColumnType("longtext");
                 e.Property(x => x.Headers).HasColumnType("longtext");
+                e.Property(x => x.TransId).HasMaxLength(255);
                 e.HasIndex(x => x.TransId);
             });
 
@@ -291,6 +296,7 @@ namespace Infrastructure.Data
 
             modelBuilder.Entity<TenantInvoice>(e =>
             {
+                e.Property(x => x.Status).HasMaxLength(255);
                 e.HasIndex(x => x.InvoiceNumber).IsUnique();
                 e.HasIndex(x => x.TenantId);
                 e.HasIndex(x => x.PropertyId);
@@ -322,17 +328,19 @@ namespace Infrastructure.Data
             });
 
             // Indexes to improve utility payments/meters lookups and aggregations
-            modelBuilder.Entity<UtilityPayment>()
-                .HasIndex(p => p.MeterNumber);
+            modelBuilder.Entity<UtilityPayment>(e =>
+            {
+                e.Property(p => p.MeterNumber).HasMaxLength(255);
+                e.HasIndex(p => p.MeterNumber);
+                e.HasIndex(p => p.CreatedAt);
+            });
 
-            modelBuilder.Entity<UtilityPayment>()
-                .HasIndex(p => p.CreatedAt);
-
-            modelBuilder.Entity<UtilityMeter>()
-                .HasIndex(m => m.MeterNumber);
-
-            modelBuilder.Entity<UtilityMeter>()
-                .HasIndex(m => m.LandLordId);
+            modelBuilder.Entity<UtilityMeter>(e =>
+            {
+                e.Property(m => m.MeterNumber).HasMaxLength(255);
+                e.HasIndex(m => m.MeterNumber);
+                e.HasIndex(m => m.LandLordId);
+            });
         }
 
         // Declaration of the partial hook used by AppDbContext.Accounting.cs
