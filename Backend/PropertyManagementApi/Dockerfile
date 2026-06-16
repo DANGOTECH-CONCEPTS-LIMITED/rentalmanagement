@@ -31,7 +31,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user and app directories
-RUN useradd --create-home --shell /bin/bash app \
+RUN (id -u app >/dev/null 2>&1 || useradd --create-home --shell /bin/bash app) \
  && mkdir -p /app/logs /app/uploads /root/.dotnet/tools \
  && chown -R app:app /app /app/logs /app/uploads
 
