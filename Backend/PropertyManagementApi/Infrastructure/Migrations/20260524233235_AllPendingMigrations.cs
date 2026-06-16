@@ -101,9 +101,27 @@ DEALLOCATE PREPARE s;
             // Avoid dropping the primary key on MariaDB/MySQL. Dropping and re-adding PK on an AUTO_INCREMENT
             // column can fail if the table already has an AUTO_INCREMENT column but no key at that moment.
 
-            migrationBuilder.RenameTable(
-                name: "RentalContracts",
-                newName: "rentalcontracts");
+            migrationBuilder.Sql(@"
+SET @has_old_table := (
+    SELECT COUNT(*)
+    FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'RentalContracts'
+);
+SET @has_new_table := (
+    SELECT COUNT(*)
+    FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'rentalcontracts'
+);
+SET @stmt := IF(@has_old_table > 0 AND @has_new_table = 0,
+    'RENAME TABLE `RentalContracts` TO `rentalcontracts`',
+    'SELECT 1'
+);
+PREPARE s FROM @stmt;
+EXECUTE s;
+DEALLOCATE PREPARE s;
+");
 
             // MariaDB doesn't support renaming indexes via ALTER TABLE ... RENAME INDEX in all versions.
             // Index names are not critical for correctness; skip explicit renames for compatibility.
@@ -168,13 +186,23 @@ DEALLOCATE PREPARE s;
             // Some environments have schema drift (column types/engines) which can cause errno 150.
             // Relationships can be reintroduced in a dedicated, validated migration later.
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_rentalcontracts_Users_OwnerId",
-                table: "rentalcontracts",
-                column: "OwnerId",
-                principalTable: "Users",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+            migrationBuilder.Sql(@"
+SET @fk := (
+    SELECT rc.CONSTRAINT_NAME
+    FROM information_schema.REFERENTIAL_CONSTRAINTS rc
+    WHERE rc.CONSTRAINT_SCHEMA = DATABASE()
+      AND rc.TABLE_NAME = 'rentalcontracts'
+      AND rc.CONSTRAINT_NAME = 'FK_rentalcontracts_Users_OwnerId'
+    LIMIT 1
+);
+SET @stmt := IF(@fk IS NULL,
+    'ALTER TABLE `rentalcontracts` ADD CONSTRAINT `FK_rentalcontracts_Users_OwnerId` FOREIGN KEY (`OwnerId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE',
+    'SELECT 1'
+);
+PREPARE s FROM @stmt;
+EXECUTE s;
+DEALLOCATE PREPARE s;
+");
         }
 
         /// <inheritdoc />
