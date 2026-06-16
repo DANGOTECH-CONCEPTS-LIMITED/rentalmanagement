@@ -1,0 +1,48 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: propertymgt-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ChangeThisRootPassword123!}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-propertymanagement}
+      MYSQL_USER: ${MYSQL_USER:-propertymgt}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ChangeThisDbPassword123!}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: propertymgt:0.1
+    container_name: propertymgt-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DB_HOST: mysql
+      DB_PORT: 3306
+      RUN_MIGRATIONS: "true"
+      ConnectionStrings__DefaultConnection: server=mysql;port=3306;database=${MYSQL_DATABASE:-propertymanagement};user=${MYSQL_USER:-propertymgt};password=${MYSQL_PASSWORD:-ChangeThisDbPassword123!};Default Command Timeout=60;Connection Timeout=30;
+    ports:
+      - "8080:8080"
+    volumes:
+      - api_uploads:/app/uploads
+      - api_logs:/app/logs
+
+volumes:
+  mysql_data:
+  api_uploads:
+  api_logs:

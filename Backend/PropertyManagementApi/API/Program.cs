@@ -304,19 +304,23 @@ app.UseCors("AllowDangopayFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Apply pending migrations
-using (var scope = app.Services.CreateScope())
+var runMigrations = app.Configuration.GetValue("RUN_MIGRATIONS", true);
+if (runMigrations)
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
+    // Apply pending migrations
+    using (var scope = app.Services.CreateScope())
     {
-        dbContext.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
-        throw;
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        try
+        {
+            dbContext.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while migrating the database.");
+            throw;
+        }
     }
 }
 

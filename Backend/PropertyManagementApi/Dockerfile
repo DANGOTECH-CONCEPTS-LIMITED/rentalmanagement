@@ -2,8 +2,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-ENV PATH=/root/.dotnet/tools:$PATH
-
 COPY ["Domain/Domain.csproj", "Domain/"]
 COPY ["Application/Application.csproj", "Application/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
@@ -14,14 +12,6 @@ RUN dotnet restore "API/API.csproj"
 COPY . .
 WORKDIR /src/API
 RUN dotnet publish "API.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-# Build a framework-dependent EF migration bundle so the runtime image does not need the SDK.
-RUN dotnet tool install --global dotnet-ef --version 8.0.13 \
- && dotnet ef migrations bundle \
-  --project ../Infrastructure/Infrastructure.csproj \
-  --startup-project API.csproj \
-  --configuration Release \
-  --output /app/publish/efbundle
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
@@ -85,13 +75,7 @@ chown -R app:app /app/uploads /app/logs
 
 # Optionally run EF Core migrations
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
-  echo "Running EF Core migrations..."
-  if ./efbundle; then
-    echo "Migrations applied successfully."
-  else
-    echo "Migrations failed. Exiting."
-    exit 1
-  fi
+  echo "RUN_MIGRATIONS is true; the API will apply EF Core migrations during startup."
 else
   echo "RUN_MIGRATIONS is false; skipping migrations."
 fi

@@ -6,6 +6,10 @@
 **/.git/
 **/.gitignore
 
+.env
+.env.*
+!.env.example
+
 API/logs/
 API/uploads/
 API/published/
