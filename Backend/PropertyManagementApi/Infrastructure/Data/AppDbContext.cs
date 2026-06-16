@@ -273,6 +273,8 @@ namespace Infrastructure.Data
 
             modelBuilder.Entity<PropertyUnit>(e =>
             {
+                e.Property(x => x.UnitNumber).HasMaxLength(255);
+                e.Property(x => x.Status).HasMaxLength(255);
                 e.HasIndex(x => new { x.PropertyId, x.UnitNumber }).IsUnique();
                 e.HasIndex(x => x.PropertyId);
                 e.HasIndex(x => x.Status);

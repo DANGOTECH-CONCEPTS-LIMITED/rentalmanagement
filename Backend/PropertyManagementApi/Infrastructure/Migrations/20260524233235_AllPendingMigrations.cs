@@ -16,10 +16,10 @@ namespace Infrastructure.Migrations
 CREATE TABLE IF NOT EXISTS `PropertyUnits` (
     `Id` int NOT NULL AUTO_INCREMENT,
     `PropertyId` int NOT NULL,
-    `UnitNumber` longtext CHARACTER SET utf8mb4 NOT NULL,
+    `UnitNumber` varchar(255) CHARACTER SET utf8mb4 NOT NULL,
     `SecurityDeposit` double NOT NULL,
     `MonthlyAmount` double NOT NULL,
-    `Status` longtext CHARACTER SET utf8mb4 NOT NULL,
+    `Status` varchar(255) CHARACTER SET utf8mb4 NOT NULL,
     `CreatedAt` datetime(6) NOT NULL,
     `UpdatedAt` datetime(6) NULL,
     CONSTRAINT `PK_PropertyUnits` PRIMARY KEY (`Id`)
