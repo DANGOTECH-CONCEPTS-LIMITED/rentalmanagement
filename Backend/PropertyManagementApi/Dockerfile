@@ -27,7 +27,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 
 # Install small utilities and gosu for privilege drop
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl netcat gosu \
+ && apt-get install -y --no-install-recommends ca-certificates curl netcat-openbsd gosu \
  && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user and app directories
