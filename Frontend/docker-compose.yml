@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://13.140.158.252:8080
+    image: rental-frontend:latest
+    container_name: rental-frontend
+    restart: unless-stopped
+    ports:
+      - "8081:80"
