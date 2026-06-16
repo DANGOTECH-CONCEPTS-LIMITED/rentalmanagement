@@ -8,8 +8,6 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-propertymanagement}
       MYSQL_USER: ${MYSQL_USER:-propertymgt}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ChangeThisDbPassword123!}
-    ports:
-      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
