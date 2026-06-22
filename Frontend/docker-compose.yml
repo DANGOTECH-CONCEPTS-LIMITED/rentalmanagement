@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: http://13.140.158.252:8080
+        VITE_API_BASE_URL: https://api.marpleproperties.com
     image: rental-frontend:latest
     container_name: rental-frontend
     restart: unless-stopped
