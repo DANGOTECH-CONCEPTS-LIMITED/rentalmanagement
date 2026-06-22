@@ -143,25 +143,77 @@ namespace API.Controllers.Accounts
             var now = DateTime.UtcNow;
             var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+            var successfulPaymentStatuses = new[] { "SUCCESSFUL", "PAID", "COMPLETED" };
 
-            // Active contracts → monthly rent expected + security deposits
-            var contracts = await _db.RentalContracts
+            var activeContracts = await _db.RentalContracts
                 .AsNoTracking()
-                .Where(c => c.OwnerId == landlordId && c.Status.ToLower() == "active")
-                .Select(c => new { c.RentAmount, c.SecurityDeposit })
+                .Where(c => c.OwnerId == landlordId && string.Equals(c.Status, "active", StringComparison.OrdinalIgnoreCase))
+                .Select(c => new
+                {
+                    c.TenantId,
+                    c.PropertyId,
+                    c.UnitId,
+                    c.RentAmount,
+                    c.SecurityDeposit
+                })
                 .ToListAsync();
 
-            var revenueExpected = (decimal)contracts.Sum(c => c.RentAmount);
-            var securityDeposits = (decimal)contracts.Sum(c => c.SecurityDeposit);
-
-            // Collected: paid invoices this month on this landlord's properties (same join as GetInvoicesByLandlordId)
-            var collected = await _db.TenantInvoices
+            var invoices = await _db.TenantInvoices
                 .AsNoTracking()
                 .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
                     i => i.PropertyId, p => p.Id, (i, p) => i)
-                .Where(i => i.Status.ToLower() == "paid"
-                         && i.InvoiceDate >= monthStart && i.InvoiceDate <= monthEnd)
-                .SumAsync(i => (decimal)i.Amount);
+                .Where(i => i.InvoiceDate >= monthStart && i.InvoiceDate <= monthEnd)
+                .Select(i => new
+                {
+                    i.TenantId,
+                    i.PropertyId,
+                    i.PropertyUnitId,
+                    i.Amount,
+                    i.Status,
+                    i.Type
+                })
+                .ToListAsync();
+
+            var collected = await _db.TenantPayments
+                .AsNoTracking()
+                .Where(p => p.PropertyTenant.Property != null
+                         && p.PropertyTenant.Property.OwnerId == landlordId
+                         && p.PaymentDate >= monthStart && p.PaymentDate <= monthEnd
+                         && successfulPaymentStatuses.Contains((p.PaymentStatus ?? string.Empty).ToUpper()))
+                .SumAsync(p => (decimal)p.Amount);
+
+            var outstandingInvoiceBalances = invoices
+                .Where(i => !string.Equals(i.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+                         && !string.Equals(i.Status, "Void", StringComparison.OrdinalIgnoreCase))
+                .Sum(i => (decimal)i.Amount);
+
+            var missingContractRent = activeContracts
+                .Where(contract => !invoices.Any(invoice =>
+                    string.Equals(invoice.Type, "Rent", StringComparison.OrdinalIgnoreCase)
+                    && (
+                        (contract.TenantId.HasValue && invoice.TenantId == contract.TenantId.Value)
+                        || (contract.PropertyId.HasValue
+                            && invoice.PropertyId == contract.PropertyId.Value
+                            && invoice.PropertyUnitId == contract.UnitId)
+                    )))
+                .Sum(contract => (decimal)contract.RentAmount);
+
+            var currentMonthSecurityDepositInvoices = invoices
+                .Where(i => !string.IsNullOrWhiteSpace(i.Type)
+                         && i.Type.Contains("security", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var contractSecurityDeposits = activeContracts.Sum(contract => (decimal)contract.SecurityDeposit);
+            var manualSecurityDeposits = currentMonthSecurityDepositInvoices
+                .Where(invoice => !activeContracts.Any(contract =>
+                    (contract.TenantId.HasValue && contract.TenantId.Value == invoice.TenantId)
+                    || (contract.PropertyId.HasValue
+                        && contract.PropertyId.Value == invoice.PropertyId
+                        && contract.UnitId == invoice.PropertyUnitId)))
+                .Sum(invoice => (decimal)invoice.Amount);
+
+            var revenueExpected = collected + outstandingInvoiceBalances + missingContractRent;
+            var securityDeposits = contractSecurityDeposits + manualSecurityDeposits;
 
             var uncollected = revenueExpected > collected ? revenueExpected - collected : 0m;
 
