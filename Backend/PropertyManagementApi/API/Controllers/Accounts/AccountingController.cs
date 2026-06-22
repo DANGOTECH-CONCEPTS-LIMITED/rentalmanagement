@@ -147,7 +147,7 @@ namespace API.Controllers.Accounts
 
             var activeContracts = await _db.RentalContracts
                 .AsNoTracking()
-                .Where(c => c.OwnerId == landlordId && string.Equals(c.Status, "active", StringComparison.OrdinalIgnoreCase))
+                .Where(c => c.OwnerId == landlordId && c.Status == "active")
                 .Select(c => new
                 {
                     c.TenantId,
@@ -169,7 +169,6 @@ namespace API.Controllers.Accounts
                     i.PropertyId,
                     i.PropertyUnitId,
                     i.Amount,
-                    i.OriginalAmount,
                     i.Status,
                     i.Type
                 })
@@ -211,7 +210,7 @@ namespace API.Controllers.Accounts
                     || (contract.PropertyId.HasValue
                         && contract.PropertyId.Value == invoice.PropertyId
                         && contract.UnitId == invoice.PropertyUnitId)))
-                .Sum(invoice => (decimal)(invoice.OriginalAmount > 0 ? invoice.OriginalAmount : invoice.Amount));
+                .Sum(invoice => (decimal)invoice.Amount);
 
             var revenueExpected = collected + outstandingInvoiceBalances + missingContractRent;
             var securityDeposits = contractSecurityDeposits + manualSecurityDeposits;
