@@ -21,13 +21,13 @@ jobs:
         with:
           dotnet-version: '9.x'
 
-      # 3. Restore dependencies
+      # 3. Restore dependencies for the API and its project references
       - name: Restore Dependencies
-        run: dotnet restore Backend/PropertyManagementApi/PropertyManagementApi.sln
+        run: dotnet restore Backend/PropertyManagementApi/API/API.csproj
 
-      # 4. Build the solution in Release mode
+      # 4. Build the API project in Release mode
       - name: Build Solution
-        run: dotnet build Backend/PropertyManagementApi/PropertyManagementApi.sln --configuration Release --no-restore
+        run: dotnet build Backend/PropertyManagementApi/API/API.csproj --configuration Release --no-restore
 
       # 5. Publish the API project into the ./publish folder
       - name: Publish API
