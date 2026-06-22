@@ -359,7 +359,7 @@ app.UseSwagger(c =>
 
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("swagger/v1/swagger.json", "Test Property Management API v1");
+    c.SwaggerEndpoint("swagger/v1/swagger.json", "Test Property Management API v2");
     c.RoutePrefix = string.Empty;
 });
 
