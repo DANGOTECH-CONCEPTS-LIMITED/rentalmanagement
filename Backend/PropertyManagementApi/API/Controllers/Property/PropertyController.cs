@@ -84,7 +84,7 @@ namespace API.Controllers.Property
         {
             try
             {
-                await _landlordPropertyService.UpdatePropertyAsync(files[0], property);
+                await _landlordPropertyService.UpdatePropertyAsync(files.FirstOrDefault(), property);
                 return Ok("Property updated successfully.");
             }
             catch (Exception ex)

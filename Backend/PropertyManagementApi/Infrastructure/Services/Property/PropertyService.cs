@@ -114,18 +114,10 @@ namespace Infrastructure.Services.Property
             await _context.SaveChangesAsync();
         }
 
-        public async Task UpdatePropertyAsync(IFormFile image, LandLordProperty property)
+        public async Task UpdatePropertyAsync(IFormFile? image, LandLordProperty property)
         {
             if (property == null)
                 throw new Exception(nameof(property));
-
-            // Check if the image is not null
-            if (image != null) 
-            {
-                // Save the image to the server and get the URL
-                var imageUrl = await _fileService.SaveFileAndReturnPathAsync(image);
-                property.ImageUrl = imageUrl;
-            }
 
             // Get the role for "Landlord"
             var landlordRole = await _context.SystemRoles
@@ -161,7 +153,6 @@ namespace Infrastructure.Services.Property
             existingProperty.Price = property.Price;
             existingProperty.NumberOfRooms = property.NumberOfRooms;
             existingProperty.OwnerId = property.OwnerId;
-            existingProperty.ImageUrl = property.ImageUrl;
             await _context.SaveChangesAsync();
         } 
     }
