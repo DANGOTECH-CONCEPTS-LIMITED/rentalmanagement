@@ -115,7 +115,7 @@ namespace Infrastructure.Services.Tenant
                 .Where(i => i.TenantId == tenantId
                          && i.PropertyId == propertyId
                          && i.PropertyUnitId == propertyUnitId
-                         && string.Equals(i.Type, "Security Deposit", StringComparison.OrdinalIgnoreCase))
+                         && i.Type == "Security Deposit")
                 .OrderByDescending(i => i.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -234,7 +234,7 @@ namespace Infrastructure.Services.Tenant
                 .Where(i => i.TenantId == tenantId
                          && i.PropertyId == propertyId
                          && i.PropertyUnitId == propertyUnitId
-                         && string.Equals(i.Type, "Security Deposit", StringComparison.OrdinalIgnoreCase))
+                         && i.Type == "Security Deposit")
                 .OrderByDescending(i => i.CreatedAt)
                 .FirstOrDefaultAsync();
 
