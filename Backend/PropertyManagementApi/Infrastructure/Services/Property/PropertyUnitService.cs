@@ -151,13 +151,27 @@ namespace Infrastructure.Services.Property
             if (tenant == null)
                 throw new Exception("Tenant not found.");
 
-            var unit = await _db.PropertyUnits.AsNoTracking().FirstOrDefaultAsync(u => u.Id == dto.UnitId);
+            var unit = await _db.PropertyUnits.FirstOrDefaultAsync(u => u.Id == dto.UnitId);
             if (unit == null)
                 throw new Exception("Unit not found.");
+
+            PropertyUnit? previousUnit = null;
+            if (tenant.PropertyUnitId.HasValue && tenant.PropertyUnitId.Value != unit.Id)
+            {
+                previousUnit = await _db.PropertyUnits.FirstOrDefaultAsync(u => u.Id == tenant.PropertyUnitId.Value);
+            }
 
             // Keep PropertyId consistent with the unit's property
             tenant.PropertyId = unit.PropertyId;
             tenant.PropertyUnitId = unit.Id;
+            unit.Status = "Occupied";
+            unit.UpdatedAt = DateTime.UtcNow;
+
+            if (previousUnit != null)
+            {
+                previousUnit.Status = "Available";
+                previousUnit.UpdatedAt = DateTime.UtcNow;
+            }
 
             await _db.SaveChangesAsync();
             return tenant;
@@ -169,7 +183,20 @@ namespace Infrastructure.Services.Property
             if (tenant == null)
                 throw new Exception("Tenant not found.");
 
+            PropertyUnit? unit = null;
+            if (tenant.PropertyUnitId.HasValue)
+            {
+                unit = await _db.PropertyUnits.FirstOrDefaultAsync(u => u.Id == tenant.PropertyUnitId.Value);
+            }
+
             tenant.PropertyUnitId = null;
+
+            if (unit != null)
+            {
+                unit.Status = "Available";
+                unit.UpdatedAt = DateTime.UtcNow;
+            }
+
             await _db.SaveChangesAsync();
             return tenant;
         }
