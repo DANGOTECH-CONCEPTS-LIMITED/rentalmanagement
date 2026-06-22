@@ -13,6 +13,10 @@ namespace Domain.Entities.PropertyMgt
         public string Status { get; set; } = "Pending";
 
         public double Amount { get; set; }
+        public double OriginalAmount { get; set; }
+        public double PaidAmount { get; set; }
+        public double RefundedAmount { get; set; }
+        public double DeductedAmount { get; set; }
 
         public DateTime InvoiceDate { get; set; } = DateTime.UtcNow;
         public DateTime DueDate { get; set; }

@@ -123,11 +123,11 @@ namespace API.Controllers.Property
 
         [HttpPut("/RemoveTenantFromUnit/{tenantId}")]
         [Authorize]
-        public async Task<IActionResult> RemoveTenantFromUnit(int tenantId)
+        public async Task<IActionResult> RemoveTenantFromUnit(int tenantId, [FromBody] RemoveTenantFromUnitDto? dto)
         {
             try
             {
-                var tenant = await _service.RemoveTenantFromUnitAsync(tenantId);
+                var tenant = await _service.RemoveTenantFromUnitAsync(tenantId, dto);
                 return Ok(tenant);
             }
             catch (Exception ex)

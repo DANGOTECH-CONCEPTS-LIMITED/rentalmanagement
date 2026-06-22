@@ -169,6 +169,7 @@ namespace API.Controllers.Accounts
                     i.PropertyId,
                     i.PropertyUnitId,
                     i.Amount,
+                    i.OriginalAmount,
                     i.Status,
                     i.Type
                 })
@@ -210,7 +211,7 @@ namespace API.Controllers.Accounts
                     || (contract.PropertyId.HasValue
                         && contract.PropertyId.Value == invoice.PropertyId
                         && contract.UnitId == invoice.PropertyUnitId)))
-                .Sum(invoice => (decimal)invoice.Amount);
+                .Sum(invoice => (decimal)(invoice.OriginalAmount > 0 ? invoice.OriginalAmount : invoice.Amount));
 
             var revenueExpected = collected + outstandingInvoiceBalances + missingContractRent;
             var securityDeposits = contractSecurityDeposits + manualSecurityDeposits;

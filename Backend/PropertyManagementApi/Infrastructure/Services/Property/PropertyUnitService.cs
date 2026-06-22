@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Application.Interfaces.Property;
+using Application.Interfaces.Tenant;
 using Domain.Dtos.Property;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
@@ -13,10 +14,12 @@ namespace Infrastructure.Services.Property
     public class PropertyUnitService : IPropertyUnitService
     {
         private readonly AppDbContext _db;
+        private readonly ITenantInvoiceService _tenantInvoiceService;
 
-        public PropertyUnitService(AppDbContext db)
+        public PropertyUnitService(AppDbContext db, ITenantInvoiceService tenantInvoiceService)
         {
             _db = db;
+            _tenantInvoiceService = tenantInvoiceService;
         }
 
         public async Task<PropertyUnit> AddUnitAsync(PropertyUnitDto dto)
@@ -147,13 +150,20 @@ namespace Infrastructure.Services.Property
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
 
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+
             var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == dto.TenantId);
             if (tenant == null)
                 throw new Exception("Tenant not found.");
 
-            var unit = await _db.PropertyUnits.FirstOrDefaultAsync(u => u.Id == dto.UnitId);
+            var unit = await _db.PropertyUnits
+                .Include(u => u.Property)
+                .FirstOrDefaultAsync(u => u.Id == dto.UnitId);
             if (unit == null)
                 throw new Exception("Unit not found.");
+
+            if (unit.Property == null)
+                throw new Exception("Unit property not found.");
 
             PropertyUnit? previousUnit = null;
             if (tenant.PropertyUnitId.HasValue && tenant.PropertyUnitId.Value != unit.Id)
@@ -174,11 +184,26 @@ namespace Infrastructure.Services.Property
             }
 
             await _db.SaveChangesAsync();
+
+            if (unit.SecurityDeposit > 0)
+            {
+                await _tenantInvoiceService.CreateSecurityDepositInvoiceAsync(
+                    tenant.Id,
+                    unit.PropertyId,
+                    unit.Id,
+                    unit.SecurityDeposit,
+                    unit.Property.OwnerId,
+                    $"Security deposit for unit {unit.UnitNumber}.");
+            }
+
+            await transaction.CommitAsync();
             return tenant;
         }
 
-        public async Task<PropertyTenant> RemoveTenantFromUnitAsync(int tenantId)
+        public async Task<PropertyTenant> RemoveTenantFromUnitAsync(int tenantId, RemoveTenantFromUnitDto? dto = null)
         {
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+
             var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId);
             if (tenant == null)
                 throw new Exception("Tenant not found.");
@@ -186,7 +211,28 @@ namespace Infrastructure.Services.Property
             PropertyUnit? unit = null;
             if (tenant.PropertyUnitId.HasValue)
             {
-                unit = await _db.PropertyUnits.FirstOrDefaultAsync(u => u.Id == tenant.PropertyUnitId.Value);
+                unit = await _db.PropertyUnits
+                    .Include(u => u.Property)
+                    .FirstOrDefaultAsync(u => u.Id == tenant.PropertyUnitId.Value);
+            }
+
+            if (unit?.Property == null && unit != null)
+                throw new Exception("Unit property not found.");
+
+            if (unit != null && dto != null && (dto.RefundAmount > 0 || dto.DeductionAmount > 0))
+            {
+                var processedByUserId = dto.ProcessedByUserId.GetValueOrDefault() > 0
+                    ? dto.ProcessedByUserId.Value
+                    : unit.Property!.OwnerId;
+
+                await _tenantInvoiceService.SettleSecurityDepositAsync(
+                    tenant.Id,
+                    unit.PropertyId,
+                    unit.Id,
+                    dto.DeductionAmount,
+                    dto.RefundAmount,
+                    processedByUserId,
+                    dto.Notes);
             }
 
             tenant.PropertyUnitId = null;
@@ -198,6 +244,7 @@ namespace Infrastructure.Services.Property
             }
 
             await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
             return tenant;
         }
     }

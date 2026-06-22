@@ -15,6 +15,6 @@ namespace Application.Interfaces.Property
         Task DeleteUnitAsync(int unitId);
 
         Task<PropertyTenant> AssignTenantToUnitAsync(AssignTenantToUnitDto dto);
-        Task<PropertyTenant> RemoveTenantFromUnitAsync(int tenantId);
+        Task<PropertyTenant> RemoveTenantFromUnitAsync(int tenantId, RemoveTenantFromUnitDto? dto = null);
     }
 }

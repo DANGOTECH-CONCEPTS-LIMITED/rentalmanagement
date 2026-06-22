@@ -78,6 +78,10 @@ namespace Infrastructure.Services.Tenant
                 PropertyId = dto.PropertyId,
                 PropertyUnitId = dto.PropertyUnitId,
                 Amount = dto.Amount,
+                OriginalAmount = dto.Amount,
+                PaidAmount = 0,
+                RefundedAmount = 0,
+                DeductedAmount = 0,
                 InvoiceDate = dto.InvoiceDate,
                 DueDate = dto.DueDate,
                 Notes = dto.Notes,
@@ -99,6 +103,40 @@ namespace Infrastructure.Services.Tenant
             }
 
             return invoice;
+        }
+
+        public async Task<TenantInvoice> CreateSecurityDepositInvoiceAsync(int tenantId, int propertyId, int? propertyUnitId, double amount, int createdByUserId, string? notes = null)
+        {
+            if (amount <= 0)
+                throw new Exception("Security deposit amount must be greater than zero.");
+
+            var existingInvoice = await _db.TenantInvoices
+                .AsNoTracking()
+                .Where(i => i.TenantId == tenantId
+                         && i.PropertyId == propertyId
+                         && i.PropertyUnitId == propertyUnitId
+                         && string.Equals(i.Type, "Security Deposit", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(i => i.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (existingInvoice != null && (existingInvoice.Amount > 0 || GetHeldDepositBalance(existingInvoice) > 0))
+                throw new Exception("An active security deposit invoice already exists for this tenant and unit.");
+
+            var invoiceDate = DateTime.UtcNow;
+            return await CreateInvoiceAsync(new CreateTenantInvoiceDto
+            {
+                Type = "Security Deposit",
+                Status = "Pending",
+                TenantId = tenantId,
+                PropertyId = propertyId,
+                PropertyUnitId = propertyUnitId,
+                Amount = amount,
+                InvoiceDate = invoiceDate,
+                DueDate = invoiceDate,
+                Notes = string.IsNullOrWhiteSpace(notes) ? "Security deposit due upon unit assignment." : notes.Trim(),
+                CreatedByUserId = createdByUserId,
+                CreatedByName = "System"
+            });
         }
 
         public async Task<IEnumerable<TenantInvoice>> GetInvoicesByTenantIdAsync(int tenantId)
@@ -158,11 +196,69 @@ namespace Infrastructure.Services.Tenant
             if (paymentAmount <= 0)
                 throw new Exception("Payment amount must be greater than zero.");
 
-            invoice.Amount = Math.Max(0, invoice.Amount - paymentAmount);
-            // Only mark Paid when fully settled; otherwise keep the existing status
-            // (Overdue stays Overdue with a reduced amount — the scheduler must not flip it back)
+            if (invoice.OriginalAmount <= 0 && invoice.Amount > 0)
+                invoice.OriginalAmount = invoice.Amount + invoice.PaidAmount;
+
+            var outstandingBalance = Math.Max(0, invoice.OriginalAmount - invoice.PaidAmount);
+            if (outstandingBalance <= 0)
+                throw new Exception("Invoice is already fully paid.");
+
+            var appliedAmount = Math.Min(paymentAmount, outstandingBalance);
+            invoice.PaidAmount += appliedAmount;
+            invoice.Amount = Math.Max(0, invoice.OriginalAmount - invoice.PaidAmount);
+
             if (invoice.Amount <= 0)
+            {
                 invoice.Status = "Paid";
+            }
+            else if (!string.Equals(invoice.Status, "Overdue", StringComparison.OrdinalIgnoreCase))
+            {
+                invoice.Status = "Partially Paid";
+            }
+
+            invoice.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            return invoice;
+        }
+
+        public async Task<TenantInvoice> SettleSecurityDepositAsync(int tenantId, int propertyId, int? propertyUnitId, double deductionAmount, double refundAmount, int processedByUserId, string? notes = null)
+        {
+            if (deductionAmount < 0)
+                throw new Exception("Deduction amount cannot be negative.");
+
+            if (refundAmount < 0)
+                throw new Exception("Refund amount cannot be negative.");
+
+            var invoice = await _db.TenantInvoices
+                .Where(i => i.TenantId == tenantId
+                         && i.PropertyId == propertyId
+                         && i.PropertyUnitId == propertyUnitId
+                         && string.Equals(i.Type, "Security Deposit", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(i => i.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (invoice == null)
+                throw new Exception("Security deposit invoice not found for this tenancy.");
+
+            if (processedByUserId <= 0)
+                throw new Exception("ProcessedBy user is required for move-out settlement.");
+
+            if (invoice.OriginalAmount <= 0 && invoice.Amount > 0)
+                invoice.OriginalAmount = invoice.Amount + invoice.PaidAmount;
+
+            var totalSettlement = deductionAmount + refundAmount;
+            if (totalSettlement <= 0)
+                return invoice;
+
+            var availableDeposit = GetHeldDepositBalance(invoice);
+            if (totalSettlement > availableDeposit)
+                throw new Exception("Refund plus deduction cannot exceed the deposit amount already paid.");
+
+            invoice.DeductedAmount += deductionAmount;
+            invoice.RefundedAmount += refundAmount;
+            invoice.Notes = AppendMoveOutSettlementNote(invoice.Notes, deductionAmount, refundAmount, notes);
+            invoice.Status = GetHeldDepositBalance(invoice) > 0 ? "Deposit Partially Settled" : "Deposit Settled";
             invoice.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
@@ -223,6 +319,22 @@ namespace Infrastructure.Services.Tenant
             }
 
             return $"{prefix}{nextSeq:D3}";
+        }
+
+        private static double GetHeldDepositBalance(TenantInvoice invoice)
+        {
+            return Math.Max(0, invoice.PaidAmount - invoice.RefundedAmount - invoice.DeductedAmount);
+        }
+
+        private static string AppendMoveOutSettlementNote(string? existingNotes, double deductionAmount, double refundAmount, string? notes)
+        {
+            var settlementNote = $"Move-out settlement on {DateTime.UtcNow:dd MMM yyyy HH:mm} UTC: deducted UGX {deductionAmount:N0}, refunded UGX {refundAmount:N0}.";
+            if (!string.IsNullOrWhiteSpace(notes))
+                settlementNote = $"{settlementNote} {notes.Trim()}";
+
+            return string.IsNullOrWhiteSpace(existingNotes)
+                ? settlementNote
+                : $"{existingNotes.Trim()} {settlementNote}";
         }
     }
 }
