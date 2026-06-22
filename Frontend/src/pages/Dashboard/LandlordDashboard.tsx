@@ -1,19 +1,47 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Loader2, Home, Users, TrendingUp, Wallet, ArrowUpRight,
-  ArrowDownLeft, ChevronDown, CircleDollarSign, Download,
-  FileText, Zap, CheckCircle, AlertTriangle, Building2,
-  Activity, Banknote, PiggyBank, X, History,
+  Loader2,
+  Home,
+  Users,
+  TrendingUp,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ChevronDown,
+  CircleDollarSign,
+  Download,
+  FileText,
+  Zap,
+  CheckCircle,
+  AlertTriangle,
+  Building2,
+  Activity,
+  Banknote,
+  PiggyBank,
+  X,
+  History,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
 import { useToast } from "@/hooks/use-toast";
-import { exportWalletStatementCsv, exportWalletStatementPdf } from "@/lib/wallet-statement-export";
+import {
+  exportWalletStatementCsv,
+  exportWalletStatementPdf,
+} from "@/lib/wallet-statement-export";
 import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
 import axios from "axios";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  PieChart, Pie, Cell, Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 
 const inputCls =
@@ -56,25 +84,46 @@ const greeting = () => {
 };
 
 const KpiCard = ({
-  label, value, sub, icon: Icon, iconBg, iconColor, trend,
+  label,
+  value,
+  sub,
+  icon: Icon,
+  iconBg,
+  iconColor,
+  trend,
 }: {
-  label: string; value: string | number; sub?: string;
-  icon: any; iconBg: string; iconColor: string; trend?: { value: number; up: boolean };
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon: any;
+  iconBg: string;
+  iconColor: string;
+  trend?: { value: number; up: boolean };
 }) => (
   <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
     <div className="flex items-start justify-between">
-      <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBg}`}>
+      <div
+        className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBg}`}
+      >
         <Icon className={`h-5 w-5 ${iconColor}`} />
       </div>
       {trend && (
-        <span className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${trend.up ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
-          {trend.up ? <TrendingUp className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3 rotate-90" />}
+        <span
+          className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${trend.up ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}
+        >
+          {trend.up ? (
+            <TrendingUp className="h-3 w-3" />
+          ) : (
+            <ArrowUpRight className="h-3 w-3 rotate-90" />
+          )}
           {Math.abs(trend.value)}%
         </span>
       )}
     </div>
     <div className="mt-4">
-      <p className="text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+      <p className="text-2xl font-bold tracking-tight text-slate-900">
+        {value}
+      </p>
       <p className="mt-0.5 text-sm font-medium text-slate-500">{label}</p>
       {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
     </div>
@@ -95,11 +144,13 @@ const LandlordDashboard = () => {
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [utilityStats, setUtilityStats] = useState<UtilityStats | null>(null);
-  const [revenueKpis, setRevenueKpis] = useState({ revenueExpected: 0, collected: 0, uncollected: 0, securityDeposits: 0 });
-
-  const dummyStats = {
-    utilityCollected: 120000, totalRooms: 24, occupiedRooms: 20, vacantRooms: 4,
-  };
+  const [revenueKpis, setRevenueKpis] = useState({
+    revenueExpected: 0,
+    collected: 0,
+    uncollected: 0,
+    securityDeposits: 0,
+  });
+  const [units, setUnits] = useState([]);
 
   const user = localStorage.getItem("user");
   if (!user) throw new Error("No user found in localStorage");
@@ -113,19 +164,28 @@ const LandlordDashboard = () => {
     fetchTenants();
     fetchUtilityStats();
     fetchRevenueKpis();
+    fetchUnits();
   }, []);
 
   const fetchWalletData = async () => {
     setIsLoading(true);
     try {
       const [balRes, stmtRes] = await Promise.all([
-        fetch(`${apiUrl}/GetBalance/${userData.id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${apiUrl}/GetStatement/${userData.id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${apiUrl}/GetBalance/${userData.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${apiUrl}/GetStatement/${userData.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
       if (balRes.ok) setBalance((await balRes.json()).balance);
       if (stmtRes.ok) setTransactions(await stmtRes.json());
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error", description: err.message });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -140,33 +200,56 @@ const LandlordDashboard = () => {
 
   const fetchUtilityStats = async () => {
     try {
-      const { data } = await axios.get(`${apiUrl}/GetLandlordUtilityStats/${userData.id}`);
+      const { data } = await axios.get(
+        `${apiUrl}/GetLandlordUtilityStats/${userData.id}`,
+      );
       setUtilityStats(data);
     } catch {}
   };
 
   const fetchRevenueKpis = async () => {
     try {
-      const { data } = await axios.get(`${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}`);
+      const { data } = await axios.get(
+        `${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}`,
+      );
       setRevenueKpis(data);
     } catch {}
   };
 
   const fetchProperties = async () => {
     try {
-      const { data } = await axios.get(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`);
+      const { data } = await axios.get(
+        `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
+      );
       setProperties(data);
+    } catch {}
+  };
+
+  const fetchUnits = async () => {
+    try {
+      const { data } = await axios.get(
+        `${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`,
+      );
+      setUnits(data);
     } catch {}
   };
 
   const validateWithdrawal = () => {
     const amount = Number(withdrawAmount);
     if (!withdrawAmount || isNaN(amount) || amount <= 0) {
-      toast({ variant: "destructive", title: "Invalid Amount", description: "Enter a valid amount." });
+      toast({
+        variant: "destructive",
+        title: "Invalid Amount",
+        description: "Enter a valid amount.",
+      });
       return false;
     }
     if (balance !== null && amount > balance) {
-      toast({ variant: "destructive", title: "Insufficient Funds", description: "Amount exceeds balance." });
+      toast({
+        variant: "destructive",
+        title: "Insufficient Funds",
+        description: "Amount exceeds balance.",
+      });
       return false;
     }
     return true;
@@ -180,50 +263,107 @@ const LandlordDashboard = () => {
       fd.append("amount", withdrawAmount);
       fd.append("landlordid", userData.id.toString());
       fd.append("description", "Withdrawal from wallet");
-      const res = await fetch(`${apiUrl}/Withdraw`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const res = await fetch(`${apiUrl}/Withdraw`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
       if (!res.ok) throw new Error("Withdrawal failed");
-      toast({ title: "Withdrawal Successful", description: `Withdrawn ${formatCurrency(Number(withdrawAmount))}` });
+      toast({
+        title: "Withdrawal Successful",
+        description: `Withdrawn ${formatCurrency(Number(withdrawAmount))}`,
+      });
       await fetchWalletData();
-      setWithdrawAmount(""); setShowConfirmation(false);
+      setWithdrawAmount("");
+      setShowConfirmation(false);
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Withdrawal Failed", description: err.message });
+      toast({
+        variant: "destructive",
+        title: "Withdrawal Failed",
+        description: err.message,
+      });
     } finally {
       setIsWithdrawing(false);
     }
   };
 
-  const statementRows = useMemo(() => buildRunningBalanceStatement(transactions, balance), [transactions, balance]);
+  const statementRows = useMemo(
+    () => buildRunningBalanceStatement(transactions, balance),
+    [transactions, balance],
+  );
 
   const overdueUtilityMeters = useMemo(() => {
     const threshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    return utilityStats?.meters.filter((m) => !m.lastPaymentAt || new Date(m.lastPaymentAt).getTime() < threshold).length ?? 0;
+    return (
+      utilityStats?.meters.filter(
+        (m) =>
+          !m.lastPaymentAt || new Date(m.lastPaymentAt).getTime() < threshold,
+      ).length ?? 0
+    );
   }, [utilityStats]);
 
   const exportStatement = () => {
-    exportWalletStatementCsv(statementRows, { fileNamePrefix: "landlord-wallet-statement", accountName: userData?.fullName });
-    toast({ title: "Exported", description: "Wallet statement exported to CSV." });
+    exportWalletStatementCsv(statementRows, {
+      fileNamePrefix: "landlord-wallet-statement",
+      accountName: userData?.fullName,
+    });
+    toast({
+      title: "Exported",
+      description: "Wallet statement exported to CSV.",
+    });
   };
   const exportStatementPdf = () => {
-    exportWalletStatementPdf(statementRows, { title: "Landlord Wallet Statement", fileNamePrefix: "landlord-wallet-statement", accountName: userData?.fullName, formatAmount: formatCurrency });
-    toast({ title: "Exported", description: "Wallet statement exported to PDF." });
+    exportWalletStatementPdf(statementRows, {
+      title: "Landlord Wallet Statement",
+      fileNamePrefix: "landlord-wallet-statement",
+      accountName: userData?.fullName,
+      formatAmount: formatCurrency,
+    });
+    toast({
+      title: "Exported",
+      description: "Wallet statement exported to PDF.",
+    });
   };
-  const occupancyPct = dummyStats.totalRooms > 0 ? Math.round((dummyStats.occupiedRooms / dummyStats.totalRooms) * 100) : 0;
+  const occupied = units.filter((u) => u.status === "Occupied").length;
+  const occupancyRate = units.length
+    ? Math.round((occupied / units.length) * 100)
+    : 0;
 
   return (
     <div className="space-y-7">
-
       {/* ── Welcome banner ── */}
-      <div className="relative overflow-hidden rounded-2xl px-7 py-6 text-white shadow-lg" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-          style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
+      <div
+        className="relative overflow-hidden rounded-2xl px-7 py-6 text-white shadow-lg"
+        style={{
+          background:
+            "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)",
+        }}
+      >
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
         {/* decorative blobs */}
 
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-200">{greeting()}, {userData?.fullName?.split(" ")[0]} 👋</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">Landlord Dashboard</h1>
+            <p className="text-sm font-medium text-blue-200">
+              {greeting()}, {userData?.fullName?.split(" ")[0]} 👋
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">
+              Landlord Dashboard
+            </h1>
             <p className="mt-1 text-sm text-blue-200/70">
-              {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              {new Date().toLocaleDateString("en-GB", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
             </p>
           </div>
 
@@ -234,10 +374,16 @@ const LandlordDashboard = () => {
                 <Wallet className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs text-white/60 font-medium">Wallet Balance</p>
-                {isLoading
-                  ? <div className="h-6 w-28 bg-white/20 rounded-md animate-pulse mt-1" />
-                  : <p className="text-xl font-bold">{balance !== null ? formatCurrency(balance) : "--"}</p>}
+                <p className="text-xs text-white/60 font-medium">
+                  Wallet Balance
+                </p>
+                {isLoading ? (
+                  <div className="h-6 w-28 bg-white/20 rounded-md animate-pulse mt-1" />
+                ) : (
+                  <p className="text-xl font-bold">
+                    {balance !== null ? formatCurrency(balance) : "--"}
+                  </p>
+                )}
               </div>
               <div className="ml-4 flex gap-2">
                 {/* Withdraw button */}
@@ -258,7 +404,6 @@ const LandlordDashboard = () => {
             </div>
           </div>
         </div>
-
       </div>
 
       {/* ── Withdraw modal ── */}
@@ -277,16 +422,31 @@ const LandlordDashboard = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
                     <Wallet className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-sm font-semibold text-white">Withdraw Funds</h3>
+                  <h3 className="text-sm font-semibold text-white">
+                    Withdraw Funds
+                  </h3>
                 </div>
-                <button onClick={() => { setShowWithdrawModal(false); setWithdrawAmount(""); }} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                <button
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    setWithdrawAmount("");
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="p-5 space-y-4">
-                <p className="text-xs text-[#64748B]">Available balance: <span className="font-semibold text-[#0F172A]">{formatCurrency(balance || 0)}</span></p>
+                <p className="text-xs text-[#64748B]">
+                  Available balance:{" "}
+                  <span className="font-semibold text-[#0F172A]">
+                    {formatCurrency(balance || 0)}
+                  </span>
+                </p>
                 <div>
-                  <label className="block text-xs font-medium text-[#64748B] mb-1.5">Amount</label>
+                  <label className="block text-xs font-medium text-[#64748B] mb-1.5">
+                    Amount
+                  </label>
                   <input
                     type="number"
                     placeholder="Enter amount"
@@ -296,11 +456,22 @@ const LandlordDashboard = () => {
                   />
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button onClick={() => { setShowWithdrawModal(false); setWithdrawAmount(""); }} className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors">
+                  <button
+                    onClick={() => {
+                      setShowWithdrawModal(false);
+                      setWithdrawAmount("");
+                    }}
+                    className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors"
+                  >
                     Cancel
                   </button>
                   <button
-                    onClick={() => { if (validateWithdrawal()) { setShowWithdrawModal(false); setShowConfirmation(true); } }}
+                    onClick={() => {
+                      if (validateWithdrawal()) {
+                        setShowWithdrawModal(false);
+                        setShowConfirmation(true);
+                      }
+                    }}
                     className="flex-1 rounded-lg bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
                   >
                     Continue
@@ -328,17 +499,34 @@ const LandlordDashboard = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
                     <AlertTriangle className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-sm font-semibold text-white">Confirm Withdrawal</h3>
+                  <h3 className="text-sm font-semibold text-white">
+                    Confirm Withdrawal
+                  </h3>
                 </div>
-                <button onClick={() => setShowConfirmation(false)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                <button
+                  onClick={() => setShowConfirmation(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="p-5 space-y-4">
-                <p className="text-sm text-[#0F172A]">Withdraw <span className="font-bold">{formatCurrency(Number(withdrawAmount))}</span> from your wallet?</p>
-                <p className="text-xs text-[#64748B]">Funds will be transferred to your registered bank or mobile money account.</p>
+                <p className="text-sm text-[#0F172A]">
+                  Withdraw{" "}
+                  <span className="font-bold">
+                    {formatCurrency(Number(withdrawAmount))}
+                  </span>{" "}
+                  from your wallet?
+                </p>
+                <p className="text-xs text-[#64748B]">
+                  Funds will be transferred to your registered bank or mobile
+                  money account.
+                </p>
                 <div className="flex gap-2 pt-1">
-                  <button onClick={() => setShowConfirmation(false)} className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors">
+                  <button
+                    onClick={() => setShowConfirmation(false)}
+                    className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors"
+                  >
                     Cancel
                   </button>
                   <button
@@ -346,7 +534,14 @@ const LandlordDashboard = () => {
                     disabled={isWithdrawing}
                     className="btn-grid flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
                   >
-                    {isWithdrawing ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</> : "Confirm"}
+                    {isWithdrawing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing…
+                      </>
+                    ) : (
+                      "Confirm"
+                    )}
                   </button>
                 </div>
               </div>
@@ -372,18 +567,31 @@ const LandlordDashboard = () => {
                     <History className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-white">Transaction History</h3>
-                    <p className="text-[11px] text-blue-200/70">{statementRows.length} records</p>
+                    <h3 className="text-sm font-semibold text-white">
+                      Transaction History
+                    </h3>
+                    <p className="text-[11px] text-blue-200/70">
+                      {statementRows.length} records
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={exportStatement} className="flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 px-2.5 py-1.5 text-xs font-medium text-white transition-colors">
+                  <button
+                    onClick={exportStatement}
+                    className="flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 px-2.5 py-1.5 text-xs font-medium text-white transition-colors"
+                  >
                     <Download className="h-3.5 w-3.5" /> CSV
                   </button>
-                  <button onClick={exportStatementPdf} className="flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 px-2.5 py-1.5 text-xs font-medium text-white transition-colors">
+                  <button
+                    onClick={exportStatementPdf}
+                    className="flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 px-2.5 py-1.5 text-xs font-medium text-white transition-colors"
+                  >
                     <FileText className="h-3.5 w-3.5" /> PDF
                   </button>
-                  <button onClick={() => setShowHistoryModal(false)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  <button
+                    onClick={() => setShowHistoryModal(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -391,39 +599,70 @@ const LandlordDashboard = () => {
               <div className="overflow-y-auto">
                 {isLoading ? (
                   <div className="flex flex-col gap-3 p-5">
-                    {[...Array(4)].map((_, i) => <div key={i} className="h-12 rounded-lg bg-slate-100 animate-pulse" />)}
+                    {[...Array(4)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-12 rounded-lg bg-slate-100 animate-pulse"
+                      />
+                    ))}
                   </div>
                 ) : statementRows.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
                       <FileText className="h-6 w-6 text-slate-400" />
                     </div>
-                    <p className="text-sm text-[#64748B]">No transactions yet</p>
+                    <p className="text-sm text-[#64748B]">
+                      No transactions yet
+                    </p>
                   </div>
                 ) : (
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-[#E2E8F0] bg-slate-50/60">
-                        {["Date", "Description", "Amount", "Running Balance"].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">{h}</th>
+                        {[
+                          "Date",
+                          "Description",
+                          "Amount",
+                          "Running Balance",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]"
+                          >
+                            {h}
+                          </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#F1F5F9]">
                       {statementRows.map((tx, i) => (
-                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-4 py-3 text-xs text-[#64748B]">{new Date(tx.transactionDate).toLocaleDateString()}</td>
+                        <tr
+                          key={i}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-xs text-[#64748B]">
+                            {new Date(tx.transactionDate).toLocaleDateString()}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2 text-sm text-[#0F172A]">
-                              {tx.amount > 0 ? <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" /> : <ArrowUpRight className="h-3.5 w-3.5 text-red-500" />}
+                              {tx.amount > 0 ? (
+                                <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
+                              ) : (
+                                <ArrowUpRight className="h-3.5 w-3.5 text-red-500" />
+                              )}
                               {tx.description || "Transaction"}
                             </div>
                           </td>
-                          <td className={`px-4 py-3 text-right text-sm font-semibold ${tx.amount > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                            {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
+                          <td
+                            className={`px-4 py-3 text-right text-sm font-semibold ${tx.amount > 0 ? "text-emerald-600" : "text-red-500"}`}
+                          >
+                            {tx.amount > 0 ? "+" : ""}
+                            {formatCurrency(tx.amount)}
                           </td>
                           <td className="px-4 py-3 text-right text-sm font-medium text-[#0F172A]">
-                            {tx.runningBalance !== null ? formatCurrency(tx.runningBalance) : "--"}
+                            {tx.runningBalance !== null
+                              ? formatCurrency(tx.runningBalance)
+                              : "--"}
                           </td>
                         </tr>
                       ))}
@@ -438,18 +677,50 @@ const LandlordDashboard = () => {
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {isLoading ? [...Array(4)].map((_, i) => <div key={i} className="h-32 rounded-2xl bg-slate-200 animate-pulse" />) : (
+        {isLoading ? (
+          [...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="h-32 rounded-2xl bg-slate-200 animate-pulse"
+            />
+          ))
+        ) : (
           <>
-            <KpiCard label="Properties" value={properties.length} sub="Managed by you" icon={Building2} iconBg="bg-blue-50" iconColor="text-blue-600" trend={{ value: 0, up: true }} />
-            <KpiCard label="Total Tenants" value={tenants.length} sub="Active occupants" icon={Users} iconBg="bg-violet-50" iconColor="text-violet-600" trend={{ value: 2, up: true }} />
+            <KpiCard
+              label="Properties"
+              value={properties.length}
+              sub="Managed by you"
+              icon={Building2}
+              iconBg="bg-blue-50"
+              iconColor="text-blue-600"
+              trend={{ value: 0, up: true }}
+            />
+            <KpiCard
+              label="Total Tenants"
+              value={tenants.length}
+              sub="Active occupants"
+              icon={Users}
+              iconBg="bg-violet-50"
+              iconColor="text-violet-600"
+              trend={{ value: 2, up: true }}
+            />
             <KpiCard
               label="Occupancy Rate"
-              value={`${occupancyPct}%`}
-              sub={`${dummyStats.occupiedRooms} of ${dummyStats.totalRooms} rooms`}
-              icon={Home} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+              value={`${occupancyRate}%`}
+              sub={`${occupied} of ${units.length} rooms`}
+              icon={Home}
+              iconBg="bg-emerald-50"
+              iconColor="text-emerald-600"
               trend={{ value: 5, up: true }}
             />
-            <KpiCard label="Utility Meters" value={utilityStats?.totalMeters ?? 0} sub={`${utilityStats?.activeMeters ?? 0} active`} icon={Zap} iconBg="bg-amber-50" iconColor="text-amber-500" />
+            <KpiCard
+              label="Utility Meters"
+              value={utilityStats?.totalMeters ?? 0}
+              sub={`${utilityStats?.activeMeters ?? 0} active`}
+              icon={Zap}
+              iconBg="bg-amber-50"
+              iconColor="text-amber-500"
+            />
           </>
         )}
       </div>
@@ -457,18 +728,49 @@ const LandlordDashboard = () => {
       {/* ── Revenue summary strip ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: "Revenue Expected", value: revenueKpis.revenueExpected, icon: Banknote, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Collected", value: revenueKpis.collected, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-          { label: "Uncollected", value: revenueKpis.uncollected, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-50" },
-          { label: "Security Deposits", value: revenueKpis.securityDeposits, icon: PiggyBank, color: "text-violet-600", bg: "bg-violet-50" },
+          {
+            label: "Revenue Expected",
+            value: revenueKpis.revenueExpected,
+            icon: Banknote,
+            color: "text-blue-600",
+            bg: "bg-blue-50",
+          },
+          {
+            label: "Collected",
+            value: revenueKpis.collected,
+            icon: CheckCircle,
+            color: "text-green-600",
+            bg: "bg-green-50",
+          },
+          {
+            label: "Uncollected",
+            value: revenueKpis.uncollected,
+            icon: AlertTriangle,
+            color: "text-red-500",
+            bg: "bg-red-50",
+          },
+          {
+            label: "Security Deposits",
+            value: revenueKpis.securityDeposits,
+            icon: PiggyBank,
+            color: "text-violet-600",
+            bg: "bg-violet-50",
+          },
         ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}>
+          <div
+            key={label}
+            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+          >
+            <div
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}
+            >
               <Icon className={`h-4 w-4 ${color}`} />
             </div>
             <div className="min-w-0">
               <p className="text-xs text-slate-400 truncate">{label}</p>
-              <p className={`text-sm font-bold ${color}`}>{formatCurrency(value)}</p>
+              <p className={`text-sm font-bold ${color}`}>
+                {formatCurrency(value)}
+              </p>
             </div>
           </div>
         ))}
@@ -476,15 +778,20 @@ const LandlordDashboard = () => {
 
       {/* ── Charts row ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-
         {/* Financial bar chart */}
         <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Financial Overview</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Current month breakdown</p>
+              <h2 className="text-base font-semibold text-slate-900">
+                Financial Overview
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Current month breakdown
+              </p>
             </div>
-            <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-600">This Month</span>
+            <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-600">
+              This Month
+            </span>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart
@@ -493,17 +800,47 @@ const LandlordDashboard = () => {
                 { name: "Collected", amount: revenueKpis.collected },
                 { name: "Uncollected", amount: revenueKpis.uncollected },
                 { name: "Deposits", amount: revenueKpis.securityDeposits },
-                { name: "Utility", amount: utilityStats?.totalUtilityAmount ?? 0 },
+                {
+                  name: "Utility",
+                  amount: utilityStats?.totalUtilityAmount ?? 0,
+                },
               ]}
               margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
               barSize={36}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "#cbd5e1" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} width={38} />
-              <Tooltip formatter={(v: number) => [formatCurrency(v), "Amount"]} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 24px -4px rgba(15,23,42,0.15)", fontSize: 12 }} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f1f5f9"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#cbd5e1" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
+                width={38}
+              />
+              <Tooltip
+                formatter={(v: number) => [formatCurrency(v), "Amount"]}
+                contentStyle={{
+                  borderRadius: 12,
+                  border: "none",
+                  boxShadow: "0 8px 24px -4px rgba(15,23,42,0.15)",
+                  fontSize: 12,
+                }}
+              />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                {["#2563EB", "#10B981", "#EF4444", "#8B5CF6", "#F59E0B"].map((c, i) => <Cell key={i} fill={c} />)}
+                {["#2563EB", "#10B981", "#EF4444", "#8B5CF6", "#F59E0B"].map(
+                  (c, i) => (
+                    <Cell key={i} fill={c} />
+                  ),
+                )}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -512,23 +849,64 @@ const LandlordDashboard = () => {
         {/* Utility stats */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5">
-            <h2 className="text-base font-semibold text-slate-900">Utility Stats</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Meter & payment overview</p>
+            <h2 className="text-base font-semibold text-slate-900">
+              Utility Stats
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Meter & payment overview
+            </p>
           </div>
           <div className="space-y-3">
             {[
-              { label: "Total Meters", value: utilityStats?.totalMeters ?? 0, icon: Zap, color: "text-amber-500", bg: "bg-amber-50" },
-              { label: "Active Meters", value: utilityStats?.activeMeters ?? 0, icon: Activity, color: "text-green-600", bg: "bg-green-50" },
-              { label: "Overdue (30+ days)", value: overdueUtilityMeters, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-50" },
-              { label: "Total Payments", value: utilityStats?.totalUtilityPayments ?? 0, icon: CircleDollarSign, color: "text-blue-600", bg: "bg-blue-50" },
-              { label: "Utility Amount", value: formatCurrency(utilityStats?.totalUtilityAmount ?? 0), icon: Banknote, color: "text-violet-600", bg: "bg-violet-50" },
+              {
+                label: "Total Meters",
+                value: utilityStats?.totalMeters ?? 0,
+                icon: Zap,
+                color: "text-amber-500",
+                bg: "bg-amber-50",
+              },
+              {
+                label: "Active Meters",
+                value: utilityStats?.activeMeters ?? 0,
+                icon: Activity,
+                color: "text-green-600",
+                bg: "bg-green-50",
+              },
+              {
+                label: "Overdue (30+ days)",
+                value: overdueUtilityMeters,
+                icon: AlertTriangle,
+                color: "text-red-500",
+                bg: "bg-red-50",
+              },
+              {
+                label: "Total Payments",
+                value: utilityStats?.totalUtilityPayments ?? 0,
+                icon: CircleDollarSign,
+                color: "text-blue-600",
+                bg: "bg-blue-50",
+              },
+              {
+                label: "Utility Amount",
+                value: formatCurrency(utilityStats?.totalUtilityAmount ?? 0),
+                icon: Banknote,
+                color: "text-violet-600",
+                bg: "bg-violet-50",
+              },
             ].map(({ label, value, icon: Icon, color, bg }) => (
-              <div key={label} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+              <div
+                key={label}
+                className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${bg}`}>
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg ${bg}`}
+                  >
                     <Icon className={`h-3.5 w-3.5 ${color}`} />
                   </div>
-                  <span className="text-xs font-medium text-slate-600">{label}</span>
+                  <span className="text-xs font-medium text-slate-600">
+                    {label}
+                  </span>
                 </div>
                 <span className={`text-sm font-bold ${color}`}>{value}</span>
               </div>
@@ -539,26 +917,63 @@ const LandlordDashboard = () => {
 
       {/* ── Pie charts row ── */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-
         {/* Room occupancy */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4">
-            <h2 className="text-base font-semibold text-slate-900">Room Occupancy</h2>
-            <p className="text-xs text-slate-400 mt-0.5">{dummyStats.occupiedRooms} occupied · {dummyStats.vacantRooms} vacant</p>
+            <h2 className="text-base font-semibold text-slate-900">
+              Room Occupancy
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {occupied} occupied · {units.length - occupied} vacant
+            </p>
           </div>
-          <div className="relative flex items-center justify-center" style={{ height: 240 }}>
+          <div
+            className="relative flex items-center justify-center"
+            style={{ height: 240 }}
+          >
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
-                <Pie data={[{ name: "Occupied", value: dummyStats.occupiedRooms }, { name: "Vacant", value: dummyStats.vacantRooms }]}
-                  cx="50%" cy="44%" innerRadius={68} outerRadius={98} paddingAngle={3} dataKey="value" startAngle={90} endAngle={-270}>
-                  <Cell fill="#1D4ED8" /><Cell fill="#EF4444" />
+                <Pie
+                  data={[
+                    { name: "Occupied", value: occupied },
+                    { name: "Vacant", value: units.length - occupied },
+                  ]}
+                  cx="50%"
+                  cy="44%"
+                  innerRadius={68}
+                  outerRadius={98}
+                  paddingAngle={3}
+                  dataKey="value"
+                  startAngle={90}
+                  endAngle={-270}
+                >
+                  <Cell fill="#1D4ED8" />
+                  <Cell fill="#EF4444" />
                 </Pie>
-                <Tooltip formatter={(v: number) => [`${v} rooms`]} contentStyle={{ borderRadius: 12, border: "none", fontSize: 12 }} />
-                <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-slate-500">{v}</span>} />
+                <Tooltip
+                  formatter={(v: number) => [`${v} rooms`]}
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "none",
+                    fontSize: 12,
+                  }}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(v) => (
+                    <span className="text-xs text-slate-500">{v}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center" style={{ marginBottom: 28 }}>
-              <span className="text-3xl font-bold text-slate-900">{occupancyPct}%</span>
+            <div
+              className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+              style={{ marginBottom: 28 }}
+            >
+              <span className="text-3xl font-bold text-slate-900">
+                {occupancyRate}%
+              </span>
               <span className="text-xs text-slate-400">Occupancy</span>
             </div>
           </div>
@@ -567,33 +982,74 @@ const LandlordDashboard = () => {
         {/* Payment status */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4">
-            <h2 className="text-base font-semibold text-slate-900">Payment Status</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Utility payment breakdown</p>
+            <h2 className="text-base font-semibold text-slate-900">
+              Payment Status
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Utility payment breakdown
+            </p>
           </div>
-          <div className="relative flex items-center justify-center" style={{ height: 240 }}>
+          <div
+            className="relative flex items-center justify-center"
+            style={{ height: 240 }}
+          >
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie
                   data={[
-                    { name: "Successful", value: utilityStats?.successfulPayments || 0 },
-                    { name: "Pending", value: utilityStats?.pendingPayments || 0 },
-                    { name: "Failed", value: utilityStats?.failedPayments || 0 },
+                    {
+                      name: "Successful",
+                      value: utilityStats?.successfulPayments || 0,
+                    },
+                    {
+                      name: "Pending",
+                      value: utilityStats?.pendingPayments || 0,
+                    },
+                    {
+                      name: "Failed",
+                      value: utilityStats?.failedPayments || 0,
+                    },
                   ]}
-                  cx="50%" cy="44%" innerRadius={68} outerRadius={98} paddingAngle={3} dataKey="value">
-                  <Cell fill="#10B981" /><Cell fill="#F59E0B" /><Cell fill="#EF4444" />
+                  cx="50%"
+                  cy="44%"
+                  innerRadius={68}
+                  outerRadius={98}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  <Cell fill="#10B981" />
+                  <Cell fill="#F59E0B" />
+                  <Cell fill="#EF4444" />
                 </Pie>
-                <Tooltip formatter={(v: number) => [`${v} payments`]} contentStyle={{ borderRadius: 12, border: "none", fontSize: 12 }} />
-                <Legend iconType="circle" iconSize={8} formatter={(v) => <span className="text-xs text-slate-500">{v}</span>} />
+                <Tooltip
+                  formatter={(v: number) => [`${v} payments`]}
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "none",
+                    fontSize: 12,
+                  }}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(v) => (
+                    <span className="text-xs text-slate-500">{v}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center" style={{ marginBottom: 28 }}>
-              <span className="text-3xl font-bold text-slate-900">{utilityStats?.totalUtilityPayments ?? 0}</span>
+            <div
+              className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+              style={{ marginBottom: 28 }}
+            >
+              <span className="text-3xl font-bold text-slate-900">
+                {utilityStats?.totalUtilityPayments ?? 0}
+              </span>
               <span className="text-xs text-slate-400">Total</span>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };

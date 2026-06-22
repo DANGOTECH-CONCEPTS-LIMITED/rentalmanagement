@@ -4,9 +4,30 @@ import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { DataTable, Column } from "@/components/ui/data-table";
 import {
-  Users, Eye, Edit, Trash2, Calendar, Home, CreditCard,
-  X, PhoneIcon, Upload, Camera, Check, Key, Mail, Phone,
-  User, Banknote, Loader2, UserCheck, UserX, DollarSign, FileText, Zap, AlertCircle,
+  Users,
+  Eye,
+  Edit,
+  Trash2,
+  Calendar,
+  Home,
+  CreditCard,
+  X,
+  PhoneIcon,
+  Upload,
+  Camera,
+  Check,
+  Key,
+  Mail,
+  Phone,
+  User,
+  Banknote,
+  Loader2,
+  UserCheck,
+  UserX,
+  DollarSign,
+  FileText,
+  Zap,
+  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -65,18 +86,39 @@ const StatusBadge = ({ active }: { active: boolean }) =>
   );
 
 interface KpiProps {
-  label: string; value: string | number; sub?: string;
-  icon: React.ElementType; iconBg: string; iconColor: string; accent: string;
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+  accent: string;
 }
-const KpiCard = ({ label, value, sub, icon: Icon, iconBg, iconColor, accent }: KpiProps) => (
-  <div className={`rounded-2xl border-l-4 border border-slate-200 bg-white p-5 shadow-sm ${accent}`}>
+const KpiCard = ({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  iconBg,
+  iconColor,
+  accent,
+}: KpiProps) => (
+  <div
+    className={`rounded-2xl border-l-4 border border-slate-200 bg-white p-5 shadow-sm ${accent}`}
+  >
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-        <p className="mt-1.5 text-2xl font-bold text-[#0F172A] leading-none">{value}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          {label}
+        </p>
+        <p className="mt-1.5 text-2xl font-bold text-[#0F172A] leading-none">
+          {value}
+        </p>
         {sub && <p className="mt-1.5 text-xs text-slate-500">{sub}</p>}
       </div>
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
+      <div
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconBg}`}
+      >
         <Icon className={`h-5 w-5 ${iconColor}`} />
       </div>
     </div>
@@ -84,16 +126,22 @@ const KpiCard = ({ label, value, sub, icon: Icon, iconBg, iconColor, accent }: K
 );
 
 const DetailRow = ({
-  icon: Icon, label, value,
+  icon: Icon,
+  label,
+  value,
 }: {
-  icon: React.ElementType; label: string; value: React.ReactNode;
+  icon: React.ElementType;
+  label: string;
+  value: React.ReactNode;
 }) => (
   <div className="flex items-start gap-3 border-b border-slate-100 py-2.5 last:border-0">
     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100">
       <Icon className="h-3.5 w-3.5 text-slate-500" />
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        {label}
+      </p>
       <div className="mt-0.5 text-sm text-[#0F172A]">{value}</div>
     </div>
   </div>
@@ -110,17 +158,25 @@ const ManageTenants = () => {
   const { branding } = useBranding();
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
-  const [units, setUnits] = useState<{ id: number; unitNumber: string; status: string }[]>([]);
+  const [units, setUnits] = useState<
+    { id: number; unitNumber: string; status: string }[]
+  >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null);
+  const [passportPhotoPreview, setPassportPhotoPreview] = useState<
+    string | null
+  >(null);
   const [deleteTenant, setDeleteTenant] = useState<Tenant | null>(null);
   const [idFrontPhoto, setIdFrontPhoto] = useState<File | null>(null);
-  const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(null);
+  const [idFrontPhotoPreview, setIdFrontPhotoPreview] = useState<string | null>(
+    null,
+  );
   const [idBackPhoto, setIdBackPhoto] = useState<File | null>(null);
-  const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(null);
+  const [idBackPhotoPreview, setIdBackPhotoPreview] = useState<string | null>(
+    null,
+  );
   const [invoiceDayInput, setInvoiceDayInput] = useState<string>("");
   const [savingInvoiceDay, setSavingInvoiceDay] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -134,11 +190,25 @@ const ManageTenants = () => {
     notes: "",
   });
   const [formData, setFormData] = useState({
-    id: 0, FullName: "", Name: "", Email: "", PhoneNumber: "",
-    NationalIdNumber: "", DateMovedIn: "", PropertyId: "", Active: "true",
-    idFront: "", idBack: "", passportPhoto: "",
-    UnitId: "", WaterMeterNo: "", ElectricityMeterNo: "", TenantStatus: "active",
-    Occupation: "", NextOfKinName: "", NextOfKinPhone: "",
+    id: 0,
+    FullName: "",
+    Name: "",
+    Email: "",
+    PhoneNumber: "",
+    NationalIdNumber: "",
+    DateMovedIn: "",
+    PropertyId: "",
+    Active: "true",
+    idFront: "",
+    idBack: "",
+    passportPhoto: "",
+    UnitId: "",
+    WaterMeterNo: "",
+    ElectricityMeterNo: "",
+    TenantStatus: "active",
+    Occupation: "",
+    NextOfKinName: "",
+    NextOfKinPhone: "",
   });
 
   const navigate = useNavigate();
@@ -146,8 +216,11 @@ const ManageTenants = () => {
   const user = localStorage.getItem("user");
   const userData = JSON.parse(user);
   const getAuthToken = () => {
-    try { return userData?.token ?? null; }
-    catch { return null; }
+    try {
+      return userData?.token ?? null;
+    } catch {
+      return null;
+    }
   };
 
   const PLACEHOLDER_IMAGE = "https://placehold.co/150?text=No+Image";
@@ -164,13 +237,19 @@ const ManageTenants = () => {
       const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
       setTenants(data.filter((t: any) => t?.property?.ownerId === userData.id));
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load tenants.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to load tenants.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => { fetchTenants(); }, []);
+  useEffect(() => {
+    fetchTenants();
+  }, []);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -178,7 +257,11 @@ const ManageTenants = () => {
         const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
         setProperties(data);
       } catch {
-        toast({ title: "Error", description: "Failed to load properties.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "Failed to load properties.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoadingProperties(false);
       }
@@ -187,13 +270,21 @@ const ManageTenants = () => {
   }, [toast]);
 
   useEffect(() => {
-    if (!formData.PropertyId) { setUnits([]); return; }
+    if (!formData.PropertyId) {
+      setUnits([]);
+      return;
+    }
     axios
       .get(`${apiUrl}/GetPropertyUnitsByPropertyId/${formData.PropertyId}`)
-      .then((res) => setUnits((res.data || []).filter((u: any) =>
-        u.status?.toLowerCase() === 'available' ||
-        (formData.UnitId && String(u.id) === String(formData.UnitId))
-      )))
+      .then((res) =>
+        setUnits(
+          (res.data || []).filter(
+            (u: any) =>
+              u.status?.toLowerCase() === "available" ||
+              (formData.UnitId && String(u.id) === String(formData.UnitId)),
+          ),
+        ),
+      )
       .catch(() => setUnits([]));
   }, [formData.PropertyId, apiUrl]);
 
@@ -205,24 +296,53 @@ const ManageTenants = () => {
     };
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "PassportPhoto" | "IdFront" | "IdBack") => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "PassportPhoto" | "IdFront" | "IdBack",
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const previewUrl = URL.createObjectURL(file);
-    if (type === "PassportPhoto") { if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview); setPassportPhoto(file); setPassportPhotoPreview(previewUrl); }
-    else if (type === "IdFront") { if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview); setIdFrontPhoto(file); setIdFrontPhotoPreview(previewUrl); }
-    else { if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview); setIdBackPhoto(file); setIdBackPhotoPreview(previewUrl); }
+    if (type === "PassportPhoto") {
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
+      setPassportPhoto(file);
+      setPassportPhotoPreview(previewUrl);
+    } else if (type === "IdFront") {
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
+      setIdFrontPhoto(file);
+      setIdFrontPhotoPreview(previewUrl);
+    } else {
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
+      setIdBackPhoto(file);
+      setIdBackPhotoPreview(previewUrl);
+    }
   };
 
   const clearFile = (type: "PassportPhoto" | "IdFront" | "IdBack") => {
-    if (type === "PassportPhoto") { if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview); setPassportPhoto(null); setPassportPhotoPreview(null); }
-    else if (type === "IdFront") { if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview); setIdFrontPhoto(null); setIdFrontPhotoPreview(null); }
-    else { if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview); setIdBackPhoto(null); setIdBackPhotoPreview(null); }
+    if (type === "PassportPhoto") {
+      if (passportPhotoPreview) URL.revokeObjectURL(passportPhotoPreview);
+      setPassportPhoto(null);
+      setPassportPhotoPreview(null);
+    } else if (type === "IdFront") {
+      if (idFrontPhotoPreview) URL.revokeObjectURL(idFrontPhotoPreview);
+      setIdFrontPhoto(null);
+      setIdFrontPhotoPreview(null);
+    } else {
+      if (idBackPhotoPreview) URL.revokeObjectURL(idBackPhotoPreview);
+      setIdBackPhoto(null);
+      setIdBackPhotoPreview(null);
+    }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value, ...(name === "FullName" ? { Name: value } : {}) }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "FullName" ? { Name: value } : {}),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -246,26 +366,59 @@ const ManageTenants = () => {
       form.append("Occupation", formData.Occupation || "");
       form.append("NextOfKinName", formData.NextOfKinName || "");
       form.append("NextOfKinPhone", formData.NextOfKinPhone || "");
-      if (passportPhoto instanceof File) form.append("passportPhoto", passportPhoto);
+      if (passportPhoto instanceof File)
+        form.append("passportPhoto", passportPhoto);
       if (idFrontPhoto instanceof File) form.append("idFront", idFrontPhoto);
       if (idBackPhoto instanceof File) form.append("idBack", idBackPhoto);
 
-      const response = await axios.put(`${apiUrl}/UpdateTenant`, form, { headers: { Accept: "*/*" } });
+      const response = await axios.put(`${apiUrl}/UpdateTenant`, form, {
+        headers: { Accept: "*/*" },
+      });
       if (response.status !== 200) throw new Error("Failed to update tenant");
 
       setIsSubmitting(false);
       setIsSuccess(true);
-      toast({ title: "Tenant Updated Successfully", description: `${formData.FullName} has been updated.` });
+      toast({
+        title: "Tenant Updated Successfully",
+        description: `${formData.FullName} has been updated.`,
+      });
 
       setTimeout(() => {
-        setFormData({ id: 0, FullName: "", Name: "", Email: "", PhoneNumber: "", NationalIdNumber: "", DateMovedIn: "", PropertyId: "", Active: "true", idFront: "", idBack: "", passportPhoto: "", UnitId: "", WaterMeterNo: "", ElectricityMeterNo: "", TenantStatus: "active", Occupation: "", NextOfKinName: "", NextOfKinPhone: "" });
-        clearFile("PassportPhoto"); clearFile("IdFront"); clearFile("IdBack");
-        setIsSuccess(false); setIsEdit(false);
+        setFormData({
+          id: 0,
+          FullName: "",
+          Name: "",
+          Email: "",
+          PhoneNumber: "",
+          NationalIdNumber: "",
+          DateMovedIn: "",
+          PropertyId: "",
+          Active: "true",
+          idFront: "",
+          idBack: "",
+          passportPhoto: "",
+          UnitId: "",
+          WaterMeterNo: "",
+          ElectricityMeterNo: "",
+          TenantStatus: "active",
+          Occupation: "",
+          NextOfKinName: "",
+          NextOfKinPhone: "",
+        });
+        clearFile("PassportPhoto");
+        clearFile("IdFront");
+        clearFile("IdBack");
+        setIsSuccess(false);
+        setIsEdit(false);
       }, 3000);
     } catch (error) {
       console.error("Error submitting form:", error);
       setIsSubmitting(false);
-      toast({ title: "Error", description: "Failed to update tenant.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to update tenant.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -273,33 +426,59 @@ const ManageTenants = () => {
     (t) =>
       t.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.property.name.toLowerCase().includes(searchTerm.toLowerCase())
+      t.property.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const formatCurrency = (amount: number, currency = "UGX") =>
-    new Intl.NumberFormat("en-UG", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat("en-UG", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
 
   const formatDate = (ds: string) =>
-    new Date(ds).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    new Date(ds).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
 
   const handleSaveInvoiceDay = async () => {
     if (!selectedTenant) return;
     const day = invoiceDayInput === "" ? null : Number(invoiceDayInput);
     if (day !== null && (day < 1 || day > 28)) {
-      toast({ title: "Invalid day", description: "Day must be between 1 and 28.", variant: "destructive" });
+      toast({
+        title: "Invalid day",
+        description: "Day must be between 1 and 28.",
+        variant: "destructive",
+      });
       return;
     }
     setSavingInvoiceDay(true);
     try {
-      await axios.put(`${apiUrl}/UpdateTenantInvoiceDay`,
+      await axios.put(
+        `${apiUrl}/UpdateTenantInvoiceDay`,
         { tenantId: selectedTenant.id, invoiceGenerationDay: day },
-        { headers: { Authorization: `Bearer ${getAuthToken()}` } }
+        { headers: { Authorization: `Bearer ${getAuthToken()}` } },
       );
       setSelectedTenant({ ...selectedTenant, invoiceGenerationDay: day });
-      setTenants(prev => prev.map(t => t.id === selectedTenant.id ? { ...t, invoiceGenerationDay: day } : t));
-      toast({ title: "Saved", description: day ? `Invoice day set to the ${ordinal(day)} of each month.` : "Reverted to landlord default." });
+      setTenants((prev) =>
+        prev.map((t) =>
+          t.id === selectedTenant.id ? { ...t, invoiceGenerationDay: day } : t,
+        ),
+      );
+      toast({
+        title: "Saved",
+        description: day
+          ? `Invoice day set to the ${ordinal(day)} of each month.`
+          : "Reverted to landlord default.",
+      });
     } catch (err: any) {
-      toast({ title: "Error", description: err?.response?.data ?? "Failed to save.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err?.response?.data ?? "Failed to save.",
+        variant: "destructive",
+      });
     } finally {
       setSavingInvoiceDay(false);
     }
@@ -324,13 +503,21 @@ const ManageTenants = () => {
         fetchTenants();
       } else throw new Error("Failed to delete tenant");
     } catch {
-      toast({ title: "Error", description: "Failed to delete tenant.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to delete tenant.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleRecordPayment = async () => {
     if (!paymentForm.amount || Number(paymentForm.amount) <= 0) {
-      toast({ title: "Validation Error", description: "Please enter a valid amount.", variant: "destructive" });
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid amount.",
+        variant: "destructive",
+      });
       return;
     }
     setIsSubmittingPayment(true);
@@ -345,23 +532,48 @@ const ManageTenants = () => {
       };
       const response = await fetch(`${apiUrl}/RecordPayment`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${getAuthToken()}`, "Content-Type": "application/json", Accept: "*/*" },
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "application/json",
+          Accept: "*/*",
+        },
         body: JSON.stringify(body),
       });
       if (!response.ok) throw new Error(`Request failed: ${response.status}`);
 
       const paid = Number(paymentForm.amount);
       setTenants((prev) =>
-        prev.map((t) => t.id === selectedTenant?.id ? { ...t, balanceDue: Math.max(0, t.balanceDue - paid) } : t)
+        prev.map((t) =>
+          t.id === selectedTenant?.id
+            ? { ...t, balanceDue: Math.max(0, t.balanceDue - paid) }
+            : t,
+        ),
       );
       if (selectedTenant)
-        setSelectedTenant({ ...selectedTenant, balanceDue: Math.max(0, selectedTenant.balanceDue - paid) });
+        setSelectedTenant({
+          ...selectedTenant,
+          balanceDue: Math.max(0, selectedTenant.balanceDue - paid),
+        });
 
-      toast({ title: "Payment Recorded", description: `${formatCurrency(paid, selectedTenant?.property.currency)} recorded.` });
+      toast({
+        title: "Payment Recorded",
+        description: `${formatCurrency(paid, selectedTenant?.property.currency)} recorded.`,
+      });
       setPaymentModalOpen(false);
-      setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split("T")[0], paymentMethod: "Cash", referenceNo: "", notes: "" });
+      setPaymentForm({
+        amount: "",
+        paymentDate: new Date().toISOString().split("T")[0],
+        paymentMethod: "Cash",
+        referenceNo: "",
+        notes: "",
+      });
     } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to record payment.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description:
+          err instanceof Error ? err.message : "Failed to record payment.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmittingPayment(false);
     }
@@ -369,14 +581,25 @@ const ManageTenants = () => {
 
   const openEdit = (t: Tenant) => {
     setFormData({
-      id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email,
-      PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber,
+      id: t.id,
+      FullName: t.fullName,
+      Name: t.fullName,
+      Email: t.email,
+      PhoneNumber: t.phoneNumber,
+      NationalIdNumber: t.nationalIdNumber,
       DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0],
-      PropertyId: t.propertyId, Active: String(t.active),
-      idFront: t.idFront || "", idBack: t.idBack || "", passportPhoto: t.passportPhoto || "",
-      UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "", ElectricityMeterNo: t.electricityMeterNo || "",
+      PropertyId: t.propertyId,
+      Active: String(t.active),
+      idFront: t.idFront || "",
+      idBack: t.idBack || "",
+      passportPhoto: t.passportPhoto || "",
+      UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "",
+      WaterMeterNo: t.waterMeterNo || "",
+      ElectricityMeterNo: t.electricityMeterNo || "",
       TenantStatus: t.active ? "active" : "left",
-      Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "",
+      Occupation: t.occupation || "",
+      NextOfKinName: t.nextOfKinName || "",
+      NextOfKinPhone: t.nextOfKinPhone || "",
     });
     setPassportPhotoPreview(getImageUrl(t.passportPhoto));
     setIdFrontPhotoPreview(getImageUrl(t.idFront));
@@ -384,7 +607,7 @@ const ManageTenants = () => {
     setIsEdit(true);
   };
 
-  const activeCount = tenants.filter(t => t.active).length;
+  const activeCount = tenants.filter((t) => t.active).length;
   const totalBalance = tenants.reduce((s, t) => s + (t.balanceDue || 0), 0);
 
   const selectCls =
@@ -397,7 +620,7 @@ const ManageTenants = () => {
     file: File | null,
     preview: string | null,
     type: "PassportPhoto" | "IdFront" | "IdBack",
-    inputId: string
+    inputId: string,
   ) => (
     <div className="space-y-1.5">
       <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -409,10 +632,17 @@ const ManageTenants = () => {
       >
         {file ? (
           <>
-            <img src={preview!} alt={label} className="h-full w-full object-cover" />
+            <img
+              src={preview!}
+              alt={label}
+              className="h-full w-full object-cover"
+            />
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); clearFile(type); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                clearFile(type);
+              }}
               className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
             >
               <X size={12} />
@@ -424,14 +654,21 @@ const ManageTenants = () => {
             <p className="text-xs text-slate-400">Click to upload</p>
           </>
         )}
-        <input id={inputId} type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, type)} />
+        <input
+          id={inputId}
+          type="file"
+          className="hidden"
+          accept="image/*"
+          onChange={(e) => handleFileChange(e, type)}
+        />
       </div>
     </div>
   );
 
   const tenantColumns: Column<Tenant>[] = [
     {
-      key: "tenant", header: "Tenant",
+      key: "tenant",
+      header: "Tenant",
       cell: (t) => (
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border-2 border-slate-100 bg-slate-100">
@@ -439,18 +676,23 @@ const ManageTenants = () => {
               src={buildImageUrl(t.passportPhoto)}
               alt={t.fullName}
               className="h-full w-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE; }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+              }}
             />
           </div>
           <div className="min-w-0">
-            <p className="truncate font-semibold text-[#0F172A]">{t.fullName}</p>
+            <p className="truncate font-semibold text-[#0F172A]">
+              {t.fullName}
+            </p>
             <p className="truncate text-xs text-slate-400">{t.email}</p>
           </div>
         </div>
       ),
     },
     {
-      key: "property", header: "Property",
+      key: "property",
+      header: "Property",
       cell: (t) => (
         <div className="flex items-center gap-1.5 text-sm text-slate-600">
           <Home className="h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -462,13 +704,20 @@ const ManageTenants = () => {
       ),
     },
     {
-      key: "unit", header: "Unit",
-      cell: (t) => t.unit?.unitNumber
-        ? <span className="rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-600">{t.unit.unitNumber}</span>
-        : <span className="text-slate-300">—</span>,
+      key: "unit",
+      header: "Unit",
+      cell: (t) =>
+        t.unit?.unitNumber ? (
+          <span className="rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-600">
+            {t.unit.unitNumber}
+          </span>
+        ) : (
+          <span className="text-slate-300">—</span>
+        ),
     },
     {
-      key: "movein", header: "Move-in",
+      key: "movein",
+      header: "Move-in",
       cell: (t) => (
         <span className="flex items-center gap-1 text-sm text-slate-500">
           <Calendar className="h-3.5 w-3.5 text-slate-400" />
@@ -477,17 +726,28 @@ const ManageTenants = () => {
       ),
     },
     {
-      key: "rent", header: "Rent/mo",
+      key: "rent",
+      header: "Rent/month",
       headerClassName: "text-right",
       className: "text-right",
-      cell: (t) => <span className="text-sm font-semibold text-[#0F172A]">{formatCurrency(t.unit?.monthlyAmount ?? t.property.price, t.property.currency)}</span>,
+      cell: (t) => (
+        <span className="text-sm font-semibold text-[#0F172A]">
+          {formatCurrency(
+            t.unit?.monthlyAmount ?? t.property.price,
+            t.property.currency,
+          )}
+        </span>
+      ),
     },
     {
-      key: "status", header: "Status",
+      key: "status",
+      header: "Status",
       cell: (t) => <StatusBadge active={t.active} />,
     },
     {
-      key: "actions", header: "Actions", headerClassName: "text-right",
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
       className: "text-right",
       cell: (t) => (
         <div className="flex items-center justify-end gap-1">
@@ -495,8 +755,32 @@ const ManageTenants = () => {
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-[#1D4ED8] transition-colors"
             onClick={() => {
               setSelectedTenant(t);
-              setInvoiceDayInput(t.invoiceGenerationDay ? String(t.invoiceGenerationDay) : "");
-              setFormData({ id: t.id, FullName: t.fullName, Name: t.fullName, Email: t.email, PhoneNumber: t.phoneNumber, NationalIdNumber: t.nationalIdNumber, DateMovedIn: new Date(t.dateMovedIn).toISOString().split("T")[0], PropertyId: t.propertyId, Active: String(t.active), idFront: t.idFront, idBack: t.idBack, passportPhoto: t.passportPhoto, UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "", WaterMeterNo: t.waterMeterNo || "", ElectricityMeterNo: t.electricityMeterNo || "", TenantStatus: t.active ? "active" : "left", Occupation: t.occupation || "", NextOfKinName: t.nextOfKinName || "", NextOfKinPhone: t.nextOfKinPhone || "" });
+              setInvoiceDayInput(
+                t.invoiceGenerationDay ? String(t.invoiceGenerationDay) : "",
+              );
+              setFormData({
+                id: t.id,
+                FullName: t.fullName,
+                Name: t.fullName,
+                Email: t.email,
+                PhoneNumber: t.phoneNumber,
+                NationalIdNumber: t.nationalIdNumber,
+                DateMovedIn: new Date(t.dateMovedIn)
+                  .toISOString()
+                  .split("T")[0],
+                PropertyId: t.propertyId,
+                Active: String(t.active),
+                idFront: t.idFront,
+                idBack: t.idBack,
+                passportPhoto: t.passportPhoto,
+                UnitId: t.propertyUnitId ? String(t.propertyUnitId) : "",
+                WaterMeterNo: t.waterMeterNo || "",
+                ElectricityMeterNo: t.electricityMeterNo || "",
+                TenantStatus: t.active ? "active" : "left",
+                Occupation: t.occupation || "",
+                NextOfKinName: t.nextOfKinName || "",
+                NextOfKinPhone: t.nextOfKinPhone || "",
+              });
             }}
             title="View"
           >
@@ -513,7 +797,13 @@ const ManageTenants = () => {
             <button
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
               title="Demand Note"
-              onClick={() => generateDemandNotePdf({ tenant: t, outstandingAmount: t.balanceDue, branding })}
+              onClick={() =>
+                generateDemandNotePdf({
+                  tenant: t,
+                  outstandingAmount: t.balanceDue,
+                  branding,
+                })
+              }
             >
               <AlertCircle className="h-4 w-4" />
             </button>
@@ -527,7 +817,10 @@ const ManageTenants = () => {
           </button>
           <button
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-            onClick={() => { setDeleteTenant(t); setIsDeleteModalOpen(true); }}
+            onClick={() => {
+              setDeleteTenant(t);
+              setIsDeleteModalOpen(true);
+            }}
             title="Delete"
           >
             <Trash2 className="h-4 w-4" />
@@ -539,30 +832,59 @@ const ManageTenants = () => {
 
   return (
     <div className="space-y-6">
-
       {/* ── Hero banner ── */}
-      <section className="relative overflow-hidden rounded-2xl px-8 py-8 text-white shadow-xl" style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-          style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
+      <section
+        className="relative overflow-hidden rounded-2xl px-8 py-8 text-white shadow-xl"
+        style={{
+          background:
+            "linear-gradient(135deg, #0a0f1e 0%, #0f2044 45%, #1a3a6e 100%)",
+        }}
+      >
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-3">
             <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-200">
               Tenant Management
             </span>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Manage Tenants</h1>
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+                Manage Tenants
+              </h1>
               <p className="mt-1 text-sm text-blue-200">
-                Review occupants, update records, and keep tenant information aligned with properties.
+                Review occupants, update records, and keep tenant information
+                aligned with properties.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 pt-1">
               {[
                 { label: "Total", value: tenants.length },
-                { label: "Active", value: activeCount, color: "text-emerald-300" },
-                { label: "Inactive", value: tenants.length - activeCount, color: "text-red-300" },
+                {
+                  label: "Active",
+                  value: activeCount,
+                  color: "text-emerald-300",
+                },
+                {
+                  label: "Inactive",
+                  value: tenants.length - activeCount,
+                  color: "text-red-300",
+                },
               ].map((s) => (
-                <div key={s.label} className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-1.5">
-                  <span className={`text-sm font-bold ${s.color ?? "text-white"}`}>{s.value}</span>
+                <div
+                  key={s.label}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-1.5"
+                >
+                  <span
+                    className={`text-sm font-bold ${s.color ?? "text-white"}`}
+                  >
+                    {s.value}
+                  </span>
                   <span className="text-xs text-blue-200">{s.label}</span>
                 </div>
               ))}
@@ -579,9 +901,33 @@ const ManageTenants = () => {
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <KpiCard label="Total Tenants"  value={tenants.length} sub={`${activeCount} active`}                                icon={Users}    iconBg="bg-blue-50"    iconColor="text-[#1D4ED8]"    accent="border-l-[#1D4ED8]" />
-        <KpiCard label="Active Tenants" value={activeCount}    sub={`${tenants.length - activeCount} inactive`}             icon={UserCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" accent="border-l-emerald-500" />
-        <KpiCard label="Total Balance Due" value={formatCurrency(totalBalance)} sub="across all tenants"                   icon={DollarSign} iconBg="bg-amber-50"  iconColor="text-amber-600"   accent="border-l-amber-500" />
+        <KpiCard
+          label="Total Tenants"
+          value={tenants.length}
+          sub={`${activeCount} active`}
+          icon={Users}
+          iconBg="bg-blue-50"
+          iconColor="text-[#1D4ED8]"
+          accent="border-l-[#1D4ED8]"
+        />
+        <KpiCard
+          label="Active Tenants"
+          value={activeCount}
+          sub={`${tenants.length - activeCount} inactive`}
+          icon={UserCheck}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          accent="border-l-emerald-500"
+        />
+        <KpiCard
+          label="Total Balance Due"
+          value={formatCurrency(totalBalance)}
+          sub="across all tenants"
+          icon={DollarSign}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-600"
+          accent="border-l-amber-500"
+        />
       </div>
 
       {/* ── Table ── */}
@@ -596,14 +942,17 @@ const ManageTenants = () => {
         pageSize={10}
         minWidth="1000px"
         emptyIcon={<Users className="h-6 w-6 text-slate-300" />}
-        emptyMessage={searchTerm ? "No tenants match your search" : "Start by adding a new tenant"}
+        emptyMessage={
+          searchTerm
+            ? "No tenants match your search"
+            : "Start by adding a new tenant"
+        }
       />
 
       {/* ── Tenant Detail Modal ── */}
       {selectedTenant && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-
             {/* Header */}
             <div className="relative shrink-0 bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-5 text-white">
               <div className="flex items-center gap-4">
@@ -612,13 +961,21 @@ const ManageTenants = () => {
                     src={buildImageUrl(selectedTenant.passportPhoto)}
                     alt={selectedTenant.fullName}
                     className="h-full w-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE; }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                    }}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">Tenant Profile</p>
-                  <h2 className="text-xl font-bold truncate">{selectedTenant.fullName}</h2>
-                  <p className="text-sm text-blue-200">{selectedTenant.email}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-300">
+                    Tenant Profile
+                  </p>
+                  <h2 className="text-xl font-bold truncate">
+                    {selectedTenant.fullName}
+                  </h2>
+                  <p className="text-sm text-blue-200">
+                    {selectedTenant.email}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge active={selectedTenant.active} />
@@ -635,31 +992,98 @@ const ManageTenants = () => {
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 gap-0 sm:grid-cols-2">
-
                 {/* Left: personal + property */}
                 <div className="border-r border-slate-100 px-6 py-4">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Personal Info</p>
-                  <DetailRow icon={PhoneIcon} label="Phone" value={selectedTenant.phoneNumber} />
-                  <DetailRow icon={CreditCard} label="National ID" value={selectedTenant.nationalIdNumber} />
-                  <DetailRow icon={Calendar} label="Move-in Date" value={formatDate(selectedTenant.dateMovedIn)} />
-                  {selectedTenant.occupation && <DetailRow icon={User} label="Occupation" value={selectedTenant.occupation} />}
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Personal Info
+                  </p>
+                  <DetailRow
+                    icon={PhoneIcon}
+                    label="Phone"
+                    value={selectedTenant.phoneNumber}
+                  />
+                  <DetailRow
+                    icon={CreditCard}
+                    label="National ID"
+                    value={selectedTenant.nationalIdNumber}
+                  />
+                  <DetailRow
+                    icon={Calendar}
+                    label="Move-in Date"
+                    value={formatDate(selectedTenant.dateMovedIn)}
+                  />
+                  {selectedTenant.occupation && (
+                    <DetailRow
+                      icon={User}
+                      label="Occupation"
+                      value={selectedTenant.occupation}
+                    />
+                  )}
                   {selectedTenant.nextOfKinName && (
                     <>
-                      <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Next of Kin</p>
-                      <DetailRow icon={User} label="Name" value={selectedTenant.nextOfKinName} />
-                      {selectedTenant.nextOfKinPhone && <DetailRow icon={PhoneIcon} label="Contact" value={selectedTenant.nextOfKinPhone} />}
+                      <p className="mb-1 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                        Next of Kin
+                      </p>
+                      <DetailRow
+                        icon={User}
+                        label="Name"
+                        value={selectedTenant.nextOfKinName}
+                      />
+                      {selectedTenant.nextOfKinPhone && (
+                        <DetailRow
+                          icon={PhoneIcon}
+                          label="Contact"
+                          value={selectedTenant.nextOfKinPhone}
+                        />
+                      )}
                     </>
                   )}
                 </div>
 
                 {/* Right: property + payment */}
                 <div className="px-6 py-4 space-y-0">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Property & Payment</p>
-                  <DetailRow icon={Home} label="Property" value={`${selectedTenant.property.name} (${selectedTenant.property.type})`} />
-                  {selectedTenant.unit?.unitNumber && <DetailRow icon={Key} label="Unit / Room" value={selectedTenant.unit.unitNumber} />}
-                  {selectedTenant.waterMeterNo && <DetailRow icon={Key} label="Water Meter" value={selectedTenant.waterMeterNo} />}
-                  {selectedTenant.electricityMeterNo && <DetailRow icon={Zap} label="UMEME Meter" value={selectedTenant.electricityMeterNo} />}
-                  <DetailRow icon={Banknote} label="Monthly Rent" value={<span className="font-semibold">{formatCurrency(selectedTenant.unit?.monthlyAmount ?? selectedTenant.property.price, selectedTenant.property.currency)}</span>} />
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Property & Payment
+                  </p>
+                  <DetailRow
+                    icon={Home}
+                    label="Property"
+                    value={`${selectedTenant.property.name} (${selectedTenant.property.type})`}
+                  />
+                  {selectedTenant.unit?.unitNumber && (
+                    <DetailRow
+                      icon={Key}
+                      label="Unit / Room"
+                      value={selectedTenant.unit.unitNumber}
+                    />
+                  )}
+                  {selectedTenant.waterMeterNo && (
+                    <DetailRow
+                      icon={Key}
+                      label="Water Meter"
+                      value={selectedTenant.waterMeterNo}
+                    />
+                  )}
+                  {selectedTenant.electricityMeterNo && (
+                    <DetailRow
+                      icon={Zap}
+                      label="UMEME Meter"
+                      value={selectedTenant.electricityMeterNo}
+                    />
+                  )}
+                  <DetailRow
+                    icon={Banknote}
+                    label="Monthly Rent"
+                    value={
+                      <span className="font-semibold">
+                        {formatCurrency(
+                          selectedTenant.unit?.monthlyAmount ??
+                            selectedTenant.property.price,
+                          selectedTenant.property.currency,
+                        )}
+                      </span>
+                    }
+                  />
                   <DetailRow
                     icon={Calendar}
                     label="Next Payment Due"
@@ -669,17 +1093,25 @@ const ManageTenants = () => {
                     icon={DollarSign}
                     label="Balance Due"
                     value={
-                      <span className={`font-semibold ${selectedTenant.balanceDue > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                        {formatCurrency(selectedTenant.balanceDue, selectedTenant.property.currency)}
+                      <span
+                        className={`font-semibold ${selectedTenant.balanceDue > 0 ? "text-red-600" : "text-emerald-600"}`}
+                      >
+                        {formatCurrency(
+                          selectedTenant.balanceDue,
+                          selectedTenant.property.currency,
+                        )}
                       </span>
                     }
                   />
 
                   {/* Invoice Day Override */}
                   <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Invoice Schedule Override</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      Invoice Schedule Override
+                    </p>
                     <p className="text-xs text-slate-500">
-                      Set a custom invoice day for this tenant. Leave blank to use your landlord default.
+                      Set a custom invoice day for this tenant. Leave blank to
+                      use your landlord default.
                     </p>
                     <div className="flex items-center gap-2">
                       <input
@@ -700,7 +1132,9 @@ const ManageTenants = () => {
                       </button>
                       {invoiceDayInput && (
                         <button
-                          onClick={() => { setInvoiceDayInput(""); }}
+                          onClick={() => {
+                            setInvoiceDayInput("");
+                          }}
                           className="text-xs text-slate-400 hover:text-slate-600 underline"
                         >
                           Clear
@@ -709,7 +1143,9 @@ const ManageTenants = () => {
                     </div>
                     {selectedTenant.invoiceGenerationDay && (
                       <p className="text-xs font-medium text-blue-600">
-                        Currently overridden: {ordinal(selectedTenant.invoiceGenerationDay)} of each month
+                        Currently overridden:{" "}
+                        {ordinal(selectedTenant.invoiceGenerationDay)} of each
+                        month
                       </p>
                     )}
                   </div>
@@ -749,9 +1185,10 @@ const ManageTenants = () => {
                 <button
                   className="btn-grid inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
                   onClick={() => {
-                    const prefillAmount = selectedTenant.balanceDue > 0
-                      ? String(selectedTenant.balanceDue)
-                      : String(selectedTenant.property.price);
+                    const prefillAmount =
+                      selectedTenant.balanceDue > 0
+                        ? String(selectedTenant.balanceDue)
+                        : String(selectedTenant.property.price);
                     setPaymentForm({
                       amount: prefillAmount,
                       paymentDate: new Date().toISOString().split("T")[0],
@@ -772,7 +1209,10 @@ const ManageTenants = () => {
                 </button>
                 <button
                   className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors"
-                  onClick={() => { setDeleteTenant(selectedTenant); setIsDeleteModalOpen(true); }}
+                  onClick={() => {
+                    setDeleteTenant(selectedTenant);
+                    setIsDeleteModalOpen(true);
+                  }}
                 >
                   <Trash2 className="h-4 w-4" /> Remove
                 </button>
@@ -812,123 +1252,276 @@ const ManageTenants = () => {
         <div className="h-[65vh] overflow-y-auto px-1">
           {isSuccess ? (
             <motion.div
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center text-center py-14"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 mb-4">
                 <Check className="h-8 w-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-1">Tenant Updated Successfully!</h3>
-              <p className="text-sm text-slate-500">An email has been sent to {formData.Email} with updated details.</p>
+              <h3 className="text-xl font-semibold mb-1">
+                Tenant Updated Successfully!
+              </h3>
+              <p className="text-sm text-slate-500">
+                An email has been sent to {formData.Email} with updated details.
+              </p>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6 py-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { name: "FullName", label: "Full Name", icon: User, type: "text", placeholder: "Tenant's full name" },
-                  { name: "Email", label: "Email", icon: Mail, type: "email", placeholder: "Tenant's email" },
-                  { name: "PhoneNumber", label: "Phone Number", icon: Phone, type: "tel", placeholder: "Phone number" },
-                  { name: "NationalIdNumber", label: "National ID Number", icon: Key, type: "text", placeholder: "ID number" },
-                  { name: "DateMovedIn", label: "Move-in Date", icon: Calendar, type: "date", placeholder: "" },
+                  {
+                    name: "FullName",
+                    label: "Full Name",
+                    icon: User,
+                    type: "text",
+                    placeholder: "Tenant's full name",
+                  },
+                  {
+                    name: "Email",
+                    label: "Email",
+                    icon: Mail,
+                    type: "email",
+                    placeholder: "Tenant's email",
+                  },
+                  {
+                    name: "PhoneNumber",
+                    label: "Phone Number",
+                    icon: Phone,
+                    type: "tel",
+                    placeholder: "Phone number",
+                  },
+                  {
+                    name: "NationalIdNumber",
+                    label: "National ID Number",
+                    icon: Key,
+                    type: "text",
+                    placeholder: "ID number",
+                  },
+                  {
+                    name: "DateMovedIn",
+                    label: "Move-in Date",
+                    icon: Calendar,
+                    type: "date",
+                    placeholder: "",
+                  },
                 ].map(({ name, label, icon: Icon, type, placeholder }) => (
                   <div key={name} className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                       <Icon className="h-3.5 w-3.5" /> {label}
                     </label>
-                    <Input name={name} type={type} value={(formData as any)[name]} onChange={handleInputChange} placeholder={placeholder} required />
+                    <Input
+                      name={name}
+                      type={type}
+                      value={(formData as any)[name]}
+                      onChange={handleInputChange}
+                      placeholder={placeholder}
+                      required
+                    />
                   </div>
                 ))}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <Home className="h-3.5 w-3.5" /> Property
                   </label>
-                  <select name="PropertyId" className={selectCls} value={formData.PropertyId} onChange={handleInputChange} required disabled={isLoadingProperties}>
+                  <select
+                    name="PropertyId"
+                    className={selectCls}
+                    value={formData.PropertyId}
+                    onChange={handleInputChange}
+                    required
+                    disabled={isLoadingProperties}
+                  >
                     <option value="">Select a property</option>
-                    {properties.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.address}</option>)}
+                    {properties.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — {p.address}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               {/* Tenancy details */}
               <div className="pt-4 border-t border-slate-100">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Tenancy Details</p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Tenancy Details
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Unit / Room</label>
-                    <select name="UnitId" className={selectCls} value={formData.UnitId} onChange={handleInputChange}>
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Unit / Room
+                    </label>
+                    <select
+                      name="UnitId"
+                      className={selectCls}
+                      value={formData.UnitId}
+                      onChange={handleInputChange}
+                    >
                       <option value="">Select unit</option>
                       {units.map((u) => {
-                        const isCurrent = String(u.id) === String(formData.UnitId);
-                        const occupied = !isCurrent && u.status?.toLowerCase() === "occupied";
+                        const isCurrent =
+                          String(u.id) === String(formData.UnitId);
+                        const occupied =
+                          !isCurrent && u.status?.toLowerCase() === "occupied";
                         return (
                           <option key={u.id} value={u.id} disabled={occupied}>
-                            {u.unitNumber}{occupied ? " — Taken" : isCurrent ? " (current)" : ""}
+                            {u.unitNumber}
+                            {occupied
+                              ? " — Taken"
+                              : isCurrent
+                                ? " (current)"
+                                : ""}
                           </option>
                         );
                       })}
                     </select>
-                    {units.some((u) => !String(u.id).includes(formData.UnitId) && u.status?.toLowerCase() === "occupied") && (
-                      <p className="text-[10px] text-slate-400 mt-1">Units marked "Taken" are already occupied.</p>
+                    {units.some(
+                      (u) =>
+                        !String(u.id).includes(formData.UnitId) &&
+                        u.status?.toLowerCase() === "occupied",
+                    ) && (
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Units marked "Taken" are already occupied.
+                      </p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Water Meter No.</label>
-                    <Input name="WaterMeterNo" value={formData.WaterMeterNo} onChange={handleInputChange} placeholder="e.g. WM-00123" />
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Water Meter No.
+                    </label>
+                    <Input
+                      name="WaterMeterNo"
+                      value={formData.WaterMeterNo}
+                      onChange={handleInputChange}
+                      placeholder="e.g. WM-00123"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">UMEME Meter No.</label>
-                    <Input name="ElectricityMeterNo" value={formData.ElectricityMeterNo} onChange={handleInputChange} placeholder="e.g. 04-1234-5678" />
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      UMEME Meter No.
+                    </label>
+                    <Input
+                      name="ElectricityMeterNo"
+                      value={formData.ElectricityMeterNo}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 04-1234-5678"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tenant Status</label>
-                    <select name="TenantStatus" className={selectCls} value={formData.TenantStatus} onChange={handleInputChange}>
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Tenant Status
+                    </label>
+                    <select
+                      name="TenantStatus"
+                      className={selectCls}
+                      value={formData.TenantStatus}
+                      onChange={handleInputChange}
+                    >
                       <option value="active">Active</option>
                       <option value="left">Left</option>
                       <option value="pending payment">Pending Payment</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Occupation</label>
-                    <Input name="Occupation" value={formData.Occupation} onChange={handleInputChange} placeholder="e.g. Teacher, Engineer…" />
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Occupation
+                    </label>
+                    <Input
+                      name="Occupation"
+                      value={formData.Occupation}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Teacher, Engineer…"
+                    />
                   </div>
                 </div>
 
-                <p className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">Next of Kin</p>
+                <p className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Next of Kin
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Name</label>
-                    <Input name="NextOfKinName" value={formData.NextOfKinName} onChange={handleInputChange} placeholder="Full name" />
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Name
+                    </label>
+                    <Input
+                      name="NextOfKinName"
+                      value={formData.NextOfKinName}
+                      onChange={handleInputChange}
+                      placeholder="Full name"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Contact</label>
-                    <Input name="NextOfKinPhone" value={formData.NextOfKinPhone} onChange={handleInputChange} placeholder="Phone number" />
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Contact
+                    </label>
+                    <Input
+                      name="NextOfKinPhone"
+                      value={formData.NextOfKinPhone}
+                      onChange={handleInputChange}
+                      placeholder="Phone number"
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Documents */}
               <div className="pt-4 border-t border-slate-100">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Current Documents</p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Current Documents
+                </p>
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   {[
-                    { src: buildImageUrl(formData.passportPhoto), label: "Passport" },
+                    {
+                      src: buildImageUrl(formData.passportPhoto),
+                      label: "Passport",
+                    },
                     { src: buildImageUrl(formData.idFront), label: "ID Front" },
                     { src: buildImageUrl(formData.idBack), label: "ID Back" },
                   ].map(({ src, label }) => (
                     <div key={label} className="space-y-1">
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">{label}</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                        {label}
+                      </p>
                       <div className="h-28 overflow-hidden rounded-xl border border-slate-200">
-                        <img src={src} alt={label} className="h-full w-full object-cover" />
+                        <img
+                          src={src}
+                          alt={label}
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Replace Documents</p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Replace Documents
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {uploadBox("Passport Photo", Camera, passportPhoto, passportPhotoPreview, "PassportPhoto", "passportPhotoInput")}
-                  {uploadBox("ID Front", CreditCard, idFrontPhoto, idFrontPhotoPreview, "IdFront", "idFrontInput")}
-                  {uploadBox("ID Back", CreditCard, idBackPhoto, idBackPhotoPreview, "IdBack", "idBackInput")}
+                  {uploadBox(
+                    "Passport Photo",
+                    Camera,
+                    passportPhoto,
+                    passportPhotoPreview,
+                    "PassportPhoto",
+                    "passportPhotoInput",
+                  )}
+                  {uploadBox(
+                    "ID Front",
+                    CreditCard,
+                    idFrontPhoto,
+                    idFrontPhotoPreview,
+                    "IdFront",
+                    "idFrontInput",
+                  )}
+                  {uploadBox(
+                    "ID Back",
+                    CreditCard,
+                    idBackPhoto,
+                    idBackPhotoPreview,
+                    "IdBack",
+                    "idBackInput",
+                  )}
                 </div>
               </div>
             </form>
@@ -943,10 +1536,18 @@ const ManageTenants = () => {
             <div className="bg-gradient-to-r from-emerald-700 to-emerald-500 px-6 py-5 text-white">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-200">Record Payment</p>
-                  <h2 className="mt-0.5 text-xl font-bold">{selectedTenant.fullName}</h2>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-200">
+                    Record Payment
+                  </p>
+                  <h2 className="mt-0.5 text-xl font-bold">
+                    {selectedTenant.fullName}
+                  </h2>
                   <p className="mt-0.5 text-sm text-emerald-100">
-                    Balance due: {formatCurrency(selectedTenant.balanceDue, selectedTenant.property.currency)}
+                    Balance due:{" "}
+                    {formatCurrency(
+                      selectedTenant.balanceDue,
+                      selectedTenant.property.currency,
+                    )}
                   </p>
                 </div>
                 <button
@@ -968,34 +1569,77 @@ const ManageTenants = () => {
                     {selectedTenant.balanceDue > 0 && (
                       <button
                         type="button"
-                        onClick={() => setPaymentForm((p) => ({ ...p, amount: String(selectedTenant.balanceDue) }))}
+                        onClick={() =>
+                          setPaymentForm((p) => ({
+                            ...p,
+                            amount: String(selectedTenant.balanceDue),
+                          }))
+                        }
                         className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 transition-colors"
                       >
-                        Balance: {formatCurrency(selectedTenant.balanceDue, selectedTenant.property.currency)}
+                        Balance:{" "}
+                        {formatCurrency(
+                          selectedTenant.balanceDue,
+                          selectedTenant.property.currency,
+                        )}
                       </button>
                     )}
                     <button
                       type="button"
-                      onClick={() => setPaymentForm((p) => ({ ...p, amount: String(selectedTenant.property.price) }))}
+                      onClick={() =>
+                        setPaymentForm((p) => ({
+                          ...p,
+                          amount: String(selectedTenant.property.price),
+                        }))
+                      }
                       className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
                     >
-                      Rent: {formatCurrency(selectedTenant.property.price, selectedTenant.property.currency)}
+                      Rent:{" "}
+                      {formatCurrency(
+                        selectedTenant.property.price,
+                        selectedTenant.property.currency,
+                      )}
                     </button>
                   </div>
                 </div>
-                <MoneyInput placeholder="e.g. 350,000" value={paymentForm.amount}
-                  onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} />
+                <MoneyInput
+                  placeholder="e.g. 350,000"
+                  value={paymentForm.amount}
+                  onChange={(e) =>
+                    setPaymentForm((p) => ({ ...p, amount: e.target.value }))
+                  }
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Date *</label>
-                  <Input type="date" value={paymentForm.paymentDate}
-                    onChange={(e) => setPaymentForm((p) => ({ ...p, paymentDate: e.target.value }))} />
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Date *
+                  </label>
+                  <Input
+                    type="date"
+                    value={paymentForm.paymentDate}
+                    onChange={(e) =>
+                      setPaymentForm((p) => ({
+                        ...p,
+                        paymentDate: e.target.value,
+                      }))
+                    }
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Method</label>
-                  <select className={selectCls} value={paymentForm.paymentMethod}
-                    onChange={(e) => setPaymentForm((p) => ({ ...p, paymentMethod: e.target.value }))}>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Method
+                  </label>
+                  <select
+                    className={selectCls}
+                    value={paymentForm.paymentMethod}
+                    onChange={(e) =>
+                      setPaymentForm((p) => ({
+                        ...p,
+                        paymentMethod: e.target.value,
+                      }))
+                    }
+                  >
                     <option value="Cash">Cash</option>
                     <option value="Mobile Money">Mobile Money</option>
                     <option value="Bank Transfer">Bank Transfer</option>
@@ -1004,14 +1648,31 @@ const ManageTenants = () => {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Reference / Receipt No.</label>
-                <Input placeholder="Optional transaction reference" value={paymentForm.referenceNo}
-                  onChange={(e) => setPaymentForm((p) => ({ ...p, referenceNo: e.target.value }))} />
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Reference / Receipt No.
+                </label>
+                <Input
+                  placeholder="Optional transaction reference"
+                  value={paymentForm.referenceNo}
+                  onChange={(e) =>
+                    setPaymentForm((p) => ({
+                      ...p,
+                      referenceNo: e.target.value,
+                    }))
+                  }
+                />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Notes</label>
-                <Input placeholder="Optional notes" value={paymentForm.notes}
-                  onChange={(e) => setPaymentForm((p) => ({ ...p, notes: e.target.value }))} />
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Notes
+                </label>
+                <Input
+                  placeholder="Optional notes"
+                  value={paymentForm.notes}
+                  onChange={(e) =>
+                    setPaymentForm((p) => ({ ...p, notes: e.target.value }))
+                  }
+                />
               </div>
             </div>
 
@@ -1027,7 +1688,11 @@ const ManageTenants = () => {
                 disabled={isSubmittingPayment}
                 onClick={handleRecordPayment}
               >
-                {isSubmittingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
+                {isSubmittingPayment ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Banknote className="h-4 w-4" />
+                )}
                 Record Payment
               </button>
             </div>
@@ -1040,7 +1705,9 @@ const ManageTenants = () => {
         isOpen={isDeleteModalOpen}
         tenantName={deleteTenant?.fullName || ""}
         onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={() => { if (deleteTenant) handleDeleteTenant(deleteTenant.id); }}
+        onConfirm={() => {
+          if (deleteTenant) handleDeleteTenant(deleteTenant.id);
+        }}
       />
 
       {statementTenant && (
