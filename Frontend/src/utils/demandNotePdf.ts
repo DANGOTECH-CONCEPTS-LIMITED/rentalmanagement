@@ -50,8 +50,8 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
   // ── Dark header band ──────────────────────────────────────────────────────
   doc.setFillColor(10, 18, 40);
   doc.rect(0, 0, pageW, 54, "F");
-  // Red accent stripe (demand = urgent/red)
-  doc.setFillColor(220, 38, 38);
+  // Gold accent stripe
+  doc.setFillColor(234, 179, 8);
   doc.rect(0, 50, pageW, 4, "F");
 
   // Logo / company initial
@@ -63,21 +63,22 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.text(companyName, logoX + 30, logoY + 9);
-    doc.setTextColor(220, 38, 38);
+    doc.setTextColor(234, 179, 8);
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
     doc.text("Property Management", logoX + 30, logoY + 16);
   } else {
-    doc.setFillColor(220, 38, 38);
+    doc.setFillColor(234, 179, 8);
     doc.roundedRect(logoX, logoY, 26, 26, 4, 4, "F");
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(15, 23, 42);
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text(companyName.charAt(0).toUpperCase(), logoX + 13, logoY + 17, { align: "center" });
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
     doc.text(companyName, logoX + 30, logoY + 9);
-    doc.setTextColor(220, 38, 38);
+    doc.setTextColor(234, 179, 8);
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
     doc.text("Property Management", logoX + 30, logoY + 16);
@@ -102,7 +103,7 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
     checkNewPage(14);
     doc.setFillColor(10, 18, 40);
     doc.rect(mg, y, cW, 10, "F");
-    doc.setFillColor(220, 38, 38);
+    doc.setFillColor(234, 179, 8);
     doc.rect(mg, y, 3, 10, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(8.5);
@@ -140,16 +141,16 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
 
   // ── Section 02: Outstanding Balance ───────────────────────────────────────
   sectionBar("02  OUTSTANDING BALANCE");
-  doc.setFillColor(254, 242, 242);
+  doc.setFillColor(255, 251, 235);
   doc.roundedRect(mg, y, cW, 22, 4, 4, "F");
-  doc.setFillColor(220, 38, 38);
+  doc.setFillColor(234, 179, 8);
   doc.roundedRect(mg, y, 3, 22, 2, 2, "F");
 
   doc.setTextColor(100, 116, 139);
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "bold");
   doc.text("TOTAL AMOUNT OUTSTANDING", mg + 8, y + 8);
-  doc.setTextColor(220, 38, 38);
+  doc.setTextColor(120, 80, 0);
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.text(`${currency} ${fmt(outstandingAmount)}`, mg + 8, y + 18);
@@ -191,7 +192,7 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
       if (idx % 2 === 0) {
         doc.setFillColor(255, 255, 255);
       } else {
-        doc.setFillColor(254, 242, 242);
+        doc.setFillColor(255, 251, 235);
       }
       doc.rect(mg, y, cW, 7.5, "F");
       doc.setTextColor(30, 41, 59);
@@ -208,7 +209,7 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
       cells.forEach((cell, i) => {
         const isRight = i >= 3;
         if (i === 4) {
-          doc.setTextColor(220, 38, 38);
+          doc.setTextColor(120, 80, 0);
           doc.setFont("helvetica", "bold");
         } else if (i === 3) {
           doc.setFont("helvetica", "bold");
@@ -229,7 +230,7 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
     doc.text("TOTAL", mg + 3, y + 5.5);
-    doc.setTextColor(252, 165, 165);
+    doc.setTextColor(234, 179, 8);
     doc.text(`${currency} ${fmt(outstandingAmount)}`, pageW - mg - 3, y + 5.5, { align: "right" });
     y += 14;
   } else {
@@ -312,7 +313,7 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
   // ── Footer ─────────────────────────────────────────────────────────────────
   doc.setFillColor(10, 18, 40);
   doc.rect(0, pageH - 11, pageW, 11, "F");
-  doc.setFillColor(220, 38, 38);
+  doc.setFillColor(234, 179, 8);
   doc.rect(0, pageH - 11, 3, 11, "F");
   doc.setTextColor(148, 163, 184);
   doc.setFontSize(7);

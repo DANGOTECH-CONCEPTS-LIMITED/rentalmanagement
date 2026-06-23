@@ -171,6 +171,7 @@ const InvoiceManagement = () => {
     propertyId: "",
     propertyUnitId: "",
     amount: "",
+    securityDeposit: "",
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: "",
     notes: "",
@@ -305,6 +306,7 @@ const InvoiceManagement = () => {
       propertyId: "",
       propertyUnitId: "",
       amount: "",
+      securityDeposit: "",
       invoiceDate: new Date().toISOString().split("T")[0],
       dueDate: "",
       notes: "",
@@ -316,10 +318,18 @@ const InvoiceManagement = () => {
   };
 
   const handleCreate = async () => {
-    if (!form.tenantId || !form.propertyId || !form.amount || !form.dueDate) {
+    if (!form.tenantId || !form.propertyId || !form.amount) {
       toast({
         title: "Validation Error",
-        description: "Tenant, property, amount and due date are required.",
+        description: "Tenant, property and amount are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (form.type !== "Manual Payment" && !form.dueDate) {
+      toast({
+        title: "Validation Error",
+        description: "Due date is required.",
         variant: "destructive",
       });
       return;
@@ -339,7 +349,12 @@ const InvoiceManagement = () => {
     }
     setIsSubmitting(true);
     try {
-      const paymentAmount = Number(form.amount.replace(/,/g, ""));
+      const rentAmount = Number(form.amount.replace(/,/g, ""));
+      const depositAmount = Number(form.securityDeposit.replace(/,/g, "")) || 0;
+      const paymentAmount = rentAmount + depositAmount;
+      const depositNote = depositAmount > 0 ? `Security Deposit: UGX ${depositAmount.toLocaleString()}` : "";
+      const userNotes = form.notes.trim();
+      const combinedNotes = [depositNote, userNotes].filter(Boolean).join("\n") || null;
       const body = {
         Type: form.type,
         // Payment records are settled immediately; charge invoices use the form's chosen status
@@ -351,8 +366,8 @@ const InvoiceManagement = () => {
           : null,
         Amount: paymentAmount,
         InvoiceDate: new Date(form.invoiceDate).toISOString(),
-        DueDate: new Date(form.dueDate).toISOString(),
-        Notes: form.notes || null,
+        DueDate: new Date(form.dueDate || form.invoiceDate).toISOString(),
+        Notes: combinedNotes,
         PaymentMethod: form.paymentMethod || null,
         CreatedByUserId: userData.id,
         CreatedByName: userData.fullName || "",
@@ -641,7 +656,13 @@ const InvoiceManagement = () => {
     // 03 Amount Due
     checkNewPage(44);
     sectionBar("03  AMOUNT DUE");
-    const amtH = 32;
+
+    // Parse security deposit from notes if present
+    const sdMatch = inv.notes?.match(/^Security Deposit: UGX ([\d,]+)/m);
+    const depositAmt = sdMatch ? Number(sdMatch[1].replace(/,/g, "")) : 0;
+    const rentAmt = depositAmt > 0 ? inv.amount - depositAmt : inv.amount;
+
+    const amtH = depositAmt > 0 ? 44 : 32;
     card(mg, y, (cW - 4) * 0.6, amtH, [238, 242, 255]);
     doc.setFillColor(29, 78, 216);
     doc.roundedRect(mg, y, 3, amtH, 1, 1, "F");
@@ -649,10 +670,27 @@ const InvoiceManagement = () => {
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.text("TOTAL AMOUNT", mg + 6, y + 8);
-    doc.setTextColor(29, 78, 216);
-    doc.setFontSize(15);
-    doc.setFont("helvetica", "bold");
-    doc.text(formatUGX(inv.amount), mg + 6, y + 22);
+    if (depositAmt > 0) {
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Rent:`, mg + 6, y + 17);
+      doc.text(formatUGX(rentAmt), mg + 30, y + 17);
+      doc.text(`Security Deposit:`, mg + 6, y + 25);
+      doc.text(formatUGX(depositAmt), mg + 46, y + 25);
+      doc.setDrawColor(200, 210, 230);
+      doc.setLineWidth(0.2);
+      doc.line(mg + 6, y + 28, mg + (cW - 4) * 0.6 - 4, y + 28);
+      doc.setTextColor(29, 78, 216);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatUGX(inv.amount), mg + 6, y + 38);
+    } else {
+      doc.setTextColor(29, 78, 216);
+      doc.setFontSize(15);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatUGX(inv.amount), mg + 6, y + 22);
+    }
 
     const statusW = (cW - 4) * 0.4;
     card(mg + (cW - 4) * 0.6 + 4, y, statusW, amtH);
@@ -672,11 +710,12 @@ const InvoiceManagement = () => {
     doc.text(s, mg + (cW - 4) * 0.6 + 8, y + 22);
     y += amtH + 7;
 
-    // 04 Notes
-    if (inv.notes) {
+    // 04 Notes — strip the auto-generated security deposit line before rendering
+    const displayNotes = inv.notes?.replace(/^Security Deposit: UGX [\d,]+\n?/m, "").trim();
+    if (displayNotes) {
       checkNewPage(30);
       sectionBar("04  NOTES");
-      const noteLines = doc.splitTextToSize(inv.notes, cW - 10);
+      const noteLines = doc.splitTextToSize(displayNotes, cW - 10);
       const noteH = noteLines.length * 5.5 + 12;
       card(mg, y, cW, noteH, [255, 251, 235]);
       doc.setFillColor(234, 179, 8);
@@ -1331,19 +1370,53 @@ const InvoiceManagement = () => {
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">
-                  Due Date *
-                </label>
-                <Input
-                  type="date"
-                  value={form.dueDate}
-                  onChange={(e) =>
-                    setForm({ ...form, dueDate: e.target.value })
-                  }
-                  className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
-                />
-              </div>
+              {form.type !== "Manual Payment" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">
+                    Security Deposit (UGX) — optional
+                  </label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="e.g. 150,000"
+                    value={form.securityDeposit}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/[^0-9]/g, "");
+                      const formatted = digits
+                        ? Number(digits).toLocaleString("en-US")
+                        : "";
+                      setForm({ ...form, securityDeposit: formatted });
+                    }}
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                  {form.securityDeposit && form.amount && (
+                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                      Total invoiced:{" "}
+                      <span className="font-semibold text-[#1D4ED8]">
+                        UGX {(
+                          Number(form.amount.replace(/,/g, "")) +
+                          Number(form.securityDeposit.replace(/,/g, ""))
+                        ).toLocaleString()}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
+              {form.type !== "Manual Payment" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">
+                    Due Date *
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.dueDate}
+                    onChange={(e) =>
+                      setForm({ ...form, dueDate: e.target.value })
+                    }
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">
                   Notes (optional)

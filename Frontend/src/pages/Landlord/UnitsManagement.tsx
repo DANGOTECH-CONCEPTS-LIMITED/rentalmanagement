@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Pencil, Trash2, DoorOpen, DoorClosed, UserPlus, UserMinus,
-  Loader2, Building2, Home, Shield, X, AlertTriangle,
+  Loader2, Building2, Home, X, AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -14,7 +14,6 @@ interface PropertyUnit {
   id: number;
   unitNumber: string;
   propertyId: number;
-  securityDeposit: number;
   monthlyAmount: number;
   status: string;
   createdAt?: string;
@@ -35,7 +34,6 @@ interface Tenant {
 const emptyForm = {
   unitNumber: "",
   propertyId: "",
-  securityDeposit: "",
   monthlyAmount: "",
   status: "Available",
 };
@@ -127,7 +125,6 @@ const UnitsManagement = () => {
     setForm({
       unitNumber: unit.unitNumber,
       propertyId: String(unit.propertyId),
-      securityDeposit: String(unit.securityDeposit),
       monthlyAmount: String(unit.monthlyAmount),
       status: unit.status,
     });
@@ -135,7 +132,7 @@ const UnitsManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!form.unitNumber || !form.propertyId || !form.securityDeposit || !form.monthlyAmount) {
+    if (!form.unitNumber || !form.propertyId || !form.monthlyAmount) {
       toast({ title: "Validation Error", description: "Please fill in all required fields.", variant: "destructive" });
       return;
     }
@@ -143,7 +140,7 @@ const UnitsManagement = () => {
     const body = {
       PropertyId: Number(form.propertyId),
       UnitNumber: form.unitNumber,
-      SecurityDeposit: Number(form.securityDeposit),
+      SecurityDeposit: 0,
       MonthlyAmount: Number(form.monthlyAmount),
       Status: form.status,
     };
@@ -245,16 +242,6 @@ const UnitsManagement = () => {
       ),
     },
     {
-      key: "securityDeposit",
-      header: "Security Deposit",
-      cell: (u) => (
-        <div className="flex items-center gap-1.5 text-sm text-[#0F172A]">
-          <Shield className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-          {formatUGX(u.securityDeposit)}
-        </div>
-      ),
-    },
-    {
       key: "monthlyAmount",
       header: "Monthly Amount",
       cell: (u) => <span className="font-semibold text-[#0F172A]">{formatUGX(u.monthlyAmount)}</span>,
@@ -323,7 +310,7 @@ const UnitsManagement = () => {
               <span className="text-blue-200 text-sm font-medium">Property Management</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-white">Units / Rooms</h1>
-            <p className="text-blue-200 text-sm mt-1">Manage room units, deposits, amounts and tenant assignments</p>
+            <p className="text-blue-200 text-sm mt-1">Manage room units, monthly amounts and tenant assignments</p>
             <div className="flex items-center gap-3 mt-3 flex-wrap">
               {[
                 { label: "Total", value: units.length },
@@ -444,15 +431,6 @@ const UnitsManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Security Deposit (UGX) *</label>
-                  <MoneyInput
-                    placeholder="e.g. 150,000"
-                    value={form.securityDeposit}
-                    onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })}
-                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
-                  />
-                </div>
-                <div className="space-y-1.5">
                   <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Monthly Amount (UGX) *</label>
                   <MoneyInput
                     placeholder="e.g. 300,000"
@@ -461,17 +439,17 @@ const UnitsManagement = () => {
                     className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
                   />
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Status</label>
-                <select
-                  className={selCls}
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                >
-                  <option value="Available">Available</option>
-                  <option value="Occupied">Occupied</option>
-                </select>
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Status</label>
+                  <select
+                    className={selCls}
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  >
+                    <option value="Available">Available</option>
+                    <option value="Occupied">Occupied</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
