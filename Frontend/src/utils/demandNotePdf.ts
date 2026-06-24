@@ -237,44 +237,111 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
     y += 4;
   }
 
+  // ── Number to words ────────────────────────────────────────────────────────
+  const numToWords = (n: number): string => {
+    if (n === 0) return "Zero";
+    const ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
+                  "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen",
+                  "Seventeen","Eighteen","Nineteen"];
+    const tens = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+    const conv = (num: number): string => {
+      if (num === 0) return "";
+      if (num < 20) return ones[num];
+      if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? " " + ones[num % 10] : "");
+      if (num < 1000) return ones[Math.floor(num / 100)] + " Hundred" + (num % 100 ? " " + conv(num % 100) : "");
+      if (num < 1_000_000) return conv(Math.floor(num / 1000)) + " Thousand" + (num % 1000 ? " " + conv(num % 1000) : "");
+      if (num < 1_000_000_000) return conv(Math.floor(num / 1_000_000)) + " Million" + (num % 1_000_000 ? " " + conv(num % 1_000_000) : "");
+      return conv(Math.floor(num / 1_000_000_000)) + " Billion" + (num % 1_000_000_000 ? " " + conv(num % 1_000_000_000) : "");
+    };
+    return conv(Math.floor(n)) + " Shillings Only";
+  };
+
+  // ── Justified paragraph renderer ──────────────────────────────────────────
+  const drawJustified = (paragraph: string) => {
+    const maxW = cW - 10;
+    const lines: string[] = doc.splitTextToSize(paragraph, maxW);
+    lines.forEach((line: string, idx: number) => {
+      checkNewPage(6);
+      const isLast = idx === lines.length - 1;
+      if (isLast) {
+        doc.text(line, mg + 5, y);
+      } else {
+        const words: string[] = line.trim().split(/\s+/);
+        if (words.length <= 1) {
+          doc.text(line, mg + 5, y);
+        } else {
+          const textW = words.reduce((sum, w) => sum + doc.getTextWidth(w), 0);
+          const gap = (maxW - textW) / (words.length - 1);
+          let cx = mg + 5;
+          words.forEach((w) => { doc.text(w, cx, y); cx += doc.getTextWidth(w) + gap; });
+        }
+      }
+      y += 5.5;
+    });
+  };
+
   // ── Section 04 / 03: Notice ─────────────────────────────────────────────────
   const noticeNum = invoices.length > 0 ? "04" : "03";
   sectionBar(`${noticeNum}  NOTICE TO TENANT`);
 
-  const noticeText = [
-    `Dear ${tenant.fullName},`,
-    "",
-    `This is a formal demand notice regarding your outstanding rental obligations for the premises at`,
-    `${tenant.property.name}${tenant.unit?.unitNumber ? `, Unit ${tenant.unit.unitNumber}` : ""}.`,
-    "",
-    `As of ${fmtDate(new Date().toISOString())}, the total outstanding balance on your account is`,
-    `${currency} ${fmt(outstandingAmount)}.`,
-    "",
-    "You are hereby required to settle the full outstanding amount within SEVEN (7) DAYS of the date",
-    "of this notice. Payment should be made to the property management office or via the agreed",
-    "payment channels.",
-    "",
-    "Failure to remit the outstanding amount within the stipulated period may result in further action,",
-    "including but not limited to formal eviction proceedings in accordance with the tenancy",
-    "agreement and applicable laws, and recovery of all associated legal costs.",
-    "",
-    "Should you have any queries or wish to make payment arrangements, please contact our office",
-    "immediately.",
-  ];
-
   doc.setTextColor(51, 65, 85);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  noticeText.forEach((line) => {
-    checkNewPage(6);
-    if (line === "") { y += 3; return; }
-    const wrapped = doc.splitTextToSize(line, cW - 10);
-    wrapped.forEach((wl: string) => {
-      checkNewPage(6);
-      doc.text(wl, mg + 5, y);
-      y += 5.5;
-    });
-  });
+
+  // Opening salutation (left-aligned)
+  checkNewPage(6);
+  doc.text(`Dear ${tenant.fullName},`, mg + 5, y);
+  y += 8;
+
+  // Paragraph 1
+  drawJustified(
+    `This is a formal demand notice regarding your outstanding rental obligations for the premises at ${tenant.property.name}${tenant.unit?.unitNumber ? `, Unit ${tenant.unit.unitNumber}` : ""}.`
+  );
+  y += 3;
+
+  // Paragraph 2 — amount reference
+  drawJustified(
+    `As of ${fmtDate(new Date().toISOString())}, the total outstanding balance on your account is as stated below.`
+  );
+  y += 3;
+
+  // ── Bold amount box (figure + words) ──────────────────────────────────────
+  checkNewPage(22);
+  doc.setFillColor(255, 251, 235);
+  doc.roundedRect(mg + 5, y, cW - 10, 20, 2, 2, "F");
+  doc.setFillColor(234, 179, 8);
+  doc.roundedRect(mg + 5, y, 3, 20, 1, 1, "F");
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${currency} ${fmt(outstandingAmount)}`, mg + 12, y + 8);
+
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(120, 80, 0);
+  doc.text(`(${numToWords(outstandingAmount)})`, mg + 12, y + 16);
+  y += 26;
+
+  // Paragraph 3
+  doc.setTextColor(51, 65, 85);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  drawJustified(
+    "You are hereby required to settle the full outstanding amount within SEVEN (7) DAYS of the date of this notice. Payment should be made to the property management office or via the agreed payment channels."
+  );
+  y += 3;
+
+  // Paragraph 4
+  drawJustified(
+    "Failure to remit the outstanding amount within the stipulated period may result in further action, including but not limited to formal eviction proceedings in accordance with the tenancy agreement and applicable laws, and recovery of all associated legal costs."
+  );
+  y += 3;
+
+  // Paragraph 5
+  drawJustified(
+    "Should you have any queries or wish to make payment arrangements, please contact our office immediately."
+  );
 
   y += 8;
 
