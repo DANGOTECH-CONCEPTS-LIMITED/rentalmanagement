@@ -143,11 +143,10 @@ namespace API.Controllers.Accounts
             var now = DateTime.UtcNow;
             var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
-            var successfulPaymentStatuses = new[] { "SUCCESSFUL", "PAID", "COMPLETED" };
 
             var activeContracts = await _db.RentalContracts
                 .AsNoTracking()
-                .Where(c => c.OwnerId == landlordId && c.Status == "active")
+                .Where(c => c.OwnerId == landlordId && c.Status.ToLower() == "active")
                 .Select(c => new
                 {
                     c.TenantId,
@@ -169,18 +168,32 @@ namespace API.Controllers.Accounts
                     i.PropertyId,
                     i.PropertyUnitId,
                     i.Amount,
+                    i.OriginalAmount,
+                    i.PaidAmount,
                     i.Status,
                     i.Type
                 })
                 .ToListAsync();
 
-            var collected = await _db.TenantPayments
+            var payments = await _db.TenantPayments
                 .AsNoTracking()
                 .Where(p => p.PropertyTenant.Property != null
                          && p.PropertyTenant.Property.OwnerId == landlordId
-                         && p.PaymentDate >= monthStart && p.PaymentDate <= monthEnd
-                         && successfulPaymentStatuses.Contains((p.PaymentStatus ?? string.Empty).ToUpper()))
-                .SumAsync(p => (decimal)p.Amount);
+                         && p.PaymentDate >= monthStart && p.PaymentDate <= monthEnd)
+                .Select(p => new
+                {
+                    p.Amount,
+                    p.PaymentStatus,
+                    p.PaymentType,
+                    p.Description
+                })
+                .ToListAsync();
+
+            var countedPayments = payments
+                .Where(p => ShouldCountDashboardPayment(p.PaymentStatus))
+                .ToList();
+
+            var collected = countedPayments.Sum(p => (decimal)p.Amount);
 
             var outstandingInvoiceBalances = invoices
                 .Where(i => !string.Equals(i.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
@@ -203,6 +216,15 @@ namespace API.Controllers.Accounts
                          && i.Type.Contains("security", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
+            var securityDepositPayments = countedPayments
+                .Where(p => IsSecurityDepositPayment(p.PaymentType, p.Description))
+                .Sum(p => (decimal)p.Amount);
+
+            var securityDepositInvoices = currentMonthSecurityDepositInvoices
+                .Sum(invoice => (decimal)(invoice.PaidAmount > 0
+                    ? invoice.PaidAmount
+                    : invoice.OriginalAmount > 0 ? invoice.OriginalAmount : invoice.Amount));
+
             var contractSecurityDeposits = activeContracts.Sum(contract => (decimal)contract.SecurityDeposit);
             var manualSecurityDeposits = currentMonthSecurityDepositInvoices
                 .Where(invoice => !activeContracts.Any(contract =>
@@ -213,11 +235,39 @@ namespace API.Controllers.Accounts
                 .Sum(invoice => (decimal)invoice.Amount);
 
             var revenueExpected = collected + outstandingInvoiceBalances + missingContractRent;
-            var securityDeposits = contractSecurityDeposits + manualSecurityDeposits;
+            var securityDeposits = securityDepositPayments > 0
+                ? securityDepositPayments
+                : securityDepositInvoices > 0
+                    ? securityDepositInvoices
+                    : contractSecurityDeposits + manualSecurityDeposits;
 
             var uncollected = revenueExpected > collected ? revenueExpected - collected : 0m;
 
             return Ok(new { revenueExpected, collected, uncollected, securityDeposits });
+        }
+
+        private static bool ShouldCountDashboardPayment(string? status)
+        {
+            var normalizedStatus = (status ?? string.Empty).Trim().ToUpperInvariant();
+
+            return normalizedStatus != "FAILED"
+                && normalizedStatus != "FAILED AT TELECOM"
+                && normalizedStatus != "FAILED AT TELCOM"
+                && normalizedStatus != "CANCELLED"
+                && normalizedStatus != "CANCELED"
+                && normalizedStatus != "VOID"
+                && normalizedStatus != "REVERSED";
+        }
+
+        private static bool IsSecurityDepositPayment(string? paymentType, string? description)
+        {
+            return ContainsDepositText(paymentType) || ContainsDepositText(description);
+        }
+
+        private static bool ContainsDepositText(string? value)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                && value.Contains("deposit", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
