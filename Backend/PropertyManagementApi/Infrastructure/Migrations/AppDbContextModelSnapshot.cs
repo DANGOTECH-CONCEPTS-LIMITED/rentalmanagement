@@ -949,9 +949,6 @@ namespace Infrastructure.Migrations
                     b.Property<double>("DeductedAmount")
                         .HasColumnType("double");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("longtext");
-
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("datetime(6)");
 

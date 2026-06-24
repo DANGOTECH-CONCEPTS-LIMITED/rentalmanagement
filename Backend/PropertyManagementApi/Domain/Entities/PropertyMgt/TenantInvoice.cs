@@ -21,8 +21,19 @@ namespace Domain.Entities.PropertyMgt
         public DateTime InvoiceDate { get; set; } = DateTime.UtcNow;
         public DateTime DueDate { get; set; }
 
-        public string? Description { get; set; }
         public string? Notes { get; set; }
+
+        [NotMapped]
+        public string? Description
+        {
+            get => Notes;
+            set
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    Notes = value;
+            }
+        }
+
         public string? PaymentMethod { get; set; }
 
         [ForeignKey("Tenant")]

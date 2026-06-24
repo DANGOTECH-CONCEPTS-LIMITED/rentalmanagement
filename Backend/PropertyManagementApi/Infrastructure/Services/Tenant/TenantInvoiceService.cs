@@ -68,6 +68,7 @@ namespace Infrastructure.Services.Tenant
             }
 
             var invoiceNumber = await GenerateNextInvoiceNumberAsync();
+            var description = ResolveInvoiceDescription(dto.Description, dto.Notes, dto.Type, invoiceNumber);
 
             var invoice = new TenantInvoice
             {
@@ -84,8 +85,7 @@ namespace Infrastructure.Services.Tenant
                 DeductedAmount = 0,
                 InvoiceDate = dto.InvoiceDate,
                 DueDate = dto.DueDate,
-                Description = ResolveInvoiceDescription(dto.Description, dto.Notes, dto.Type, invoiceNumber),
-                Notes = dto.Notes,
+                Notes = description,
                 PaymentMethod = dto.PaymentMethod,
                 CreatedByUserId = dto.CreatedByUserId,
                 CreatedAt = DateTime.UtcNow
@@ -320,7 +320,7 @@ namespace Infrastructure.Services.Tenant
                     Date = i.InvoiceDate,
                     TransactionType = "Invoice",
                     Reference = i.InvoiceNumber,
-                    Description = i.Description ?? i.Notes ?? i.Type,
+                    Description = i.Notes ?? i.Type,
                     Debit = i.OriginalAmount > 0 ? i.OriginalAmount : i.Amount,
                     Credit = 0,
                     SortOrder = 0
