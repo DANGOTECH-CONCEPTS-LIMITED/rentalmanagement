@@ -37,10 +37,14 @@ namespace Infrastructure.Services.PaymentServices
             // 1) Load tenant (including its Property)
             var tenant = await _context.Tenants
                 .Include(pt => pt.Property)
+                .Include(pt => pt.Unit)
                 .FirstOrDefaultAsync(pt => pt.Id == tenantPaymentDto.PropertyTenantId);
 
             if (tenant == null)
                 throw new Exception("Tenant not found.");
+
+            if (tenantPaymentDto.Amount <= 0)
+                throw new Exception("Payment amount must be greater than zero.");
 
             // 2) Prevent duplicate transaction IDs
             if (await _context.TenantPayments
@@ -88,8 +92,14 @@ namespace Infrastructure.Services.PaymentServices
             await _context.TenantPayments.AddAsync(payment);
 
             // 5) Apply funds: first to Arrears, then to this period
-            double rent = tenant.Property!.Price;
+            double rent = GetMonthlyRent(tenant);
             double remaining = tenantPaymentDto.Amount;
+
+            if (rent <= 0)
+            {
+                await _context.SaveChangesAsync();
+                return;
+            }
 
             // 5a) Arrears
             if (tenant.Arrears > 0 && remaining > 0)
@@ -127,7 +137,7 @@ namespace Infrastructure.Services.PaymentServices
             {
                 // Full coverage + maybe extras
                 double extra = remaining - owedThisPeriod;
-                int fullMonths = 1 + (int)(extra / rent);
+                int fullMonths = CalculateFullMonthsToAdvance(extra, rent, tenant.NextPaymentDate);
 
                 // Advance the due date
                 tenant.NextPaymentDate = tenant.NextPaymentDate.AddMonths(fullMonths);
@@ -182,11 +192,47 @@ namespace Infrastructure.Services.PaymentServices
             if (monthsMissed <= 0)
                 return;
 
-            double rent = tenant.Property!.Price;
+            double rent = GetMonthlyRent(tenant);
+            if (rent <= 0)
+                return;
+
+            monthsMissed = Math.Min(monthsMissed, GetMaxSafeMonthsToAdd(tenant.NextPaymentDate));
+            if (monthsMissed <= 0)
+                return;
 
             tenant.Arrears += monthsMissed * rent;
             tenant.NextPaymentDate = tenant.NextPaymentDate.AddMonths(monthsMissed);
             tenant.BalanceDue = rent;
+        }
+
+        private static double GetMonthlyRent(PropertyTenant tenant)
+        {
+            if (tenant.Unit?.MonthlyAmount > 0)
+                return tenant.Unit.MonthlyAmount;
+
+            return tenant.Property?.Price > 0 ? tenant.Property.Price : 0;
+        }
+
+        private static int CalculateFullMonthsToAdvance(double extra, double rent, DateTime nextPaymentDate)
+        {
+            if (rent <= 0)
+                return 0;
+
+            var monthsToAdvance = Math.Floor(extra / rent) + 1;
+            if (double.IsNaN(monthsToAdvance) || double.IsInfinity(monthsToAdvance) || monthsToAdvance < 1)
+                throw new Exception("Payment amount could not be applied to the tenant rent schedule.");
+
+            var maxSafeMonths = GetMaxSafeMonthsToAdd(nextPaymentDate);
+            if (monthsToAdvance > maxSafeMonths)
+                throw new Exception("Payment amount covers too many future rent months. Please reduce the amount or review the tenant rent amount.");
+
+            return (int)monthsToAdvance;
+        }
+
+        private static int GetMaxSafeMonthsToAdd(DateTime date)
+        {
+            var monthsUntilMaxYear = ((DateTime.MaxValue.Year - date.Year) * 12) + DateTime.MaxValue.Month - date.Month;
+            return Math.Max(0, Math.Min(120000, monthsUntilMaxYear));
         }
 
         public async Task DeletePaymentAsync(int id)
