@@ -125,5 +125,20 @@ namespace API.Controllers.Tenant
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpGet("/GetCustomerStatement/{tenantId}")]
+        [Authorize]
+        public async Task<IActionResult> GetCustomerStatement(int tenantId, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        {
+            try
+            {
+                var statement = await _service.GetCustomerStatementAsync(tenantId, from, to);
+                return Ok(statement);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

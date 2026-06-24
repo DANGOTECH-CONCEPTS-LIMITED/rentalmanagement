@@ -21,6 +21,7 @@ namespace Domain.Entities.PropertyMgt
         public DateTime InvoiceDate { get; set; } = DateTime.UtcNow;
         public DateTime DueDate { get; set; }
 
+        public string? Description { get; set; }
         public string? Notes { get; set; }
         public string? PaymentMethod { get; set; }
 

@@ -18,5 +18,6 @@ namespace Application.Interfaces.Tenant
         Task<TenantInvoice> SettleSecurityDepositAsync(int tenantId, int propertyId, int? propertyUnitId, double deductionAmount, double refundAmount, int processedByUserId, string? notes = null);
 
         Task<TenantProfileDto> GetTenantProfileAsync(int tenantId);
+        Task<CustomerStatementDto> GetCustomerStatementAsync(int tenantId, DateTime? from = null, DateTime? to = null);
     }
 }

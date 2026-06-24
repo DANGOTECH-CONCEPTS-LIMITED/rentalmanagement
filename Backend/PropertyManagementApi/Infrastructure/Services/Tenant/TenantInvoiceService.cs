@@ -84,6 +84,7 @@ namespace Infrastructure.Services.Tenant
                 DeductedAmount = 0,
                 InvoiceDate = dto.InvoiceDate,
                 DueDate = dto.DueDate,
+                Description = ResolveInvoiceDescription(dto.Description, dto.Notes, dto.Type, invoiceNumber),
                 Notes = dto.Notes,
                 PaymentMethod = dto.PaymentMethod,
                 CreatedByUserId = dto.CreatedByUserId,
@@ -123,6 +124,7 @@ namespace Infrastructure.Services.Tenant
                 throw new Exception("An active security deposit invoice already exists for this tenant and unit.");
 
             var invoiceDate = DateTime.UtcNow;
+            var description = string.IsNullOrWhiteSpace(notes) ? "Security deposit due upon unit assignment." : notes.Trim();
             return await CreateInvoiceAsync(new CreateTenantInvoiceDto
             {
                 Type = "Security Deposit",
@@ -133,7 +135,8 @@ namespace Infrastructure.Services.Tenant
                 Amount = amount,
                 InvoiceDate = invoiceDate,
                 DueDate = invoiceDate,
-                Notes = string.IsNullOrWhiteSpace(notes) ? "Security deposit due upon unit assignment." : notes.Trim(),
+                Description = description,
+                Notes = description,
                 CreatedByUserId = createdByUserId,
                 CreatedByName = "System"
             });
@@ -297,6 +300,88 @@ namespace Infrastructure.Services.Tenant
             return profile;
         }
 
+        public async Task<CustomerStatementDto> GetCustomerStatementAsync(int tenantId, DateTime? from = null, DateTime? to = null)
+        {
+            if (tenantId <= 0)
+                throw new Exception("Tenant is required.");
+
+            var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+            if (tenant == null)
+                throw new Exception("Tenant not found.");
+
+            var fromDate = from?.Date ?? DateTime.MinValue;
+            var toDate = to?.Date.AddDays(1).AddTicks(-1) ?? DateTime.MaxValue;
+
+            var invoiceLines = await _db.TenantInvoices
+                .AsNoTracking()
+                .Where(i => i.TenantId == tenantId && i.InvoiceDate <= toDate)
+                .Select(i => new StatementSourceLine
+                {
+                    Date = i.InvoiceDate,
+                    TransactionType = "Invoice",
+                    Reference = i.InvoiceNumber,
+                    Description = i.Description ?? i.Notes ?? i.Type,
+                    Debit = i.OriginalAmount > 0 ? i.OriginalAmount : i.Amount,
+                    Credit = 0,
+                    SortOrder = 0
+                })
+                .ToListAsync();
+
+            var paymentLines = await _db.TenantPayments
+                .AsNoTracking()
+                .Where(p => p.PropertyTenantId == tenantId && p.PaymentDate <= toDate)
+                .Select(p => new StatementSourceLine
+                {
+                    Date = p.PaymentDate,
+                    TransactionType = "Payment",
+                    Reference = p.TransactionId,
+                    Description = p.Description ?? p.PaymentType,
+                    Debit = 0,
+                    Credit = p.Amount,
+                    SortOrder = 1
+                })
+                .ToListAsync();
+
+            var allLines = invoiceLines
+                .Concat(paymentLines)
+                .OrderBy(l => l.Date)
+                .ThenBy(l => l.SortOrder)
+                .ToList();
+
+            var openingBalance = allLines
+                .Where(l => l.Date < fromDate)
+                .Sum(l => l.Debit - l.Credit);
+
+            var runningBalance = openingBalance;
+            var statementLines = new List<CustomerStatementLineDto>();
+
+            foreach (var line in allLines.Where(l => l.Date >= fromDate))
+            {
+                runningBalance += line.Debit - line.Credit;
+                statementLines.Add(new CustomerStatementLineDto
+                {
+                    Date = line.Date,
+                    TransactionType = line.TransactionType,
+                    Reference = line.Reference,
+                    Description = line.Description,
+                    Debit = line.Debit,
+                    Credit = line.Credit,
+                    RunningBalance = runningBalance
+                });
+            }
+
+            return new CustomerStatementDto
+            {
+                TenantId = tenant.Id,
+                TenantName = tenant.FullName,
+                From = fromDate,
+                To = toDate,
+                OpeningBalance = openingBalance,
+                ClosingBalance = runningBalance,
+                Lines = statementLines
+            };
+        }
+
         private async Task<string> GenerateNextInvoiceNumberAsync()
         {
             var year = DateTime.UtcNow.Year;
@@ -335,6 +420,29 @@ namespace Infrastructure.Services.Tenant
             return string.IsNullOrWhiteSpace(existingNotes)
                 ? settlementNote
                 : $"{existingNotes.Trim()} {settlementNote}";
+        }
+
+        private static string ResolveInvoiceDescription(string? description, string? notes, string? type, string invoiceNumber)
+        {
+            if (!string.IsNullOrWhiteSpace(description))
+                return description.Trim();
+
+            if (!string.IsNullOrWhiteSpace(notes))
+                return notes.Trim();
+
+            var invoiceType = string.IsNullOrWhiteSpace(type) ? "Invoice" : type.Trim();
+            return $"{invoiceType} {invoiceNumber}";
+        }
+
+        private sealed class StatementSourceLine
+        {
+            public DateTime Date { get; set; }
+            public string TransactionType { get; set; } = string.Empty;
+            public string Reference { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public double Debit { get; set; }
+            public double Credit { get; set; }
+            public int SortOrder { get; set; }
         }
     }
 }
