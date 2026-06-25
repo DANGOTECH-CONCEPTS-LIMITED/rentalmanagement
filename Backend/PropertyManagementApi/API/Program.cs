@@ -351,7 +351,7 @@ app.UseSwagger(c =>
         {
             new OpenApiServer
             {
-                Url = $"https://{httpReq.Host.Value}/TestPropertyApi"
+                Url = $"http://{httpReq.Host.Value}/TestPropertyApi"
             }
         };
     });

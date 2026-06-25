@@ -486,14 +486,29 @@ namespace API.Controllers.UserControllers
                     .Distinct()
                     .CountAsync();
 
-                // Build a query of payments that belong to meters of this landlord by joining on MeterNumber
-                // Note: use LINQ method syntax for EF parameterization
+                var landlordMetersQuery = _db.UtilityMeters.AsNoTracking()
+                    .Where(m => m.LandLordId == landlordId);
+
+                // Build a query of payments that belong to meters of this landlord.
                 var paymentsQuery = _db.UtilityPayments.AsNoTracking()
-                    .Where(p => p.MeterNumber != null && p.MeterNumber != "")
-                    .Join(_db.UtilityMeters.AsNoTracking().Where(m => m.LandLordId == landlordId && !string.IsNullOrWhiteSpace(m.MeterNumber)),
-                        p => p.MeterNumber,
-                        m => m.MeterNumber,
-                        (p, m) => new { p.MeterNumber, p.Amount, p.Charges, p.Status, p.CreatedAt });
+                    .Where(p =>
+                        !string.IsNullOrWhiteSpace(p.MeterNumber) ||
+                        !string.IsNullOrWhiteSpace(p.UtilityAccountNumber))
+                    .Where(p => landlordMetersQuery.Any(m =>
+                        (!string.IsNullOrWhiteSpace(m.MeterNumber) &&
+                            ((!string.IsNullOrWhiteSpace(p.MeterNumber) && m.MeterNumber.Trim() == p.MeterNumber.Trim()) ||
+                             (!string.IsNullOrWhiteSpace(p.UtilityAccountNumber) && m.MeterNumber.Trim() == p.UtilityAccountNumber.Trim()))) ||
+                        (!string.IsNullOrWhiteSpace(m.NWSCAccount) &&
+                            ((!string.IsNullOrWhiteSpace(p.MeterNumber) && m.NWSCAccount.Trim() == p.MeterNumber.Trim()) ||
+                             (!string.IsNullOrWhiteSpace(p.UtilityAccountNumber) && m.NWSCAccount.Trim() == p.UtilityAccountNumber.Trim())))))
+                    .Select(p => new
+                    {
+                        MeterNumber = !string.IsNullOrWhiteSpace(p.MeterNumber) ? p.MeterNumber : p.UtilityAccountNumber ?? string.Empty,
+                        p.Amount,
+                        p.Charges,
+                        p.Status,
+                        p.CreatedAt
+                    });
 
                 var totalUtilityPayments = await paymentsQuery.CountAsync();
                 var totalUtilityAmount = await paymentsQuery.Where(p => successfulStatuses.Contains(p.Status)).SumAsync(p => (decimal?)p.Amount) ?? 0m;
