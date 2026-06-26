@@ -131,5 +131,50 @@ namespace API.Controllers.Tenant
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpGet("/GetTenantsByPropertyId/{propertyId}")]
+        [Authorize]
+        public async Task<IActionResult> GetTenantsByPropertyId(int propertyId)
+        {
+            try
+            {
+                var tenants = await _tenantService.GetTenantsByPropertyIdAsync(propertyId);
+                return Ok(tenants);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("/GetTenantsByCaretakerId/{caretakerId}")]
+        [Authorize]
+        public async Task<IActionResult> GetTenantsByCaretakerId(int caretakerId)
+        {
+            try
+            {
+                var tenants = await _tenantService.GetTenantsByCaretakerIdAsync(caretakerId);
+                return Ok(tenants);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("/GetTenantsByCaretakerIdAndPropertyId/{caretakerId}/{propertyId}")]
+        [Authorize]
+        public async Task<IActionResult> GetTenantsByCaretakerIdAndPropertyId(int caretakerId, int propertyId)
+        {
+            try
+            {
+                var tenants = await _tenantService.GetTenantsByCaretakerIdAndPropertyIdAsync(caretakerId, propertyId);
+                return Ok(tenants);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

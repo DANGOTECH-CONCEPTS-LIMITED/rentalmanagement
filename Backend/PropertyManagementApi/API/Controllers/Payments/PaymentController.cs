@@ -33,6 +33,21 @@ namespace API.Controllers.Payments
             }
         }
 
+        [HttpPost("/MakeCaretakerTenantPayment/{caretakerId}")]
+        [Authorize]
+        public async Task<IActionResult> MakeCaretakerTenantPayment(int caretakerId, [FromBody] TenantPaymentDto paymentDto)
+        {
+            try
+            {
+                await _paymentService.MakeCaretakerTenantPaymentAsync(caretakerId, paymentDto);
+                return Ok("Payment created successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error creating caretaker payment: {ex.Message}");
+            }
+        }
+
         [HttpGet("/GetAllPayments")]
         [Authorize]
         public async Task<IActionResult> GetAllPayments()
@@ -270,6 +285,51 @@ namespace API.Controllers.Payments
             catch (Exception ex)
             {
                 return BadRequest($"Error retrieving payments: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetTenantPaymentsByCaretakerId/{caretakerId}")]
+        [Authorize]
+        public async Task<IActionResult> GetTenantPaymentsByCaretakerId(int caretakerId)
+        {
+            try
+            {
+                var payments = await _paymentService.GetTenantPaymentsByCaretakerIdAsync(caretakerId);
+                return Ok(payments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving caretaker payments: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetTenantPaymentsByCaretakerIdAndPropertyId/{caretakerId}/{propertyId}")]
+        [Authorize]
+        public async Task<IActionResult> GetTenantPaymentsByCaretakerIdAndPropertyId(int caretakerId, int propertyId)
+        {
+            try
+            {
+                var payments = await _paymentService.GetTenantPaymentsByCaretakerIdAndPropertyIdAsync(caretakerId, propertyId);
+                return Ok(payments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving caretaker property payments: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetTenantPaymentsByCaretakerIdAndUnitId/{caretakerId}/{unitId}")]
+        [Authorize]
+        public async Task<IActionResult> GetTenantPaymentsByCaretakerIdAndUnitId(int caretakerId, int unitId)
+        {
+            try
+            {
+                var payments = await _paymentService.GetTenantPaymentsByCaretakerIdAndUnitIdAsync(caretakerId, unitId);
+                return Ok(payments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving caretaker unit payments: {ex.Message}");
             }
         }
 

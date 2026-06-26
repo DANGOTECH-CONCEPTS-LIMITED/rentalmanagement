@@ -406,6 +406,106 @@ namespace Infrastructure.Services.UserServices
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<LandLordProperty>> AssignPropertiesToCaretakerAsync(CaretakerPropertyAssignmentDto assignment)
+        {
+            if (assignment == null)
+                throw new ArgumentNullException(nameof(assignment));
+
+            var propertyIds = assignment.PropertyIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (!propertyIds.Any())
+                throw new Exception("At least one property is required.");
+
+            var caretaker = await GetCaretakerUserAsync(assignment.CaretakerId);
+            if (!caretaker.LandlordId.HasValue)
+                throw new Exception("Caretaker is not under a landlord.");
+
+            var properties = await _context.LandLordProperties
+                .AsNoTracking()
+                .Where(p => propertyIds.Contains(p.Id))
+                .ToListAsync();
+
+            var missingPropertyIds = propertyIds.Except(properties.Select(p => p.Id)).ToList();
+            if (missingPropertyIds.Any())
+                throw new Exception($"Property not found: {string.Join(", ", missingPropertyIds)}.");
+
+            var invalidPropertyIds = properties
+                .Where(p => p.OwnerId != caretaker.LandlordId.Value)
+                .Select(p => p.Id)
+                .ToList();
+
+            if (invalidPropertyIds.Any())
+                throw new Exception($"Property does not belong to the caretaker's landlord: {string.Join(", ", invalidPropertyIds)}.");
+
+            var existingPropertyIds = await _context.CaretakerPropertyAssignments
+                .Where(a => a.CaretakerId == assignment.CaretakerId && propertyIds.Contains(a.PropertyId))
+                .Select(a => a.PropertyId)
+                .ToListAsync();
+
+            foreach (var propertyId in propertyIds.Except(existingPropertyIds))
+            {
+                await _context.CaretakerPropertyAssignments.AddAsync(new CaretakerPropertyAssignment
+                {
+                    CaretakerId = assignment.CaretakerId,
+                    PropertyId = propertyId,
+                    AssignedAt = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            return await GetCaretakerPropertiesAsync(assignment.CaretakerId);
+        }
+
+        public async Task<IEnumerable<LandLordProperty>> GetCaretakerPropertiesAsync(int caretakerId)
+        {
+            await GetCaretakerUserAsync(caretakerId);
+
+            return await _context.LandLordProperties
+                .AsNoTracking()
+                .Where(p => _context.CaretakerPropertyAssignments
+                    .Any(a => a.CaretakerId == caretakerId && a.PropertyId == p.Id))
+                .Include(p => p.Owner)
+                .ToListAsync();
+        }
+
+        public async Task RemovePropertyFromCaretakerAsync(int caretakerId, int propertyId)
+        {
+            await GetCaretakerUserAsync(caretakerId);
+
+            var assignment = await _context.CaretakerPropertyAssignments
+                .FirstOrDefaultAsync(a => a.CaretakerId == caretakerId && a.PropertyId == propertyId);
+
+            if (assignment == null)
+                throw new Exception("Property is not assigned to this caretaker.");
+
+            _context.CaretakerPropertyAssignments.Remove(assignment);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task<User> GetCaretakerUserAsync(int caretakerId)
+        {
+            var caretakerRoleId = await _context.SystemRoles
+                .AsNoTracking()
+                .Where(r => r.Name == CaretakerRoleName)
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (caretakerRoleId == 0)
+                throw new Exception("Caretaker role not found.");
+
+            var caretaker = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == caretakerId && u.SystemRoleId == caretakerRoleId);
+
+            if (caretaker == null)
+                throw new Exception("Caretaker not found.");
+
+            return caretaker;
+        }
+
         private async Task<int?> ResolveCaretakerLandlordIdAsync(string roleName, int? landlordId)
         {
             if (!string.Equals(roleName, CaretakerRoleName, StringComparison.OrdinalIgnoreCase))

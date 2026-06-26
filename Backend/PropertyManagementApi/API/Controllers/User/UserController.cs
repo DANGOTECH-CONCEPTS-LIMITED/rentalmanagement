@@ -193,6 +193,54 @@ namespace API.Controllers.UserControllers
             }
         }
 
+        [HttpPost("/AssignPropertiesToCaretaker")]
+        [Authorize]
+        public async Task<IActionResult> AssignPropertiesToCaretaker([FromBody] CaretakerPropertyAssignmentDto request)
+        {
+            try
+            {
+                var properties = await _userService.AssignPropertiesToCaretakerAsync(request);
+                return Ok(properties);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning properties to caretaker {CaretakerId}", request?.CaretakerId);
+                return BadRequest($"Error assigning properties to caretaker: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetCaretakerProperties/{caretakerId}")]
+        [Authorize]
+        public async Task<IActionResult> GetCaretakerProperties(int caretakerId)
+        {
+            try
+            {
+                var properties = await _userService.GetCaretakerPropertiesAsync(caretakerId);
+                return Ok(properties);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving properties for caretaker {CaretakerId}", caretakerId);
+                return BadRequest($"Error retrieving caretaker properties: {ex.Message}");
+            }
+        }
+
+        [HttpDelete("/RemovePropertyFromCaretaker/{caretakerId}/{propertyId}")]
+        [Authorize]
+        public async Task<IActionResult> RemovePropertyFromCaretaker(int caretakerId, int propertyId)
+        {
+            try
+            {
+                await _userService.RemovePropertyFromCaretakerAsync(caretakerId, propertyId);
+                return Ok("Property removed from caretaker successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing property {PropertyId} from caretaker {CaretakerId}", propertyId, caretakerId);
+                return BadRequest($"Error removing property from caretaker: {ex.Message}");
+            }
+        }
+
         [HttpPost("/ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {

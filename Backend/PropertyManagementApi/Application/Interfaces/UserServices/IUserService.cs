@@ -25,6 +25,9 @@ namespace Application.Interfaces.UserServices
         Task DeleteUser(int id);
         Task<IEnumerable<User>> GetLandlordsAsync();
     Task<IEnumerable<User>> GetCaretakersByLandlordIdAsync(int landlordId);
+    Task<IEnumerable<LandLordProperty>> AssignPropertiesToCaretakerAsync(CaretakerPropertyAssignmentDto assignment);
+    Task<IEnumerable<LandLordProperty>> GetCaretakerPropertiesAsync(int caretakerId);
+    Task RemovePropertyFromCaretakerAsync(int caretakerId, int propertyId);
         Task AddUtilityMeter(UtilityMeterDto utilityMeter);
         Task<IEnumerable<UtilityMeter>> GetUtilityMetersByLandLordIdAsync(int landlordId);
         Task<IEnumerable<UtilityMeter>> GetAllUtilityMetersAsync();

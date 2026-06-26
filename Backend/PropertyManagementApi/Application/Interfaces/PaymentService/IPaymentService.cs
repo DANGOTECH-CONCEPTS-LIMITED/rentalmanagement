@@ -11,6 +11,7 @@ namespace Application.Interfaces.PaymentService
     public interface IPaymentService
     {
         Task MakeTenantPaymentAsync(TenantPaymentDto paymentDto);
+        Task MakeCaretakerTenantPaymentAsync(int caretakerId, TenantPaymentDto paymentDto);
         Task<IEnumerable<TenantPayment>> GetAllPaymentsAsync();
         Task<TenantPayment> GetPaymentByIdAsync(int id);
         Task UpdatePaymentAsync(TenantPayment pymt);
@@ -30,6 +31,9 @@ namespace Application.Interfaces.PaymentService
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByPropertyIdAndTypeAsync(int propertyId, string type);
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByPropertyIdAndTransactionIdAsync(int propertyId, string transactionId);
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByPropertyIdAndTenantIdAsync(int propertyId, int tenantId);
+        Task<IEnumerable<TenantPayment>> GetTenantPaymentsByCaretakerIdAsync(int caretakerId);
+        Task<IEnumerable<TenantPayment>> GetTenantPaymentsByCaretakerIdAndPropertyIdAsync(int caretakerId, int propertyId);
+        Task<IEnumerable<TenantPayment>> GetTenantPaymentsByCaretakerIdAndUnitIdAsync(int caretakerId, int unitId);
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByLandLordIdAsync(int landlordid);
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByLandLordIdAndDateRangeAsync(int landlordid, DateTime startDate, DateTime endDate);
         Task<IEnumerable<TenantPayment>> GetTenantPaymentsByLandLordIdAndStatusAsync(int landlordid, string status);

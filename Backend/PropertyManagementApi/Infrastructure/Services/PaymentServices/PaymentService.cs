@@ -181,6 +181,24 @@ namespace Infrastructure.Services.PaymentServices
             await _context.SaveChangesAsync();
         }
 
+        public async Task MakeCaretakerTenantPaymentAsync(int caretakerId, TenantPaymentDto tenantPaymentDto)
+        {
+            if (tenantPaymentDto == null)
+                throw new ArgumentNullException(nameof(tenantPaymentDto));
+
+            var propertyId = await _context.Tenants
+                .AsNoTracking()
+                .Where(t => t.Id == tenantPaymentDto.PropertyTenantId)
+                .Select(t => t.PropertyId)
+                .FirstOrDefaultAsync();
+
+            if (propertyId <= 0)
+                throw new Exception("Tenant not found.");
+
+            await EnsureCaretakerAssignedToPropertyAsync(caretakerId, propertyId);
+            await MakeTenantPaymentAsync(tenantPaymentDto);
+        }
+
         private void AccrueArrearsIfNeeded(PropertyTenant tenant)
         {
             var today = DateTime.UtcNow.Date;
@@ -462,6 +480,39 @@ namespace Infrastructure.Services.PaymentServices
             return payments;
         }
 
+        public async Task<IEnumerable<TenantPayment>> GetTenantPaymentsByCaretakerIdAsync(int caretakerId)
+        {
+            await EnsureCaretakerExistsAsync(caretakerId);
+
+            return await CaretakerTenantPaymentQuery(caretakerId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<TenantPayment>> GetTenantPaymentsByCaretakerIdAndPropertyIdAsync(int caretakerId, int propertyId)
+        {
+            await EnsureCaretakerAssignedToPropertyAsync(caretakerId, propertyId);
+
+            return await CaretakerTenantPaymentQuery(caretakerId)
+                .Where(tp => tp.PropertyTenant.PropertyId == propertyId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<TenantPayment>> GetTenantPaymentsByCaretakerIdAndUnitIdAsync(int caretakerId, int unitId)
+        {
+            var unit = await _context.PropertyUnits
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == unitId);
+
+            if (unit == null)
+                throw new Exception("Unit not found.");
+
+            await EnsureCaretakerAssignedToPropertyAsync(caretakerId, unit.PropertyId);
+
+            return await CaretakerTenantPaymentQuery(caretakerId)
+                .Where(tp => tp.PropertyTenant.PropertyUnitId == unitId)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<TenantPayment>> GetTenantPaymentsByLandLordIdAsync(int landlordid)
         {
             var payments = await _context.TenantPayments
@@ -516,6 +567,49 @@ namespace Infrastructure.Services.PaymentServices
                 .Where(tp => tp.PropertyTenant.Property.OwnerId == landlordid && tp.PaymentMethod == method)
                 .ToListAsync();
             return payments;
+        }
+
+        private IQueryable<TenantPayment> CaretakerTenantPaymentQuery(int caretakerId)
+        {
+            return _context.TenantPayments
+                .Include(tp => tp.PropertyTenant)
+                    .ThenInclude(pt => pt.Property)
+                        .ThenInclude(p => p.Owner)
+                .Include(tp => tp.PropertyTenant)
+                    .ThenInclude(pt => pt.Unit)
+                .Where(tp => _context.CaretakerPropertyAssignments
+                    .Any(a => a.CaretakerId == caretakerId && a.PropertyId == tp.PropertyTenant.PropertyId));
+        }
+
+        private async Task EnsureCaretakerExistsAsync(int caretakerId)
+        {
+            var caretakerRoleId = await _context.SystemRoles
+                .AsNoTracking()
+                .Where(r => r.Name == "Caretaker")
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (caretakerRoleId == 0)
+                throw new Exception("Caretaker role not found.");
+
+            var caretakerExists = await _context.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == caretakerId && u.SystemRoleId == caretakerRoleId);
+
+            if (!caretakerExists)
+                throw new Exception("Caretaker not found.");
+        }
+
+        private async Task EnsureCaretakerAssignedToPropertyAsync(int caretakerId, int propertyId)
+        {
+            await EnsureCaretakerExistsAsync(caretakerId);
+
+            var assignmentExists = await _context.CaretakerPropertyAssignments
+                .AsNoTracking()
+                .AnyAsync(a => a.CaretakerId == caretakerId && a.PropertyId == propertyId);
+
+            if (!assignmentExists)
+                throw new Exception("Property is not assigned to this caretaker.");
         }
 
         public async Task UpdatePaymentStatus(string status, string transactionid, string vendorreason, string vendortranref, string TranType)

@@ -10,6 +10,8 @@ namespace Application.Interfaces.Property
         Task<PropertyUnit> AddUnitAsync(PropertyUnitDto dto);
         Task<IEnumerable<PropertyUnit>> GetUnitsByPropertyIdAsync(int propertyId);
         Task<IEnumerable<PropertyUnit>> GetUnitsByLandlordIdAsync(int landlordId);
+        Task<IEnumerable<PropertyUnit>> GetUnitsByCaretakerIdAsync(int caretakerId);
+        Task<IEnumerable<PropertyUnit>> GetUnitsByCaretakerIdAndPropertyIdAsync(int caretakerId, int propertyId);
         Task<PropertyUnit> GetUnitByIdAsync(int unitId);
         Task<PropertyUnit> UpdateUnitAsync(int unitId, PropertyUnitDto dto);
         Task DeleteUnitAsync(int unitId);

@@ -61,6 +61,36 @@ namespace API.Controllers.Property
             }
         }
 
+        [HttpGet("/GetPropertyUnitsByCaretakerId/{caretakerId}")]
+        [Authorize]
+        public async Task<IActionResult> GetPropertyUnitsByCaretakerId(int caretakerId)
+        {
+            try
+            {
+                var units = await _service.GetUnitsByCaretakerIdAsync(caretakerId);
+                return Ok(units);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("/GetPropertyUnitsByCaretakerIdAndPropertyId/{caretakerId}/{propertyId}")]
+        [Authorize]
+        public async Task<IActionResult> GetPropertyUnitsByCaretakerIdAndPropertyId(int caretakerId, int propertyId)
+        {
+            try
+            {
+                var units = await _service.GetUnitsByCaretakerIdAndPropertyIdAsync(caretakerId, propertyId);
+                return Ok(units);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpGet("/GetPropertyUnitById/{unitId}")]
         [Authorize]
         public async Task<IActionResult> GetPropertyUnitById(int unitId)

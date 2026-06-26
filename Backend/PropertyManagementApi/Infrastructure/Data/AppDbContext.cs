@@ -26,6 +26,7 @@ namespace Infrastructure.Data
         public DbSet<WalletTransaction> WalletTransactions { get; set; } = null!;
 
         public DbSet<SystemRole> SystemRoles { get; set; }
+        public DbSet<CaretakerPropertyAssignment> CaretakerPropertyAssignments { get; set; } = null!;
 
         public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
@@ -225,6 +226,20 @@ namespace Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(x => x.LandlordId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<CaretakerPropertyAssignment>(e =>
+            {
+                e.HasIndex(x => new { x.CaretakerId, x.PropertyId }).IsUnique();
+                e.HasIndex(x => x.PropertyId);
+                e.HasOne(x => x.Caretaker)
+                    .WithMany()
+                    .HasForeignKey(x => x.CaretakerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Property)
+                    .WithMany()
+                    .HasForeignKey(x => x.PropertyId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // one‐to‐one between User⇄Wallet

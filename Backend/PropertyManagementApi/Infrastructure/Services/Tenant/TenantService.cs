@@ -198,6 +198,31 @@ namespace Infrastructure.Services.Tenant
             return tenants;
         }
 
+        public async Task<IEnumerable<PropertyTenant>> GetTenantsByCaretakerIdAsync(int caretakerId)
+        {
+            await EnsureCaretakerExistsAsync(caretakerId);
+
+            return await _context.Tenants
+                .Where(t => _context.CaretakerPropertyAssignments
+                    .Any(a => a.CaretakerId == caretakerId && a.PropertyId == t.PropertyId))
+                .Include(t => t.Property)
+                    .ThenInclude(p => p.Owner)
+                .Include(t => t.Unit)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<PropertyTenant>> GetTenantsByCaretakerIdAndPropertyIdAsync(int caretakerId, int propertyId)
+        {
+            await EnsureCaretakerAssignedToPropertyAsync(caretakerId, propertyId);
+
+            return await _context.Tenants
+                .Where(t => t.PropertyId == propertyId)
+                .Include(t => t.Property)
+                    .ThenInclude(p => p.Owner)
+                .Include(t => t.Unit)
+                .ToListAsync();
+        }
+
         public async Task UpdateTenantInvoiceDayAsync(int tenantId, int? invoiceGenerationDay)
         {
             if (invoiceGenerationDay.HasValue && (invoiceGenerationDay < 1 || invoiceGenerationDay > 28))
@@ -209,6 +234,37 @@ namespace Infrastructure.Services.Tenant
 
             tenant.InvoiceGenerationDay = invoiceGenerationDay;
             await _context.SaveChangesAsync();
+        }
+
+        private async Task EnsureCaretakerExistsAsync(int caretakerId)
+        {
+            var caretakerRoleId = await _context.SystemRoles
+                .AsNoTracking()
+                .Where(r => r.Name == "Caretaker")
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (caretakerRoleId == 0)
+                throw new Exception("Caretaker role not found.");
+
+            var caretakerExists = await _context.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == caretakerId && u.SystemRoleId == caretakerRoleId);
+
+            if (!caretakerExists)
+                throw new Exception("Caretaker not found.");
+        }
+
+        private async Task EnsureCaretakerAssignedToPropertyAsync(int caretakerId, int propertyId)
+        {
+            await EnsureCaretakerExistsAsync(caretakerId);
+
+            var assignmentExists = await _context.CaretakerPropertyAssignments
+                .AsNoTracking()
+                .AnyAsync(a => a.CaretakerId == caretakerId && a.PropertyId == propertyId);
+
+            if (!assignmentExists)
+                throw new Exception("Property is not assigned to this caretaker.");
         }
 
     }

@@ -94,6 +94,35 @@ namespace Infrastructure.Services.Property
             return properties;
         }
 
+        public async Task<IEnumerable<LandLordProperty>> GetPropertiesByCaretakerIdAsync(int caretakerId)
+        {
+            await EnsureCaretakerExistsAsync(caretakerId);
+
+            return await _context.LandLordProperties
+                .AsNoTracking()
+                .Where(p => _context.CaretakerPropertyAssignments
+                    .Any(a => a.CaretakerId == caretakerId && a.PropertyId == p.Id))
+                .Include(p => p.Owner)
+                .ToListAsync();
+        }
+
+        public async Task<LandLordProperty> GetPropertyByCaretakerIdAsync(int caretakerId, int propertyId)
+        {
+            await EnsureCaretakerExistsAsync(caretakerId);
+
+            var property = await _context.LandLordProperties
+                .AsNoTracking()
+                .Where(p => p.Id == propertyId && _context.CaretakerPropertyAssignments
+                    .Any(a => a.CaretakerId == caretakerId && a.PropertyId == p.Id))
+                .Include(p => p.Owner)
+                .FirstOrDefaultAsync();
+
+            if (property == null)
+                throw new Exception("Property is not assigned to this caretaker.");
+
+            return property;
+        }
+
         public async Task<IEnumerable<LandLordProperty>> GetAllPropertiesAsync()
         {
             var properties = await _context.LandLordProperties
@@ -155,6 +184,25 @@ namespace Infrastructure.Services.Property
             existingProperty.OwnerId = property.OwnerId;
             await _context.SaveChangesAsync();
         } 
+
+        private async Task EnsureCaretakerExistsAsync(int caretakerId)
+        {
+            var caretakerRoleId = await _context.SystemRoles
+                .AsNoTracking()
+                .Where(r => r.Name == "Caretaker")
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (caretakerRoleId == 0)
+                throw new Exception("Caretaker role not found.");
+
+            var caretakerExists = await _context.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == caretakerId && u.SystemRoleId == caretakerRoleId);
+
+            if (!caretakerExists)
+                throw new Exception("Caretaker not found.");
+        }
     }
    
 }

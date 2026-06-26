@@ -63,6 +63,36 @@ namespace API.Controllers.Property
             }
         }
 
+        [HttpGet("/GetPropertiesByCaretakerId/{caretakerId}")]
+        [Authorize]
+        public async Task<IActionResult> GetPropertiesByCaretakerId(int caretakerId)
+        {
+            try
+            {
+                var properties = await _landlordPropertyService.GetPropertiesByCaretakerIdAsync(caretakerId);
+                return Ok(properties);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving caretaker properties: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetPropertyByCaretakerId/{caretakerId}/{propertyId}")]
+        [Authorize]
+        public async Task<IActionResult> GetPropertyByCaretakerId(int caretakerId, int propertyId)
+        {
+            try
+            {
+                var property = await _landlordPropertyService.GetPropertyByCaretakerIdAsync(caretakerId, propertyId);
+                return Ok(property);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving caretaker property: {ex.Message}");
+            }
+        }
+
         [HttpPost("/AddProperty")]
         [Authorize]
         public async Task<IActionResult> AddProperty([FromForm]List<IFormFile> files, [FromForm] PropertyDto property)
