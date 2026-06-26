@@ -523,14 +523,16 @@ const ManageTenants = () => {
     setIsSubmittingPayment(true);
     try {
       const body = {
-        tenantId: selectedTenant?.id,
-        amount: Number(paymentForm.amount),
-        paymentDate: paymentForm.paymentDate,
-        paymentMethod: paymentForm.paymentMethod,
-        referenceNo: paymentForm.referenceNo,
-        notes: paymentForm.notes,
+        Amount: Number(paymentForm.amount),
+        PaymentDate: new Date(paymentForm.paymentDate).toISOString(),
+        PaymentMethod: paymentForm.paymentMethod,
+        TransactionId: paymentForm.referenceNo || null,
+        Description: paymentForm.notes || `${paymentForm.paymentMethod} payment`,
+        PropertyTenantId: selectedTenant?.id,
+        Vendor: "",
+        PaymentType: "Rent",
       };
-      const response = await fetch(`${apiUrl}/RecordPayment`, {
+      const response = await fetch(`${apiUrl}/MakeTenantPayment`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,

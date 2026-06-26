@@ -19,25 +19,24 @@ interface Tenant {
   property: { id: number; name: string; address?: string; type: string; price: number; currency: string };
 }
 
-interface Invoice {
-  id: number;
-  invoiceNumber: string;
-  type: string;
-  status: string;
-  amount: number;
-  invoiceDate: string;
-  dueDate: string;
-  notes?: string;
+interface StatementLine {
+  date: string;
+  transactionType: string;
+  reference: string;
+  description: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
 }
 
-interface Payment {
-  id: number;
-  amount: number;
-  paymentDate: string;
-  paymentMethod: string;
-  paymentStatus: string;
-  transactionId: string;
-  description: string | null;
+interface CustomerStatement {
+  tenantId: number;
+  tenantName: string;
+  from: string;
+  to: string;
+  openingBalance: number;
+  closingBalance: number;
+  lines: StatementLine[];
 }
 
 interface LedgerRow {
@@ -49,8 +48,6 @@ interface LedgerRow {
   balance: number;
   reference: string;
   status: string;
-  // false = payment already embedded in charge invoice amount, shown for history only
-  affectsBalance?: boolean;
 }
 
 const fmt = (n: number, currency = "UGX") =>
@@ -84,88 +81,33 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
   const [from, setFrom] = useState(yearStart);
   const [to, setTo] = useState(today);
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
+  const [closingBal, setClosingBal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchStatement = async () => {
     setIsLoading(true);
     try {
-      const [invRes, payRes] = await Promise.allSettled([
-        axios.get<Invoice[]>(`${apiUrl}/GetInvoicesByTenantId/${tenant.id}`),
-        axios.get<Payment[]>(`${apiUrl}/GetPaymentsByTenantId/${tenant.id}`),
-      ]);
-
-      const invoices: Invoice[] = invRes.status === "fulfilled" ? invRes.value.data ?? [] : [];
-      const payments: Payment[] = payRes.status === "fulfilled" ? payRes.value.data ?? [] : [];
-
-      const fromMs = new Date(from).getTime();
-      const toMs = new Date(to + "T23:59:59").getTime();
-
-      const filteredInvoices = invoices.filter((inv) => {
-        const t = new Date(inv.invoiceDate).getTime();
-        return t >= fromMs && t <= toMs;
-      });
-
-      const filteredPayments = payments.filter((p) => {
-        const t = new Date(p.paymentDate).getTime();
-        return t >= fromMs && t <= toMs;
-      });
-
-      // Charge invoices = debit rows (current amounts; payments are already subtracted from amount)
-      const chargeInvoices = filteredInvoices.filter(
-        (inv) => !inv.type?.toLowerCase().includes("payment")
+      const { data } = await axios.get<CustomerStatement>(
+        `${apiUrl}/GetCustomerStatement/${tenant.id}`,
+        { params: { from, to } }
       );
 
-      // Payment invoices (Manual Payment type) = credit rows for history visibility.
-      // affectsBalance = false because their amounts are already embedded in the charge invoice amounts.
-      const paymentInvoices = filteredInvoices.filter(
-        (inv) => inv.type?.toLowerCase().includes("payment")
-      );
-
-      const rows: Omit<LedgerRow, "balance">[] = [
-        // Debit row for every charge invoice (current outstanding amount)
-        ...chargeInvoices.map((inv) => ({
-          date: inv.invoiceDate,
-          type: "Invoice" as const,
-          description: inv.type === "Invoice" || inv.type === "Rent" ? "Rent Invoice" : inv.type,
-          debit: inv.amount,
-          credit: 0,
-          reference: inv.invoiceNumber,
-          status: inv.status,
-          affectsBalance: true,
-        })),
-        // Payment records — shown for history but do NOT change running balance
-        // (payment was already deducted from the invoice amount above)
-        ...paymentInvoices.map((inv) => ({
-          date: inv.invoiceDate,
-          type: "Payment" as const,
-          description: `${inv.paymentMethod || "Payment"} — ${inv.invoiceNumber}`,
-          debit: 0,
-          credit: inv.amount,
-          reference: inv.invoiceNumber,
-          status: "Paid",
-          affectsBalance: false,
-        })),
-        // Actual TenantPayment records (if any) — also already reflected, show for completeness
-        ...filteredPayments.map((p) => ({
-          date: p.paymentDate,
-          type: "Payment" as const,
-          description: p.description ? p.description : p.paymentMethod ?? "Payment",
-          debit: 0,
-          credit: p.amount,
-          reference: p.transactionId || "—",
-          status: p.paymentStatus,
-          affectsBalance: false,
-        })),
-      ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      // Running balance only advances for charge invoice rows; payment rows are informational
-      let running = 0;
-      const withBalance: LedgerRow[] = rows.map((r) => {
-        if (r.affectsBalance !== false) running += r.debit - r.credit;
-        return { ...r, balance: running };
+      const rows: LedgerRow[] = (data.lines ?? []).map((line) => {
+        const isPayment = line.transactionType?.toLowerCase().includes("payment");
+        return {
+          date: line.date,
+          type: isPayment ? "Payment" : "Invoice",
+          description: line.description || line.transactionType,
+          debit: line.debit,
+          credit: line.credit,
+          balance: line.runningBalance,
+          reference: line.reference,
+          status: isPayment ? "Paid" : line.debit > 0 ? "Pending" : "Paid",
+        };
       });
 
-      setLedger(withBalance);
+      setLedger(rows);
+      setClosingBal(data.closingBalance ?? 0);
     } catch (err: any) {
       toast({ title: "Error", description: "Failed to load statement.", variant: "destructive" });
     } finally {
@@ -176,10 +118,8 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
   useEffect(() => { fetchStatement(); }, [tenant.id]);
 
   const totalDebits = ledger.reduce((s, r) => s + r.debit, 0);
-  // Total Paid = sum of payment credit rows only
-  const totalCredits = ledger.filter((r) => r.affectsBalance === false).reduce((s, r) => s + r.credit, 0);
-  // Outstanding balance = end of the running balance (charge-invoice debits only)
-  const closingBalance = ledger.length > 0 ? ledger[ledger.length - 1].balance : 0;
+  const totalCredits = ledger.reduce((s, r) => s + r.credit, 0);
+  const closingBalance = closingBal;
 
   const handlePrint = () => {
     const printWin = window.open("", "_blank", "width=960,height=800");
@@ -526,15 +466,10 @@ const TenantStatementModal = ({ tenant, onClose }: Props) => {
                         {row.credit > 0 ? `${fmt(row.credit)}` : <span className="text-slate-300">—</span>}
                       </td>
                       <td className={`px-4 py-3 text-right text-xs font-bold ${row.balance > 0 ? "text-red-700" : "text-emerald-700"}`}>
-                        {row.affectsBalance === false
-                          ? <span className="text-slate-300 font-normal text-[10px]">applied</span>
-                          : <>
-                              {fmt(Math.abs(row.balance))}
-                              {row.balance > 0 && idx === ledger.length - 1 && (
-                                <AlertTriangle className="inline h-3 w-3 ml-1 text-red-500" />
-                              )}
-                            </>
-                        }
+                        {fmt(Math.abs(row.balance))}
+                        {row.balance > 0 && idx === ledger.length - 1 && (
+                          <AlertTriangle className="inline h-3 w-3 ml-1 text-red-500" />
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs font-mono text-[#64748B] whitespace-nowrap">{row.reference}</td>
                       <td className="px-4 py-3">

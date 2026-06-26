@@ -176,6 +176,7 @@ const InvoiceManagement = () => {
     dueDate: "",
     notes: "",
     paymentMethod: "",
+    reference: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingInvoices, setPendingInvoices] = useState<Invoice[]>([]);
@@ -311,6 +312,7 @@ const InvoiceManagement = () => {
       dueDate: "",
       notes: "",
       paymentMethod: type === "Manual Payment" ? "Cash" : "",
+      reference: "",
     });
     setPendingInvoices([]);
     setSelectedInvoiceId(null);
@@ -368,11 +370,26 @@ const InvoiceManagement = () => {
         InvoiceDate: new Date(form.invoiceDate).toISOString(),
         DueDate: new Date(form.dueDate || form.invoiceDate).toISOString(),
         Notes: combinedNotes,
+        Description: combinedNotes,
         PaymentMethod: form.paymentMethod || null,
         CreatedByUserId: userData.id,
         CreatedByName: userData.fullName || "",
       };
       await axios.post(`${apiUrl}/CreateTenantInvoice`, body);
+
+      // Also record in TenantPayments table when type is Manual Payment
+      if (form.type === "Manual Payment") {
+        await axios.post(`${apiUrl}/MakeTenantPayment`, {
+          Amount: paymentAmount,
+          PaymentDate: new Date(form.invoiceDate).toISOString(),
+          PaymentMethod: form.paymentMethod || "Cash",
+          TransactionId: form.reference || null,
+          Description: form.notes || `${form.paymentMethod || "Cash"} payment`,
+          PropertyTenantId: Number(form.tenantId),
+          Vendor: "",
+          PaymentType: "Rent",
+        }).catch(() => { /* non-blocking — invoice record already saved */ });
+      }
 
       if (selectedInvoiceId) {
         const linked = pendingInvoices.find((i) => i.id === selectedInvoiceId);
@@ -1413,6 +1430,19 @@ const InvoiceManagement = () => {
                     onChange={(e) =>
                       setForm({ ...form, dueDate: e.target.value })
                     }
+                    className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+                  />
+                </div>
+              )}
+              {form.type === "Manual Payment" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">
+                    Reference / Receipt No.
+                  </label>
+                  <Input
+                    placeholder="Optional transaction reference"
+                    value={form.reference}
+                    onChange={(e) => setForm({ ...form, reference: e.target.value })}
                     className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
                   />
                 </div>

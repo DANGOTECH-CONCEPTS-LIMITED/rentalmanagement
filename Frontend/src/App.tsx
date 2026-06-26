@@ -47,6 +47,7 @@ import UnitsManagement from "./pages/Landlord/UnitsManagement";
 import InvoiceManagement from "./pages/Landlord/InvoiceManagement";
 import ExpenseManagement from "./pages/Landlord/ExpenseManagement";
 import LandlordReports from "./pages/Landlord/LandlordReports";
+import ManageCaretakers from "./pages/Landlord/ManageCaretakers";
 import Index from "./pages/Index";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
@@ -172,6 +173,7 @@ const App = () => (
                 <Route path="utility-charge" element={<UtilityChargeConfig />} />
                 <Route path="invoice-settings" element={<LandlordInvoiceSettings />} />
                 <Route path="viewing-requests" element={<ViewingRequests />} />
+                <Route path="caretakers" element={<ManageCaretakers />} />
                 <Route path="my-profile" element={<UserProfile />} />
               </Route>
             </Route>

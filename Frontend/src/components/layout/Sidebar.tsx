@@ -6,7 +6,7 @@ import { useIsMobile } from "../../hooks/use-mobile";
 import {
   Home, Users, FileText, Settings, BarChart3, Menu, LogOut, ChevronRight,
   House, MessageSquare, CreditCard, Plus, X, FileSearch, DoorOpen, Receipt,
-  TrendingDown, UserCircle, Zap, Smartphone, Inbox, Eye, Calendar,
+  TrendingDown, UserCircle, Zap, Smartphone, Inbox, Eye, Calendar, ShieldCheck,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -364,6 +364,7 @@ function getNavEntries(role: number): NavEntry[] {
           { label: "Manage Contracts", icon: <FileText size={16} />, path: "/landlord-dashboard/rental-contracts" },
           { label: "Viewing Requests", icon: <Eye size={16} />, path: "/landlord-dashboard/viewing-requests" },
           { label: "Handle Complaints", icon: <MessageSquare size={16} />, path: "/landlord-dashboard/complaints" },
+          { label: "Caretakers", icon: <ShieldCheck size={16} />, path: "/landlord-dashboard/caretakers" },
         ],
       },
       {
