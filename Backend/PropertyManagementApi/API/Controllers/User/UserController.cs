@@ -177,6 +177,22 @@ namespace API.Controllers.UserControllers
             }
         }
 
+        [HttpGet("/GetCaretakersByLandLordId/{landlordId}")]
+        [Authorize]
+        public async Task<IActionResult> GetCaretakersByLandLordId(int landlordId)
+        {
+            try
+            {
+                var caretakers = await _userService.GetCaretakersByLandlordIdAsync(landlordId);
+                return Ok(caretakers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving caretakers for landlord {LandlordId}", landlordId);
+                return BadRequest($"Error retrieving caretakers: {ex.Message}");
+            }
+        }
+
         [HttpPost("/ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {

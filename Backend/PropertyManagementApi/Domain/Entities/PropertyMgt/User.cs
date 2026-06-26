@@ -36,5 +36,9 @@ namespace Domain.Entities.PropertyMgt
         public int SystemRoleId { get; set; }
 
         public SystemRole? SystemRole { get; set; }
+
+        [ForeignKey("Landlord")]
+        public int? LandlordId { get; set; }
+        public User? Landlord { get; set; }
     }
 }

@@ -23,6 +23,9 @@ namespace Infrastructure.Services.UserServices
 {
     public class UserService : IUserService
     {
+        private const string LandlordRoleName = "Landlord";
+        private const string CaretakerRoleName = "Caretaker";
+
         private readonly IConfiguration _configuration;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly EmailService _emailService;
@@ -72,6 +75,8 @@ namespace Infrastructure.Services.UserServices
                 .FirstOrDefaultAsync(r => r.Id == userDto.SystemRoleId)
                 ?? throw new KeyNotFoundException($"SystemRoleId {userDto.SystemRoleId} not found.");
 
+            var landlordId = await ResolveCaretakerLandlordIdAsync(systemRole.Name, userDto.LandlordId);
+
             // 4. Upload files in parallel (single‐arg overload)
             var passportTask = _settings.SaveFileAndReturnPathAsync(passportPhoto);
             var frontTask = _settings.SaveFileAndReturnPathAsync(idFront);
@@ -94,6 +99,7 @@ namespace Infrastructure.Services.UserServices
                 IdBack = idBackPath,
                 SystemRoleId = systemRole.Id,
                 NationalIdNumber = userDto.NationalIdNumber,
+                LandlordId = landlordId,
                 PasswordChanged = false,
                 Verified = false,
             };
@@ -144,6 +150,7 @@ namespace Infrastructure.Services.UserServices
             return await _context.Users
                 .AsNoTracking()
                 .Include(u => u.SystemRole)
+                .Include(u => u.Landlord)
                 .ToListAsync();
         }
 
@@ -228,6 +235,11 @@ namespace Infrastructure.Services.UserServices
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
+            if (user.LandlordId.HasValue)
+            {
+                claims.Add(new Claim("landlord_id", user.LandlordId.Value.ToString()));
+            }
+
             // Create the JWT token
             var token = new JwtSecurityToken(
                 issuer: issuer,
@@ -249,6 +261,8 @@ namespace Infrastructure.Services.UserServices
             var systemRole = await _context.SystemRoles.FirstOrDefaultAsync(r => r.Id == user.SystemRoleId);
             if (systemRole == null)
                 throw new Exception("System role not found.");
+
+            user.LandlordId = await ResolveCaretakerLandlordIdAsync(systemRole.Name, user.LandlordId);
 
             // Check for duplicate user
             var existingUser = await _context.Users
@@ -281,6 +295,7 @@ namespace Infrastructure.Services.UserServices
             var user = await _context.Users
                 .AsNoTracking()
                 .Include(u => u.SystemRole)
+                .Include(u => u.Landlord)
                 .FirstOrDefaultAsync(u => u.Id == id);
             if (user == null)
                 throw new Exception("User not found.");
@@ -300,6 +315,11 @@ namespace Infrastructure.Services.UserServices
             if (existingUser == null)
                 throw new Exception("User not found.");
 
+            var updatedRole = await _context.SystemRoles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == userDto.SystemRoleId)
+                ?? throw new Exception("System role not found.");
+
             // 2. Map any simple properties you allow to be updated
             existingUser.FullName = userDto.FullName;
             existingUser.PhoneNumber = userDto.PhoneNumber;
@@ -307,6 +327,7 @@ namespace Infrastructure.Services.UserServices
             existingUser.Active = userDto.Active;
             existingUser.Verified = userDto.Verified;
             existingUser.SystemRoleId = userDto.SystemRoleId; // Assuming this is allowed to be changed
+            existingUser.LandlordId = await ResolveCaretakerLandlordIdAsync(updatedRole.Name, userDto.LandlordId);
             //existingUser.Email = userDto.Email; // Assuming this is allowed to be changed
             // (…and any other fields you want to let the caller change…)
 
@@ -346,7 +367,7 @@ namespace Infrastructure.Services.UserServices
             // Resolve the role id first to avoid joining SystemRoles for every user
             var landlordRoleId = await _context.SystemRoles
                 .AsNoTracking()
-                .Where(r => r.Name == "Landlord")
+                .Where(r => r.Name == LandlordRoleName)
                 .Select(r => r.Id)
                 .FirstOrDefaultAsync();
 
@@ -360,6 +381,68 @@ namespace Infrastructure.Services.UserServices
                 .Where(u => u.SystemRoleId == landlordRoleId)
                 .Include(u => u.SystemRole)
                 .ToListAsync();
+        }
+
+        public async Task<IEnumerable<User>> GetCaretakersByLandlordIdAsync(int landlordId)
+        {
+            await EnsureLandlordExistsAsync(landlordId);
+
+            var caretakerRoleId = await _context.SystemRoles
+                .AsNoTracking()
+                .Where(r => r.Name == CaretakerRoleName)
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (caretakerRoleId == 0)
+            {
+                return [];
+            }
+
+            return await _context.Users
+                .AsNoTracking()
+                .Where(u => u.SystemRoleId == caretakerRoleId && u.LandlordId == landlordId)
+                .Include(u => u.SystemRole)
+                .Include(u => u.Landlord)
+                .ToListAsync();
+        }
+
+        private async Task<int?> ResolveCaretakerLandlordIdAsync(string roleName, int? landlordId)
+        {
+            if (!string.Equals(roleName, CaretakerRoleName, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (!landlordId.HasValue || landlordId.Value <= 0)
+            {
+                throw new Exception("LandlordId is required for caretaker users.");
+            }
+
+            await EnsureLandlordExistsAsync(landlordId.Value);
+            return landlordId.Value;
+        }
+
+        private async Task EnsureLandlordExistsAsync(int landlordId)
+        {
+            var landlordRoleId = await _context.SystemRoles
+                .AsNoTracking()
+                .Where(r => r.Name == LandlordRoleName)
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (landlordRoleId == 0)
+            {
+                throw new Exception("Landlord role not found.");
+            }
+
+            var landlordExists = await _context.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == landlordId && u.SystemRoleId == landlordRoleId);
+
+            if (!landlordExists)
+            {
+                throw new Exception("Landlord not found.");
+            }
         }
 
         public async Task ForgotPassword(string email)

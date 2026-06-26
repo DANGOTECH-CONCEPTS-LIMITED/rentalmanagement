@@ -208,7 +208,24 @@ namespace Infrastructure.Data
                     Description = "Utility payment role with limited permissions",
                     Permissions = null,
                     CreatedAt = new DateTime(2025, 04, 10)
+                },
+                new SystemRole
+                {
+                    Id = 5,
+                    Name = "Caretaker",
+                    Description = "Caretaker role under a landlord with limited permissions",
+                    Permissions = null,
+                    CreatedAt = new DateTime(2025, 04, 10)
                 });
+
+            modelBuilder.Entity<User>(e =>
+            {
+                e.HasIndex(x => x.LandlordId);
+                e.HasOne(x => x.Landlord)
+                    .WithMany()
+                    .HasForeignKey(x => x.LandlordId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
 
             // one‐to‐one between User⇄Wallet
             modelBuilder.Entity<Wallet>()

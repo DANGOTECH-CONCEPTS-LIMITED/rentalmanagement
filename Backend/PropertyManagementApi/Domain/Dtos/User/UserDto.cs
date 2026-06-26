@@ -14,5 +14,6 @@ namespace Domain.Dtos.User
         public string PhoneNumber { get; set; } = string.Empty;
         public string NationalIdNumber { get; set; } = string.Empty;
         public int SystemRoleId { get; set; }
+        public int? LandlordId { get; set; }
     }
 }
