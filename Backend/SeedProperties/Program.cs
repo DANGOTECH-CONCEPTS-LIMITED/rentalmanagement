@@ -1418,6 +1418,86 @@ namespace SeedProperties
             await db.SaveChangesAsync();
             Console.WriteLine($"\nProperty expenses seeded : {expensesSeeded}  (total in DB: {await db.PropertyExpenses.CountAsync()})");
 
+            // ── 12. Seed Caretaker Users ─────────────────────────────────────
+            var caretakerRole = await db.SystemRoles.FirstOrDefaultAsync(r => r.Name == "Caretaker");
+            if (caretakerRole == null)
+            {
+                Console.WriteLine("\n[WARN] 'Caretaker' role not found — skipping caretaker seed.");
+            }
+            else
+            {
+                var caretakersToSeed = new List<(string FullName, string Email, string Phone, string NationalId, string Password)>
+                {
+                    ("John Ssekandi",  "john.ssekandi@caretaker.com",  "+256701000011", "CM1111111101", "Caretaker@123"),
+                    ("Grace Nalubega", "grace.nalubega@caretaker.com", "+256701000012", "CM1111111102", "Caretaker@123"),
+                };
+
+                int caretakersSeeded = 0;
+                var seededCaretakerIds = new List<int>();
+
+                foreach (var c in caretakersToSeed)
+                {
+                    var existing = await db.Users.FirstOrDefaultAsync(u => u.Email == c.Email);
+                    if (existing != null)
+                    {
+                        Console.WriteLine($"  [SKIP] Caretaker '{c.FullName}' ({c.Email}) already exists.");
+                        seededCaretakerIds.Add(existing.Id);
+                        continue;
+                    }
+
+                    var caretaker = new User
+                    {
+                        FullName = c.FullName,
+                        Email = c.Email,
+                        PhoneNumber = c.Phone,
+                        NationalIdNumber = c.NationalId,
+                        Password = hasher.HashPassword(null!, c.Password),
+                        Active = true,
+                        Verified = true,
+                        PasswordChanged = false,
+                        SystemRoleId = caretakerRole.Id,
+                        LandlordId = landlord.Id,
+                        PassportPhoto = "",
+                        IdFront = "",
+                        IdBack = "",
+                        UtilityChargeType = "Percentage",
+                        UtilityChargePercentage = 0
+                    };
+                    db.Users.Add(caretaker);
+                    await db.SaveChangesAsync();
+                    seededCaretakerIds.Add(caretaker.Id);
+                    caretakersSeeded++;
+                    Console.WriteLine($"  [ADD]  Caretaker {c.FullName} ({c.Email}) → Id = {caretaker.Id}  Password: {c.Password}");
+                }
+
+                // Assign caretakers to the first two properties
+                var firstTwoProperties = await db.LandLordProperties.Take(2).ToListAsync();
+                int assignmentsSeeded = 0;
+                for (int ci = 0; ci < seededCaretakerIds.Count && ci < firstTwoProperties.Count; ci++)
+                {
+                    var ctId = seededCaretakerIds[ci];
+                    var propId = firstTwoProperties[ci].Id;
+                    var exists = await db.CaretakerPropertyAssignments
+                        .AnyAsync(a => a.CaretakerId == ctId && a.PropertyId == propId);
+                    if (exists)
+                    {
+                        Console.WriteLine($"  [SKIP] Assignment caretaker {ctId} → property {propId} already exists.");
+                        continue;
+                    }
+                    db.CaretakerPropertyAssignments.Add(new CaretakerPropertyAssignment
+                    {
+                        CaretakerId = ctId,
+                        PropertyId = propId,
+                        AssignedAt = DateTime.UtcNow
+                    });
+                    assignmentsSeeded++;
+                    Console.WriteLine($"  [ADD]  Assignment: caretaker Id={ctId} → property '{firstTwoProperties[ci].Name}'");
+                }
+                await db.SaveChangesAsync();
+                Console.WriteLine($"\nCaretakers seeded    : {caretakersSeeded}  (total caretakers in DB: {await db.Users.CountAsync(u => u.SystemRoleId == caretakerRole.Id)})");
+                Console.WriteLine($"Assignments seeded   : {assignmentsSeeded}");
+            }
+
             Console.WriteLine($"\n=== Seed Complete ===");
             Console.WriteLine($"Properties seeded    : {seededCount}  (total in DB: {await db.LandLordProperties.CountAsync()})");
             Console.WriteLine($"Property units seeded: {unitsSeeded}  (total in DB: {await db.PropertyUnits.CountAsync()})");

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import {
   UserPlus, Trash2, Phone, Mail, IdCard,
-  ShieldCheck, Users, CheckCircle2, XCircle, X,
+  ShieldCheck, Users, CheckCircle2, XCircle, X, AlertTriangle,
 } from "lucide-react";
 
 interface Caretaker {
@@ -38,7 +38,7 @@ const FIELDS = [
 ];
 
 export default function ManageCaretakers() {
-  const { userData } = useAuth();
+  const { user: userData } = useAuth();
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -48,9 +48,10 @@ export default function ManageCaretakers() {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
 
-  useEffect(() => { fetchCaretakers(); }, []);
+  useEffect(() => { if (userData?.id) fetchCaretakers(); }, [userData?.id]);
 
   const fetchCaretakers = async () => {
     setIsLoading(true);
@@ -71,16 +72,16 @@ export default function ManageCaretakers() {
     }
     setSubmitting(true);
     try {
-      await axios.post(`${apiUrl}/RegisterUserMinusFiles`, {
+      await axios.post(`${apiUrl}/RegisterUserMinusFiles?landlordId=${userData?.id}`, {
         FullName: form.fullName.trim(),
         Email: form.email.trim(),
         PhoneNumber: form.phoneNumber.trim(),
         NationalIdNumber: form.nationalIdNumber?.trim() || "",
-        PasswordHash: form.password?.trim() || "Caretaker@123",
+        Password: form.password?.trim() || "Caretaker@123",
         SystemRoleId: CARETAKER_ROLE_ID,
         LandlordId: userData?.id,
         Active: true,
-        Verified: false,
+        Verified: true,
       });
       toast({ title: "Caretaker Added", description: `${form.fullName} has been registered.` });
       setAddOpen(false);
@@ -96,8 +97,10 @@ export default function ManageCaretakers() {
     }
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Remove ${name} as caretaker?`)) return;
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    const { id, name } = confirmDelete;
+    setConfirmDelete(null);
     setDeletingId(id);
     try {
       await axios.delete(`${apiUrl}/DeleteUser/${id}`);
@@ -252,7 +255,7 @@ export default function ManageCaretakers() {
                     <td className="px-4 py-3 text-right">
                       <button
                         disabled={deletingId === c.id}
-                        onClick={() => handleDelete(c.id, c.fullName)}
+                        onClick={() => setConfirmDelete({ id: c.id, name: c.fullName })}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -266,6 +269,47 @@ export default function ManageCaretakers() {
           </div>
         )}
       </div>
+
+      {/* Confirm Delete Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-white" />
+                <h2 className="text-lg font-bold text-white">Remove Caretaker</h2>
+              </div>
+              <button onClick={() => setConfirmDelete(null)} className="text-white/70 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-slate-600 text-sm">
+                Are you sure you want to remove <span className="font-semibold text-slate-800">{confirmDelete.name}</span> as a caretaker? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3 pt-1">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Yes, Remove
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Add Modal */}
       {addOpen && (

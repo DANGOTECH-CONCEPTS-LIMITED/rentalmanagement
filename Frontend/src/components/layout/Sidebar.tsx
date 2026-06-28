@@ -432,6 +432,18 @@ function getNavEntries(role: number): NavEntry[] {
     ];
   }
 
+  if (role === 5) {
+    return [
+      { label: "Dashboard", icon: <Home size={16} />, path: "/caretaker-dashboard" },
+      { label: "Properties", icon: <House size={16} />, path: "/caretaker-dashboard/properties" },
+      { label: "Units", icon: <DoorOpen size={16} />, path: "/caretaker-dashboard/units" },
+      { label: "Tenants", icon: <Users size={16} />, path: "/caretaker-dashboard/manage-tenants" },
+      { label: "Payments", icon: <CreditCard size={16} />, path: "/caretaker-dashboard/payments" },
+      { label: "Complaints", icon: <MessageSquare size={16} />, path: "/caretaker-dashboard/complaints" },
+      { label: "My Profile", icon: <UserCircle size={16} />, path: "/caretaker-dashboard/my-profile" },
+    ];
+  }
+
   return [];
 }
 
