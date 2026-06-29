@@ -271,10 +271,10 @@ namespace Infrastructure.Services.UserServices
             if (existingUser != null)
                 throw new Exception("User with this email already exists.");
 
-            //generate a unique, temporary password
-            var password = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var password = !string.IsNullOrWhiteSpace(user.Password)
+                ? user.Password
+                : Guid.NewGuid().ToString("N").Substring(0, 8);
 
-            // Hash the supplied password
             user.Password = _passwordHasher.HashPassword(user, password);
             user.PasswordChanged = false;
             user.Verified = false;

@@ -396,14 +396,7 @@ const Properties = () => {
 
   const userData = JSON.parse(user!);
   const token = userData.token;
-  if (!token) {
-    toast({
-      title: "Error",
-      description: "User token not found. Please log in again.",
-      variant: "destructive",
-    });
-    return null;
-  }
+  const isCaretaker = userData?.systemRoleId === 5;
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const navigate = useNavigate();
@@ -415,15 +408,27 @@ const Properties = () => {
   };
 
   useEffect(() => {
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "User token not found. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
     fetchProperties();
-    fetchLandlords();
+    if (!isCaretaker) fetchLandlords();
   }, []);
+
+  if (!token) return null;
 
   const fetchProperties = async () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
+        isCaretaker
+          ? `${apiUrl}/GetPropertiesByCaretakerId/${userData.id}`
+          : `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
         {
           headers: { accept: "*/*", Authorization: `Bearer ${token}` },
         },
@@ -711,7 +716,7 @@ const Properties = () => {
                 My Properties
               </h1>
               <p className="mt-1 text-sm text-blue-200">
-                View and manage all your registered properties
+                {isCaretaker ? "View properties assigned to you" : "View and manage all your registered properties"}
               </p>
             </div>
             <div className="flex flex-wrap gap-3 pt-1">
@@ -743,13 +748,13 @@ const Properties = () => {
             </div>
           </div>
 
-          <button
+          {!isCaretaker && <button
             onClick={() => setAddProperty(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white px-5 py-2.5 text-sm font-bold text-[#1D4ED8] shadow-sm transition-colors hover:bg-blue-50 shrink-0"
           >
             <Plus className="h-4 w-4" />
             Add New Property
-          </button>
+          </button>}
         </div>
       </section>
 
@@ -843,20 +848,20 @@ const Properties = () => {
                     >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button
+                    {!isCaretaker && <button
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                       onClick={() => handleEditProperty(p)}
                       title="Edit"
                     >
                       <Edit className="h-4 w-4" />
-                    </button>
-                    <button
+                    </button>}
+                    {!isCaretaker && <button
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
                       onClick={() => handleDeleteProperty(p.id)}
                       title="Delete"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </button>}
                   </div>
                 ),
               },
@@ -871,7 +876,9 @@ const Properties = () => {
           emptyMessage={
             searchTerm
               ? "No properties match your search"
-              : "Start by adding a new property"
+              : isCaretaker
+                ? "No properties have been assigned to you"
+                : "Start by adding a new property"
           }
         />
       )}
@@ -1042,7 +1049,7 @@ const Properties = () => {
                 >
                   Transactions
                 </button>
-                <button
+                {!isCaretaker && <button
                   className="flex-1 btn-grid inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#1D4ED8] py-2.5 text-sm font-semibold text-white hover:bg-[#1e40af] transition-colors"
                   onClick={() => {
                     setSelectedProperty(null);
@@ -1050,7 +1057,7 @@ const Properties = () => {
                   }}
                 >
                   <Edit className="h-3.5 w-3.5" /> Edit
-                </button>
+                </button>}
               </div>
             </motion.div>
           </div>

@@ -156,6 +156,7 @@ const LandlordDashboard = () => {
   if (!user) throw new Error("No user found in localStorage");
   const userData = JSON.parse(user);
   const token = userData.token;
+  const isCaretaker = userData?.systemRoleId === 5;
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
@@ -193,8 +194,13 @@ const LandlordDashboard = () => {
 
   const fetchTenants = async () => {
     try {
-      const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
-      setTenants(data.filter((t: any) => t?.property?.ownerId === userData.id));
+      if (isCaretaker) {
+        const { data } = await axios.get(`${apiUrl}/GetTenantsByCaretakerId/${userData.id}`);
+        setTenants(Array.isArray(data) ? data : []);
+      } else {
+        const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
+        setTenants(data.filter((t: any) => t?.property?.ownerId === userData.id));
+      }
     } catch {}
   };
 
@@ -219,7 +225,9 @@ const LandlordDashboard = () => {
   const fetchProperties = async () => {
     try {
       const { data } = await axios.get(
-        `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
+        isCaretaker
+          ? `${apiUrl}/GetPropertiesByCaretakerId/${userData.id}`
+          : `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
       );
       setProperties(data);
     } catch {}
@@ -228,7 +236,9 @@ const LandlordDashboard = () => {
   const fetchUnits = async () => {
     try {
       const { data } = await axios.get(
-        `${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`,
+        isCaretaker
+          ? `${apiUrl}/GetPropertyUnitsByCaretakerId/${userData.id}`
+          : `${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`,
       );
       setUnits(data);
     } catch {}

@@ -3,7 +3,7 @@ import { getImageUrl } from "@/lib/imageUrl";
 import {
   MessageSquare, Filter, Eye, CheckCircle, XCircle,
   Clock, AlertCircle, FileText, Calendar, Home, X,
-  ShieldAlert,
+  Plus, Send, Upload, Loader2, User,
 } from "lucide-react";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,20 @@ interface Complaint {
   property: Property;
   tenantName?: string;
 }
+
+interface Tenant {
+  id: number;
+  fullName: string;
+  propertyId: number;
+  property?: Property;
+}
+
+const emptyComplaintForm = {
+  tenantId: "",
+  subject: "",
+  description: "",
+  priority: "medium",
+};
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }: { status: string }) => {
@@ -129,17 +143,24 @@ const HandleComplaints = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [complaintForm, setComplaintForm] = useState(emptyComplaintForm);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [submittingComplaint, setSubmittingComplaint] = useState(false);
 
   const user = localStorage.getItem("user");
   let token = "";
   let id = "";
+  let isCaretaker = false;
   try {
     if (user) {
       const userData = JSON.parse(user);
       token = userData.token;
       id = userData.id;
+      isCaretaker = userData.systemRoleId === 5;
     }
   } catch (error) {
     console.error("Error parsing user data:", error);
@@ -151,7 +172,10 @@ const HandleComplaints = () => {
     const fetchComplaints = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${apiUrl}/GetAllTenantComplaintsByLandlordId/${id}`, {
+        const endpoint = isCaretaker
+          ? `${apiUrl}/GetAllTenantComplaintsByCaretakerId/${id}`
+          : `${apiUrl}/GetAllTenantComplaintsByLandlordId/${id}`;
+        const response = await fetch(endpoint, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
         });
@@ -167,8 +191,88 @@ const HandleComplaints = () => {
         setLoading(false);
       }
     };
+
+    const fetchCaretakerTenants = async () => {
+      if (!isCaretaker) return;
+      try {
+        const response = await fetch(`${apiUrl}/GetTenantsByCaretakerId/${id}`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
+        });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        setTenants(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching caretaker tenants:", error);
+        toast({ title: "Error loading tenants", description: "Could not retrieve assigned tenants.", variant: "destructive" });
+      }
+    };
+
     if (token) fetchComplaints();
-  }, [toast, token]);
+    if (token) fetchCaretakerTenants();
+  }, [apiUrl, id, isCaretaker, toast, token]);
+
+  const resetComplaintForm = () => {
+    setComplaintForm(emptyComplaintForm);
+    setAttachment(null);
+  };
+
+  const closeRegisterModal = () => {
+    setRegisterOpen(false);
+    resetComplaintForm();
+  };
+
+  const handleRegisterComplaint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!complaintForm.tenantId || !complaintForm.subject.trim() || !complaintForm.description.trim()) {
+      toast({ title: "Validation", description: "Select a tenant and enter the complaint details.", variant: "destructive" });
+      return;
+    }
+
+    const selectedTenant = tenants.find((tenant) => String(tenant.id) === complaintForm.tenantId);
+    if (!selectedTenant) {
+      toast({ title: "Validation", description: "Selected tenant could not be found.", variant: "destructive" });
+      return;
+    }
+
+    setSubmittingComplaint(true);
+    try {
+      const formData = new FormData();
+      formData.append("Subject", complaintForm.subject.trim());
+      formData.append("Description", complaintForm.description.trim());
+      formData.append("Priority", complaintForm.priority);
+      formData.append("Status", "Pending");
+      formData.append("ResolutionDetails", "");
+      formData.append("PropertyId", String(selectedTenant.propertyId));
+      if (attachment) formData.append("file", attachment, attachment.name);
+
+      const response = await fetch(`${apiUrl}/LogCaretakerTenantComplaint/${id}/${selectedTenant.id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const message = (await response.text()) || "Failed to register complaint.";
+        throw new Error(message);
+      }
+
+      toast({ title: "Complaint Registered", description: `Complaint logged for ${selectedTenant.fullName}.` });
+      closeRegisterModal();
+      const complaintResponse = await fetch(`${apiUrl}/GetAllTenantComplaintsByCaretakerId/${id}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
+      });
+      if (complaintResponse.ok) {
+        const data = await complaintResponse.json();
+        setComplaints(data.map((c: Complaint, i: number) => ({ ...c, tenantName: `Tenant ${i + 1}` })));
+      }
+    } catch (error) {
+      toast({ title: "Submission Failed", description: error instanceof Error ? error.message : "Failed to register complaint.", variant: "destructive" });
+    } finally {
+      setSubmittingComplaint(false);
+    }
+  };
 
   const filteredComplaints = complaints.filter(
     (c) =>
@@ -309,9 +413,19 @@ const HandleComplaints = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Tenant Complaints</h1>
             <p className="mt-1 text-sm text-blue-200">
-              Review incoming complaints, filter by urgency, and inspect attachments without leaving the page.
+              {isCaretaker
+                ? "Register and follow up on complaints for tenants in your assigned properties."
+                : "Review incoming complaints, filter by urgency, and inspect attachments without leaving the page."}
             </p>
           </div>
+          {isCaretaker && (
+            <button
+              onClick={() => setRegisterOpen(true)}
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-[#1D4ED8] shadow-lg transition-colors hover:bg-blue-50"
+            >
+              <Plus className="h-4 w-4" /> Register Complaint
+            </button>
+          )}
           {/* Inline stats */}
           <div className="flex flex-wrap gap-3 pt-1">
             {[
@@ -369,6 +483,102 @@ const HandleComplaints = () => {
           </div>
         }
       />
+
+      {/* ── Register Complaint Modal ── */}
+      {registerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <form onSubmit={handleRegisterComplaint} className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 text-white">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold">Register Complaint</h2>
+                  <p className="mt-0.5 text-xs text-blue-200">For tenants in assigned properties</p>
+                </div>
+                <button type="button" onClick={closeRegisterModal} className="rounded-lg bg-white/10 p-2 text-white hover:bg-white/20">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tenant *</label>
+                <select
+                  value={complaintForm.tenantId}
+                  onChange={(e) => setComplaintForm((prev) => ({ ...prev, tenantId: e.target.value }))}
+                  className="h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10"
+                >
+                  <option value="">Select tenant</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={String(tenant.id)}>
+                      {tenant.fullName}{tenant.property?.name ? ` - ${tenant.property.name}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Subject *</label>
+                  <input
+                    value={complaintForm.subject}
+                    onChange={(e) => setComplaintForm((prev) => ({ ...prev, subject: e.target.value }))}
+                    placeholder="e.g. Water leakage in kitchen"
+                    className="h-11 w-full rounded-xl border border-[#E2E8F0] px-3.5 text-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Priority</label>
+                  <select
+                    value={complaintForm.priority}
+                    onChange={(e) => setComplaintForm((prev) => ({ ...prev, priority: e.target.value }))}
+                    className="h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Attachment</label>
+                  <label className="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[#CBD5E1] px-3.5 text-sm text-slate-500 transition-colors hover:border-[#1D4ED8] hover:text-[#1D4ED8]">
+                    <Upload className="h-4 w-4" />
+                    <span className="truncate">{attachment?.name || "Upload image"}</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => setAttachment(e.target.files?.[0] ?? null)} />
+                  </label>
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Description *</label>
+                  <textarea
+                    value={complaintForm.description}
+                    onChange={(e) => setComplaintForm((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe what the tenant reported and any immediate action needed."
+                    rows={5}
+                    className="w-full resize-none rounded-xl border border-[#E2E8F0] px-3.5 py-3 text-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+              <button type="button" onClick={closeRegisterModal} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingComplaint || tenants.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+              >
+                {submittingComplaint ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Submit Complaint
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* ── Complaint Details Modal ── */}
       {selectedComplaint && (

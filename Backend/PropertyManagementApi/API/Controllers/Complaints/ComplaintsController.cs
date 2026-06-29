@@ -40,6 +40,26 @@ namespace API.Controllers.Complaints
             }
         }
 
+        [HttpPost("/LogCaretakerTenantComplaint/{caretakerId}/{tenantId}")]
+        [Description("Log a tenant complaint by caretaker")]
+        [Authorize]
+        public async Task<IActionResult> LogCaretakerTenantComplaint(int caretakerId, int tenantId, [FromForm] List<IFormFile> file, [FromForm] ComplaintDto complaint)
+        {
+            try
+            {
+                if (file == null || file.Count == 0)
+                {
+                    file = new List<IFormFile> { new FormFile(Stream.Null, 0, 0, "", "") };
+                }
+                await _complaintService.LogCaretakerTenantComplaint(caretakerId, tenantId, file[0], complaint);
+                return Ok("Complaint logged successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error logging caretaker complaint: {ex.Message}");
+            }
+        }
+
         [HttpGet("/GetTenantComplaintsByPropertyId/{propertyId}")]
         [Description("Get tenant complaints by property ID")]
         [Authorize]
@@ -149,6 +169,22 @@ namespace API.Controllers.Complaints
             catch (Exception ex)
             {
                 return BadRequest($"Error retrieving complaints: {ex.Message}");
+            }
+        }
+
+        [HttpGet("/GetAllTenantComplaintsByCaretakerId/{caretakerId}")]
+        [Description("Get all tenant complaints by caretaker ID")]
+        [Authorize]
+        public async Task<IActionResult> GetAllTenantComplaintsByCaretakerId(int caretakerId)
+        {
+            try
+            {
+                var complaints = await _complaintService.GetAllTenantComplaintsByCaretakerId(caretakerId);
+                return Ok(complaints);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving caretaker complaints: {ex.Message}");
             }
         }
     }

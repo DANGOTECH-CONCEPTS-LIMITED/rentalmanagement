@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import PasswordChangeModal from "./PasswordChangeModal";
 
 interface ProtectedRouteProps {
-  role?: 1 | 2 | 3 | 4;
+  role?: 1 | 2 | 3 | 4 | 5;
   fallback?: string;
 }
 
@@ -12,6 +12,7 @@ const roleRedirects = {
   2: "/landlord-dashboard",
   3: "/tenant-dashboard",
   4: "/utility-dashboard",
+  5: "/caretaker-dashboard",
 };
 
 const LoadingSpinner = () => (
@@ -66,6 +67,9 @@ const PasswordChangeModalWrapper = () => {
         break;
       case 4:
         navigate("/utility-dashboard");
+        break;
+      case 5:
+        navigate("/caretaker-dashboard");
         break;
       default:
         navigate("/");

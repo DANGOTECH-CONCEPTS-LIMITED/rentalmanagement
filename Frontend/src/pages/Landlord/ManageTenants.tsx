@@ -66,6 +66,7 @@ interface Tenant {
   invoiceGenerationDay?: number | null;
   property: {
     id: number;
+    ownerId?: number;
     name: string;
     type: string;
     price: number;
@@ -215,6 +216,7 @@ const ManageTenants = () => {
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const user = localStorage.getItem("user");
   const userData = JSON.parse(user);
+  const isCaretaker = userData?.systemRoleId === 5;
   const getAuthToken = () => {
     try {
       return userData?.token ?? null;
@@ -234,8 +236,13 @@ const ManageTenants = () => {
   const fetchTenants = async () => {
     setIsLoading(true);
     try {
-      const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
-      setTenants(data.filter((t: any) => t?.property?.ownerId === userData.id));
+      if (isCaretaker) {
+        const { data } = await axios.get(`${apiUrl}/GetTenantsByCaretakerId/${userData.id}`);
+        setTenants(Array.isArray(data) ? data : []);
+      } else {
+        const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
+        setTenants((Array.isArray(data) ? data : []).filter((tenant: Tenant) => tenant?.property?.ownerId === userData.id));
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -254,8 +261,11 @@ const ManageTenants = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const { data } = await axios.get(`${apiUrl}/GetAllProperties`);
-        setProperties(data);
+        const endpoint = isCaretaker
+          ? `${apiUrl}/GetPropertiesByCaretakerId/${userData.id}`
+          : `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`;
+        const { data } = await axios.get(endpoint);
+        setProperties(Array.isArray(data) ? data : []);
       } catch {
         toast({
           title: "Error",

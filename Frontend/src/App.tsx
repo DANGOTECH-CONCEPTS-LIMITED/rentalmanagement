@@ -198,6 +198,19 @@ const App = () => (
               </Route>
             </Route>
 
+            {/* Caretaker Routes */}
+            <Route element={<ProtectedRoute role={5} />}>
+              <Route path="/caretaker-dashboard" element={<AppLayout role={5} />}>
+                <Route index element={<LandlordDashboard />} />
+                <Route path="manage-tenants" element={<ManageTenants />} />
+                <Route path="properties" element={<Properties />} />
+                <Route path="units" element={<UnitsManagement />} />
+                <Route path="payments" element={<TrackPayments />} />
+                <Route path="complaints" element={<HandleComplaints />} />
+                <Route path="my-profile" element={<UserProfile />} />
+              </Route>
+            </Route>
+
             {/* Tenant Routes */}
             <Route element={<ProtectedRoute role={4} />}>
               <Route path="/utility-dashboard" element={<AppLayout role={4} />}>

@@ -274,10 +274,12 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/RegisterUserMinusFiles")]
-        public async Task<IActionResult> RegisterUserMinusFiles([FromBody] User user)
+        public async Task<IActionResult> RegisterUserMinusFiles([FromBody] User user, [FromQuery] int? landlordId = null)
         {
             try
             {
+                if (landlordId.HasValue && !user.LandlordId.HasValue)
+                    user.LandlordId = landlordId;
                 await _userService.RegisterUserMinusFiles(user);
                 return Ok("User registered successfully without files.");
             }

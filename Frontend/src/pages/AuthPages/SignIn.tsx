@@ -27,6 +27,7 @@ const SignIn = () => {
         case 2: navigate("/landlord-dashboard"); break;
         case 3: navigate("/tenant-dashboard"); break;
         case 4: navigate("/utility-dashboard"); break;
+        case 5: navigate("/caretaker-dashboard"); break;
         default: navigate("/");
       }
     } catch (error) {

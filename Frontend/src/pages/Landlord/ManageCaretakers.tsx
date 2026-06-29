@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
@@ -6,7 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import {
   UserPlus, Trash2, Phone, Mail, IdCard,
-  ShieldCheck, Users, CheckCircle2, XCircle, X,
+  ShieldCheck, Users, CheckCircle2, XCircle, X, AlertTriangle,
+  Building2, Loader2,
 } from "lucide-react";
 
 interface Caretaker {
@@ -17,6 +18,13 @@ interface Caretaker {
   nationalIdNumber: string;
   active: boolean;
   systemRole?: { name: string };
+}
+
+interface Property {
+  id: number;
+  name: string;
+  type?: string;
+  address?: string;
 }
 
 const CARETAKER_ROLE_ID = 5;
@@ -37,30 +45,133 @@ const FIELDS = [
   { label: "Initial Password", key: "password", placeholder: "Leave blank for default (Caretaker@123)", type: "password" },
 ];
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    if (typeof data === "string") return data;
+    if (data) return JSON.stringify(data);
+    return error.message || fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+};
+
 export default function ManageCaretakers() {
-  const { userData } = useAuth();
+  const { user: userData } = useAuth();
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const [caretakers, setCaretakers] = useState<Caretaker[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
+  const [assigningCaretaker, setAssigningCaretaker] = useState<Caretaker | null>(null);
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>([]);
+  const [assignedPropertyIds, setAssignedPropertyIds] = useState<number[]>([]);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
   const [search, setSearch] = useState("");
 
-  useEffect(() => { fetchCaretakers(); }, []);
-
-  const fetchCaretakers = async () => {
+  const fetchCaretakers = useCallback(async () => {
+    if (!userData?.id) return;
     setIsLoading(true);
     try {
-      const { data } = await axios.get(`${apiUrl}/GetCaretakersByLandLordId/${userData?.id}`);
+      const { data } = await axios.get(`${apiUrl}/GetCaretakersByLandLordId/${userData.id}`);
       setCaretakers(Array.isArray(data) ? data : []);
     } catch {
       setCaretakers([]);
     } finally {
       setIsLoading(false);
+    }
+  }, [apiUrl, userData?.id]);
+
+  const fetchProperties = useCallback(async () => {
+    if (!userData?.id) return;
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`);
+      setProperties(Array.isArray(data) ? data : []);
+    } catch {
+      setProperties([]);
+    }
+  }, [apiUrl, userData?.id]);
+
+  useEffect(() => {
+    if (userData?.id) {
+      fetchCaretakers();
+      fetchProperties();
+    }
+  }, [fetchCaretakers, fetchProperties, userData?.id]);
+
+  const openAssignmentModal = async (caretaker: Caretaker) => {
+    setAssigningCaretaker(caretaker);
+    setSelectedPropertyIds([]);
+    setAssignedPropertyIds([]);
+    setAssignmentLoading(true);
+    try {
+      const [{ data: currentProperties }] = await Promise.all([
+        axios.get(`${apiUrl}/GetCaretakerProperties/${caretaker.id}`),
+        properties.length ? Promise.resolve() : fetchProperties(),
+      ]);
+      const currentIds = Array.isArray(currentProperties)
+        ? currentProperties.map((property: Property) => property.id)
+        : [];
+      setSelectedPropertyIds(currentIds);
+      setAssignedPropertyIds(currentIds);
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error, "Failed to load caretaker properties."), variant: "destructive" });
+      setAssigningCaretaker(null);
+    } finally {
+      setAssignmentLoading(false);
+    }
+  };
+
+  const togglePropertySelection = (propertyId: number) => {
+    setSelectedPropertyIds(prev =>
+      prev.includes(propertyId)
+        ? prev.filter(id => id !== propertyId)
+        : [...prev, propertyId]
+    );
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!assigningCaretaker) return;
+
+    const removedPropertyIds = assignedPropertyIds.filter(id => !selectedPropertyIds.includes(id));
+    const hasChanges =
+      removedPropertyIds.length > 0 ||
+      selectedPropertyIds.some(id => !assignedPropertyIds.includes(id));
+
+    if (!hasChanges) {
+      setAssigningCaretaker(null);
+      return;
+    }
+
+    setAssignmentSubmitting(true);
+    try {
+      if (selectedPropertyIds.length > 0) {
+        await axios.post(`${apiUrl}/AssignPropertiesToCaretaker`, {
+          CaretakerId: assigningCaretaker.id,
+          PropertyIds: selectedPropertyIds,
+        });
+      }
+
+      await Promise.all(
+        removedPropertyIds.map(propertyId =>
+          axios.delete(`${apiUrl}/RemovePropertyFromCaretaker/${assigningCaretaker.id}/${propertyId}`)
+        )
+      );
+
+      toast({ title: "Properties Updated", description: `${assigningCaretaker.fullName}'s property assignments were saved.` });
+      setAssigningCaretaker(null);
+      setSelectedPropertyIds([]);
+      setAssignedPropertyIds([]);
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error, "Failed to save property assignments."), variant: "destructive" });
+    } finally {
+      setAssignmentSubmitting(false);
     }
   };
 
@@ -71,33 +182,32 @@ export default function ManageCaretakers() {
     }
     setSubmitting(true);
     try {
-      await axios.post(`${apiUrl}/RegisterUserMinusFiles`, {
+      await axios.post(`${apiUrl}/RegisterUserMinusFiles?landlordId=${userData?.id}`, {
         FullName: form.fullName.trim(),
         Email: form.email.trim(),
         PhoneNumber: form.phoneNumber.trim(),
         NationalIdNumber: form.nationalIdNumber?.trim() || "",
-        PasswordHash: form.password?.trim() || "Caretaker@123",
+        Password: form.password?.trim() || "Caretaker@123",
         SystemRoleId: CARETAKER_ROLE_ID,
         LandlordId: userData?.id,
         Active: true,
-        Verified: false,
+        Verified: true,
       });
       toast({ title: "Caretaker Added", description: `${form.fullName} has been registered.` });
       setAddOpen(false);
       setForm(emptyForm);
       fetchCaretakers();
-    } catch (err: any) {
-      const msg = typeof err.response?.data === "string"
-        ? err.response.data
-        : JSON.stringify(err.response?.data) || err.message || "Failed to add caretaker.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Error", description: getErrorMessage(err, "Failed to add caretaker."), variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Remove ${name} as caretaker?`)) return;
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    const { id, name } = confirmDelete;
+    setConfirmDelete(null);
     setDeletingId(id);
     try {
       await axios.delete(`${apiUrl}/DeleteUser/${id}`);
@@ -199,7 +309,7 @@ export default function ManageCaretakers() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                  {["Caretaker", "Email", "Phone", "National ID", "Status", ""].map(h => (
+                  {["Caretaker", "Email", "Phone", "National ID", "Status", "Properties", ""].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -249,10 +359,19 @@ export default function ManageCaretakers() {
                         {c.active ? "Active" : "Inactive"}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => openAssignmentModal(c)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                      >
+                        <Building2 className="h-3.5 w-3.5" />
+                        Assign
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button
                         disabled={deletingId === c.id}
-                        onClick={() => handleDelete(c.id, c.fullName)}
+                        onClick={() => setConfirmDelete({ id: c.id, name: c.fullName })}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -266,6 +385,125 @@ export default function ManageCaretakers() {
           </div>
         )}
       </div>
+
+      {/* Confirm Delete Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDelete(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-white" />
+                <h2 className="text-lg font-bold text-white">Remove Caretaker</h2>
+              </div>
+              <button onClick={() => setConfirmDelete(null)} className="text-white/70 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-slate-600 text-sm">
+                Are you sure you want to remove <span className="font-semibold text-slate-800">{confirmDelete.name}</span> as a caretaker? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3 pt-1">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Yes, Remove
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Assign Properties Modal */}
+      {assigningCaretaker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setAssigningCaretaker(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-[#0F172A] to-[#1D4ED8] px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Assign Properties</h2>
+                <p className="text-blue-200 text-xs mt-0.5">{assigningCaretaker.fullName}</p>
+              </div>
+              <button onClick={() => setAssigningCaretaker(null)} className="text-white/70 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              {assignmentLoading ? (
+                <div className="py-10 flex items-center justify-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading properties...
+                </div>
+              ) : properties.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-400">
+                  No properties available for assignment.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {properties.map(property => {
+                    const checked = selectedPropertyIds.includes(property.id);
+                    return (
+                      <label
+                        key={property.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                          checked ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-white hover:bg-slate-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePropertySelection(property.id)}
+                          className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#0F172A]">{property.name}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {[property.type, property.address].filter(Boolean).join(" • ") || "Property"}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-[#E2E8F0] flex justify-end gap-3">
+              <button
+                onClick={() => setAssigningCaretaker(null)}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAssignments}
+                disabled={assignmentLoading || assignmentSubmitting || properties.length === 0}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-[#1D4ED8] text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60"
+              >
+                {assignmentSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Save Assignments
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Add Modal */}
       {addOpen && (
