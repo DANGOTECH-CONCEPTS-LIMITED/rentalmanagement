@@ -59,6 +59,7 @@ const UnitsManagement = () => {
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const userData = JSON.parse(localStorage.getItem("user") || "{}");
+  const isCaretaker = userData?.systemRoleId === 5;
 
   const [units, setUnits] = useState<PropertyUnit[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -77,7 +78,10 @@ const UnitsManagement = () => {
   const fetchUnits = async () => {
     setIsLoading(true);
     try {
-      const { data } = await axios.get<PropertyUnit[]>(`${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`);
+      const endpoint = isCaretaker
+        ? `${apiUrl}/GetPropertyUnitsByCaretakerId/${userData.id}`
+        : `${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`;
+      const { data } = await axios.get<PropertyUnit[]>(endpoint);
       setUnits(data);
     } catch (error: any) {
       toast({ title: "Error", description: error.response?.data || "Failed to load units.", variant: "destructive" });
@@ -89,26 +93,36 @@ const UnitsManagement = () => {
   useEffect(() => {
     fetchUnits();
 
-    const fetchProperties = async () => {
+    const fetchPageData = async () => {
+      let loadedProperties: Property[] = [];
       try {
-        const { data } = await axios.get<Property[]>(`${apiUrl}/GetPropertiesByLandLordId/${userData.id}`);
-        setProperties(data);
+        const endpoint = isCaretaker
+          ? `${apiUrl}/GetPropertiesByCaretakerId/${userData.id}`
+          : `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`;
+        const { data } = await axios.get<Property[]>(endpoint);
+        loadedProperties = Array.isArray(data) ? data : [];
+        setProperties(loadedProperties);
+      } catch {
+        // silent
+      }
+
+      try {
+        const endpoint = isCaretaker
+          ? `${apiUrl}/GetTenantsByCaretakerId/${userData.id}`
+          : `${apiUrl}/GetAllTenants`;
+        const { data } = await axios.get<Tenant[]>(endpoint);
+        const assignedPropertyIds = new Set(loadedProperties.map((property) => property.id));
+        setTenants(
+          data.filter((tenant) =>
+            tenant.propertyId > 0 && (!isCaretaker || assignedPropertyIds.has(tenant.propertyId))
+          )
+        );
       } catch {
         // silent
       }
     };
 
-    const fetchTenants = async () => {
-      try {
-        const { data } = await axios.get<Tenant[]>(`${apiUrl}/GetAllTenants`);
-        setTenants(data.filter((t) => t.propertyId > 0));
-      } catch {
-        // silent
-      }
-    };
-
-    fetchProperties();
-    fetchTenants();
+    fetchPageData();
   }, []);
 
   const propertyName = (id: number) =>
@@ -258,7 +272,7 @@ const UnitsManagement = () => {
       className: "text-right",
       cell: (u) => (
         <div className="flex items-center justify-end gap-2">
-          {u.status === "Occupied" ? (
+          {!isCaretaker && (u.status === "Occupied" ? (
             <button
               onClick={() => setRemoveUnit(u)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-[#E2E8F0] text-slate-600 hover:border-amber-300 hover:text-amber-700 hover:bg-amber-50 transition-colors"
@@ -272,21 +286,21 @@ const UnitsManagement = () => {
             >
               <UserPlus className="h-3.5 w-3.5" />Assign
             </button>
-          )}
-          <button
+          ))}
+          {!isCaretaker && <button
             onClick={() => openEdit(u)}
             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-[#1D4ED8] transition-colors"
             title="Edit"
           >
             <Pencil className="h-4 w-4" />
-          </button>
-          <button
+          </button>}
+          {!isCaretaker && <button
             onClick={() => setDeleteUnit(u)}
             className="p-1.5 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
             title="Delete"
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </button>}
         </div>
       ),
     },
@@ -325,12 +339,12 @@ const UnitsManagement = () => {
               ))}
             </div>
           </div>
-          <button
+          {!isCaretaker && <button
             onClick={openAdd}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-[#1D4ED8] text-sm font-semibold hover:bg-blue-50 transition-colors shadow-lg self-start md:self-auto"
           >
             <Plus className="h-4 w-4" />Add Room Unit
-          </button>
+          </button>}
         </div>
       </div>
 

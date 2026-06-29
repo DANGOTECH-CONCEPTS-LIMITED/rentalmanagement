@@ -19,5 +19,7 @@ namespace Application.Interfaces.Complaints
         Task<IEnumerable<Complaint>> GetComplaintsByTenantId(int tenantId);
         Task<IEnumerable<Complaint>> GetAllTenantComplaints();
         Task<IEnumerable<Complaint>> GetAllTenantComplaintsByLandlordId(int landlordId);
+        Task<IEnumerable<Complaint>> GetAllTenantComplaintsByCaretakerId(int caretakerId);
+        Task LogCaretakerTenantComplaint(int caretakerId, int tenantId, IFormFile file, ComplaintDto complaint);
     }
 }

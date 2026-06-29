@@ -50,6 +50,15 @@ namespace Infrastructure.Services.Complaints
                 .Where(c => c.Property.OwnerId == landlordId).ToListAsync();
         }
 
+        public async Task<IEnumerable<Complaint>> GetAllTenantComplaintsByCaretakerId(int caretakerId)
+        {
+            return await _context.TenantComplaints
+                .Include(c => c.Property)
+                .Where(c => _context.CaretakerPropertyAssignments
+                    .Any(a => a.CaretakerId == caretakerId && a.PropertyId == c.PropertyId))
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Complaint>> GetComplaintsByTenantId(int tenantId)
         {
             return await _context.TenantComplaints
@@ -102,6 +111,34 @@ namespace Infrastructure.Services.Complaints
             //add the complaint to the database
             _context.TenantComplaints.Add(newcomplaint);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task LogCaretakerTenantComplaint(int caretakerId, int tenantId, IFormFile file, ComplaintDto complaint)
+        {
+            var tenant = await _context.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+            if (tenant == null)
+            {
+                throw new Exception("Tenant does not exist");
+            }
+
+            var isAssigned = await _context.CaretakerPropertyAssignments
+                .AnyAsync(a => a.CaretakerId == caretakerId && a.PropertyId == tenant.PropertyId);
+
+            if (!isAssigned)
+            {
+                throw new Exception("Tenant is not within a property assigned to this caretaker");
+            }
+
+            if (complaint.PropertyId > 0 && complaint.PropertyId != tenant.PropertyId)
+            {
+                throw new Exception("Complaint property does not match the selected tenant");
+            }
+
+            complaint.PropertyId = tenant.PropertyId;
+            await LogTenantComplaint(file, complaint);
         }
 
         public async Task UpdateTenantComplaint(int complaintId, ComplaintDto complaint)
