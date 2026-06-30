@@ -216,8 +216,7 @@ namespace API.Controllers.Accounts
                 .AsNoTracking()
                 .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
                     i => i.PropertyId, p => p.Id, (i, p) => i)
-                .Where(i => !string.IsNullOrWhiteSpace(i.Type)
-                         && i.Type.Contains("security", StringComparison.OrdinalIgnoreCase))
+                .Where(i => i.Type != null && i.Type.ToLower().Contains("security"))
                 .Select(i => new
                 {
                     i.TenantId,
