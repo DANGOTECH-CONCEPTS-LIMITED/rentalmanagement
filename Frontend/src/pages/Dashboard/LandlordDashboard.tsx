@@ -157,11 +157,10 @@ const LandlordDashboard = () => {
   const userData = JSON.parse(user);
   const token = userData.token;
   const isCaretaker = userData?.systemRoleId === 5;
-  const landlordId = isCaretaker ? userData.landlordId : userData.id;
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    if (!isCaretaker) fetchWalletData();
+    fetchWalletData();
     fetchProperties();
     fetchTenants();
     fetchUtilityStats();
@@ -208,7 +207,7 @@ const LandlordDashboard = () => {
   const fetchUtilityStats = async () => {
     try {
       const { data } = await axios.get(
-        `${apiUrl}/GetLandlordUtilityStats/${landlordId}`,
+        `${apiUrl}/GetLandlordUtilityStats/${userData.id}`,
       );
       setUtilityStats(data);
     } catch {}
@@ -216,9 +215,8 @@ const LandlordDashboard = () => {
 
   const fetchRevenueKpis = async () => {
     try {
-      if (!landlordId) return;
       const { data } = await axios.get(
-        `${apiUrl}/api/Accounting/dashboard-kpis/${landlordId}`,
+        `${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}`,
       );
       setRevenueKpis(data);
     } catch {}
@@ -367,7 +365,7 @@ const LandlordDashboard = () => {
               {greeting()}, {userData?.fullName?.split(" ")[0]} 👋
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">
-              {isCaretaker ? "Caretaker Dashboard" : "Landlord Dashboard"}
+              Landlord Dashboard
             </h1>
             <p className="mt-1 text-sm text-blue-200/70">
               {new Date().toLocaleDateString("en-GB", {
@@ -379,48 +377,48 @@ const LandlordDashboard = () => {
             </p>
           </div>
 
-          {/* Wallet inline — landlord only */}
-          {!isCaretaker && (
-            <div className="flex flex-col gap-3 sm:items-end">
-              <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
-                  <Wallet className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/60 font-medium">
-                    Wallet Balance
+          {/* Wallet inline */}
+          <div className="flex flex-col gap-3 sm:items-end">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                <Wallet className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs text-white/60 font-medium">
+                  Wallet Balance
+                </p>
+                {isLoading ? (
+                  <div className="h-6 w-28 bg-white/20 rounded-md animate-pulse mt-1" />
+                ) : (
+                  <p className="text-xl font-bold">
+                    {balance !== null ? formatCurrency(balance) : "--"}
                   </p>
-                  {isLoading ? (
-                    <div className="h-6 w-28 bg-white/20 rounded-md animate-pulse mt-1" />
-                  ) : (
-                    <p className="text-xl font-bold">
-                      {balance !== null ? formatCurrency(balance) : "--"}
-                    </p>
-                  )}
-                </div>
-                <div className="ml-4 flex gap-2">
-                  <button
-                    onClick={() => setShowWithdrawModal(true)}
-                    className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
-                  >
-                    Withdraw
-                  </button>
-                  <button
-                    onClick={() => setShowHistoryModal(true)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25 transition-colors"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
-                </div>
+                )}
+              </div>
+              <div className="ml-4 flex gap-2">
+                {/* Withdraw button */}
+                <button
+                  onClick={() => setShowWithdrawModal(true)}
+                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1D4ED8] hover:bg-blue-50 transition-colors"
+                >
+                  Withdraw
+                </button>
+                {/* History chevron */}
+                <button
+                  onClick={() => setShowHistoryModal(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25 transition-colors"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* ── Withdraw modal — landlord only ── */}
+      {/* ── Withdraw modal ── */}
       <AnimatePresence>
-        {!isCaretaker && showWithdrawModal && (
+        {showWithdrawModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 12 }}
@@ -495,9 +493,9 @@ const LandlordDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Confirm withdrawal — landlord only ── */}
+      {/* ── Confirm withdrawal ── */}
       <AnimatePresence>
-        {!isCaretaker && showConfirmation && (
+        {showConfirmation && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 12 }}
@@ -562,9 +560,9 @@ const LandlordDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Transaction history modal — landlord only ── */}
+      {/* ── Transaction history modal ── */}
       <AnimatePresence>
-        {!isCaretaker && showHistoryModal && (
+        {showHistoryModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 12 }}

@@ -17,7 +17,6 @@ interface User {
   phoneNumber: string;
   token: string;
   systemRoleId: number;
-  landlordId?: number;
 }
 
 interface AuthContextType {
@@ -126,7 +125,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         systemRoleId: response.data.systemRoleId,
         verified: response.data.verified,
         passportPhoto: response.data.passportPhoto,
-        landlordId: response.data.landlordId,
       };
 
       setUser(userData);
