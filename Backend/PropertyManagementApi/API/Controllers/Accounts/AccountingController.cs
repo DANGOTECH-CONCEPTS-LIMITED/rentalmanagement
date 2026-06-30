@@ -211,22 +211,43 @@ namespace API.Controllers.Accounts
                     )))
                 .Sum(contract => (decimal)contract.RentAmount);
 
-            var currentMonthSecurityDepositInvoices = invoices
+            // Security deposits are one-time events — query all time, not just current month
+            var allTimeSecDepositInvoices = await _db.TenantInvoices
+                .AsNoTracking()
+                .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
+                    i => i.PropertyId, p => p.Id, (i, p) => i)
                 .Where(i => !string.IsNullOrWhiteSpace(i.Type)
                          && i.Type.Contains("security", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+                .Select(i => new
+                {
+                    i.TenantId,
+                    i.PropertyId,
+                    i.PropertyUnitId,
+                    i.Amount,
+                    i.OriginalAmount,
+                    i.PaidAmount,
+                })
+                .ToListAsync();
 
-            var securityDepositPayments = countedPayments
-                .Where(p => IsSecurityDepositPayment(p.PaymentType, p.Description))
+            var allTimeSecDepositPayments = await _db.TenantPayments
+                .AsNoTracking()
+                .Where(p => p.PropertyTenant.Property != null
+                         && p.PropertyTenant.Property.OwnerId == landlordId)
+                .Select(p => new { p.Amount, p.PaymentStatus, p.PaymentType, p.Description })
+                .ToListAsync();
+
+            var securityDepositPayments = allTimeSecDepositPayments
+                .Where(p => ShouldCountDashboardPayment(p.PaymentStatus)
+                         && IsSecurityDepositPayment(p.PaymentType, p.Description))
                 .Sum(p => (decimal)p.Amount);
 
-            var securityDepositInvoices = currentMonthSecurityDepositInvoices
+            var securityDepositInvoices = allTimeSecDepositInvoices
                 .Sum(invoice => (decimal)(invoice.PaidAmount > 0
                     ? invoice.PaidAmount
                     : invoice.OriginalAmount > 0 ? invoice.OriginalAmount : invoice.Amount));
 
             var contractSecurityDeposits = activeContracts.Sum(contract => (decimal)contract.SecurityDeposit);
-            var manualSecurityDeposits = currentMonthSecurityDepositInvoices
+            var manualSecurityDeposits = allTimeSecDepositInvoices
                 .Where(invoice => !activeContracts.Any(contract =>
                     (contract.TenantId.HasValue && contract.TenantId.Value == invoice.TenantId)
                     || (contract.PropertyId.HasValue

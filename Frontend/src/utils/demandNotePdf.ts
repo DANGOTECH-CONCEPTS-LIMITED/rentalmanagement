@@ -377,16 +377,21 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
   doc.line(pageW - mg - 60, y, pageW - mg, y);
   doc.text("Designation / Title", pageW - mg - 60, y + 4);
 
-  // ── Footer ─────────────────────────────────────────────────────────────────
-  doc.setFillColor(10, 18, 40);
-  doc.rect(0, pageH - 11, pageW, 11, "F");
-  doc.setFillColor(234, 179, 8);
-  doc.rect(0, pageH - 11, 3, 11, "F");
-  doc.setTextColor(148, 163, 184);
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${ref}  ·  ${companyName}  ·  Generated ${new Date().toLocaleDateString("en-GB")}`, mg, pageH - 4);
-  doc.text("OFFICIAL DOCUMENT", pageW - mg, pageH - 4, { align: "right" });
+  // ── Footer on every page ───────────────────────────────────────────────────
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(10, 18, 40);
+    doc.rect(0, pageH - 11, pageW, 11, "F");
+    doc.setFillColor(234, 179, 8);
+    doc.rect(0, pageH - 11, 3, 11, "F");
+    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${ref}  ·  ${companyName}  ·  Generated ${new Date().toLocaleDateString("en-GB")}`, mg, pageH - 4);
+    doc.text(`Page ${p} of ${totalPages}`, pageW / 2, pageH - 4, { align: "center" });
+    doc.text("OFFICIAL DOCUMENT", pageW - mg, pageH - 4, { align: "right" });
+  }
 
   doc.save(`DemandNote_${tenant.fullName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`);
 };

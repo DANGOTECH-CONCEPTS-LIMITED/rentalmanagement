@@ -375,7 +375,11 @@ const InvoiceManagement = () => {
         CreatedByUserId: userData.id,
         CreatedByName: userData.fullName || "",
       };
-      await axios.post(`${apiUrl}/CreateTenantInvoice`, body);
+      // When paying against an existing invoice, skip creating a new invoice record
+      // (the existing invoice is already the debit — creating another one doubles it)
+      if (!(form.type === "Manual Payment" && selectedInvoiceId)) {
+        await axios.post(`${apiUrl}/CreateTenantInvoice`, body);
+      }
 
       // Also record in TenantPayments table when type is Manual Payment
       if (form.type === "Manual Payment") {
