@@ -525,6 +525,13 @@ namespace Infrastructure.Services.PaymentServices
 
             var charges = await CalculateUtilityChargeAsync(dto.MeterNumber, dto.Amount);
 
+            // check whether charges are less than 600 if its less give it 600
+            if(charges < 600)
+            {
+                charges = 600;
+            } 
+
+
             var payment = new UtilityPayment
             {
                 UtilityType = "PREPAID WATER",
