@@ -667,7 +667,14 @@ const AdminWalletManagement = () => {
   }, [selectedUserId]);
 
   const selectedRoleFilter = roleFilter === "all" ? "All wallet roles" : roleFilter;
-  const transferTargets = selectableUsers.filter((user) => String(user.id) !== selectedUserId);
+  const selectedTransferTarget = useMemo(
+    () => selectableUsers.find((user) => String(user.id) === transferTargetUserId) ?? null,
+    [selectableUsers, transferTargetUserId]
+  );
+  const transferTargets = useMemo(
+    () => selectableUsers.filter((user) => String(user.id) !== selectedUserId),
+    [selectableUsers, selectedUserId]
+  );
   const filteredTransferTargets = useMemo(() => {
     const normalizedSearch = transferTargetSearchTerm.trim().toLowerCase();
 
@@ -682,6 +689,16 @@ const AdminWalletManagement = () => {
         .includes(normalizedSearch)
     );
   }, [transferTargetSearchTerm, transferTargets]);
+
+  useEffect(() => {
+    if (!transferTargetUserId) {
+      return;
+    }
+
+    if (transferTargetUserId === selectedUserId || !selectedTransferTarget) {
+      setTransferTargetUserId("");
+    }
+  }, [selectedTransferTarget, selectedUserId, transferTargetUserId]);
 
   return (
     <div className="space-y-8">
@@ -1177,15 +1194,9 @@ const AdminWalletManagement = () => {
                   >
                     <span className="truncate text-left">
                       {transferTargetUserId
-                        ? (() => {
-                            const target = transferTargets.find(
-                              (user) => String(user.id) === transferTargetUserId
-                            );
-
-                            return target
-                              ? `${target.fullName} (${getRoleLabel(target)})`
-                              : "Search destination wallet";
-                          })()
+                        ? selectedTransferTarget
+                          ? `${selectedTransferTarget.fullName} (${getRoleLabel(selectedTransferTarget)})`
+                          : "Search destination wallet"
                         : transferTargets.length > 0
                           ? "Search destination wallet"
                           : "No destination wallets available"}
