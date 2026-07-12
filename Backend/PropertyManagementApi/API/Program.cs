@@ -52,6 +52,7 @@ using Infrastructure.Services.STSVending;
 using Infrastructure.Services.Contract;
 
 var builder = WebApplication.CreateBuilder(args);
+const string CorsPolicyName = "AllowAll";
 
 builder.Host.UseSerilog((context, services, loggerConfiguration) =>
 {
@@ -159,14 +160,13 @@ builder.Services.AddControllers(options =>
     });
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowDangopayFrontend", policy =>
+    options.AddPolicy(CorsPolicyName, policy =>
     {
         policy
-         .SetIsOriginAllowed(_ => true) // ⚠️ allow ANY origin
-                                        //.WithOrigins("https://dangopay.dangotechconcepts.com")
+            .SetIsOriginAllowed(_ => true)
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials(); // Optional, only if using cookies or auth headers
+            .AllowCredentials();
     });
 });
 
@@ -286,6 +286,10 @@ builder.Logging.AddConsole();
 
 var app = builder.Build();
 app.UsePathBase("/TestPropertyApi");
+
+// Apply CORS before anything can write a response.
+app.UseCors(CorsPolicyName);
+
 app.UseStaticFiles(); // wwwroot
 
 // Serve uploaded files at /uploads/{filename}
@@ -297,10 +301,6 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/uploads"
 });
 
-// ✅ Apply CORS FIRST
-app.UseCors("AllowDangopayFrontend");
-
-// ✅ Then authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
