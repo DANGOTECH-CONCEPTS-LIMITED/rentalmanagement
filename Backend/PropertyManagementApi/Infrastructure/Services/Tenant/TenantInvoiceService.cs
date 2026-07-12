@@ -9,18 +9,22 @@ using Domain.Dtos.Tenant.Invoice;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services.Tenant
 {
     public class TenantInvoiceService : ITenantInvoiceService
     {
         private readonly AppDbContext _db;
-        private readonly ISmsProcessor _sms;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<TenantInvoiceService> _logger;
 
-        public TenantInvoiceService(AppDbContext db, ISmsProcessor sms)
+        public TenantInvoiceService(AppDbContext db, IServiceScopeFactory scopeFactory, ILogger<TenantInvoiceService> logger)
         {
             _db = db;
-            _sms = sms;
+            _scopeFactory = scopeFactory;
+            _logger = logger;
         }
 
         public async Task<TenantInvoice> CreateInvoiceAsync(CreateTenantInvoiceDto dto)
@@ -100,10 +104,27 @@ namespace Infrastructure.Services.Tenant
                 var msg = $"Dear {tenant.FullName}, a {invoice.Type} invoice of UGX {invoice.Amount:N0} " +
                           $"has been raised and is due on {invoice.DueDate:dd MMM yyyy}. " +
                           $"Invoice: {invoice.InvoiceNumber}. Thank you.";
-                await _sms.SendAsync(tenant.PhoneNumber, msg);
+                QueueInvoiceSms(tenant.PhoneNumber, msg, invoice.InvoiceNumber);
             }
 
             return invoice;
+        }
+
+        private void QueueInvoiceSms(string phoneNumber, string message, string invoiceNumber)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var sms = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
+                    await sms.SendAsync(phoneNumber, message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Invoice SMS notification failed for invoice {InvoiceNumber} to {PhoneNumber}", invoiceNumber, phoneNumber);
+                }
+            });
         }
 
         public async Task<TenantInvoice> CreateSecurityDepositInvoiceAsync(int tenantId, int propertyId, int? propertyUnitId, double amount, int createdByUserId, string? notes = null)
