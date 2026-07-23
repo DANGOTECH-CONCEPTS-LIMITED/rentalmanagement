@@ -1,4 +1,5 @@
 using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog.Core;
 using Serilog.Debugging;
@@ -37,25 +38,12 @@ namespace API.Logging
                 var rawContent = BuildRawContent(logEvent, level, renderedMessage, exception);
                 var eventHash = ComputeHash(rawContent);
 
-                if (!string.IsNullOrWhiteSpace(eventHash) && context.ServiceLogs.Any(x => x.EventHash == eventHash))
-                {
-                    return;
-                }
-
-                context.ServiceLogs.Add(new Domain.Entities.ServiceLogs.ServiceLogs
-                {
-                    ServiceName = serviceName,
-                    LogDate = logEvent.Timestamp.LocalDateTime,
-                    LogLevel = level,
-                    Message = renderedMessage,
-                    Exception = exception,
-                    SourceType = "SerilogSink",
-                    SourceIdentifier = serviceName,
-                    RawContent = rawContent,
-                    EventHash = eventHash,
-                });
-
-                context.SaveChanges();
+                context.Database.ExecuteSqlInterpolated($"""
+                    INSERT IGNORE INTO `ServiceLogs`
+                        (`EventHash`, `Exception`, `LogDate`, `LogLevel`, `Message`, `RawContent`, `ServiceName`, `SourceIdentifier`, `SourceType`)
+                    VALUES
+                        ({eventHash}, {exception}, {logEvent.Timestamp.LocalDateTime}, {level}, {renderedMessage}, {rawContent}, {serviceName}, {serviceName}, {"SerilogSink"});
+                    """);
             }
             catch (Exception ex)
             {
