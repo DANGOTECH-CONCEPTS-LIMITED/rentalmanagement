@@ -9,7 +9,6 @@ using Domain.Dtos.Tenant.Invoice;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services.Tenant
@@ -17,13 +16,13 @@ namespace Infrastructure.Services.Tenant
     public class TenantInvoiceService : ITenantInvoiceService
     {
         private readonly AppDbContext _db;
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IInvoiceSmsQueue _invoiceSmsQueue;
         private readonly ILogger<TenantInvoiceService> _logger;
 
-        public TenantInvoiceService(AppDbContext db, IServiceScopeFactory scopeFactory, ILogger<TenantInvoiceService> logger)
+        public TenantInvoiceService(AppDbContext db, IInvoiceSmsQueue invoiceSmsQueue, ILogger<TenantInvoiceService> logger)
         {
             _db = db;
-            _scopeFactory = scopeFactory;
+            _invoiceSmsQueue = invoiceSmsQueue;
             _logger = logger;
         }
 
@@ -71,12 +70,13 @@ namespace Infrastructure.Services.Tenant
                     throw new Exception("Unit does not belong to the selected property.");
             }
 
-            var invoiceNumber = await GenerateNextInvoiceNumberAsync();
-            var description = ResolveInvoiceDescription(dto.Description, dto.Notes, dto.Type, invoiceNumber);
+            var usesGeneratedDescription = string.IsNullOrWhiteSpace(dto.Description) && string.IsNullOrWhiteSpace(dto.Notes);
+            var temporaryInvoiceNumber = $"PENDING-{Guid.NewGuid():N}";
+            var description = ResolveInvoiceDescription(dto.Description, dto.Notes, dto.Type, temporaryInvoiceNumber);
 
             var invoice = new TenantInvoice
             {
-                InvoiceNumber = invoiceNumber,
+                InvoiceNumber = temporaryInvoiceNumber,
                 Type = string.IsNullOrWhiteSpace(dto.Type) ? "Invoice" : dto.Type.Trim(),
                 Status = string.IsNullOrWhiteSpace(dto.Status) ? "Pending" : dto.Status.Trim(),
                 TenantId = dto.TenantId,
@@ -98,6 +98,14 @@ namespace Infrastructure.Services.Tenant
             _db.TenantInvoices.Add(invoice);
             await _db.SaveChangesAsync();
 
+            invoice.InvoiceNumber = $"INV-{invoice.CreatedAt:yyyy}-{invoice.Id:D6}";
+            if (usesGeneratedDescription)
+            {
+                invoice.Notes = ResolveInvoiceDescription(dto.Description, dto.Notes, dto.Type, invoice.InvoiceNumber);
+            }
+
+            await _db.SaveChangesAsync();
+
             // Notify tenant via SMS
             if (!string.IsNullOrWhiteSpace(tenant.PhoneNumber))
             {
@@ -112,19 +120,10 @@ namespace Infrastructure.Services.Tenant
 
         private void QueueInvoiceSms(string phoneNumber, string message, string invoiceNumber)
         {
-            _ = Task.Run(async () =>
+            if (!_invoiceSmsQueue.TryQueue(phoneNumber, message, invoiceNumber))
             {
-                try
-                {
-                    using var scope = _scopeFactory.CreateScope();
-                    var sms = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
-                    await sms.SendAsync(phoneNumber, message);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Invoice SMS notification failed for invoice {InvoiceNumber} to {PhoneNumber}", invoiceNumber, phoneNumber);
-                }
-            });
+                _logger.LogWarning("Invoice SMS queue is full; notification skipped for invoice {InvoiceNumber}", invoiceNumber);
+            }
         }
 
         public async Task<TenantInvoice> CreateSecurityDepositInvoiceAsync(int tenantId, int propertyId, int? propertyUnitId, double amount, int createdByUserId, string? notes = null)
@@ -401,30 +400,6 @@ namespace Infrastructure.Services.Tenant
                 ClosingBalance = runningBalance,
                 Lines = statementLines
             };
-        }
-
-        private async Task<string> GenerateNextInvoiceNumberAsync()
-        {
-            var year = DateTime.UtcNow.Year;
-            var prefix = $"INV-{year}-";
-
-            // Find the latest invoice for the year by InvoiceNumber prefix
-            var last = await _db.TenantInvoices
-                .AsNoTracking()
-                .Where(i => i.InvoiceNumber.StartsWith(prefix))
-                .OrderByDescending(i => i.InvoiceNumber)
-                .Select(i => i.InvoiceNumber)
-                .FirstOrDefaultAsync();
-
-            var nextSeq = 1;
-            if (!string.IsNullOrWhiteSpace(last))
-            {
-                var parts = last.Split('-');
-                if (parts.Length == 3 && int.TryParse(parts[2], out var seq))
-                    nextSeq = seq + 1;
-            }
-
-            return $"{prefix}{nextSeq:D3}";
         }
 
         private static double GetHeldDepositBalance(TenantInvoice invoice)

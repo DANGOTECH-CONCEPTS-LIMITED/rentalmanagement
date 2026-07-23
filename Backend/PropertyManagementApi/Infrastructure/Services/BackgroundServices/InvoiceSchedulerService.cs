@@ -107,7 +107,6 @@ namespace Infrastructure.Services.BackgroundServices
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var invoiceSvc = scope.ServiceProvider.GetRequiredService<ITenantInvoiceService>();
-            var sms = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
 
             var today = DateTime.UtcNow;
             var globalDueDays = _config.GetValue<int>("InvoiceScheduler:DueDays", 7);
@@ -173,17 +172,6 @@ namespace Infrastructure.Services.BackgroundServices
                         CreatedByUserId = contract.OwnerId,
                         CreatedByName = "System (Auto)",
                     });
-
-                    // Send SMS notification
-                    var phone = contract.Tenant?.PhoneNumber ?? contract.TenantPhone;
-                    if (!string.IsNullOrWhiteSpace(phone))
-                    {
-                        var name = contract.Tenant?.FullName ?? contract.TenantName;
-                        var msg = $"Dear {name}, your rent invoice of UGX {contract.RentAmount:N0} " +
-                                  $"for {contract.PropertyName} is due on {invoice.DueDate:dd MMM yyyy}. " +
-                                  $"Invoice: {invoice.InvoiceNumber}. Thank you.";
-                        await sms.SendAsync(phone, msg);
-                    }
 
                     created++;
                     _logger.LogInformation("Created invoice {InvoiceNo} for tenant {TenantId}", invoice.InvoiceNumber, contract.TenantId);

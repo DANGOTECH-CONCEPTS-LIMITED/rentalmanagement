@@ -82,6 +82,9 @@ builder.Services.AddScoped<IPropertyUnitService, PropertyUnitService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITenantInvoiceService, TenantInvoiceService>();
+builder.Services.AddSingleton<InvoiceSmsQueue>();
+builder.Services.AddSingleton<IInvoiceSmsQueue>(services => services.GetRequiredService<InvoiceSmsQueue>());
+builder.Services.AddHostedService(services => services.GetRequiredService<InvoiceSmsQueue>());
 // Version endpoint controller added for deployment verification
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IExternalPaymentService, ExternalPaymentService>();

@@ -10,6 +10,7 @@ namespace API.Logging
 {
     public class ServiceLogDatabaseSink : ILogEventSink
     {
+        private static readonly AsyncLocal<bool> IsPersisting = new();
         private readonly IServiceScopeFactory _scopeFactory;
 
         public ServiceLogDatabaseSink(IServiceScopeFactory scopeFactory)
@@ -19,8 +20,14 @@ namespace API.Logging
 
         public void Emit(LogEvent logEvent)
         {
+            if (IsPersisting.Value || IsEntityFrameworkLog(logEvent))
+            {
+                return;
+            }
+
             try
             {
+                IsPersisting.Value = true;
                 using var scope = _scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var serviceName = ResolveServiceName(logEvent);
@@ -54,6 +61,16 @@ namespace API.Logging
             {
                 SelfLog.WriteLine("Failed to persist Serilog event to database: {0}", ex);
             }
+            finally
+            {
+                IsPersisting.Value = false;
+            }
+        }
+
+        private static bool IsEntityFrameworkLog(LogEvent logEvent)
+        {
+            return logEvent.Properties.TryGetValue("SourceContext", out var sourceContext)
+                && sourceContext.ToString().Trim('"').StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal);
         }
 
         private static string ResolveServiceName(LogEvent logEvent)
