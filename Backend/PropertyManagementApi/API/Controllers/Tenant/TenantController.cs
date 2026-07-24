@@ -79,6 +79,21 @@ namespace API.Controllers.Tenant
             }
         }
 
+        [HttpDelete("/DeleteTenantAndAllData/{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteTenantAndAllData(int id)
+        {
+            try
+            {
+                await _tenantService.DeleteTenantAndAllDataAsync(id);
+                return Ok("Tenant and all associated data deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpGet("/GetTenantById/{id}")]
         [Authorize]
         public async Task<IActionResult> GetTenantById(int id)

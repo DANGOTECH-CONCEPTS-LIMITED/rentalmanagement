@@ -184,6 +184,74 @@ namespace Infrastructure.Services.Tenant
             await _context.SaveChangesAsync();
         }
 
+        public async Task DeleteTenantAndAllDataAsync(int id)
+        {
+            var tenant = await _context.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == id);
+            if (tenant == null)
+                throw new Exception("Tenant not found.");
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            await _context.JournalLines
+                .Where(line => line.TenantId == id)
+                .ExecuteDeleteAsync();
+            await _context.TenantPayments
+                .Where(payment => payment.PropertyTenantId == id)
+                .ExecuteDeleteAsync();
+            await _context.TenantInvoices
+                .Where(invoice => invoice.TenantId == id)
+                .ExecuteDeleteAsync();
+            await _context.RentalContracts
+                .Where(contract => contract.TenantId == id)
+                .ExecuteDeleteAsync();
+            await _context.ViewingRequests
+                .Where(request => request.TenantId == id)
+                .ExecuteDeleteAsync();
+
+            var hasEmail = !string.IsNullOrWhiteSpace(tenant.Email);
+            var hasPhoneNumber = !string.IsNullOrWhiteSpace(tenant.PhoneNumber);
+            if (hasEmail || hasPhoneNumber)
+            {
+                await _context.SmsLogs
+                    .Where(log => (hasEmail && log.SentByEmail == tenant.Email) ||
+                                  (hasPhoneNumber && log.Phone == tenant.PhoneNumber))
+                    .ExecuteDeleteAsync();
+            }
+
+            if (tenant.UserId.HasValue)
+            {
+                var userId = tenant.UserId.Value;
+
+                await _context.AuditTrailEntries
+                    .Where(entry => entry.UserId == userId.ToString())
+                    .ExecuteDeleteAsync();
+            }
+
+            if (tenant.PropertyUnitId.HasValue)
+            {
+                await _context.PropertyUnits
+                    .Where(unit => unit.Id == tenant.PropertyUnitId.Value)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(unit => unit.Status, "Available")
+                        .SetProperty(unit => unit.UpdatedAt, DateTime.UtcNow));
+            }
+
+            await _context.Tenants
+                .Where(currentTenant => currentTenant.Id == id)
+                .ExecuteDeleteAsync();
+
+            if (tenant.UserId.HasValue)
+            {
+                await _context.Users
+                    .Where(user => user.Id == tenant.UserId.Value)
+                    .ExecuteDeleteAsync();
+            }
+
+            await transaction.CommitAsync();
+        }
+
         public async Task<IEnumerable<PropertyTenant>> GetTenantsByPropertyIdAsync(int propertyId)
         {
             var tenants = await _context.Tenants
