@@ -5,6 +5,7 @@ type ConfirmDeleteModalProps = {
   isOpen: boolean;
   tenantName: string;
   title: string;
+  warning?: string;
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -13,6 +14,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   isOpen,
   title,
   tenantName,
+  warning,
   onClose,
   onConfirm,
 }) => {
@@ -25,6 +27,11 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
         <p className="mb-6">
           Are you sure you want to delete <strong>{tenantName}</strong>?
         </p>
+        {warning && (
+          <p className="mb-6 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {warning}
+          </p>
+        )}
         <div className="flex justify-end space-x-4">
           <button
             onClick={onClose}

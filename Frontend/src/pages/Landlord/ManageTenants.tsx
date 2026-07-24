@@ -503,13 +503,15 @@ const ManageTenants = () => {
 
   const handleDeleteTenant = async (tenantId: number) => {
     try {
-      const response = await fetch(`${apiUrl}/DeleteTenant/${tenantId}`, {
+      const response = await fetch(`${apiUrl}/DeleteTenantAndAllData/${tenantId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (response.ok) {
         setSelectedTenant(null);
-        toast({ title: "Success", description: "Tenant deleted successfully" });
+        setIsDeleteModalOpen(false);
+        setDeleteTenant(null);
+        toast({ title: "Success", description: "Tenant and associated data deleted successfully" });
         fetchTenants();
       } else throw new Error("Failed to delete tenant");
     } catch {
@@ -1716,6 +1718,7 @@ const ManageTenants = () => {
         title="Delete Tenant"
         isOpen={isDeleteModalOpen}
         tenantName={deleteTenant?.fullName || ""}
+        warning="This permanently deletes the tenant's profile, payments, invoices, contracts, and other associated records. This action cannot be undone."
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={() => {
           if (deleteTenant) handleDeleteTenant(deleteTenant.id);
