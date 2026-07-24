@@ -45,7 +45,7 @@ namespace API.Controllers.Tenant
                     request.PassportPhoto,
                     request.IdFront,
                     request.IdBack,
-                    request.Tenant,
+                    request.Tenant ?? request,
                     request.TenantId);
                 return Ok("Tenant updated successfully.");
             }
@@ -55,12 +55,12 @@ namespace API.Controllers.Tenant
             }
         }
 
-        public sealed class UpdateTenantRequest
+        public sealed class UpdateTenantRequest : TenantDto
         {
             public IFormFile? PassportPhoto { get; set; }
             public IFormFile? IdFront { get; set; }
             public IFormFile? IdBack { get; set; }
-            public TenantDto Tenant { get; set; } = new();
+            public TenantDto? Tenant { get; set; }
             public int TenantId { get; set; }
         }
 

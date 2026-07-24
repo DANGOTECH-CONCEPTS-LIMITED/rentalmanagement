@@ -50,6 +50,22 @@ namespace Infrastructure.Services.Tenant
             var property = await _context.LandLordProperties
                 .Include(p => p.Owner)
                 .FirstOrDefaultAsync(p => p.Id == tenantDto.PropertyId);
+            if (property == null)
+                throw new Exception("Property not found.");
+
+            PropertyUnit? unit = null;
+            if (tenantDto.PropertyUnitId.HasValue)
+            {
+                unit = await _context.PropertyUnits
+                    .FirstOrDefaultAsync(currentUnit => currentUnit.Id == tenantDto.PropertyUnitId.Value);
+                if (unit == null)
+                    throw new Exception("Property unit not found.");
+                if (unit.PropertyId != tenantDto.PropertyId)
+                    throw new Exception("Property unit does not belong to the selected property.");
+                if (!string.Equals(unit.Status, "Available", StringComparison.OrdinalIgnoreCase))
+                    throw new Exception("Property unit is already occupied.");
+            }
+
             //map dto to entity
             var tenant = new PropertyTenant
             {
@@ -95,6 +111,13 @@ namespace Infrastructure.Services.Tenant
             tenant.UserId = createduser.Id;
             //add to db
             await _context.Tenants.AddAsync(tenant);
+
+            if (unit != null)
+            {
+                unit.Status = "Occupied";
+                unit.UpdatedAt = DateTime.UtcNow;
+            }
+
             await _context.SaveChangesAsync();
 
             
@@ -134,6 +157,36 @@ namespace Infrastructure.Services.Tenant
             if (existingTenant == null)
                 throw new Exception("Tenant not found.");
 
+            var property = await _context.LandLordProperties
+                .Include(currentProperty => currentProperty.Owner)
+                .FirstOrDefaultAsync(currentProperty => currentProperty.Id == tenant.PropertyId);
+            if (property == null)
+                throw new Exception("Property not found.");
+
+            var previousUnitId = existingTenant.PropertyUnitId;
+            PropertyUnit? requestedUnit = null;
+            if (tenant.PropertyUnitId.HasValue)
+            {
+                requestedUnit = await _context.PropertyUnits
+                    .FirstOrDefaultAsync(currentUnit => currentUnit.Id == tenant.PropertyUnitId.Value);
+                if (requestedUnit == null)
+                    throw new Exception("Property unit not found.");
+                if (requestedUnit.PropertyId != tenant.PropertyId)
+                    throw new Exception("Property unit does not belong to the selected property.");
+
+                var isCurrentUnit = previousUnitId == requestedUnit.Id;
+                var unitAssignedToAnotherTenant = await _context.Tenants
+                    .AsNoTracking()
+                    .AnyAsync(currentTenant => currentTenant.Id != existingTenant.Id &&
+                                               currentTenant.PropertyUnitId == requestedUnit.Id);
+                if (!isCurrentUnit &&
+                    (!string.Equals(requestedUnit.Status, "Available", StringComparison.OrdinalIgnoreCase) ||
+                     unitAssignedToAnotherTenant))
+                    throw new Exception("Property unit is already occupied.");
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             if (passportphoto != null)
             {
                 var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
@@ -166,12 +219,36 @@ namespace Infrastructure.Services.Tenant
             existingTenant.NextOfKinRelationship = tenant.NextOfKinRelationship ?? string.Empty;
             existingTenant.NextOfKinIdNumber = tenant.NextOfKinIdNumber ?? string.Empty;
             existingTenant.NextOfKinWorkplace = tenant.NextOfKinWorkplace ?? string.Empty;
-            existingTenant.Property = await _context.LandLordProperties
-                .Include(p => p.Owner)
-                .FirstOrDefaultAsync(p => p.Id == tenant.PropertyId);
+            existingTenant.Property = property;
+
+            if (previousUnitId != tenant.PropertyUnitId)
+            {
+                if (previousUnitId.HasValue)
+                {
+                    var previousUnit = await _context.PropertyUnits
+                        .FirstOrDefaultAsync(currentUnit => currentUnit.Id == previousUnitId.Value);
+                    if (previousUnit != null)
+                    {
+                        previousUnit.Status = "Available";
+                        previousUnit.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+
+                if (requestedUnit != null)
+                {
+                    requestedUnit.Status = "Occupied";
+                    requestedUnit.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            else if (requestedUnit != null)
+            {
+                requestedUnit.Status = "Occupied";
+                requestedUnit.UpdatedAt = DateTime.UtcNow;
+            }
 
             _context.Tenants.Update(existingTenant);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         public async Task DeleteTenantAsync(int id)
