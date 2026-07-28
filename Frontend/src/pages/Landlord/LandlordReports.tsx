@@ -85,7 +85,7 @@ interface PaymentRecord {
   paymentStatus: string;
   transactionId: string;
   description: string | null;
-  propertyTenant?: { tenant?: { firstName: string; lastName: string } };
+  propertyTenant?: { fullName?: string; unit?: { unitNumber?: string }; tenant?: { firstName: string; lastName: string } };
 }
 
 interface ExpenseRecord {
@@ -135,6 +135,24 @@ const LoadingRows = ({ count = 4 }: { count?: number }) => (
     ))}
   </div>
 );
+
+const isCollectedStatus = (status?: string) => {
+  const normalized = (status ?? "").trim().toLowerCase();
+  return ["paid", "successful", "success", "completed", "complete"].includes(normalized);
+};
+
+const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
+  const escape = (value: string | number) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const blob = new Blob([rows.map((row) => row.map(escape).join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 const LandlordReports = () => {
   const { toast } = useToast();
@@ -209,9 +227,10 @@ const LandlordReports = () => {
             return d >= fromDate && d <= toDate;
           });
 
-          // Paid invoices represent settled rent — use as the single source for collections.
-          // Payment records cover the same transactions so we must NOT add both.
-          const totalCollections = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
+          const collectedPayments = payments.filter((payment) => isCollectedStatus(payment.paymentStatus));
+          const paymentCollections = collectedPayments.reduce((s, p) => s + (p.amount ?? 0), 0);
+          const invoiceCollections = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
+          const totalCollections = paymentCollections > 0 ? paymentCollections : invoiceCollections;
           const totalExpenses = expenses.reduce((s, e) => s + (e.amount ?? 0), 0);
           return { property: prop, payments, paidInvoices, expenses, totalCollections, totalExpenses };
         })
@@ -273,6 +292,41 @@ const LandlordReports = () => {
       fetchTrialBalance(period);
       fetchBalanceSheet(period);
     }
+  };
+
+  const handleExport = () => {
+    if (activeTab === "property") {
+      downloadCsv(`property-report-${reportFrom}-to-${reportTo}.csv`, [
+        ["Property", "Address", "Collections", "Expenses", "Net"],
+        ...propertyReports.map((report) => [
+          report.property.name,
+          report.property.address,
+          report.totalCollections,
+          report.totalExpenses,
+          report.totalCollections - report.totalExpenses,
+        ]),
+      ]);
+      toast({ title: "Exported", description: "Property report exported to CSV." });
+      return;
+    }
+
+    if (activeTab === "trial") {
+      downloadCsv(`trial-balance-${period}.csv`, [
+        ["Code", "Account Name", "Debit", "Credit", "Balance"],
+        ...trialRows.map((row) => [row.accountCode, row.accountName, row.debit, row.credit, row.balance]),
+      ]);
+    } else if (activeTab === "expense") {
+      downloadCsv(`expense-breakdown-${period}.csv`, [
+        ["Category", "Amount"],
+        ...expenseBreakdown.map((row) => [row.name, row.value]),
+      ]);
+    } else {
+      downloadCsv(`profit-and-loss-${period}.csv`, [
+        ["Month", "Income", "Expenses", "Net Profit"],
+        ...monthly.map((row) => [row.month, row.income, row.expenses, row.profit]),
+      ]);
+    }
+    toast({ title: "Exported", description: "Report exported to CSV." });
   };
 
   useEffect(() => {
@@ -352,6 +406,7 @@ const LandlordReports = () => {
               Refresh
             </button>
             <button
+              onClick={handleExport}
               className="flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/15 px-3 py-2 text-xs font-semibold text-white hover:bg-white/25 transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
@@ -794,6 +849,7 @@ const LandlordReports = () => {
                 {propertyReports.map(({ property, payments, paidInvoices, expenses, totalCollections, totalExpenses }) => {
                   const net = totalCollections - totalExpenses;
                   const isExpanded = expandedProperty === property.id;
+                  const collectedPayments = payments.filter((payment) => isCollectedStatus(payment.paymentStatus));
                   return (
                     <div key={property.id} className="rounded-2xl border border-[#E2E8F0] bg-white shadow-sm overflow-hidden">
                       {/* Property header row */}
@@ -853,10 +909,10 @@ const LandlordReports = () => {
                             <div className="flex items-center gap-2 px-5 py-3 bg-slate-50/60">
                               <Banknote className="h-4 w-4 text-emerald-500" />
                               <span className="text-xs font-semibold text-[#0F172A] uppercase tracking-wide">
-                                Collections ({payments.length + paidInvoices.length})
+                                Collections ({collectedPayments.length + paidInvoices.length})
                               </span>
                             </div>
-                            {payments.length === 0 && paidInvoices.length === 0 ? (
+                            {collectedPayments.length === 0 && paidInvoices.length === 0 ? (
                               <p className="px-5 py-4 text-xs text-[#94A3B8]">No payments in this period.</p>
                             ) : (
                               <div className="overflow-x-auto">
@@ -869,9 +925,9 @@ const LandlordReports = () => {
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-[#F8FAFC]">
-                                    {payments.map((p) => {
+                                    {payments.filter((p) => isCollectedStatus(p.paymentStatus)).map((p) => {
                                       const tenant = p.propertyTenant?.tenant;
-                                      const tenantName = tenant ? `${tenant.firstName} ${tenant.lastName}` : "—";
+                                      const tenantName = p.propertyTenant?.fullName ?? (tenant ? `${tenant.firstName} ${tenant.lastName}` : "—");
                                       const statusColor =
                                         p.paymentStatus?.toLowerCase() === "completed" ? "bg-emerald-50 text-emerald-700"
                                         : p.paymentStatus?.toLowerCase() === "failed" ? "bg-red-50 text-red-700"

@@ -52,6 +52,8 @@ const selCls =
 const textareaCls =
   "w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] shadow-sm outline-none transition-all focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 resize-none";
 
+const propertyTypes = ["Apartment", "Shop", "Commercial", "Vacant Land", "Farm Land", "House"];
+
 const RegisterProperty = () => {
   const [formData, setFormData] = useState({
     Name: "",
@@ -431,11 +433,9 @@ const RegisterProperty = () => {
                   required
                 >
                   <option value="">Select property type</option>
-                  <option value="Apartment">Apartment</option>
-                  <option value="Studio">Studio Room</option>
-                  <option value="House">House</option>
-                  <option value="Condo">Condominium</option>
-                  <option value="Commercial">Commercial</option>
+                  {propertyTypes.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
                 </select>
               </div>
               <div>

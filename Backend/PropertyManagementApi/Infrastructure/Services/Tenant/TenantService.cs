@@ -164,11 +164,13 @@ namespace Infrastructure.Services.Tenant
                 throw new Exception("Property not found.");
 
             var previousUnitId = existingTenant.PropertyUnitId;
+            var tenantIsActive = tenant.Active ?? false;
+            var requestedUnitId = tenantIsActive ? tenant.PropertyUnitId : null;
             PropertyUnit? requestedUnit = null;
-            if (tenant.PropertyUnitId.HasValue)
+            if (requestedUnitId.HasValue)
             {
                 requestedUnit = await _context.PropertyUnits
-                    .FirstOrDefaultAsync(currentUnit => currentUnit.Id == tenant.PropertyUnitId.Value);
+                    .FirstOrDefaultAsync(currentUnit => currentUnit.Id == requestedUnitId.Value);
                 if (requestedUnit == null)
                     throw new Exception("Property unit not found.");
                 if (requestedUnit.PropertyId != tenant.PropertyId)
@@ -207,10 +209,10 @@ namespace Infrastructure.Services.Tenant
             existingTenant.FullName = tenant.FullName;
             existingTenant.Email = tenant.Email;
             existingTenant.PhoneNumber = tenant.PhoneNumber;
-            existingTenant.Active = tenant.Active ?? false;
+            existingTenant.Active = tenantIsActive;
             existingTenant.NationalIdNumber = tenant.NationalIdNumber;
             existingTenant.PropertyId = tenant.PropertyId;
-            existingTenant.PropertyUnitId = tenant.PropertyUnitId;
+            existingTenant.PropertyUnitId = requestedUnitId;
             existingTenant.WaterMeterNo = tenant.WaterMeterNo ?? string.Empty;
             existingTenant.ElectricityMeterNo = tenant.ElectricityMeterNo ?? string.Empty;
             existingTenant.Occupation = tenant.Occupation ?? string.Empty;
@@ -221,7 +223,7 @@ namespace Infrastructure.Services.Tenant
             existingTenant.NextOfKinWorkplace = tenant.NextOfKinWorkplace ?? string.Empty;
             existingTenant.Property = property;
 
-            if (previousUnitId != tenant.PropertyUnitId)
+            if (previousUnitId != requestedUnitId)
             {
                 if (previousUnitId.HasValue)
                 {

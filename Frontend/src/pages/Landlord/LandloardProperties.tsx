@@ -71,12 +71,18 @@ interface Landlord {
 
 const propertyTypes = [
   "Apartment",
-  "Studio",
-  "House",
-  "Condo",
-  "Townhouse",
+  "Shop",
   "Commercial",
+  "Vacant Land",
+  "Farm Land",
+  "House",
 ];
+
+interface PropertyUnit {
+  id: number;
+  propertyId: number;
+  status: string;
+}
 
 const inputCls =
   "w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/10 transition-colors";
@@ -127,11 +133,10 @@ const typeBadge = (type: string) => {
   const map: Record<string, string> = {
     Apartment: "bg-blue-50 text-blue-700 border-blue-100",
     House: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    Villa: "bg-violet-50 text-violet-700 border-violet-100",
-    Condo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-    Townhouse: "bg-amber-50 text-amber-700 border-amber-100",
+    Shop: "bg-amber-50 text-amber-700 border-amber-100",
     Commercial: "bg-slate-100 text-slate-700 border-slate-200",
-    Studio: "bg-pink-50 text-pink-700 border-pink-100",
+    "Vacant Land": "bg-lime-50 text-lime-700 border-lime-100",
+    "Farm Land": "bg-green-50 text-green-700 border-green-100",
   };
   const cls = map[type] ?? "bg-slate-100 text-slate-600 border-slate-200";
   return (
@@ -247,6 +252,7 @@ const Properties = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
+  const [propertyUnits, setPropertyUnits] = useState<PropertyUnit[]>([]);
   const [formData, setFormData] = useState({
     Name: "",
     Address: "",
@@ -417,6 +423,7 @@ const Properties = () => {
       return;
     }
     fetchProperties();
+    fetchPropertyUnits();
     if (!isCaretaker) fetchLandlords();
   }, []);
 
@@ -465,6 +472,28 @@ const Properties = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const fetchPropertyUnits = async () => {
+    try {
+      const response = await fetch(
+        isCaretaker
+          ? `${apiUrl}/GetPropertyUnitsByCaretakerId/${userData.id}`
+          : `${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`,
+        { headers: { accept: "*/*", Authorization: `Bearer ${token}` } },
+      );
+      if (response.ok) setPropertyUnits(await response.json());
+    } catch {
+      // non-critical; fall back to the property flag
+    }
+  };
+
+  const isPropertyOccupied = (property: Property) => {
+    const unitsForProperty = propertyUnits.filter((unit) => unit.propertyId === property.id);
+    if (unitsForProperty.length > 0) {
+      return unitsForProperty.every((unit) => unit.status?.toLowerCase() === "occupied");
+    }
+    return !!property.occupied;
   };
 
   const filteredProperties = properties.filter(
@@ -685,7 +714,7 @@ const Properties = () => {
     });
   };
 
-  const occupiedCount = properties.filter((p) => p.occupied).length;
+  const occupiedCount = properties.filter((p) => isPropertyOccupied(p)).length;
   const vacantCount = properties.length - occupiedCount;
 
   return (
@@ -824,7 +853,7 @@ const Properties = () => {
                 key: "status",
                 header: "Status",
                 cell: (p) =>
-                  p.occupied ? (
+                  isPropertyOccupied(p) ? (
                     <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
                       Occupied
                     </span>
@@ -947,9 +976,9 @@ const Properties = () => {
                   </p>
                 </div>
                 <span
-                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${selectedProperty.occupied ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${isPropertyOccupied(selectedProperty) ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}
                 >
-                  {selectedProperty.occupied ? "Occupied" : "Vacant"}
+                  {isPropertyOccupied(selectedProperty) ? "Occupied" : "Vacant"}
                 </span>
               </div>
 

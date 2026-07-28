@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DataTable, Column } from "@/components/ui/data-table";
 import axios from "axios";
 
-type ExpenseCategory = "Maintenance" | "Utilities" | "Insurance" | "Taxes" | "Cleaning" | "Repairs" | "Other";
+type ExpenseCategory = "Maintenance" | "Utilities" | "Transport" | "Taxes" | "Cleaning" | "Repairs" | "Other";
 
 interface Expense {
   id: number;
@@ -38,12 +38,12 @@ interface PropertyUnit {
   propertyId: number;
 }
 
-const categories: ExpenseCategory[] = ["Maintenance", "Utilities", "Insurance", "Taxes", "Cleaning", "Repairs", "Other"];
+const categories: ExpenseCategory[] = ["Maintenance", "Utilities", "Transport", "Taxes", "Cleaning", "Repairs", "Other"];
 
 const categoryStyle: Record<string, { pill: string; border: string; bg: string; color: string }> = {
   Maintenance: { pill: "bg-blue-50 text-blue-700 border-blue-200",   border: "border-l-blue-500",   bg: "bg-blue-50",   color: "text-blue-600"   },
   Utilities:   { pill: "bg-amber-50 text-amber-700 border-amber-200", border: "border-l-amber-500",  bg: "bg-amber-50",  color: "text-amber-600"  },
-  Insurance:   { pill: "bg-purple-50 text-purple-700 border-purple-200", border: "border-l-purple-500", bg: "bg-purple-50", color: "text-purple-600" },
+  Transport:   { pill: "bg-purple-50 text-purple-700 border-purple-200", border: "border-l-purple-500", bg: "bg-purple-50", color: "text-purple-600" },
   Taxes:       { pill: "bg-red-50 text-red-700 border-red-200",       border: "border-l-red-500",    bg: "bg-red-50",    color: "text-red-600"    },
   Cleaning:    { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", border: "border-l-emerald-500", bg: "bg-emerald-50", color: "text-emerald-600" },
   Repairs:     { pill: "bg-orange-50 text-orange-700 border-orange-200", border: "border-l-orange-500", bg: "bg-orange-50", color: "text-orange-600" },

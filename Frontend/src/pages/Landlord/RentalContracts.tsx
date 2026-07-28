@@ -149,6 +149,14 @@ const fmtPeriod = (startDate: string, endDate: string) => {
   return isOpen ? `${start} → Open-ended` : `${start} → ${fmtDate(endDate)}`;
 };
 
+const OPEN_ENDED_DATE = '0001-01-01T00:00:00Z';
+
+const contractPayload = (form: CreateContractDto) => ({
+  ...form,
+  openEnded: form.openEnded || !form.endDate,
+  endDate: form.openEnded || !form.endDate ? OPEN_ENDED_DATE : form.endDate,
+});
+
 // ── Standard T&C template ─────────────────────────────────────────────────────
 const TERMS_TEMPLATE = `1. RENT PAYMENT
 Rent is due on the 1st day of each month. A grace period of 5 days is allowed. Rent not received by the 6th of the month will attract a late payment fee of 5% of the monthly rent amount.
@@ -509,8 +517,8 @@ const RentalContracts = () => {
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!addForm.tenantId || !addForm.propertyName || !addForm.startDate || (!addForm.openEnded && !addForm.endDate)) {
-      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property, start date, and end date (or mark as open-ended).' });
+    if (!addForm.tenantId || !addForm.propertyName || !addForm.startDate) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property and start date.' });
       return;
     }
     setIsSaving(true);
@@ -518,7 +526,7 @@ const RentalContracts = () => {
       const res = await fetch(`${apiUrl}/CreateContract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...addForm, ownerId: userData.id }),
+        body: JSON.stringify({ ...contractPayload(addForm), ownerId: userData.id }),
       });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Contract created', description: 'The rental agreement has been saved.' });
@@ -540,7 +548,7 @@ const RentalContracts = () => {
       const res = await fetch(`${apiUrl}/UpdateContract`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id: editContract.id, ...editForm }),
+        body: JSON.stringify({ id: editContract.id, ...contractPayload(editForm) }),
       });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: 'Contract updated', description: 'Changes saved successfully.' });
@@ -863,15 +871,19 @@ const RentalContracts = () => {
     if (c.terms) {
       checkNewPage(30);
       sectionBar('05  TERMS & CONDITIONS');
-      const termsLines = doc.splitTextToSize(c.terms, cW - 10);
-      doc.setTextColor(51, 65, 85);
-      doc.setFontSize(8.5);
-      doc.setFont('helvetica', 'normal');
       y += 4;
-      termsLines.forEach((line: string) => {
-        checkNewPage(8);
-        doc.text(line, margin + 5, y);
-        y += 5.5;
+      c.terms.split(/\n/).forEach((rawLine: string) => {
+        const isTitle = /^\s*\d+\.\s+/.test(rawLine);
+        const termsLines = doc.splitTextToSize(rawLine, cW - 10);
+        doc.setTextColor(isTitle ? 15 : 51, isTitle ? 23 : 65, isTitle ? 42 : 85);
+        doc.setFontSize(isTitle ? 8.8 : 8.5);
+        doc.setFont('helvetica', isTitle ? 'bold' : 'normal');
+        termsLines.forEach((line: string) => {
+          checkNewPage(8);
+          doc.text(line, margin + 5, y);
+          y += 5.5;
+        });
+        if (isTitle) y += 1;
       });
       y += 10;
     }

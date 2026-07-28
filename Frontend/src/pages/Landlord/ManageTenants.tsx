@@ -351,6 +351,9 @@ const ManageTenants = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === "TenantStatus"
+        ? { Active: value === "left" ? "false" : "true", UnitId: value === "left" ? "" : prev.UnitId }
+        : {}),
       ...(name === "FullName" ? { Name: value } : {}),
     }));
   };
@@ -369,8 +372,9 @@ const ManageTenants = () => {
       form.append("NationalIdNumber", formData.NationalIdNumber);
       form.append("DateMovedIn", formattedDate);
       form.append("PropertyId", formData.PropertyId);
-      form.append("Active", formData.Active);
-      if (formData.UnitId) form.append("PropertyUnitId", formData.UnitId);
+      const tenantLeft = formData.TenantStatus === "left";
+      form.append("Active", tenantLeft ? "false" : formData.Active);
+      if (!tenantLeft && formData.UnitId) form.append("PropertyUnitId", formData.UnitId);
       form.append("WaterMeterNo", formData.WaterMeterNo || "");
       form.append("ElectricityMeterNo", formData.ElectricityMeterNo || "");
       form.append("Occupation", formData.Occupation || "");

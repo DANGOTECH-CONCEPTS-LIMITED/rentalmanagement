@@ -270,13 +270,11 @@ namespace API.Controllers.Accounts
         {
             var normalizedStatus = (status ?? string.Empty).Trim().ToUpperInvariant();
 
-            return normalizedStatus != "FAILED"
-                && normalizedStatus != "FAILED AT TELECOM"
-                && normalizedStatus != "FAILED AT TELCOM"
-                && normalizedStatus != "CANCELLED"
-                && normalizedStatus != "CANCELED"
-                && normalizedStatus != "VOID"
-                && normalizedStatus != "REVERSED";
+            return normalizedStatus == "PAID"
+                || normalizedStatus == "SUCCESSFUL"
+                || normalizedStatus == "SUCCESS"
+                || normalizedStatus == "COMPLETED"
+                || normalizedStatus == "COMPLETE";
         }
 
         private static bool IsSecurityDepositPayment(string? paymentType, string? description)

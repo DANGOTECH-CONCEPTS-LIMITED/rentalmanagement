@@ -73,16 +73,22 @@ interface Landlord {
   systemRole: { id: number; name: string; description: string };
 }
 
-const propertyTypes = ["Apartment", "House", "Villa", "Condo", "Townhouse", "Commercial"];
+const propertyTypes = ["Apartment", "Shop", "Commercial", "Vacant Land", "Farm Land", "House"];
+
+interface PropertyUnit {
+  id: number;
+  propertyId: number;
+  status: string;
+}
 
 const typeBadge = (type: string) => {
   const map: Record<string, string> = {
     Apartment: "bg-blue-50 text-blue-700 border-blue-100",
     House: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    Villa: "bg-violet-50 text-violet-700 border-violet-100",
-    Condo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-    Townhouse: "bg-amber-50 text-amber-700 border-amber-100",
+    Shop: "bg-amber-50 text-amber-700 border-amber-100",
     Commercial: "bg-slate-100 text-slate-700 border-slate-200",
+    "Vacant Land": "bg-lime-50 text-lime-700 border-lime-100",
+    "Farm Land": "bg-green-50 text-green-700 border-green-100",
   };
   const cls = map[type] ?? "bg-slate-100 text-slate-600 border-slate-200";
   return (
@@ -125,9 +131,11 @@ const LandlordProperties = () => {
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+  const [propertyUnits, setPropertyUnits] = useState<PropertyUnit[]>([]);
 
   const user = localStorage.getItem("user") || null;
-  const token = JSON.parse(user).token;
+  const userData = JSON.parse(user);
+  const token = userData.token;
   if (!token) {
     toast({ title: "Error", description: "User token not found. Please log in again.", variant: "destructive" });
     return;
@@ -139,6 +147,7 @@ const LandlordProperties = () => {
   useEffect(() => {
     fetchProperties();
     fetchLandlords();
+    fetchPropertyUnits();
   }, []);
 
   const fetchProperties = async () => {
@@ -170,6 +179,25 @@ const LandlordProperties = () => {
     } finally {
       setIsLoadingLandlords(false);
     }
+  };
+
+  const fetchPropertyUnits = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/GetPropertyUnitsByLandLordId/${userData.id}`, {
+        headers: { accept: "*/*", Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) setPropertyUnits(await response.json());
+    } catch {
+      // non-critical; fall back to the property flag
+    }
+  };
+
+  const isPropertyOccupied = (property: Property) => {
+    const unitsForProperty = propertyUnits.filter((unit) => unit.propertyId === property.id);
+    if (unitsForProperty.length > 0) {
+      return unitsForProperty.every((unit) => unit.status?.toLowerCase() === "occupied");
+    }
+    return !!property.occupied;
   };
 
   const filteredProperties = properties.filter(
@@ -288,7 +316,7 @@ const LandlordProperties = () => {
     });
   };
 
-  const occupiedCount = properties.filter((p) => p.occupied).length;
+  const occupiedCount = properties.filter((p) => isPropertyOccupied(p)).length;
   const vacantCount = properties.length - occupiedCount;
 
   return (
@@ -392,7 +420,7 @@ const LandlordProperties = () => {
               key: "status",
               header: "Status",
               cell: (row) =>
-                row.occupied ? (
+                isPropertyOccupied(row) ? (
                   <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
                     Occupied
                   </span>

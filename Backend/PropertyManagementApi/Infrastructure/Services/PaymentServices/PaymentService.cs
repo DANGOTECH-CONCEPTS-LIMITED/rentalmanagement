@@ -83,7 +83,7 @@ namespace Infrastructure.Services.PaymentServices
                 PaymentMethod = tenantPaymentDto.PaymentMethod,
                 Vendor = tenantPaymentDto.Vendor,
                 PaymentType = tenantPaymentDto.PaymentType,
-                PaymentStatus = "PENDING",
+                PaymentStatus = "SUCCESSFUL",
                 TransactionId = tenantPaymentDto.TransactionId,
                 PropertyTenantId = tenantPaymentDto.PropertyTenantId,
                 PropertyTenant = tenant,
@@ -266,6 +266,8 @@ namespace Infrastructure.Services.PaymentServices
         {
             return await _context.TenantPayments
                 .Include(tp => tp.PropertyTenant)
+                    .ThenInclude(pt => pt.Unit)
+                .Include(tp => tp.PropertyTenant)
                     .ThenInclude(pt => pt.Property)
                         .ThenInclude(p => p.Owner)
                 .ToListAsync();
@@ -406,6 +408,8 @@ namespace Infrastructure.Services.PaymentServices
         public async Task<IEnumerable<TenantPayment>> GetTenantPaymentsByPropertyIdAndDateRangeAsync(int propertyId, DateTime startDate, DateTime endDate)
         {
             var payments = await _context.TenantPayments
+                .Include(tp => tp.PropertyTenant)
+                    .ThenInclude(pt => pt.Unit)
                 .Include(tp => tp.PropertyTenant)
                     .ThenInclude(pt => pt.Property)
                         .ThenInclude(p => p.Owner)

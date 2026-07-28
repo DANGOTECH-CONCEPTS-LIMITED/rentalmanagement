@@ -53,6 +53,8 @@ interface UnifiedPayment {
   tenantName: string;
   tenantPhone: string;
   propertyName: string;
+  propertyId?: number;
+  roomNo?: string;
   amount: number;
   date: string;
   status: string;
@@ -77,6 +79,7 @@ interface RawPayment {
     id: number;
     fullName: string;
     phoneNumber: string;
+    unit?: { id: number; unitNumber: string } | null;
     property: { id: number; name: string; address: string; ownerId: number };
   };
 }
@@ -92,6 +95,9 @@ interface RawInvoice {
   notes: string | null;
   tenantId: number;
   tenant: { id: number; fullName: string; phoneNumber: string };
+  propertyId?: number;
+  propertyUnitId?: number;
+  unit?: { id: number; unitNumber: string } | null;
   property: { id: number; name: string };
 }
 
@@ -196,6 +202,9 @@ const TrackPayments = () => {
   const [payments, setPayments] = useState<UnifiedPayment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterProperty, setFilterProperty] = useState("All");
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
   const [tab, setTab] = useState("all");
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -235,6 +244,8 @@ const TrackPayments = () => {
             tenantName: p.propertyTenant.fullName,
             tenantPhone: p.propertyTenant.phoneNumber,
             propertyName: p.propertyTenant.property.name,
+            propertyId: p.propertyTenant.property.id,
+            roomNo: p.propertyTenant.unit?.unitNumber ?? "",
             amount: p.amount,
             date: p.paymentDate,
             status: normaliseStatus(p.paymentStatus),
@@ -254,6 +265,8 @@ const TrackPayments = () => {
           tenantName: inv.tenant?.fullName ?? "",
           tenantPhone: inv.tenant?.phoneNumber ?? "",
           propertyName: inv.property?.name ?? "",
+          propertyId: inv.propertyId ?? inv.property?.id,
+          roomNo: inv.unit?.unitNumber ?? "",
           amount: inv.amount,
           date: inv.invoiceDate,
           status: normaliseStatus(inv.status),
@@ -390,13 +403,11 @@ const TrackPayments = () => {
     doc.text(`Date:  ${fmtDate(p.date)}`, pageW - mg, 34, { align: "right" });
 
     // Status pill in header
-    const s = p.status;
-    if (s === "Paid") doc.setFillColor(16, 185, 129);
-    else if (s === "Failed") doc.setFillColor(239, 68, 68);
-    else doc.setFillColor(245, 158, 11);
+    const receiptStatus = "Paid";
+    doc.setFillColor(16, 185, 129);
     doc.roundedRect(pageW - mg - 28, 43, 28, 8, 2, 2, "F");
     doc.setTextColor(255, 255, 255); doc.setFontSize(7.5); doc.setFont("helvetica", "bold");
-    doc.text(s.toUpperCase(), pageW - mg - 14, 48.5, { align: "center" });
+    doc.text(receiptStatus.toUpperCase(), pageW - mg - 14, 48.5, { align: "center" });
 
     let y = 62;
 
@@ -441,10 +452,11 @@ const TrackPayments = () => {
     // Section 02 – Payment Details
     sectionBar("02  PAYMENT DETAILS");
     fieldRow("Reference / Invoice No.", p.reference);
+    if (p.roomNo) fieldRow("Room No.", p.roomNo);
     fieldRow("Payment Method / Type", p.method);
     fieldRow("Date Received", fmtDate(p.date));
     if (p.vendor) fieldRow("Received By", p.vendor);
-    fieldRow("Status", s, true);
+    fieldRow("Status", receiptStatus, true);
     y += 6;
 
     // Section 03 – Amount Paid
@@ -459,9 +471,8 @@ const TrackPayments = () => {
     const statusW = (cW - 4) * 0.4;
     card(mg + (cW - 4) * 0.6 + 4, y, statusW, amtH);
     doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.text("PAYMENT STATUS", mg + (cW - 4) * 0.6 + 8, y + 8);
-    const sc: [number, number, number] = s === "Paid" ? [16, 185, 129] : s === "Failed" ? [239, 68, 68] : [245, 158, 11];
-    doc.setTextColor(...sc); doc.setFontSize(11); doc.setFont("helvetica", "bold");
-    doc.text(s, mg + (cW - 4) * 0.6 + 8, y + 22);
+    doc.setTextColor(16, 185, 129); doc.setFontSize(11); doc.setFont("helvetica", "bold");
+    doc.text(receiptStatus, mg + (cW - 4) * 0.6 + 8, y + 22);
     y += amtH + 7;
 
     // Section 04 – Notes (optional)
@@ -490,14 +501,15 @@ const TrackPayments = () => {
   };
 
   const handleExport = () => {
-    const headers = ["Reference", "Source", "Tenant", "Property", "Amount (UGX)", "Date", "Type", "Status", "Notes"];
+    const headers = ["Reference", "Source", "Tenant", "Property", "Room No", "Amount (UGX)", "Date", "Type", "Status", "Notes"];
     const csvRows = [
       headers.join(","),
-      ...payments.map((p) => [
+      ...sortedPayments.map((p) => [
         `"${p.reference}"`,
         p.source,
         `"${p.tenantName}"`,
         `"${p.propertyName}"`,
+        `"${p.roomNo ?? ""}"`,
         p.amount,
         new Date(p.date).toLocaleDateString(),
         p.method,
@@ -511,8 +523,12 @@ const TrackPayments = () => {
     link.href = url; link.download = "payments_export.csv";
     document.body.appendChild(link); link.click();
     document.body.removeChild(link);
-    toast({ title: "Export Successful", description: "Payments exported to CSV." });
+    toast({ title: "Export Successful", description: `${sortedPayments.length} filtered payment row${sortedPayments.length !== 1 ? "s" : ""} exported to CSV.` });
   };
+
+  const propertyOptions = Array.from(
+    new Map(payments.map((p) => [p.propertyId ?? p.propertyName, { id: p.propertyId, name: p.propertyName }])).values(),
+  ).filter((property) => property.name);
 
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
@@ -527,7 +543,13 @@ const TrackPayments = () => {
       (tab === "failed"  && p.status === "Failed") ||
       (tab === "invoice" && p.source === "invoice") ||
       (tab === "payment" && p.source === "payment");
-    return matchesSearch && matchesTab;
+    const matchesProperty =
+      filterProperty === "All" ||
+      String(p.propertyId ?? p.propertyName) === filterProperty;
+    const paymentDate = p.date?.split("T")[0] ?? "";
+    const matchesFrom = !filterFrom || paymentDate >= filterFrom;
+    const matchesTo = !filterTo || paymentDate <= filterTo;
+    return matchesSearch && matchesTab && matchesProperty && matchesFrom && matchesTo;
   });
 
   const sortedPayments = [...filteredPayments].sort((a, b) => {
@@ -556,16 +578,16 @@ const TrackPayments = () => {
         : <ArrowDown className="ml-1 h-3 w-3 inline" />
       : null;
 
-  const totalReceived = payments.filter((p) => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
-  const totalPending  = payments.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
-  const totalFailed   = payments.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
-  const totalCash     = payments.filter((p) => p.method === "CASH" && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+  const totalReceived = filteredPayments.filter((p) => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+  const totalPending  = filteredPayments.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
+  const totalFailed   = filteredPayments.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
+  const totalCash     = filteredPayments.filter((p) => p.method === "CASH" && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
 
   const kpiCards = [
     {
       label: "Total Received",
       value: `UGX ${totalReceived.toLocaleString()}`,
-      sub: `${payments.filter((p) => p.status === "Paid").length} completed`,
+      sub: `${filteredPayments.filter((p) => p.status === "Paid").length} completed`,
       Icon: TrendingUp,
       border: "border-l-emerald-500",
       bg: "bg-emerald-50",
@@ -574,7 +596,7 @@ const TrackPayments = () => {
     {
       label: "Pending",
       value: `UGX ${totalPending.toLocaleString()}`,
-      sub: `${payments.filter((p) => p.status === "Pending").length} awaiting`,
+      sub: `${filteredPayments.filter((p) => p.status === "Pending").length} awaiting`,
       Icon: Clock,
       border: "border-l-amber-500",
       bg: "bg-amber-50",
@@ -583,7 +605,7 @@ const TrackPayments = () => {
     {
       label: "Failed",
       value: `UGX ${totalFailed.toLocaleString()}`,
-      sub: `${payments.filter((p) => p.status === "Failed").length} transactions`,
+      sub: `${filteredPayments.filter((p) => p.status === "Failed").length} transactions`,
       Icon: AlertCircle,
       border: "border-l-red-500",
       bg: "bg-red-50",
@@ -592,7 +614,7 @@ const TrackPayments = () => {
     {
       label: "Cash Collected",
       value: `UGX ${totalCash.toLocaleString()}`,
-      sub: `${payments.filter((p) => p.method === "CASH").length} cash payments`,
+      sub: `${filteredPayments.filter((p) => p.method === "CASH").length} cash payments`,
       Icon: Banknote,
       border: "border-l-slate-400",
       bg: "bg-slate-100",
@@ -641,10 +663,24 @@ const TrackPayments = () => {
       key: "propertyName",
       header: "Property",
       cell: (row) => (
-        <div className="flex items-center gap-1.5 text-sm text-[#0F172A]">
-          <Home className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-          {row.propertyName}
+        <div className="flex flex-col gap-0.5 text-sm text-[#0F172A]">
+          <span className="flex items-center gap-1.5">
+            <Home className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+            {row.propertyName}
+          </span>
+          {row.roomNo && <span className="ml-5 text-xs text-slate-400">Room {row.roomNo}</span>}
         </div>
+      ),
+    },
+    {
+      key: "roomNo",
+      header: "Room No",
+      cell: (row) => row.roomNo ? (
+        <span className="rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-slate-600">
+          {row.roomNo}
+        </span>
+      ) : (
+        <span className="text-xs text-slate-300">—</span>
       ),
     },
     {
@@ -843,6 +879,40 @@ const TrackPayments = () => {
             emptyMessage="No payments found"
             emptyIcon={<CircleDollarSign className="h-10 w-10" />}
             minWidth="900px"
+            headerRight={
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#1D4ED8] transition-colors"
+                  value={filterProperty}
+                  onChange={(e) => setFilterProperty(e.target.value)}
+                >
+                  <option value="All">All Properties</option>
+                  {propertyOptions.map((property) => (
+                    <option key={String(property.id ?? property.name)} value={String(property.id ?? property.name)}>
+                      {property.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400 whitespace-nowrap">From</span>
+                  <input
+                    type="date"
+                    className="h-8 w-32 rounded-lg border border-[#E2E8F0] px-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+                    value={filterFrom}
+                    onChange={(e) => setFilterFrom(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400 whitespace-nowrap">To</span>
+                  <input
+                    type="date"
+                    className="h-8 w-32 rounded-lg border border-[#E2E8F0] px-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+                    value={filterTo}
+                    onChange={(e) => setFilterTo(e.target.value)}
+                  />
+                </div>
+              </div>
+            }
           />
         </div>
       </div>
