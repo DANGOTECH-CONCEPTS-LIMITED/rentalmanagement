@@ -93,22 +93,19 @@ const MakePayment = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data } = await axios.get(`${apiUrl}/GetPaymentsByTenantId/${userData.id}`, {
+        const { data: tenant } = await axios.get(`${apiUrl}/GetTenantById/${userData.id}`, {
           headers: { Authorization: 'Bearer ' + token },
         });
-        if (data.length > 0) {
-          const tenant = data[0].propertyTenant;
-          setTenantData({
-            id: tenant.id,
-            fullName: tenant.fullName,
-            property: { id: tenant.property.id, name: tenant.property.name, address: tenant.property.address, price: tenant.property.price, currency: tenant.property.currency },
-            balanceDue: tenant.balanceDue,
-            arrears: tenant.arrears,
-            nextPaymentDate: tenant.nextPaymentDate,
-            dateMovedIn: tenant.dateMovedIn,
-          });
-          setPaymentAmount(tenant.property.price.toString());
-        }
+        setTenantData({
+          id: tenant.id,
+          fullName: tenant.fullName,
+          property: { id: tenant.property.id, name: tenant.property.name, address: tenant.property.address, price: tenant.property.price, currency: tenant.property.currency },
+          balanceDue: tenant.balanceDue,
+          arrears: tenant.arrears,
+          nextPaymentDate: tenant.nextPaymentDate,
+          dateMovedIn: tenant.dateMovedIn,
+        });
+        setPaymentAmount(tenant.property.price.toString());
       } catch {
         toast({ title: "Error", description: "Failed to fetch payment data", variant: "destructive" });
       }
@@ -129,26 +126,65 @@ const MakePayment = () => {
     setTimeout(() => setShowSuccess(false), 3500);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const recordTenantPayment = async (details: {
+    paymentMethod: string;
+    paymentType: string;
+    vendor?: string;
+    transactionId?: string;
+    description?: string;
+  }) => {
+    if (!tenantData?.id) throw new Error('Tenant details are not loaded yet.');
+
+    await axios.post(`${apiUrl}/MakeTenantPayment`, {
+      amount: parseFloat(paymentAmount),
+      paymentDate: new Date().toISOString(),
+      paymentMethod: details.paymentMethod,
+      vendor: details.vendor ?? '',
+      paymentType: details.paymentType,
+      transactionId: details.transactionId || `UI-${details.paymentMethod}-${Date.now()}`,
+      description: details.description ?? `${details.paymentMethod} payment from tenant checkout`,
+      propertyTenantId: tenantData.id,
+    }, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => { setIsLoading(false); handleSuccess(paymentAmount); }, 2000);
+    try {
+      if (paymentMethod === 'card') {
+        await recordTenantPayment({
+          paymentMethod: 'CARD',
+          paymentType: 'Rent',
+          vendor: cardName,
+          description: description || 'Card payment from tenant checkout',
+        });
+      } else if (paymentMethod === 'bank_transfer') {
+        await recordTenantPayment({
+          paymentMethod: 'BANK_TRANSFER',
+          paymentType: 'Rent',
+          vendor: bankName,
+          description: `Bank transfer from account ${accountNumber}`,
+        });
+      }
+      handleSuccess(paymentAmount);
+    } catch {
+      toast({ title: "Payment Failed", description: "There was an issue recording your payment.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmitMobileMoney = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await axios.post(`${apiUrl}/MakeTenantPayment`, {
-        amount: parseFloat(paymentAmount),
-        paymentDate: new Date().toISOString(),
+      await recordTenantPayment({
         paymentMethod: 'MOMO',
+        paymentType: 'Rent',
         vendor,
-        paymentType: 'MOMO',
         transactionId,
-        description,
-        propertyTenantId: userData.id || 0,
-      }, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+        description: description || 'Mobile money payment from tenant checkout',
+      });
       handleSuccess(paymentAmount);
     } catch {
       toast({ title: "Payment Failed", description: "There was an issue processing your mobile money payment.", variant: "destructive" });
