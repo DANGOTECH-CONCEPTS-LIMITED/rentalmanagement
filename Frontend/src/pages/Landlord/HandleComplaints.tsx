@@ -27,6 +27,8 @@ interface Complaint {
   resolutionDetails: string | null;
   propertyId: number;
   property: Property;
+  tenantId?: number | null;
+  tenant?: Tenant | null;
   tenantName?: string;
 }
 
@@ -43,6 +45,12 @@ const emptyComplaintForm = {
   description: "",
   priority: "medium",
 };
+
+const withTenantNames = (complaints: Complaint[]) =>
+  complaints.map((complaint, index) => ({
+    ...complaint,
+    tenantName: complaint.tenant?.fullName ?? complaint.tenantName ?? `Tenant ${index + 1}`,
+  }));
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }: { status: string }) => {
@@ -160,7 +168,7 @@ const HandleComplaints = () => {
       const userData = JSON.parse(user);
       token = userData.token;
       id = userData.id;
-      isCaretaker = userData.systemRoleId === 5;
+      isCaretaker = Number(userData.systemRoleId) === 5;
     }
   } catch (error) {
     console.error("Error parsing user data:", error);
@@ -181,9 +189,7 @@ const HandleComplaints = () => {
         });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        setComplaints(
-          data.map((c: Complaint, i: number) => ({ ...c, tenantName: `Tenant ${i + 1}` }))
-        );
+        setComplaints(withTenantNames(Array.isArray(data) ? data : []));
       } catch (error) {
         console.error("Error fetching complaints:", error);
         toast({ title: "Error loading complaints", description: "Could not retrieve complaints.", variant: "destructive" });
@@ -244,6 +250,7 @@ const HandleComplaints = () => {
       formData.append("Status", "Pending");
       formData.append("ResolutionDetails", "");
       formData.append("PropertyId", String(selectedTenant.propertyId));
+      formData.append("TenantId", String(selectedTenant.id));
       if (attachment) formData.append("file", attachment, attachment.name);
 
       const response = await fetch(`${apiUrl}/LogCaretakerTenantComplaint/${id}/${selectedTenant.id}`, {
@@ -265,7 +272,7 @@ const HandleComplaints = () => {
       });
       if (complaintResponse.ok) {
         const data = await complaintResponse.json();
-        setComplaints(data.map((c: Complaint, i: number) => ({ ...c, tenantName: `Tenant ${i + 1}` })));
+        setComplaints(withTenantNames(Array.isArray(data) ? data : []));
       }
     } catch (error) {
       toast({ title: "Submission Failed", description: error instanceof Error ? error.message : "Failed to register complaint.", variant: "destructive" });

@@ -21,6 +21,9 @@ namespace Domain.Entities.PropertyMgt
         [ForeignKey("Property")]
         public int PropertyId { get; set; }
         public LandLordProperty? Property { get; set; }
+        [ForeignKey("Tenant")]
+        public int? TenantId { get; set; }
+        public PropertyTenant? Tenant { get; set; }
 
     }
 }

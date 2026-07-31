@@ -47,6 +47,7 @@ namespace Infrastructure.Services.Complaints
         {
             return await _context.TenantComplaints
                 .Include(c => c.Property)
+                .Include(c => c.Tenant)
                 .Where(c => c.Property.OwnerId == landlordId).ToListAsync();
         }
 
@@ -54,6 +55,7 @@ namespace Infrastructure.Services.Complaints
         {
             return await _context.TenantComplaints
                 .Include(c => c.Property)
+                .Include(c => c.Tenant)
                 .Where(c => _context.CaretakerPropertyAssignments
                     .Any(a => a.CaretakerId == caretakerId && a.PropertyId == c.PropertyId))
                 .ToListAsync();
@@ -61,10 +63,19 @@ namespace Infrastructure.Services.Complaints
 
         public async Task<IEnumerable<Complaint>> GetComplaintsByTenantId(int tenantId)
         {
+            var tenant = await _context.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+            if (tenant == null)
+            {
+                return [];
+            }
+
             return await _context.TenantComplaints
                 .Include(c => c.Property)
-                .Join(_context.Tenants, c => c.PropertyId, t => t.PropertyId, (c, t) => new { Complaint = c, Tenant = t })
-                .Where(x => x.Tenant.Id == tenantId).Select(x => x.Complaint)
+                .Include(c => c.Tenant)
+                .Where(c => c.TenantId == tenantId || (c.TenantId == null && c.PropertyId == tenant.PropertyId))
                 .ToListAsync();
         }
 
@@ -105,7 +116,8 @@ namespace Infrastructure.Services.Complaints
                 Attachement = file != null ? await _settings.SaveFileAndReturnPathAsync(file) : "",
                 Status = "PENDING",
                 PropertyId = complaint.PropertyId,
-                Property = property
+                Property = property,
+                TenantId = complaint.TenantId
             };
 
             //add the complaint to the database
@@ -138,6 +150,7 @@ namespace Infrastructure.Services.Complaints
             }
 
             complaint.PropertyId = tenant.PropertyId;
+            complaint.TenantId = tenant.Id;
             await LogTenantComplaint(file, complaint);
         }
 
