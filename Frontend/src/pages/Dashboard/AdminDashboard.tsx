@@ -31,6 +31,16 @@ interface SimpleBalance {
   message: string;
 }
 
+interface Payment {
+  amount: number;
+  paymentStatus?: string;
+}
+
+const isCollectedStatus = (status?: string) => {
+  const normalized = (status ?? "").trim().toLowerCase();
+  return ["paid", "successful", "success", "completed", "complete"].includes(normalized);
+};
+
 const greeting = () => {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -90,6 +100,7 @@ const AdminDashboard = () => {
 
   const [properties, setProperties] = useState<any[]>([]);
   const [landlords, setLandlords] = useState<any[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [balance, setBalance] = useState<SimpleBalance | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
@@ -194,10 +205,24 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchPayments = async () => {
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetAllPayments`);
+      setPayments(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.response?.data ?? "Failed to load payments.", variant: "destructive" });
+    }
+  };
+
   useEffect(() => {
     fetchProperties();
     fetchLandlords();
+    fetchPayments();
   }, []);
+
+  const totalCollections = payments
+    .filter((payment) => isCollectedStatus(payment.paymentStatus))
+    .reduce((sum, payment) => sum + (payment.amount ?? 0), 0);
 
   const balanceTabs: { type: BalanceType; label: string }[] = [
     { type: "SMS", label: "SMS" },
@@ -252,8 +277,8 @@ const AdminDashboard = () => {
           trend={{ value: 8, up: true }}
         />
         <KpiCard
-          label="Total Revenue"
-          value="UGX 125,000"
+          label="Total Collections"
+          value={`UGX ${totalCollections.toLocaleString()}`}
           sub="Lifetime collections"
           icon={CircleDollarSign}
           iconBg="bg-amber-50"

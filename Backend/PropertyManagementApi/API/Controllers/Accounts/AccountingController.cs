@@ -193,11 +193,19 @@ namespace API.Controllers.Accounts
                 .Where(p => ShouldCountDashboardPayment(p.PaymentStatus))
                 .ToList();
 
-            var collected = countedPayments.Sum(p => (decimal)p.Amount);
+            var collectedPayments = countedPayments.Sum(p => (decimal)p.Amount);
+            var collectedInvoices = invoices
+                .Where(i => ShouldCountDashboardPayment(i.Status))
+                .Sum(i => (decimal)(i.PaidAmount > 0
+                    ? i.PaidAmount
+                    : i.OriginalAmount > 0 ? i.OriginalAmount : i.Amount));
+
+            var collected = collectedPayments + collectedInvoices;
 
             var outstandingInvoiceBalances = invoices
                 .Where(i => !string.Equals(i.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
-                         && !string.Equals(i.Status, "Void", StringComparison.OrdinalIgnoreCase))
+                         && !string.Equals(i.Status, "Void", StringComparison.OrdinalIgnoreCase)
+                         && !ShouldCountDashboardPayment(i.Status))
                 .Sum(i => (decimal)i.Amount);
 
             var missingContractRent = activeContracts

@@ -153,8 +153,8 @@ const OPEN_ENDED_DATE = '0001-01-01T00:00:00Z';
 
 const contractPayload = (form: CreateContractDto) => ({
   ...form,
-  openEnded: form.openEnded || !form.endDate,
-  endDate: form.openEnded || !form.endDate ? OPEN_ENDED_DATE : form.endDate,
+  openEnded: false,
+  endDate: form.endDate,
 });
 
 // ── Standard T&C template ─────────────────────────────────────────────────────
@@ -368,27 +368,15 @@ const ContractFields = ({
           <input type="date" className={inputCls} value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
         </div>
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">
-            End Date {form.openEnded ? <span className="normal-case font-normal text-slate-400 ml-1">(open-ended)</span> : '*'}
-          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">End Date *</label>
           <input
             type="date"
-            className={`${inputCls} ${form.openEnded ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
+            className={inputCls}
             value={form.endDate}
             onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-            disabled={!!form.openEnded}
           />
         </div>
       </div>
-      <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-slate-300 text-[#1D4ED8] accent-[#1D4ED8]"
-          checked={!!form.openEnded}
-          onChange={e => setForm(f => ({ ...f, openEnded: e.target.checked, endDate: e.target.checked ? '' : f.endDate }))}
-        />
-        <span className="text-sm text-slate-600">Open-ended contract <span className="text-slate-400 text-xs">(no fixed end date)</span></span>
-      </label>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B]">Monthly Rent *</label>
@@ -517,8 +505,8 @@ const RentalContracts = () => {
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!addForm.tenantId || !addForm.propertyName || !addForm.startDate) {
-      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property and start date.' });
+    if (!addForm.tenantId || !addForm.propertyName || !addForm.startDate || !addForm.endDate) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property, start date, and end date.' });
       return;
     }
     setIsSaving(true);
@@ -543,6 +531,10 @@ const RentalContracts = () => {
   // ── Update ────────────────────────────────────────────────────────────────
   const handleEditSave = async () => {
     if (!editContract) return;
+    if (!editForm.tenantId || !editForm.propertyName || !editForm.startDate || !editForm.endDate) {
+      toast({ variant: 'destructive', title: 'Missing fields', description: 'Please select a tenant and fill in property, start date, and end date.' });
+      return;
+    }
     setIsSaving(true);
     try {
       const res = await fetch(`${apiUrl}/UpdateContract`, {
@@ -587,8 +579,8 @@ const RentalContracts = () => {
       tenantId: c.tenantId, tenantName: c.tenantName, tenantEmail: c.tenantEmail, tenantPhone: c.tenantPhone,
       propertyId: c.propertyId, propertyName: c.propertyName,
       unitId: c.unitId, unitName: c.unitName,
-      startDate: c.startDate?.slice(0, 10) ?? '', endDate: c.endDate?.slice(0, 10) ?? '',
-      openEnded: !c.endDate || c.endDate.startsWith('0001'),
+      startDate: c.startDate?.slice(0, 10) ?? '', endDate: c.endDate && !c.endDate.startsWith('0001') ? c.endDate.slice(0, 10) : '',
+      openEnded: false,
       rentAmount: c.rentAmount, currency: c.currency, securityDeposit: c.securityDeposit,
       status: c.status, terms: c.terms ?? '', ownerId: userData?.id ?? 0,
     });

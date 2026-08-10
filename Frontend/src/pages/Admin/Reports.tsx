@@ -189,18 +189,22 @@ const Reports = () => {
   }, [filteredPayments]);
 
   const handleExport = () => {
+    const escapeCsvCell = (value: string | number) => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const rows = [
       ["Month", "Revenue (UGX)"],
       ...monthlyRevenue.map(r => [r.month, r.amount]),
     ];
-    const csv = rows.map(r => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const csv = rows.map(r => r.map(escapeCsvCell).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `reports-${timeframe}-${currentYear}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast({ title: "Exported", description: "Report exported to CSV." });
   };
 
   if (isLoading) {

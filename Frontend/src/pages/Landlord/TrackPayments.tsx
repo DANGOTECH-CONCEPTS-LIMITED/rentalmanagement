@@ -21,6 +21,7 @@ import {
   FileText,
   Eye,
   Home,
+  Filter,
   Calendar,
   CreditCard,
   Clock,
@@ -501,21 +502,20 @@ const TrackPayments = () => {
   };
 
   const handleExport = () => {
-    const headers = ["Reference", "Source", "Tenant", "Property", "Room No", "Amount (UGX)", "Date", "Type", "Status", "Notes"];
+    const escapeCsvCell = (value: string | number) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const headers = ["Reference", "Tenant", "Property", "Room No", "Amount (UGX)", "Date", "Type", "Status"];
     const csvRows = [
-      headers.join(","),
+      headers.map(escapeCsvCell).join(","),
       ...sortedPayments.map((p) => [
-        `"${p.reference}"`,
-        p.source,
-        `"${p.tenantName}"`,
-        `"${p.propertyName}"`,
-        `"${p.roomNo ?? ""}"`,
+        p.reference,
+        p.tenantName,
+        p.propertyName,
+        p.roomNo ?? "",
         p.amount,
         new Date(p.date).toLocaleDateString(),
         p.method,
         p.status,
-        p.notes ? `"${p.notes}"` : "",
-      ].join(",")),
+      ].map(escapeCsvCell).join(",")),
     ];
     const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -866,6 +866,61 @@ const TrackPayments = () => {
             </button>
           ))}
         </div>
+        <div className="border-b border-[#E2E8F0] bg-slate-50/60 p-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#0F172A]">
+            <Filter className="h-4 w-4 text-[#1D4ED8]" />
+            Filters
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Property</label>
+              <select
+                className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+                value={filterProperty}
+                onChange={(e) => setFilterProperty(e.target.value)}
+              >
+                <option value="All">All Properties</option>
+                {propertyOptions.map((property) => (
+                  <option key={String(property.id ?? property.name)} value={String(property.id ?? property.name)}>
+                    {property.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">From</label>
+              <input
+                type="date"
+                className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">To</label>
+              <input
+                type="date"
+                className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => { setFilterProperty("All"); setFilterFrom(""); setFilterTo(""); }}
+                disabled={filterProperty === "All" && !filterFrom && !filterTo}
+              >
+                <X className="h-4 w-4" />
+                Reset Filters
+              </button>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Showing {sortedPayments.length} of {payments.length} payment record{payments.length !== 1 ? "s" : ""}.
+          </p>
+        </div>
         <div className="p-4">
           <DataTable
             data={sortedPayments}
@@ -879,40 +934,6 @@ const TrackPayments = () => {
             emptyMessage="No payments found"
             emptyIcon={<CircleDollarSign className="h-10 w-10" />}
             minWidth="900px"
-            headerRight={
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  className="rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#1D4ED8] transition-colors"
-                  value={filterProperty}
-                  onChange={(e) => setFilterProperty(e.target.value)}
-                >
-                  <option value="All">All Properties</option>
-                  {propertyOptions.map((property) => (
-                    <option key={String(property.id ?? property.name)} value={String(property.id ?? property.name)}>
-                      {property.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-400 whitespace-nowrap">From</span>
-                  <input
-                    type="date"
-                    className="h-8 w-32 rounded-lg border border-[#E2E8F0] px-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
-                    value={filterFrom}
-                    onChange={(e) => setFilterFrom(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-400 whitespace-nowrap">To</span>
-                  <input
-                    type="date"
-                    className="h-8 w-32 rounded-lg border border-[#E2E8F0] px-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
-                    value={filterTo}
-                    onChange={(e) => setFilterTo(e.target.value)}
-                  />
-                </div>
-              </div>
-            }
           />
         </div>
       </div>
@@ -988,6 +1009,7 @@ const TrackPayments = () => {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { icon: Calendar, label: "Date", value: new Date(viewPayment.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) },
+                    ...(viewPayment.roomNo ? [{ icon: Home, label: "Room No", value: viewPayment.roomNo }] : []),
                     { icon: Banknote, label: "Type", value: <MethodBadge method={viewPayment.method} /> },
                     { icon: Hash,     label: "Reference", value: <span className="font-mono text-xs">{viewPayment.reference}</span> },
                     ...(viewPayment.vendor ? [{ icon: User, label: "Received By", value: viewPayment.vendor }] : []),

@@ -230,7 +230,7 @@ const LandlordReports = () => {
           const collectedPayments = payments.filter((payment) => isCollectedStatus(payment.paymentStatus));
           const paymentCollections = collectedPayments.reduce((s, p) => s + (p.amount ?? 0), 0);
           const invoiceCollections = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
-          const totalCollections = paymentCollections > 0 ? paymentCollections : invoiceCollections;
+          const totalCollections = paymentCollections + invoiceCollections;
           const totalExpenses = expenses.reduce((s, e) => s + (e.amount ?? 0), 0);
           return { property: prop, payments, paidInvoices, expenses, totalCollections, totalExpenses };
         })
