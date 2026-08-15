@@ -73,15 +73,28 @@ namespace API.Controllers.Accounts
             var toDate = to?.Date ?? new DateTime(DateTime.UtcNow.Year, 12, 31);
             var toDateEnd = toDate.AddDays(1).AddTicks(-1);
 
-            // Income: paid invoices on properties owned by this landlord (same join as GetInvoicesByLandlordId)
+            // Income: paid invoices on properties owned by this landlord
             var paidInvoices = await _db.TenantInvoices
                 .AsNoTracking()
                 .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
                     i => i.PropertyId, p => p.Id, (i, p) => i)
                 .Where(i => i.Status.ToLower() == "paid"
                          && i.InvoiceDate >= fromDate && i.InvoiceDate <= toDateEnd)
-                .Select(i => new { i.InvoiceDate, i.Amount })
+                .Select(i => new { Date = i.InvoiceDate, i.Amount })
                 .ToListAsync();
+
+            // Income: successful cash payments (MakeTenantPayment records) — captures rent paid without a matching paid invoice
+            var successfulPayments = await _db.TenantPayments
+                .AsNoTracking()
+                .Where(p => p.PropertyTenant.Property != null
+                         && p.PropertyTenant.Property.OwnerId == landlordId
+                         && p.PaymentDate >= fromDate && p.PaymentDate <= toDateEnd)
+                .Select(p => new { Date = p.PaymentDate, p.Amount, p.PaymentStatus })
+                .ToListAsync();
+
+            var countedPayments = successfulPayments
+                .Where(p => ShouldCountDashboardPayment(p.PaymentStatus))
+                .ToList();
 
             // Expenses: property expenses recorded by this landlord
             var expenses = await _db.PropertyExpenses
@@ -91,14 +104,19 @@ namespace API.Controllers.Accounts
                 .Select(e => new { e.Date, e.Amount, e.Category })
                 .ToListAsync();
 
-            var totalIncome = (decimal)paidInvoices.Sum(i => i.Amount);
+            var totalIncome = (decimal)paidInvoices.Sum(i => i.Amount)
+                            + (decimal)countedPayments.Sum(p => p.Amount);
             var totalExpenses = (decimal)expenses.Sum(e => e.Amount);
             var netProfit = totalIncome - totalExpenses;
 
-            // Monthly breakdown for the full range
-            var paymentsByMonth = paidInvoices
-                .GroupBy(i => new { i.InvoiceDate.Year, i.InvoiceDate.Month })
-                .ToDictionary(g => g.Key, g => (decimal)g.Sum(i => i.Amount));
+            // Monthly breakdown — combine paid invoices and cash payments
+            var allIncomeEntries = paidInvoices.Select(i => (i.Date, i.Amount))
+                .Concat(countedPayments.Select(p => (p.Date, p.Amount)))
+                .ToList();
+
+            var paymentsByMonth = allIncomeEntries
+                .GroupBy(x => new { x.Date.Year, x.Date.Month })
+                .ToDictionary(g => g.Key, g => (decimal)g.Sum(x => x.Amount));
 
             var expensesByMonth = expenses
                 .GroupBy(e => new { e.Date.Year, e.Date.Month })
@@ -224,7 +242,8 @@ namespace API.Controllers.Accounts
                 .AsNoTracking()
                 .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
                     i => i.PropertyId, p => p.Id, (i, p) => i)
-                .Where(i => i.Type != null && i.Type.ToLower().Contains("security"))
+                .Where(i => (i.Type != null && (i.Type.ToLower().Contains("security") || i.Type.ToLower().Contains("deposit")))
+                         || (i.Notes != null && (i.Notes.ToLower().Contains("security deposit") || i.Notes.ToLower().Contains("security"))))
                 .Select(i => new
                 {
                     i.TenantId,
@@ -263,11 +282,13 @@ namespace API.Controllers.Accounts
                 .Sum(invoice => (decimal)invoice.Amount);
 
             var revenueExpected = collected + outstandingInvoiceBalances + missingContractRent;
-            var securityDeposits = securityDepositPayments > 0
-                ? securityDepositPayments
+            // Priority: contracts are most reliable (set at contract creation); fall back to invoices, then payments
+            var contractTotal = contractSecurityDeposits + manualSecurityDeposits;
+            var securityDeposits = contractTotal > 0
+                ? contractTotal
                 : securityDepositInvoices > 0
                     ? securityDepositInvoices
-                    : contractSecurityDeposits + manualSecurityDeposits;
+                    : securityDepositPayments;
 
             var uncollected = revenueExpected > collected ? revenueExpected - collected : 0m;
 
