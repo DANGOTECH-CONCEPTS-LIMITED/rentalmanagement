@@ -758,6 +758,17 @@ const ManageTenants = () => {
       ),
     },
     {
+      key: "outstanding",
+      header: "Outstanding",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (t) => (
+        <span className={`text-sm font-semibold ${(t.balanceDue ?? 0) > 0 ? "text-red-600" : "text-emerald-600"}`}>
+          {formatCurrency(t.balanceDue ?? 0, t.property.currency)}
+        </span>
+      ),
+    },
+    {
       key: "status",
       header: "Status",
       cell: (t) => <StatusBadge active={t.active} />,

@@ -114,9 +114,11 @@ interface PropertyReport {
   property: Property;
   payments: PaymentRecord[];
   paidInvoices: InvoiceRecord[];
+  allInvoices: InvoiceRecord[];
   expenses: ExpenseRecord[];
   totalCollections: number;
   totalExpenses: number;
+  totalInvoiceAmount: number;
 }
 
 const EmptyState = ({ message }: { message: string }) => (
@@ -219,20 +221,21 @@ const LandlordReports = () => {
           const expenses: ExpenseRecord[] =
             expensesRes.status === "fulfilled" ? expensesRes.value.data ?? [] : [];
 
-          // Paid invoices for this property within the date range
-          const paidInvoices: InvoiceRecord[] = allInvoices.filter((inv) => {
+          // All invoices for this property within the date range
+          const propInvoices: InvoiceRecord[] = allInvoices.filter((inv) => {
             if (inv.propertyId !== prop.id) return false;
-            if (inv.status?.toLowerCase() !== "paid") return false;
             const d = new Date(inv.invoiceDate);
             return d >= fromDate && d <= toDate;
           });
+          const paidInvoices = propInvoices.filter((inv) => inv.status?.toLowerCase() === "paid");
 
           const collectedPayments = payments.filter((payment) => isCollectedStatus(payment.paymentStatus));
           const paymentCollections = collectedPayments.reduce((s, p) => s + (p.amount ?? 0), 0);
           const invoiceCollections = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
           const totalCollections = paymentCollections + invoiceCollections;
           const totalExpenses = expenses.reduce((s, e) => s + (e.amount ?? 0), 0);
-          return { property: prop, payments, paidInvoices, expenses, totalCollections, totalExpenses };
+          const totalInvoiceAmount = propInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
+          return { property: prop, payments, paidInvoices, allInvoices: propInvoices, expenses, totalCollections, totalExpenses, totalInvoiceAmount };
         })
       );
       setPropertyReports(reports);
@@ -297,10 +300,11 @@ const LandlordReports = () => {
   const handleExport = () => {
     if (activeTab === "property") {
       downloadCsv(`property-report-${reportFrom}-to-${reportTo}.csv`, [
-        ["Property", "Address", "Collections", "Expenses", "Net"],
+        ["Property", "Address", "Total Invoices", "Payments", "Expenses", "Net"],
         ...propertyReports.map((report) => [
           report.property.name,
           report.property.address,
+          report.totalInvoiceAmount,
           report.totalCollections,
           report.totalExpenses,
           report.totalCollections - report.totalExpenses,
@@ -800,16 +804,27 @@ const LandlordReports = () => {
           ) : (
             <>
               {/* Summary KPIs */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                 {(() => {
                   const grandCollections = propertyReports.reduce((s, r) => s + r.totalCollections, 0);
                   const grandExpenses = propertyReports.reduce((s, r) => s + r.totalExpenses, 0);
+                  const grandInvoiced = propertyReports.reduce((s, r) => s + r.totalInvoiceAmount, 0);
                   const grandNet = grandCollections - grandExpenses;
                   return (
                     <>
+                      <div className="rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 border-l-blue-500 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium text-[#64748B]">Total Invoiced</p>
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                            <FileBarChart className="h-4.5 w-4.5 text-blue-600" />
+                          </div>
+                        </div>
+                        <p className="mt-3 text-2xl font-bold text-blue-600">{formatUGX(grandInvoiced)}</p>
+                        <p className="mt-1 text-xs text-[#94A3B8]">{reportFrom} — {reportTo}</p>
+                      </div>
                       <div className="rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 border-l-emerald-500 shadow-sm">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium text-[#64748B]">Total Collections</p>
+                          <p className="text-xs font-medium text-[#64748B]">Total Payments</p>
                           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50">
                             <Banknote className="h-4.5 w-4.5 text-emerald-600" />
                           </div>
@@ -837,7 +852,7 @@ const LandlordReports = () => {
                           </div>
                         </div>
                         <p className={`mt-3 text-2xl font-bold ${grandNet >= 0 ? "text-blue-600" : "text-red-700"}`}>{formatUGX(grandNet)}</p>
-                        <p className="mt-1 text-xs text-[#94A3B8]">Collections minus expenses</p>
+                        <p className="mt-1 text-xs text-[#94A3B8]">Payments minus expenses</p>
                       </div>
                     </>
                   );
@@ -846,7 +861,7 @@ const LandlordReports = () => {
 
               {/* Per-property cards */}
               <div className="space-y-3">
-                {propertyReports.map(({ property, payments, paidInvoices, expenses, totalCollections, totalExpenses }) => {
+                {propertyReports.map(({ property, payments, paidInvoices, allInvoices: propInvoices, expenses, totalCollections, totalExpenses, totalInvoiceAmount }) => {
                   const net = totalCollections - totalExpenses;
                   const isExpanded = expandedProperty === property.id;
                   const collectedPayments = payments.filter((payment) => isCollectedStatus(payment.paymentStatus));
@@ -868,7 +883,11 @@ const LandlordReports = () => {
                         </div>
                         <div className="flex items-center gap-6">
                           <div className="text-right hidden sm:block">
-                            <p className="text-xs text-[#94A3B8]">Collections</p>
+                            <p className="text-xs text-[#94A3B8]">Total Invoiced</p>
+                            <p className="text-sm font-bold text-blue-600">{formatUGX(totalInvoiceAmount)}</p>
+                          </div>
+                          <div className="text-right hidden sm:block">
+                            <p className="text-xs text-[#94A3B8]">Payments</p>
                             <p className="text-sm font-bold text-emerald-600">{formatUGX(totalCollections)}</p>
                           </div>
                           <div className="text-right hidden sm:block">
@@ -890,7 +909,8 @@ const LandlordReports = () => {
                       {/* Mobile totals strip */}
                       <div className="sm:hidden flex divide-x divide-[#F1F5F9] border-t border-[#F1F5F9]">
                         {[
-                          { label: "Collections", value: totalCollections, cls: "text-emerald-600" },
+                          { label: "Invoiced", value: totalInvoiceAmount, cls: "text-blue-600" },
+                          { label: "Payments", value: totalCollections, cls: "text-emerald-600" },
                           { label: "Expenses", value: totalExpenses, cls: "text-red-500" },
                           { label: "Net", value: net, cls: net >= 0 ? "text-blue-600" : "text-red-700" },
                         ].map(({ label, value, cls }) => (
@@ -909,7 +929,7 @@ const LandlordReports = () => {
                             <div className="flex items-center gap-2 px-5 py-3 bg-slate-50/60">
                               <Banknote className="h-4 w-4 text-emerald-500" />
                               <span className="text-xs font-semibold text-[#0F172A] uppercase tracking-wide">
-                                Collections ({collectedPayments.length + paidInvoices.length})
+                                Payments ({collectedPayments.length + paidInvoices.length})
                               </span>
                             </div>
                             {collectedPayments.length === 0 && paidInvoices.length === 0 ? (

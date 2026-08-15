@@ -774,10 +774,10 @@ const InvoiceManagement = () => {
     .filter((i) => isPaymentType(i.type))
     .reduce((s, i) => s + i.amount, 0);
   const totalPending = chargeInvoices
-    .filter((i) => i.status === "Pending")
+    .filter((i) => i.status?.toLowerCase() === "pending")
     .reduce((s, i) => s + i.amount, 0);
   const totalOverdue = chargeInvoices
-    .filter((i) => i.status === "Overdue")
+    .filter((i) => i.status?.toLowerCase() === "overdue")
     .reduce((s, i) => s + i.amount, 0);
 
   const kpiCards = [

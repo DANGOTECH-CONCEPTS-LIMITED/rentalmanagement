@@ -193,7 +193,7 @@ const TABS = [
   { key: "pending", label: "Pending" },
   { key: "failed",  label: "Failed" },
   { key: "invoice", label: "Invoices" },
-  { key: "payment", label: "Payments" },
+  { key: "payment", label: "Receipts" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -578,7 +578,10 @@ const TrackPayments = () => {
         : <ArrowDown className="ml-1 h-3 w-3 inline" />
       : null;
 
-  const totalReceived = filteredPayments.filter((p) => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+  // On "all" tab only count payment-source records as received (avoids double-counting paid invoices that already have a payment record).
+  const totalReceived = filteredPayments
+    .filter((p) => p.status === "Paid" && (tab !== "all" || p.source === "payment"))
+    .reduce((s, p) => s + p.amount, 0);
   const totalPending  = filteredPayments.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
   const totalFailed   = filteredPayments.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
   const totalCash     = filteredPayments.filter((p) => p.method === "CASH" && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
