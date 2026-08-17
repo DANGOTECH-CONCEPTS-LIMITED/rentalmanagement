@@ -236,13 +236,29 @@ const ManageTenants = () => {
   const fetchTenants = async () => {
     setIsLoading(true);
     try {
+      let list: Tenant[] = [];
       if (isCaretaker) {
         const { data } = await axios.get(`${apiUrl}/GetTenantsByCaretakerId/${userData.id}`);
-        setTenants(Array.isArray(data) ? data : []);
+        list = Array.isArray(data) ? data : [];
       } else {
         const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
-        setTenants((Array.isArray(data) ? data : []).filter((tenant: Tenant) => tenant?.property?.ownerId === userData.id));
+        list = (Array.isArray(data) ? data : []).filter((t: Tenant) => t?.property?.ownerId === userData.id);
       }
+
+      // Fetch closing balances from customer statements in parallel (same source as mobile app)
+      const statements = await Promise.allSettled(
+        list.map((t) => axios.get(`${apiUrl}/GetCustomerStatement/${t.id}`))
+      );
+      const withBalances = list.map((t, i) => {
+        const result = statements[i];
+        if (result.status === "fulfilled") {
+          const closing = result.value.data?.closingBalance ?? 0;
+          return { ...t, balanceDue: Math.max(0, closing) };
+        }
+        return t;
+      });
+
+      setTenants(withBalances);
     } catch (error) {
       toast({
         title: "Error",

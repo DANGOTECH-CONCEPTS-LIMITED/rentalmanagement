@@ -71,6 +71,7 @@ const TenantDashboard = () => {
   const navigate = useNavigate();
   const formatCurrency = useCurrencyFormatter();
   const [tenant, setTenant] = useState<any>(null);
+  const [contract, setContract] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
 
@@ -82,6 +83,7 @@ const TenantDashboard = () => {
   useEffect(() => {
     fetchTenant();
     fetchInvoices();
+    fetchContract();
   }, []);
 
   const fetchTenant = async () => {
@@ -103,6 +105,22 @@ const TenantDashboard = () => {
     }
   };
 
+  const fetchContract = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const token = userData?.token;
+    try {
+      const { data } = await axios.get(`${apiUrl}/GetContractsByTenantId/${userData.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const active = Array.isArray(data)
+        ? data.find((c: any) => c.status?.toLowerCase() === "active") ?? data[0]
+        : null;
+      setContract(active ?? null);
+    } catch {
+      // silently ignore — falls back to property price
+    }
+  };
+
   const fetchInvoices = async () => {
     const apiUrl = import.meta.env.VITE_API_BASE_URL;
     const token = userData?.token;
@@ -121,7 +139,7 @@ const TenantDashboard = () => {
 
   const nextPayment = tenant?.nextPaymentDate;
   const days = daysUntil(nextPayment);
-  const rent = tenant?.property?.price ?? 0;
+  const rent = contract?.rentAmount ?? tenant?.property?.price ?? 0;
   const currency = tenant?.property?.currency ?? "UGX";
   const propertyName = tenant?.property?.propertyName ?? tenant?.property?.name ?? "—";
 
