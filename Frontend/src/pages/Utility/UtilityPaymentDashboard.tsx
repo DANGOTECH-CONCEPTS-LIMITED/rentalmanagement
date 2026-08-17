@@ -129,7 +129,7 @@ const successfulStatuses = new Set([
   "SUCCESSFUL",
   "SUCCESSFUL AT TELECOM",
   "SUCCESSFUL AT THE BANK",
-  "SUCCESSFUL AT TELCOM",
+  "",
 ]);
 
 const pendingStatuses = new Set([

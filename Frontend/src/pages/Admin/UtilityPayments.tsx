@@ -334,7 +334,7 @@ const UtilityPayments = () => {
                 <option value="PENDING">PENDING</option>
                 <option value="PENDING AT TELCOM">PENDING AT TELCOM</option>
                 <option value="SUCCESSFUL">SUCCESSFUL</option>
-                <option value="SUCCESSFUL AT TELCOM">SUCCESSFUL AT TELCOM</option>
+                <option value="SUCCESSFUL AT TELECOM">SUCCESSFUL AT TELECOM</option>
                 <option value="FAILED">FAILED</option>
                 <option value="REVERSED">REVERSED</option>
               </select>
