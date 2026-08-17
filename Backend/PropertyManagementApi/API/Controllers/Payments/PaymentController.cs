@@ -4,6 +4,7 @@ using Domain.Entities.PropertyMgt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace API.Controllers.Payments
 {
@@ -384,11 +385,18 @@ namespace API.Controllers.Payments
             }
 
         [HttpPut("/Admin/UpdatePaymentStatus")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> UpdatePaymentStatus([FromBody] UpdatePaymentStatusDto dto)
         {
             try
             {
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+                if (!string.Equals(userRole, "Administrator", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Unauthorized();
+                }
+
                 if (dto == null) return BadRequest(new { error = "Invalid payload" });
                 await _paymentService.UpdatePaymentStatus(dto.Status, dto.TransactionId, dto.ReasonAtTelecom ?? string.Empty, dto.VendorTranRef ?? string.Empty, dto.TranType ?? "UTILITY");
                 return Ok(new { message = "Payment status updated successfully." });
