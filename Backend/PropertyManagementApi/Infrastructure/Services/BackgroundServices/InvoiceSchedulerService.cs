@@ -108,7 +108,7 @@ namespace Infrastructure.Services.BackgroundServices
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var invoiceSvc = scope.ServiceProvider.GetRequiredService<ITenantInvoiceService>();
 
-            var today = DateTime.UtcNow;
+            var today = DateTime.Now; // use server local time so day-of-month matches landlord's timezone
             var globalDueDays = _config.GetValue<int>("InvoiceScheduler:DueDays", 7);
 
             var contracts = await db.RentalContracts
