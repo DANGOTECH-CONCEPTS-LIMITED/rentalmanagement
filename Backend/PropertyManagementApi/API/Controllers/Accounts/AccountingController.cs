@@ -151,20 +151,29 @@ namespace API.Controllers.Accounts
             });
         }
 
-        // GET: /api/accounting/dashboard-kpis/1
+        // GET: /api/accounting/dashboard-kpis/1?fromDate=2026-01-01&toDate=2026-01-31&propertyId=3
         [HttpGet("dashboard-kpis/{landlordId:int}")]
         [Authorize]
-        public async Task<IActionResult> GetDashboardKpis(int landlordId)
+        public async Task<IActionResult> GetDashboardKpis(
+            int landlordId,
+            [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? toDate,
+            [FromQuery] int? propertyId)
         {
             if (landlordId <= 0) return BadRequest("landlordId is required.");
 
             var now = DateTime.UtcNow;
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+            var periodStart = fromDate.HasValue
+                ? DateTime.SpecifyKind(fromDate.Value.Date, DateTimeKind.Utc)
+                : new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var periodEnd = toDate.HasValue
+                ? DateTime.SpecifyKind(toDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc)
+                : new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddTicks(-1);
 
             var activeContracts = await _db.RentalContracts
                 .AsNoTracking()
-                .Where(c => c.OwnerId == landlordId && c.Status.ToLower() == "active")
+                .Where(c => c.OwnerId == landlordId && c.Status.ToLower() == "active"
+                         && (!propertyId.HasValue || c.PropertyId == propertyId.Value))
                 .Select(c => new
                 {
                     c.TenantId,
@@ -175,11 +184,16 @@ namespace API.Controllers.Accounts
                 })
                 .ToListAsync();
 
-            var invoices = await _db.TenantInvoices
+            var invoiceQuery = _db.TenantInvoices
                 .AsNoTracking()
                 .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
                     i => i.PropertyId, p => p.Id, (i, p) => i)
-                .Where(i => i.InvoiceDate >= monthStart && i.InvoiceDate <= monthEnd)
+                .Where(i => i.InvoiceDate >= periodStart && i.InvoiceDate <= periodEnd);
+
+            if (propertyId.HasValue)
+                invoiceQuery = invoiceQuery.Where(i => i.PropertyId == propertyId.Value);
+
+            var invoices = await invoiceQuery
                 .Select(i => new
                 {
                     i.TenantId,
@@ -193,11 +207,16 @@ namespace API.Controllers.Accounts
                 })
                 .ToListAsync();
 
-            var payments = await _db.TenantPayments
+            var paymentQuery = _db.TenantPayments
                 .AsNoTracking()
                 .Where(p => p.PropertyTenant.Property != null
                          && p.PropertyTenant.Property.OwnerId == landlordId
-                         && p.PaymentDate >= monthStart && p.PaymentDate <= monthEnd)
+                         && p.PaymentDate >= periodStart && p.PaymentDate <= periodEnd);
+
+            if (propertyId.HasValue)
+                paymentQuery = paymentQuery.Where(p => p.PropertyTenant.Property!.Id == propertyId.Value);
+
+            var payments = await paymentQuery
                 .Select(p => new
                 {
                     p.Amount,
@@ -237,13 +256,18 @@ namespace API.Controllers.Accounts
                     )))
                 .Sum(contract => (decimal)contract.RentAmount);
 
-            // Security deposits are one-time events — query all time, not just current month
-            var allTimeSecDepositInvoices = await _db.TenantInvoices
+            // Security deposits are one-time events — query all time, not just the selected period
+            var secDepInvoiceQuery = _db.TenantInvoices
                 .AsNoTracking()
                 .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
                     i => i.PropertyId, p => p.Id, (i, p) => i)
                 .Where(i => (i.Type != null && (i.Type.ToLower().Contains("security") || i.Type.ToLower().Contains("deposit")))
-                         || (i.Notes != null && (i.Notes.ToLower().Contains("security deposit") || i.Notes.ToLower().Contains("security"))))
+                         || (i.Notes != null && (i.Notes.ToLower().Contains("security deposit") || i.Notes.ToLower().Contains("security"))));
+
+            if (propertyId.HasValue)
+                secDepInvoiceQuery = secDepInvoiceQuery.Where(i => i.PropertyId == propertyId.Value);
+
+            var allTimeSecDepositInvoices = await secDepInvoiceQuery
                 .Select(i => new
                 {
                     i.TenantId,
@@ -255,10 +279,15 @@ namespace API.Controllers.Accounts
                 })
                 .ToListAsync();
 
-            var allTimeSecDepositPayments = await _db.TenantPayments
+            var secDepPaymentQuery = _db.TenantPayments
                 .AsNoTracking()
                 .Where(p => p.PropertyTenant.Property != null
-                         && p.PropertyTenant.Property.OwnerId == landlordId)
+                         && p.PropertyTenant.Property.OwnerId == landlordId);
+
+            if (propertyId.HasValue)
+                secDepPaymentQuery = secDepPaymentQuery.Where(p => p.PropertyTenant.Property!.Id == propertyId.Value);
+
+            var allTimeSecDepositPayments = await secDepPaymentQuery
                 .Select(p => new { p.Amount, p.PaymentStatus, p.PaymentType, p.Description })
                 .ToListAsync();
 

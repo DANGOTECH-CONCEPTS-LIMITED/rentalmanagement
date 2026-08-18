@@ -20,6 +20,8 @@ import {
   PiggyBank,
   X,
   History,
+  Filter,
+  Calendar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
@@ -150,6 +152,10 @@ const LandlordDashboard = () => {
     uncollected: 0,
     securityDeposits: 0,
   });
+  const [revenueLoading, setRevenueLoading] = useState(false);
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
+  const [filterProperty, setFilterProperty] = useState("");
   const [units, setUnits] = useState([]);
 
   const user = localStorage.getItem("user");
@@ -164,9 +170,13 @@ const LandlordDashboard = () => {
     fetchProperties();
     fetchTenants();
     fetchUtilityStats();
-    fetchRevenueKpis();
+    fetchRevenueKpis("", "", "");
     fetchUnits();
   }, []);
+
+  useEffect(() => {
+    fetchRevenueKpis(filterFrom, filterTo, filterProperty);
+  }, [filterFrom, filterTo, filterProperty]);
 
   const fetchWalletData = async () => {
     setIsLoading(true);
@@ -213,13 +223,21 @@ const LandlordDashboard = () => {
     } catch {}
   };
 
-  const fetchRevenueKpis = async () => {
+  const fetchRevenueKpis = async (from = filterFrom, to = filterTo, propId = filterProperty) => {
+    setRevenueLoading(true);
     try {
+      const params = new URLSearchParams();
+      if (from) params.append("fromDate", from);
+      if (to) params.append("toDate", to);
+      if (propId) params.append("propertyId", propId);
+      const qs = params.toString() ? `?${params.toString()}` : "";
       const { data } = await axios.get(
-        `${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}`,
+        `${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}${qs}`,
       );
       setRevenueKpis(data);
-    } catch {}
+    } catch {} finally {
+      setRevenueLoading(false);
+    }
   };
 
   const fetchProperties = async () => {
@@ -735,6 +753,70 @@ const LandlordDashboard = () => {
         )}
       </div>
 
+      {/* ── Revenue filters ── */}
+      <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <Filter className="h-4 w-4 text-[#1D4ED8]" />
+          Revenue Filter
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Property</label>
+            <select
+              className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+              value={filterProperty}
+              onChange={(e) => setFilterProperty(e.target.value)}
+            >
+              <option value="">All Properties</option>
+              {(properties as any[]).map((p: any) => (
+                <option key={p.id} value={String(p.id)}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">From</label>
+            <input
+              type="date"
+              className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+              value={filterFrom}
+              onChange={(e) => setFilterFrom(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">To</label>
+            <input
+              type="date"
+              className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8]"
+              value={filterTo}
+              onChange={(e) => setFilterTo(e.target.value)}
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              disabled={!filterFrom && !filterTo && !filterProperty}
+              onClick={() => { setFilterFrom(""); setFilterTo(""); setFilterProperty(""); }}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            >
+              <X className="h-4 w-4" />
+              Reset
+            </button>
+          </div>
+        </div>
+        {(filterFrom || filterTo || filterProperty) && (
+          <p className="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            Showing revenue for{filterProperty ? ` selected property` : " all properties"}
+            {filterFrom && ` from ${new Date(filterFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+            {filterTo && ` to ${new Date(filterTo).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+            {!filterFrom && !filterTo && " (all time)"}
+          </p>
+        )}
+        {!filterFrom && !filterTo && !filterProperty && (
+          <p className="mt-2 text-[11px] text-slate-400">Showing current month by default. Set filters to change range.</p>
+        )}
+      </div>
+
       {/* ── Revenue summary strip ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
@@ -778,9 +860,10 @@ const LandlordDashboard = () => {
             </div>
             <div className="min-w-0">
               <p className="text-xs text-slate-400 truncate">{label}</p>
-              <p className={`text-sm font-bold ${color}`}>
-                {formatCurrency(value)}
-              </p>
+              {revenueLoading
+                ? <div className="mt-1 h-4 w-24 rounded bg-slate-200 animate-pulse" />
+                : <p className={`text-sm font-bold ${color}`}>{formatCurrency(value)}</p>
+              }
             </div>
           </div>
         ))}
