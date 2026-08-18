@@ -161,6 +161,7 @@ const InvoiceManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all");
+  const [filterProperty, setFilterProperty] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
   const [updateStatusInvoice, setUpdateStatusInvoice] =
@@ -288,17 +289,14 @@ const InvoiceManagement = () => {
       inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
       propertyName(inv.propertyId).toLowerCase().includes(search.toLowerCase());
     const matchTab =
-      // "All" shows only charge invoices — payment records live in "Payments" tab
       (tab === "all" && !isPaymentType(inv.type)) ||
-      // Status tabs also exclude payment-type records
       (["pending", "paid", "overdue"].includes(tab) &&
         inv.status.toLowerCase() === tab &&
         !isPaymentType(inv.type)) ||
-      // Manual Invoice tab: manual charges only
       (tab === "manual-invoice" && inv.type === "Manual Invoice") ||
-      // Payments tab: payment records only
       (tab === "payments" && isPaymentType(inv.type));
-    return matchSearch && matchTab;
+    const matchProperty = !filterProperty || inv.propertyId === Number(filterProperty);
+    return matchSearch && matchTab && matchProperty;
   });
 
   const openAdd = (type: InvoiceType = "Invoice") => {
@@ -792,12 +790,13 @@ const InvoiceManagement = () => {
     });
   };
   // Charge invoices only — excludes payment records from KPI totals.
-  const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
+  const kpiInvoices = filterProperty
+    ? invoices.filter((i) => i.propertyId === Number(filterProperty))
+    : invoices;
+  const chargeInvoices = kpiInvoices.filter((i) => !isPaymentType(i.type));
 
   // Collected = sum of payment records (Manual Payment type).
-  // These are created at the exact amount paid, so they're always accurate —
-  // even for partial payments where the original invoice is marked Paid at full value.
-  const totalPaid = invoices
+  const totalPaid = kpiInvoices
     .filter((i) => isPaymentType(i.type))
     .reduce((s, i) => s + i.amount, 0);
   const totalPending = chargeInvoices
@@ -1044,6 +1043,34 @@ const InvoiceManagement = () => {
             </div>
           </motion.div>
         ))}
+      </div>
+
+      {/* Property Filter */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 shadow-sm">
+        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Filter by Property</label>
+        <select
+          className="h-9 rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8] min-w-[200px]"
+          value={filterProperty}
+          onChange={(e) => setFilterProperty(e.target.value)}
+        >
+          <option value="">All Properties</option>
+          {properties.map((p) => (
+            <option key={p.id} value={String(p.id)}>{p.name}</option>
+          ))}
+        </select>
+        {filterProperty && (
+          <button
+            onClick={() => setFilterProperty("")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" /> Clear
+          </button>
+        )}
+        {filterProperty && (
+          <span className="ml-auto text-xs text-slate-400">
+            Showing invoices for <span className="font-semibold text-[#0F172A]">{properties.find(p => String(p.id) === filterProperty)?.name}</span>
+          </span>
+        )}
       </div>
 
       {/* Table Section */}
