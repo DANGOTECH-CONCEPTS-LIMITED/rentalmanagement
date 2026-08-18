@@ -239,22 +239,11 @@ namespace API.Controllers.Accounts
 
             var collected = collectedPayments + collectedInvoices;
 
-            var outstandingInvoiceBalances = invoices
+            // Revenue Expected = all invoices raised in the period, excluding cancelled/void
+            var revenueExpected = invoices
                 .Where(i => !string.Equals(i.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
-                         && !string.Equals(i.Status, "Void", StringComparison.OrdinalIgnoreCase)
-                         && !ShouldCountDashboardPayment(i.Status))
+                         && !string.Equals(i.Status, "Void", StringComparison.OrdinalIgnoreCase))
                 .Sum(i => (decimal)i.Amount);
-
-            var missingContractRent = activeContracts
-                .Where(contract => !invoices.Any(invoice =>
-                    string.Equals(invoice.Type, "Rent", StringComparison.OrdinalIgnoreCase)
-                    && (
-                        (contract.TenantId.HasValue && invoice.TenantId == contract.TenantId.Value)
-                        || (contract.PropertyId.HasValue
-                            && invoice.PropertyId == contract.PropertyId.Value
-                            && invoice.PropertyUnitId == contract.UnitId)
-                    )))
-                .Sum(contract => (decimal)contract.RentAmount);
 
             // Security deposits are one-time events — query all time, not just the selected period
             var secDepInvoiceQuery = _db.TenantInvoices
@@ -310,7 +299,6 @@ namespace API.Controllers.Accounts
                         && contract.UnitId == invoice.PropertyUnitId)))
                 .Sum(invoice => (decimal)invoice.Amount);
 
-            var revenueExpected = collected + outstandingInvoiceBalances + missingContractRent;
             // Priority: contracts are most reliable (set at contract creation); fall back to invoices, then payments
             var contractTotal = contractSecurityDeposits + manualSecurityDeposits;
             var securityDeposits = contractTotal > 0
