@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
 import {
   Plus,
   Eye,
@@ -16,6 +17,7 @@ import {
   X,
   Receipt,
   Download,
+  TableProperties,
 } from "lucide-react";
 import { useBranding } from "@/context/BrandingContext";
 import { Input } from "@/components/ui/input";
@@ -464,6 +466,31 @@ const InvoiceManagement = () => {
   };
 
   const formatUGX = (n: number) => `UGX ${n.toLocaleString()}`;
+
+  const handleExportExcel = () => {
+    const rows = filtered.map((inv) => ({
+      "Invoice No.": inv.invoiceNumber,
+      "Tenant": tenantName(inv.tenantId),
+      "Property": propertyName(inv.propertyId),
+      "Unit": unitName(inv.propertyUnitId),
+      "Type": inv.type,
+      "Status": inv.status,
+      "Amount (UGX)": inv.amount,
+      "Invoice Date": new Date(inv.invoiceDate).toLocaleDateString("en-GB"),
+      "Due Date": inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-GB") : "",
+      "Notes": inv.notes ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Column widths
+    ws["!cols"] = [
+      { wch: 20 }, { wch: 22 }, { wch: 24 }, { wch: 12 },
+      { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 30 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+    XLSX.writeFile(wb, `invoices-${new Date().toISOString().split("T")[0]}.xlsx`);
+    toast({ title: "Exported", description: `${rows.length} invoice${rows.length !== 1 ? "s" : ""} exported to Excel.` });
+  };
 
   const handleDownloadPDF = (inv: Invoice) => {
     const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -960,6 +987,13 @@ const InvoiceManagement = () => {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-sm font-medium border border-emerald-400/30 transition-colors"
+            >
+              <TableProperties className="h-4 w-4" />
+              Export Excel
+            </button>
             <button
               onClick={() => openAdd("Manual Payment")}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium border border-white/20 transition-colors"
