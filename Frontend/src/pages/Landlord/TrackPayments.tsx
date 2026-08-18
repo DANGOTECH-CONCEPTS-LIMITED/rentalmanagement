@@ -201,6 +201,7 @@ const TrackPayments = () => {
   const { toast } = useToast();
   const { branding } = useBranding();
   const [payments, setPayments] = useState<UnifiedPayment[]>([]);
+  const [allProperties, setAllProperties] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterProperty, setFilterProperty] = useState("All");
@@ -285,7 +286,22 @@ const TrackPayments = () => {
     }
   };
 
-  useEffect(() => { fetchPayments(); }, []);
+  const fetchProperties = async () => {
+    try {
+      const res = await fetch(
+        `${apiUrl}/GetPropertiesByLandLordId/${userData.id}`,
+        { headers: { Authorization: `Bearer ${token}`, accept: "*/*" } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setAllProperties(
+          (Array.isArray(data) ? data : []).map((p: any) => ({ id: p.id, name: p.name }))
+        );
+      }
+    } catch { /* silently ignore */ }
+  };
+
+  useEffect(() => { fetchPayments(); fetchProperties(); }, []);
 
   const sendSms = async (phone: string, message: string, reference: string) => {
     const res = await fetch(`${apiUrl}/sendSingleSms`, {
@@ -526,9 +542,12 @@ const TrackPayments = () => {
     toast({ title: "Export Successful", description: `${sortedPayments.length} filtered payment row${sortedPayments.length !== 1 ? "s" : ""} exported to CSV.` });
   };
 
-  const propertyOptions = Array.from(
-    new Map(payments.map((p) => [p.propertyId ?? p.propertyName, { id: p.propertyId, name: p.propertyName }])).values(),
-  ).filter((property) => property.name);
+  // Use the full property list fetched from the API so all properties appear regardless of payment history
+  const propertyOptions = allProperties.length > 0
+    ? allProperties
+    : Array.from(
+        new Map(payments.map((p) => [p.propertyId ?? p.propertyName, { id: p.propertyId, name: p.propertyName }])).values(),
+      ).filter((p) => p.name);
 
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
