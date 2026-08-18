@@ -420,60 +420,6 @@ const LandlordReports = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 border-l-emerald-500 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-[#64748B]">Total Income</p>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50">
-              <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />
-            </div>
-          </div>
-          {isLoadingProfit ? (
-            <div className="mt-3 h-7 w-32 rounded-md bg-slate-100 animate-pulse" />
-          ) : (
-            <p className="mt-3 text-2xl font-bold text-emerald-600">{formatUGX(totalIncome)}</p>
-          )}
-          <p className="mt-1 text-xs text-[#94A3B8]">For {period}</p>
-        </div>
-
-        <div className="rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 border-l-red-500 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-[#64748B]">Total Expenses</p>
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
-              <TrendingDown className="h-4.5 w-4.5 text-red-500" />
-            </div>
-          </div>
-          {isLoadingProfit ? (
-            <div className="mt-3 h-7 w-32 rounded-md bg-slate-100 animate-pulse" />
-          ) : (
-            <p className="mt-3 text-2xl font-bold text-red-500">{formatUGX(totalExpenses)}</p>
-          )}
-          <p className="mt-1 text-xs text-[#94A3B8]">For {period}</p>
-        </div>
-
-        <div className={`rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 ${netProfit >= 0 ? "border-l-blue-500" : "border-l-red-600"} shadow-sm`}>
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-[#64748B]">Net Profit</p>
-            <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${netProfit >= 0 ? "bg-blue-50" : "bg-red-50"}`}>
-              {netProfit >= 0
-                ? <CircleDollarSign className="h-4.5 w-4.5 text-blue-600" />
-                : <AlertTriangle className="h-4.5 w-4.5 text-red-600" />
-              }
-            </div>
-          </div>
-          {isLoadingProfit ? (
-            <div className="mt-3 h-7 w-32 rounded-md bg-slate-100 animate-pulse" />
-          ) : (
-            <p className={`mt-3 text-2xl font-bold ${netProfit >= 0 ? "text-blue-600" : "text-red-700"}`}>
-              {formatUGX(netProfit)}
-            </p>
-          )}
-          <p className="mt-1 text-xs text-[#94A3B8]">
-            {totalIncome > 0 ? `${((netProfit / totalIncome) * 100).toFixed(1)}% margin` : "For " + period}
-          </p>
-        </div>
-      </div>
 
       {/* Tab pills */}
       <div className="flex flex-wrap gap-2">
