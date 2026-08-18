@@ -230,14 +230,10 @@ namespace API.Controllers.Accounts
                 .Where(p => ShouldCountDashboardPayment(p.PaymentStatus))
                 .ToList();
 
-            var collectedPayments = countedPayments.Sum(p => (decimal)p.Amount);
-            var collectedInvoices = invoices
-                .Where(i => ShouldCountDashboardPayment(i.Status))
-                .Sum(i => (decimal)(i.PaidAmount > 0
-                    ? i.PaidAmount
-                    : i.OriginalAmount > 0 ? i.OriginalAmount : i.Amount));
-
-            var collected = collectedPayments + collectedInvoices;
+            // Use payment records only to avoid double-counting: when a payment comes in,
+            // both a TenantPayment record and the linked invoice (now "Paid") exist.
+            // Summing both would count the same cash twice.
+            var collected = countedPayments.Sum(p => (decimal)p.Amount);
 
             // Revenue Expected = all invoices raised in the period, excluding cancelled/void
             var revenueExpected = invoices
