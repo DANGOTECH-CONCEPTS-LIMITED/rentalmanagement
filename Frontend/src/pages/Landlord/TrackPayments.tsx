@@ -578,19 +578,30 @@ const TrackPayments = () => {
         : <ArrowDown className="ml-1 h-3 w-3 inline" />
       : null;
 
-  // On "all" tab only count payment-source records as received (avoids double-counting paid invoices that already have a payment record).
-  const totalReceived = filteredPayments
-    .filter((p) => p.status === "Paid" && (tab !== "all" || p.source === "payment"))
+  // KPI totals use property + date filters only (not tab) so cards stay meaningful regardless of active tab.
+  const kpiPayments = payments.filter((p) => {
+    const matchesProperty =
+      filterProperty === "All" ||
+      String(p.propertyId ?? p.propertyName) === filterProperty;
+    const paymentDate = p.date?.split("T")[0] ?? "";
+    const matchesFrom = !filterFrom || paymentDate >= filterFrom;
+    const matchesTo   = !filterTo   || paymentDate <= filterTo;
+    return matchesProperty && matchesFrom && matchesTo;
+  });
+
+  // Only count payment-source records as received to avoid double-counting paid invoices that already have a payment record.
+  const totalReceived = kpiPayments
+    .filter((p) => p.status === "Paid" && p.source === "payment")
     .reduce((s, p) => s + p.amount, 0);
-  const totalPending  = filteredPayments.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
-  const totalFailed   = filteredPayments.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
-  const totalCash     = filteredPayments.filter((p) => p.method === "CASH" && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+  const totalPending  = kpiPayments.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
+  const totalFailed   = kpiPayments.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
+  const totalCash     = kpiPayments.filter((p) => p.method === "CASH" && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
 
   const kpiCards = [
     {
       label: "Total Received",
       value: `UGX ${totalReceived.toLocaleString()}`,
-      sub: `${filteredPayments.filter((p) => p.status === "Paid").length} completed`,
+      sub: `${kpiPayments.filter((p) => p.status === "Paid").length} completed`,
       Icon: TrendingUp,
       border: "border-l-emerald-500",
       bg: "bg-emerald-50",
@@ -599,7 +610,7 @@ const TrackPayments = () => {
     {
       label: "Pending",
       value: `UGX ${totalPending.toLocaleString()}`,
-      sub: `${filteredPayments.filter((p) => p.status === "Pending").length} awaiting`,
+      sub: `${kpiPayments.filter((p) => p.status === "Pending").length} awaiting`,
       Icon: Clock,
       border: "border-l-amber-500",
       bg: "bg-amber-50",
@@ -608,7 +619,7 @@ const TrackPayments = () => {
     {
       label: "Failed",
       value: `UGX ${totalFailed.toLocaleString()}`,
-      sub: `${filteredPayments.filter((p) => p.status === "Failed").length} transactions`,
+      sub: `${kpiPayments.filter((p) => p.status === "Failed").length} transactions`,
       Icon: AlertCircle,
       border: "border-l-red-500",
       bg: "bg-red-50",
@@ -617,7 +628,7 @@ const TrackPayments = () => {
     {
       label: "Cash Collected",
       value: `UGX ${totalCash.toLocaleString()}`,
-      sub: `${filteredPayments.filter((p) => p.method === "CASH").length} cash payments`,
+      sub: `${kpiPayments.filter((p) => p.method === "CASH").length} cash payments`,
       Icon: Banknote,
       border: "border-l-slate-400",
       bg: "bg-slate-100",
