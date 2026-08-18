@@ -152,6 +152,7 @@ const DetailRow = ({
 const ManageTenants = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterPropertyId, setFilterPropertyId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -452,12 +453,14 @@ const ManageTenants = () => {
     }
   };
 
-  const filteredTenants = tenants.filter(
-    (t) =>
+  const filteredTenants = tenants.filter((t) => {
+    const matchSearch =
       t.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.property.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+      t.property.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchProperty = !filterPropertyId || String(t.property.id) === filterPropertyId;
+    return matchSearch && matchProperty;
+  });
 
   const formatCurrency = (amount: number, currency = "UGX") =>
     new Intl.NumberFormat("en-UG", {
@@ -641,8 +644,8 @@ const ManageTenants = () => {
     setIsEdit(true);
   };
 
-  const activeCount = tenants.filter((t) => t.active).length;
-  const totalBalance = tenants.reduce((s, t) => s + (t.balanceDue || 0), 0);
+  const activeCount = filteredTenants.filter((t) => t.active).length;
+  const totalBalance = filteredTenants.reduce((s, t) => s + (t.balanceDue || 0), 0);
 
   const selectCls =
     "h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3.5 text-sm text-[#0F172A] shadow-sm " +
@@ -944,11 +947,39 @@ const ManageTenants = () => {
         </div>
       </section>
 
+      {/* ── Property filter ── */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 shadow-sm">
+        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Filter by Property</label>
+        <select
+          className="h-9 rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm text-[#0F172A] focus:outline-none focus:border-[#1D4ED8] min-w-[220px]"
+          value={filterPropertyId}
+          onChange={(e) => setFilterPropertyId(e.target.value)}
+        >
+          <option value="">All Properties</option>
+          {properties.map((p: any) => (
+            <option key={p.id} value={String(p.id)}>{p.name}</option>
+          ))}
+        </select>
+        {filterPropertyId && (
+          <button
+            onClick={() => setFilterPropertyId("")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" /> Clear
+          </button>
+        )}
+        {filterPropertyId && (
+          <span className="ml-auto text-xs text-slate-400">
+            Showing tenants for <span className="font-semibold text-[#0F172A]">{properties.find((p: any) => String(p.id) === filterPropertyId)?.name}</span>
+          </span>
+        )}
+      </div>
+
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           label="Total Tenants"
-          value={tenants.length}
+          value={filteredTenants.length}
           sub={`${activeCount} active`}
           icon={Users}
           iconBg="bg-blue-50"
