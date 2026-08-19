@@ -621,7 +621,10 @@ const TrackPayments = () => {
     .reduce((s, p) => s + p.amount, 0);
   const totalPending  = kpiBase.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
   const totalFailed   = kpiBase.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
-  const totalCash     = kpiBase.filter((p) => p.method === "CASH" && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+  const isCashRecord  = (p: UnifiedPayment) =>
+    p.method === "CASH" ||
+    (p.source === "invoice" && p.method === "Manual Payment");
+  const totalCash     = kpiBase.filter((p) => isCashRecord(p) && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
 
   const kpiCards = [
     {
@@ -654,7 +657,7 @@ const TrackPayments = () => {
     {
       label: "Cash Collected",
       value: `UGX ${totalCash.toLocaleString()}`,
-      sub: `${kpiBase.filter((p) => p.method === "CASH").length} cash payments`,
+      sub: `${kpiBase.filter((p) => isCashRecord(p)).length} cash payments`,
       Icon: Banknote,
       border: "border-l-slate-400",
       bg: "bg-slate-100",
