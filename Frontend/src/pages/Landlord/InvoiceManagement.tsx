@@ -811,9 +811,10 @@ const InvoiceManagement = () => {
   // Charge invoices only — excludes payment records from KPI totals.
   const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
 
-  // Cash Payments = Manual Payment invoices (landlord-recorded cash collections)
+  // Cash Payments = Manual Payment invoices that are Paid (matches dashboard logic)
+  const paidStatuses = ["paid", "successful", "success", "completed", "complete"];
   const totalCashPayments = invoices
-    .filter((i) => isPaymentType(i.type))
+    .filter((i) => isPaymentType(i.type) && paidStatuses.includes((i.status ?? "").toLowerCase()))
     .reduce((s, i) => s + i.amount, 0);
   const totalPending = chargeInvoices
     .filter((i) => i.status?.toLowerCase() === "pending")
