@@ -149,6 +149,7 @@ const LandlordDashboard = () => {
   const [revenueKpis, setRevenueKpis] = useState({
     revenueExpected: 0,
     collected: 0,
+    cashPayments: 0,
     uncollected: 0,
     securityDeposits: 0,
   });
@@ -818,7 +819,7 @@ const LandlordDashboard = () => {
       </div>
 
       {/* ── Revenue summary strip ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         {[
           {
             label: "Revenue Expected",
@@ -828,11 +829,18 @@ const LandlordDashboard = () => {
             bg: "bg-blue-50",
           },
           {
-            label: "Collected",
+            label: "E-Payments",
             value: revenueKpis.collected,
             icon: CheckCircle,
             color: "text-green-600",
             bg: "bg-green-50",
+          },
+          {
+            label: "Cash Payments",
+            value: revenueKpis.cashPayments,
+            icon: CircleDollarSign,
+            color: "text-amber-600",
+            bg: "bg-amber-50",
           },
           {
             label: "Uncollected",
@@ -890,7 +898,8 @@ const LandlordDashboard = () => {
             <BarChart
               data={[
                 { name: "Expected", amount: revenueKpis.revenueExpected },
-                { name: "Collected", amount: revenueKpis.collected },
+                { name: "E-Payments", amount: revenueKpis.collected },
+                { name: "Cash", amount: revenueKpis.cashPayments },
                 { name: "Uncollected", amount: revenueKpis.uncollected },
                 { name: "Deposits", amount: revenueKpis.securityDeposits },
                 {

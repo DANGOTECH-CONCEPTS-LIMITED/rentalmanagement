@@ -232,10 +232,15 @@ namespace API.Controllers.Accounts
                 .Where(p => ShouldCountDashboardPayment(p.PaymentStatus))
                 .ToList();
 
-            // Use payment records only to avoid double-counting: when a payment comes in,
-            // both a TenantPayment record and the linked invoice (now "Paid") exist.
-            // Summing both would count the same cash twice.
+            // E-Payments = online/electronic payment records (TenantPayments table)
             var collected = countedPayments.Sum(p => (decimal)p.Amount);
+
+            // Cash Payments = Manual Payment invoices recorded by the landlord
+            var cashPayments = invoices
+                .Where(i => i.Type != null
+                         && i.Type.Equals("Manual Payment", StringComparison.OrdinalIgnoreCase)
+                         && ShouldCountDashboardPayment(i.Status))
+                .Sum(i => (decimal)i.Amount);
 
             // Revenue Expected = all invoices raised in the period, excluding cancelled/void
             var revenueExpected = invoices
@@ -307,7 +312,7 @@ namespace API.Controllers.Accounts
 
             var uncollected = revenueExpected > collected ? revenueExpected - collected : 0m;
 
-            return Ok(new { revenueExpected, collected, uncollected, securityDeposits });
+            return Ok(new { revenueExpected, collected, cashPayments, uncollected, securityDeposits });
         }
 
         private static bool ShouldCountDashboardPayment(string? status)
