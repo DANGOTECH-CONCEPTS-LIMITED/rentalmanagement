@@ -616,14 +616,16 @@ const TrackPayments = () => {
     ? kpiPayments.filter((p) => p.source === "payment")
     : kpiPayments;
 
-  const totalReceived = kpiBase
-    .filter((p) => p.status === "Paid" && (tab === "invoice" ? true : p.source === "payment"))
-    .reduce((s, p) => s + p.amount, 0);
-  const totalPending  = kpiBase.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
-  const totalFailed   = kpiBase.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
   const isCashRecord  = (p: UnifiedPayment) =>
     p.method === "CASH" ||
     (p.source === "invoice" && p.method === "Manual Payment");
+
+  // Total Received = E-payments + Cash payments (Manual Payment invoices)
+  const totalReceived = kpiBase
+    .filter((p) => p.status === "Paid" && (p.source === "payment" || isCashRecord(p)))
+    .reduce((s, p) => s + p.amount, 0);
+  const totalPending  = kpiBase.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
+  const totalFailed   = kpiBase.filter((p) => p.status === "Failed").reduce((s, p) => s + p.amount, 0);
   const totalCash     = kpiBase.filter((p) => isCashRecord(p) && p.status === "Paid").reduce((s, p) => s + p.amount, 0);
 
   const kpiCards = [
