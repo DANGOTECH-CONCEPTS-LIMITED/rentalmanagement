@@ -813,7 +813,7 @@ const LandlordDashboard = () => {
           </p>
         )}
         {!filterFrom && !filterTo && !filterProperty && (
-          <p className="mt-2 text-[11px] text-slate-400">Showing current month by default. Set filters to change range.</p>
+          <p className="mt-2 text-[11px] text-slate-400">Showing all-time totals by default. Set filters to narrow by date or property.</p>
         )}
       </div>
 

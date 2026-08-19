@@ -162,13 +162,13 @@ namespace API.Controllers.Accounts
         {
             if (landlordId <= 0) return BadRequest("landlordId is required.");
 
-            var now = DateTime.UtcNow;
-            var periodStart = fromDate.HasValue
+            // When no dates supplied, query all time (no date restriction).
+            DateTime? periodStart = fromDate.HasValue
                 ? DateTime.SpecifyKind(fromDate.Value.Date, DateTimeKind.Utc)
-                : new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var periodEnd = toDate.HasValue
+                : (DateTime?)null;
+            DateTime? periodEnd = toDate.HasValue
                 ? DateTime.SpecifyKind(toDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc)
-                : new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddTicks(-1);
+                : (DateTime?)null;
 
             var activeContracts = await _db.RentalContracts
                 .AsNoTracking()
@@ -188,7 +188,8 @@ namespace API.Controllers.Accounts
                 .AsNoTracking()
                 .Join(_db.LandLordProperties.AsNoTracking().Where(p => p.OwnerId == landlordId),
                     i => i.PropertyId, p => p.Id, (i, p) => i)
-                .Where(i => i.InvoiceDate >= periodStart && i.InvoiceDate <= periodEnd);
+                .Where(i => (!periodStart.HasValue || i.InvoiceDate >= periodStart.Value)
+                         && (!periodEnd.HasValue   || i.InvoiceDate <= periodEnd.Value));
 
             if (propertyId.HasValue)
                 invoiceQuery = invoiceQuery.Where(i => i.PropertyId == propertyId.Value);
@@ -211,7 +212,8 @@ namespace API.Controllers.Accounts
                 .AsNoTracking()
                 .Where(p => p.PropertyTenant.Property != null
                          && p.PropertyTenant.Property.OwnerId == landlordId
-                         && p.PaymentDate >= periodStart && p.PaymentDate <= periodEnd);
+                         && (!periodStart.HasValue || p.PaymentDate >= periodStart.Value)
+                         && (!periodEnd.HasValue   || p.PaymentDate <= periodEnd.Value));
 
             if (propertyId.HasValue)
                 paymentQuery = paymentQuery.Where(p => p.PropertyTenant.Property!.Id == propertyId.Value);
