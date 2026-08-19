@@ -242,11 +242,10 @@ namespace API.Controllers.Accounts
                          && ShouldCountDashboardPayment(i.Status))
                 .Sum(i => (decimal)i.Amount);
 
-            // Revenue Expected = charge invoices only (exclude Manual Payment records and cancelled/void)
+            // Revenue Expected = all invoices raised in the period, excluding cancelled/void
             var revenueExpected = invoices
                 .Where(i => !string.Equals(i.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
-                         && !string.Equals(i.Status, "Void", StringComparison.OrdinalIgnoreCase)
-                         && !string.Equals(i.Type, "Manual Payment", StringComparison.OrdinalIgnoreCase))
+                         && !string.Equals(i.Status, "Void", StringComparison.OrdinalIgnoreCase))
                 .Sum(i => (decimal)i.Amount);
 
             // Security deposits are one-time events — query all time, not just the selected period
