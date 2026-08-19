@@ -96,31 +96,31 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
   doc.text(`Ref:   ${ref}`, pageW - mg, 28, { align: "right" });
   doc.text(`Date:  ${fmtDate(new Date().toISOString())}`, pageW - mg, 34, { align: "right" });
 
-  y = 62;
+  y = 58;
 
   // ── Section bar helper ─────────────────────────────────────────────────────
   const sectionBar = (title: string) => {
-    checkNewPage(14);
+    checkNewPage(12);
     doc.setFillColor(10, 18, 40);
-    doc.rect(mg, y, cW, 10, "F");
+    doc.rect(mg, y, cW, 9, "F");
     doc.setFillColor(234, 179, 8);
-    doc.rect(mg, y, 3, 10, "F");
+    doc.rect(mg, y, 3, 9, "F");
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text(title, mg + 6, y + 7);
-    y += 14;
+    doc.text(title, mg + 6, y + 6.2);
+    y += 12;
   };
 
   const labelVal = (label: string, val: string, xOffset = 0) => {
     doc.setTextColor(100, 116, 139);
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.text(label.toUpperCase(), mg + 6 + xOffset, y);
     doc.setTextColor(15, 23, 42);
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
-    doc.text(val, mg + 6 + xOffset, y + 6);
+    doc.text(val, mg + 6 + xOffset, y + 5.5);
   };
 
   // ── Section 01: Addressed To ───────────────────────────────────────────────
@@ -128,45 +128,45 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
   const halfW = cW / 2;
   labelVal("Tenant Name", tenant.fullName);
   labelVal("Phone", tenant.phoneNumber, halfW);
-  y += 12;
+  y += 10;
   labelVal("Property", tenant.property.name);
   const unitStr = tenant.unit?.unitNumber ? `Unit ${tenant.unit.unitNumber}` : "—";
   labelVal("Unit / Room", unitStr, halfW);
-  y += 12;
+  y += 10;
   if (tenant.dateMovedIn) {
     labelVal("Move-in Date", fmtDate(tenant.dateMovedIn));
-    y += 12;
+    y += 10;
   }
-  y += 4;
+  y += 3;
 
   // ── Section 02: Outstanding Balance ───────────────────────────────────────
   sectionBar("02  OUTSTANDING BALANCE");
   doc.setFillColor(255, 251, 235);
-  doc.roundedRect(mg, y, cW, 22, 4, 4, "F");
+  doc.roundedRect(mg, y, cW, 18, 4, 4, "F");
   doc.setFillColor(234, 179, 8);
-  doc.roundedRect(mg, y, 3, 22, 2, 2, "F");
+  doc.roundedRect(mg, y, 3, 18, 2, 2, "F");
 
   doc.setTextColor(100, 116, 139);
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.text("TOTAL AMOUNT OUTSTANDING", mg + 8, y + 8);
+  doc.text("TOTAL AMOUNT OUTSTANDING", mg + 8, y + 6);
   doc.setTextColor(120, 80, 0);
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(`${currency} ${fmt(outstandingAmount)}`, mg + 8, y + 18);
+  doc.text(`${currency} ${fmt(outstandingAmount)}`, mg + 8, y + 14);
 
   // Payment deadline — 7 days
   const deadline = new Date();
   deadline.setDate(deadline.getDate() + 7);
   doc.setTextColor(100, 116, 139);
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.text("PAYMENT DUE BY", mg + halfW, y + 8);
+  doc.text("PAYMENT DUE BY", mg + halfW, y + 6);
   doc.setTextColor(15, 23, 42);
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text(fmtDate(deadline.toISOString()), mg + halfW, y + 18);
-  y += 28;
+  doc.text(fmtDate(deadline.toISOString()), mg + halfW, y + 14);
+  y += 22;
 
   // ── Section 03: Invoice Breakdown (if provided) ────────────────────────────
   if (invoices.length > 0) {
@@ -176,27 +176,27 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
 
     // Table header row
     doc.setFillColor(30, 41, 59);
-    doc.rect(mg, y, cW, 8, "F");
+    doc.rect(mg, y, cW, 7, "F");
     doc.setTextColor(226, 232, 240);
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     let cx = mg + 3;
     headers.forEach((h, i) => {
-      doc.text(h, i >= 3 ? cx + colW[i] - 3 : cx, y + 5.5, { align: i >= 3 ? "right" : "left" });
+      doc.text(h, i >= 3 ? cx + colW[i] - 3 : cx, y + 4.8, { align: i >= 3 ? "right" : "left" });
       cx += colW[i];
     });
-    y += 8;
+    y += 7;
 
     invoices.forEach((inv, idx) => {
-      checkNewPage(8);
+      checkNewPage(7);
       if (idx % 2 === 0) {
         doc.setFillColor(255, 255, 255);
       } else {
         doc.setFillColor(255, 251, 235);
       }
-      doc.rect(mg, y, cW, 7.5, "F");
+      doc.rect(mg, y, cW, 6.5, "F");
       doc.setTextColor(30, 41, 59);
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setFont("helvetica", "normal");
       cx = mg + 3;
       const cells = [
@@ -217,24 +217,24 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
           doc.setFont("helvetica", "normal");
           doc.setTextColor(30, 41, 59);
         }
-        doc.text(cell, isRight ? cx + colW[i] - 3 : cx, y + 5.2, { align: isRight ? "right" : "left" });
+        doc.text(cell, isRight ? cx + colW[i] - 3 : cx, y + 4.6, { align: isRight ? "right" : "left" });
         cx += colW[i];
       });
-      y += 7.5;
+      y += 6.5;
     });
 
     // Total row
     doc.setFillColor(30, 41, 59);
-    doc.rect(mg, y, cW, 8, "F");
+    doc.rect(mg, y, cW, 7, "F");
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("TOTAL", mg + 3, y + 5.5);
+    doc.text("TOTAL", mg + 3, y + 4.8);
     doc.setTextColor(234, 179, 8);
-    doc.text(`${currency} ${fmt(outstandingAmount)}`, pageW - mg - 3, y + 5.5, { align: "right" });
-    y += 14;
+    doc.text(`${currency} ${fmt(outstandingAmount)}`, pageW - mg - 3, y + 4.8, { align: "right" });
+    y += 11;
   } else {
-    y += 4;
+    y += 2;
   }
 
   // ── Number to words ────────────────────────────────────────────────────────
@@ -261,7 +261,7 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
     const maxW = cW - 10;
     const lines: string[] = doc.splitTextToSize(paragraph, maxW);
     lines.forEach((line: string, idx: number) => {
-      checkNewPage(6);
+      checkNewPage(5);
       const isLast = idx === lines.length - 1;
       if (isLast) {
         doc.text(line, mg + 5, y);
@@ -276,7 +276,7 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
           words.forEach((w) => { doc.text(w, cx, y); cx += doc.getTextWidth(w) + gap; });
         }
       }
-      y += 5.5;
+      y += 5;
     });
   };
 
@@ -285,92 +285,91 @@ export const generateDemandNotePdf = (params: DemandNoteParams) => {
   sectionBar(`${noticeNum}  NOTICE TO TENANT`);
 
   doc.setTextColor(51, 65, 85);
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
 
   // Opening salutation (left-aligned)
-  checkNewPage(6);
+  checkNewPage(5);
   doc.text(`Dear ${tenant.fullName},`, mg + 5, y);
-  y += 8;
+  y += 6;
 
   // Paragraph 1
   drawJustified(
     `This is a formal demand notice regarding your outstanding rental obligations for the premises at ${tenant.property.name}${tenant.unit?.unitNumber ? `, Unit ${tenant.unit.unitNumber}` : ""}.`
   );
-  y += 3;
+  y += 2;
 
   // Paragraph 2 — amount reference
   drawJustified(
     `As of ${fmtDate(new Date().toISOString())}, the total outstanding balance on your account is as stated below.`
   );
-  y += 3;
+  y += 2;
 
   // ── Bold amount box (figure + words) ──────────────────────────────────────
-  checkNewPage(22);
+  checkNewPage(18);
   doc.setFillColor(255, 251, 235);
-  doc.roundedRect(mg + 5, y, cW - 10, 20, 2, 2, "F");
+  doc.roundedRect(mg + 5, y, cW - 10, 16, 2, 2, "F");
   doc.setFillColor(234, 179, 8);
-  doc.roundedRect(mg + 5, y, 3, 20, 1, 1, "F");
+  doc.roundedRect(mg + 5, y, 3, 16, 1, 1, "F");
 
   doc.setTextColor(15, 23, 42);
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text(`${currency} ${fmt(outstandingAmount)}`, mg + 12, y + 8);
+  doc.text(`${currency} ${fmt(outstandingAmount)}`, mg + 12, y + 7);
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(120, 80, 0);
-  doc.text(`(${numToWords(outstandingAmount)})`, mg + 12, y + 16);
-  y += 26;
+  doc.text(`(${numToWords(outstandingAmount)})`, mg + 12, y + 13);
+  y += 20;
 
   // Paragraph 3
   doc.setTextColor(51, 65, 85);
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
   drawJustified(
     "You are hereby required to settle the full outstanding amount within SEVEN (7) DAYS of the date of this notice. Payment should be made to the property management office or via the agreed payment channels."
   );
-  y += 3;
+  y += 2;
 
   // Paragraph 4
   drawJustified(
     "Failure to remit the outstanding amount within the stipulated period may result in further action, including but not limited to formal eviction proceedings in accordance with the tenancy agreement and applicable laws, and recovery of all associated legal costs."
   );
-  y += 3;
+  y += 2;
 
   // Paragraph 5
   drawJustified(
     "Should you have any queries or wish to make payment arrangements, please contact our office immediately."
   );
 
-  y += 8;
+  y += 6;
 
-  // ── Signature block ────────────────────────────────────────────────────────
-  checkNewPage(32);
+  // ── Signature block — never push to new page, stay on current page ────────
   doc.setDrawColor(203, 213, 225);
   doc.setLineWidth(0.3);
 
   // Issued by
   doc.setTextColor(100, 116, 139);
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.text("ISSUED BY", mg + 5, y);
-  y += 5;
+  y += 4;
   doc.setTextColor(15, 23, 42);
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont("helvetica", "bold");
   doc.text(companyName, mg + 5, y);
-  y += 5;
+  y += 4;
   doc.setTextColor(100, 116, 139);
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
   doc.text(`Date: ${fmtDate(new Date().toISOString())}`, mg + 5, y);
-  y += 12;
+  y += 10;
 
   // Signature line
   doc.line(mg + 5, y, mg + 65, y);
   doc.setTextColor(100, 116, 139);
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.text("Authorised Signature", mg + 5, y + 4);
 
