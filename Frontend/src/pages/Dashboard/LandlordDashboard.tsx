@@ -235,7 +235,13 @@ const LandlordDashboard = () => {
       const { data } = await axios.get(
         `${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}${qs}`,
       );
-      setRevenueKpis(data);
+      setRevenueKpis({
+        revenueExpected:  Number(data.revenueExpected  ?? 0),
+        collected:        Number(data.collected        ?? 0),
+        cashPayments:     Number(data.cashPayments     ?? 0),
+        uncollected:      Number(data.uncollected      ?? 0),
+        securityDeposits: Number(data.securityDeposits ?? 0),
+      });
     } catch {} finally {
       setRevenueLoading(false);
     }
