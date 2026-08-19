@@ -142,7 +142,7 @@ const DetailRow = ({
 const TABS = [
   { key: "all", label: "All" },
   { key: "pending", label: "Pending" },
-  { key: "paid", label: "Paid" },
+  { key: "paid", label: "Cash Payment" },
   { key: "overdue", label: "Overdue" },
   { key: "manual-invoice", label: "Manual Invoice" },
   { key: "payments", label: "Payments" },
