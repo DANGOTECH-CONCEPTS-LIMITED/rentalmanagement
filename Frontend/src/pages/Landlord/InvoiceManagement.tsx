@@ -145,7 +145,7 @@ const TABS = [
   { key: "paid", label: "Cash Payment" },
   { key: "overdue", label: "Overdue" },
   { key: "manual-invoice", label: "Manual Invoice" },
-  { key: "payments", label: "Payments" },
+  { key: "payments", label: "E-Payment" },
 ];
 
 const InvoiceManagement = () => {
