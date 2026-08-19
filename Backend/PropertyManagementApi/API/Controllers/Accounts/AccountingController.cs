@@ -310,7 +310,8 @@ namespace API.Controllers.Accounts
                     ? securityDepositInvoices
                     : securityDepositPayments;
 
-            var uncollected = revenueExpected > collected ? revenueExpected - collected : 0m;
+            var totalCollected = collected + cashPayments;
+            var uncollected = revenueExpected > totalCollected ? revenueExpected - totalCollected : 0m;
 
             return Ok(new { revenueExpected, collected, cashPayments, uncollected, securityDeposits });
         }
