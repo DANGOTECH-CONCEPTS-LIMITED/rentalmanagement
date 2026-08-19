@@ -155,6 +155,7 @@ const InvoiceManagement = () => {
   const userData = getLoggedInUser();
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [ePaymentTotal, setEPaymentTotal] = useState(0);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<PropertyUnit[]>([]);
@@ -243,9 +244,28 @@ const InvoiceManagement = () => {
       }
     };
 
+    const fetchEPayments = async () => {
+      try {
+        const { data } = await axios.get<any[]>(`${apiUrl}/GetAllPayments`, {
+          headers: { Authorization: `Bearer ${userData.token ?? ""}` },
+        });
+        const paid = ["paid","successful","success","completed","complete"];
+        const total = data
+          .filter((p: any) =>
+            p.propertyTenant?.property?.ownerId === userData.id &&
+            paid.includes((p.paymentStatus ?? "").trim().toLowerCase())
+          )
+          .reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
+        setEPaymentTotal(total);
+      } catch {
+        // silent
+      }
+    };
+
     fetchTenants();
     fetchProperties();
     fetchUnits();
+    fetchEPayments();
   }, []);
 
   useEffect(() => {
@@ -791,8 +811,8 @@ const InvoiceManagement = () => {
   // Charge invoices only — excludes payment records from KPI totals.
   const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
 
-  // Collected = sum of payment records (Manual Payment type).
-  const totalPaid = invoices
+  // Cash Payments = Manual Payment invoices (landlord-recorded cash collections)
+  const totalCashPayments = invoices
     .filter((i) => isPaymentType(i.type))
     .reduce((s, i) => s + i.amount, 0);
   const totalPending = chargeInvoices
@@ -813,11 +833,19 @@ const InvoiceManagement = () => {
     },
     {
       label: "E-Payments",
-      value: formatUGX(totalPaid),
+      value: formatUGX(ePaymentTotal),
       Icon: CheckCircle,
       border: "border-l-emerald-500",
       bg: "bg-emerald-50",
       color: "text-emerald-600",
+    },
+    {
+      label: "Cash Payments",
+      value: formatUGX(totalCashPayments),
+      Icon: CreditCard,
+      border: "border-l-amber-500",
+      bg: "bg-amber-50",
+      color: "text-amber-600",
     },
     {
       label: "Pending",
