@@ -812,7 +812,7 @@ const InvoiceManagement = () => {
       color: "text-blue-600",
     },
     {
-      label: "Collected",
+      label: "E-Payments",
       value: formatUGX(totalPaid),
       Icon: CheckCircle,
       border: "border-l-emerald-500",
