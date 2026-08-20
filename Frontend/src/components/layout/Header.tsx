@@ -215,7 +215,7 @@ const Header = () => {
               id: `inv-${inv.id}`,
               type: auto ? "system" : "invoice",
               title: auto
-                ? `Auto-invoice: ${tenantName || inv.invoiceNumber ?? "#"}`
+                ? `Auto-invoice: ${tenantName || (inv.invoiceNumber ?? "#")}`
                 : `Invoice ${inv.invoiceNumber ?? "#"}`,
               subtitle: auto
                 ? `${inv.notes?.split("—")[1]?.trim() ?? "Monthly rent"} · UGX ${Number(inv.amount ?? 0).toLocaleString()} · ${inv.status ?? "Pending"}`
