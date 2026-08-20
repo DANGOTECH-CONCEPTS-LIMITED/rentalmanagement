@@ -836,14 +836,14 @@ const LandlordDashboard = () => {
           },
           {
             label: "E-Payments",
-            value: revenueKpis.collected,
+            value: revenueKpis.cashPayments,
             icon: CheckCircle,
             color: "text-green-600",
             bg: "bg-green-50",
           },
           {
             label: "Cash Payments",
-            value: revenueKpis.cashPayments,
+            value: revenueKpis.collected,
             icon: CircleDollarSign,
             color: "text-amber-600",
             bg: "bg-amber-50",
@@ -904,8 +904,8 @@ const LandlordDashboard = () => {
             <BarChart
               data={[
                 { name: "Expected", amount: revenueKpis.revenueExpected },
-                { name: "E-Payments", amount: revenueKpis.collected },
-                { name: "Cash", amount: revenueKpis.cashPayments },
+                { name: "E-Payments", amount: revenueKpis.cashPayments },
+                { name: "Cash", amount: revenueKpis.collected },
                 { name: "Uncollected", amount: revenueKpis.uncollected },
                 { name: "Deposits", amount: revenueKpis.securityDeposits },
                 {

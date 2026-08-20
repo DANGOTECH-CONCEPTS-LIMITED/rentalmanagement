@@ -232,14 +232,13 @@ namespace API.Controllers.Accounts
                 .Where(p => ShouldCountDashboardPayment(p.PaymentStatus))
                 .ToList();
 
-            // E-Payments = online/electronic payment records (TenantPayments table)
+            // E-Payments = electronic payment records (TenantPayments table only)
             var collected = countedPayments.Sum(p => (decimal)p.Amount);
 
-            // Cash Payments = Manual Payment invoices recorded by the landlord
+            // Cash Payments = ALL paid invoices (matches Property Report invoiceCollections logic)
+            // Includes Manual Payment invoices + regular invoices marked as Paid via cash
             var cashPayments = invoices
-                .Where(i => i.Type != null
-                         && i.Type.Equals("Manual Payment", StringComparison.OrdinalIgnoreCase)
-                         && ShouldCountDashboardPayment(i.Status))
+                .Where(i => ShouldCountDashboardPayment(i.Status))
                 .Sum(i => (decimal)i.Amount);
 
             // Revenue Expected = all invoices raised in the period, excluding cancelled/void

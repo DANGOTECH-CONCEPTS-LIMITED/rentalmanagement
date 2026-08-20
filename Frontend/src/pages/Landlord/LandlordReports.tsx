@@ -221,11 +221,13 @@ const LandlordReports = () => {
           const expenses: ExpenseRecord[] =
             expensesRes.status === "fulfilled" ? expensesRes.value.data ?? [] : [];
 
-          // All invoices for this property within the date range
+          // All invoices for this property within the date range.
+          // Compare date strings (YYYY-MM-DD) to avoid timezone-shift bugs where
+          // "2026-01-01T00:00:00" (local) converts to Dec 31 UTC and falls outside the range.
           const propInvoices: InvoiceRecord[] = allInvoices.filter((inv) => {
             if (inv.propertyId !== prop.id) return false;
-            const d = new Date(inv.invoiceDate);
-            return d >= fromDate && d <= toDate;
+            const invDate = (inv.invoiceDate ?? "").split("T")[0];
+            return invDate >= from && invDate <= to;
           });
           const paidInvoices = propInvoices.filter((inv) => inv.status?.toLowerCase() === "paid");
 

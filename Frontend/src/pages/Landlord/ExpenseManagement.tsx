@@ -91,6 +91,7 @@ const ExpenseManagement = () => {
   const [editExpense, setEditExpense] = useState<Expense | null>(null);
   const [deleteExpense, setDeleteExpense] = useState<Expense | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [customCategory, setCustomCategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchExpenses = async () => {
@@ -152,18 +153,20 @@ const ExpenseManagement = () => {
   const totalFiltered = filtered.reduce((s, e) => s + e.amount, 0);
   const totalAll = expenses.reduce((s, e) => s + e.amount, 0);
 
-  const openAdd = () => { setForm(emptyForm); setAddOpen(true); };
+  const openAdd = () => { setForm(emptyForm); setCustomCategory(""); setAddOpen(true); };
   const openEdit = (exp: Expense) => {
+    const isCustom = !categories.includes(exp.category as ExpenseCategory);
     setForm({
       date: exp.date.split("T")[0],
       amount: String(exp.amount),
-      category: exp.category as ExpenseCategory,
+      category: isCustom ? "Other" : (exp.category as ExpenseCategory),
       description: exp.description,
       propertyId: exp.propertyId ? String(exp.propertyId) : "",
       propertyUnitId: exp.propertyUnitId ? String(exp.propertyUnitId) : "",
       paidBy: exp.paidBy,
       receiptReference: exp.receiptReference || "",
     });
+    setCustomCategory(isCustom ? exp.category : "");
     setEditExpense(exp);
   };
 
@@ -172,11 +175,16 @@ const ExpenseManagement = () => {
       toast({ title: "Validation Error", description: "Date, amount, description and paid by are required.", variant: "destructive" });
       return;
     }
+    if (form.category === "Other" && !customCategory.trim()) {
+      toast({ title: "Validation Error", description: "Please enter a category name.", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
+    const resolvedCategory = form.category === "Other" ? customCategory.trim() : form.category;
     const body = {
       Date: new Date(form.date).toISOString(),
       Amount: Number(form.amount),
-      Category: form.category,
+      Category: resolvedCategory,
       PaidBy: form.paidBy,
       Description: form.description,
       OwnerId: userData.id,
@@ -350,10 +358,18 @@ const ExpenseManagement = () => {
           <select
             className={selCls}
             value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value as ExpenseCategory })}
+            onChange={(e) => { setForm({ ...form, category: e.target.value as ExpenseCategory }); setCustomCategory(""); }}
           >
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+          {form.category === "Other" && (
+            <Input
+              placeholder="e.g. Utility, Insurance, Security..."
+              value={customCategory}
+              onChange={(e) => setCustomCategory(e.target.value)}
+              className="mt-2 border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
+            />
+          )}
         </div>
         <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-wider text-slate-400 font-medium">Paid By *</label>
