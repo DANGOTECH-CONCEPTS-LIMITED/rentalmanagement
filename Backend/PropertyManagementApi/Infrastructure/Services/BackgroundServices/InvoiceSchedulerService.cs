@@ -107,6 +107,7 @@ namespace Infrastructure.Services.BackgroundServices
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var invoiceSvc = scope.ServiceProvider.GetRequiredService<ITenantInvoiceService>();
+            var sms = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
 
             var today = DateTime.Now; // use server local time so day-of-month matches landlord's timezone
             var globalDueDays = _config.GetValue<int>("InvoiceScheduler:DueDays", 7);
@@ -132,6 +133,9 @@ namespace Infrastructure.Services.BackgroundServices
                 .Where(t => tenantIds.Contains(t.Id) && t.InvoiceGenerationDay != null)
                 .Select(t => new { t.Id, t.InvoiceGenerationDay })
                 .ToDictionaryAsync(t => t.Id);
+
+            // Track generated amounts per landlord so we can send one SMS summary per landlord
+            var landlordSummary = new Dictionary<int, (int Count, double Total)>();
 
             int created = 0;
             foreach (var contract in contracts)
@@ -174,11 +178,36 @@ namespace Infrastructure.Services.BackgroundServices
                     });
 
                     created++;
+                    if (!landlordSummary.ContainsKey(contract.OwnerId))
+                        landlordSummary[contract.OwnerId] = (0, 0);
+                    var prev = landlordSummary[contract.OwnerId];
+                    landlordSummary[contract.OwnerId] = (prev.Count + 1, prev.Total + contract.RentAmount);
+
                     _logger.LogInformation("Created invoice {InvoiceNo} for tenant {TenantId}", invoice.InvoiceNumber, contract.TenantId);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to create invoice for contract {ContractId}", contract.Id);
+                }
+            }
+
+            // Notify each landlord by SMS with a one-line summary
+            if (landlordSummary.Count > 0)
+            {
+                var landlordPhones = await db.Users
+                    .AsNoTracking()
+                    .Where(u => landlordSummary.Keys.Contains(u.Id) && u.PhoneNumber != null && u.PhoneNumber != "")
+                    .Select(u => new { u.Id, u.FullName, u.PhoneNumber })
+                    .ToListAsync();
+
+                foreach (var landlord in landlordPhones)
+                {
+                    var (count, total) = landlordSummary[landlord.Id];
+                    var msg = $"Hi {landlord.FullName}, {count} rent invoice(s) have been auto-generated for {today:MMMM yyyy}. " +
+                              $"Total: UGX {total:N0}. " +
+                              $"Log in to your dashboard to review them.";
+                    try { await sms.SendAsync(landlord.PhoneNumber!, msg); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "SMS notification failed for landlord {Id}", landlord.Id); }
                 }
             }
 

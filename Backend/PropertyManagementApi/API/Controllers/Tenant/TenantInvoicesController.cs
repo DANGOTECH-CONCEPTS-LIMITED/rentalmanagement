@@ -1,3 +1,4 @@
+using Application.Interfaces.SMS;
 using Application.Interfaces.Tenant;
 using Domain.Dtos.Tenant.Invoice;
 using Infrastructure.Data;
@@ -15,12 +16,14 @@ namespace API.Controllers.Tenant
         private readonly ITenantInvoiceService _service;
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
+        private readonly ISmsProcessor _sms;
 
-        public TenantInvoicesController(ITenantInvoiceService service, AppDbContext db, IConfiguration config)
+        public TenantInvoicesController(ITenantInvoiceService service, AppDbContext db, IConfiguration config, ISmsProcessor sms)
         {
             _service = service;
             _db = db;
             _config = config;
+            _sms = sms;
         }
 
         [HttpPost("/CreateTenantInvoice")]
@@ -179,6 +182,7 @@ namespace API.Controllers.Tenant
 
             int created = 0;
             var skipped = new List<string>();
+            var landlordSummary = new Dictionary<int, (int Count, double Total)>();
 
             foreach (var contract in contracts)
             {
@@ -215,10 +219,34 @@ namespace API.Controllers.Tenant
                         CreatedByName = "System (Manual Trigger)",
                     });
                     created++;
+                    if (!landlordSummary.ContainsKey(contract.OwnerId))
+                        landlordSummary[contract.OwnerId] = (0, 0);
+                    var prev = landlordSummary[contract.OwnerId];
+                    landlordSummary[contract.OwnerId] = (prev.Count + 1, prev.Total + contract.RentAmount);
                 }
                 catch (Exception ex)
                 {
                     skipped.Add($"Tenant {contract.TenantId} ({contract.TenantName}) — error: {ex.Message}");
+                }
+            }
+
+            // Send SMS summary to each landlord
+            if (landlordSummary.Count > 0)
+            {
+                var landlordPhones = await _db.Users
+                    .AsNoTracking()
+                    .Where(u => landlordSummary.Keys.Contains(u.Id) && u.PhoneNumber != null && u.PhoneNumber != "")
+                    .Select(u => new { u.Id, u.FullName, u.PhoneNumber })
+                    .ToListAsync();
+
+                foreach (var ll in landlordPhones)
+                {
+                    var (count, total) = landlordSummary[ll.Id];
+                    var msg = $"Hi {ll.FullName}, {count} rent invoice(s) have been generated for {today:MMMM yyyy}. " +
+                              $"Total: UGX {total:N0}. " +
+                              $"Log in to your dashboard to review them.";
+                    try { await _sms.SendAsync(ll.PhoneNumber!, msg); }
+                    catch { /* non-fatal */ }
                 }
             }
 
