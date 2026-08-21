@@ -249,11 +249,12 @@ const InvoiceManagement = () => {
         const { data } = await axios.get<any[]>(`${apiUrl}/GetAllPayments`, {
           headers: { Authorization: `Bearer ${userData.token ?? ""}` },
         });
-        const paid = ["paid","successful","success","completed","complete"];
+        const paid = ["paid", "successful", "success", "completed", "complete"];
         const total = data
-          .filter((p: any) =>
-            p.propertyTenant?.property?.ownerId === userData.id &&
-            paid.includes((p.paymentStatus ?? "").trim().toLowerCase())
+          .filter(
+            (p: any) =>
+              p.propertyTenant?.property?.ownerId === userData.id &&
+              paid.includes((p.paymentStatus ?? "").trim().toLowerCase()),
           )
           .reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
         setEPaymentTotal(total);
@@ -373,9 +374,13 @@ const InvoiceManagement = () => {
       const rentAmount = Number(form.amount.replace(/,/g, ""));
       const depositAmount = Number(form.securityDeposit.replace(/,/g, "")) || 0;
       const paymentAmount = rentAmount + depositAmount;
-      const depositNote = depositAmount > 0 ? `Security Deposit: UGX ${depositAmount.toLocaleString()}` : "";
+      const depositNote =
+        depositAmount > 0
+          ? `Security Deposit: UGX ${depositAmount.toLocaleString()}`
+          : "";
       const userNotes = form.notes.trim();
-      const combinedNotes = [depositNote, userNotes].filter(Boolean).join("\n") || null;
+      const combinedNotes =
+        [depositNote, userNotes].filter(Boolean).join("\n") || null;
       const body = {
         Type: form.type,
         // Payment records are settled immediately; charge invoices use the form's chosen status
@@ -402,16 +407,21 @@ const InvoiceManagement = () => {
 
       // Also record in TenantPayments table when type is Manual Payment
       if (form.type === "Manual Payment") {
-        await axios.post(`${apiUrl}/MakeTenantPayment`, {
-          Amount: paymentAmount,
-          PaymentDate: new Date(form.invoiceDate).toISOString(),
-          PaymentMethod: form.paymentMethod || "Cash",
-          TransactionId: form.reference || null,
-          Description: form.notes || `${form.paymentMethod || "Cash"} payment`,
-          PropertyTenantId: Number(form.tenantId),
-          Vendor: "",
-          PaymentType: "Rent",
-        }).catch(() => { /* non-blocking — invoice record already saved */ });
+        await axios
+          .post(`${apiUrl}/MakeTenantPayment`, {
+            Amount: paymentAmount,
+            PaymentDate: new Date(form.invoiceDate).toISOString(),
+            PaymentMethod: form.paymentMethod || "Cash",
+            TransactionId: form.reference || null,
+            Description:
+              form.notes || `${form.paymentMethod || "Cash"} payment`,
+            PropertyTenantId: Number(form.tenantId),
+            Vendor: "",
+            PaymentType: "Rent",
+          })
+          .catch(() => {
+            /* non-blocking — invoice record already saved */
+          });
       }
 
       if (selectedInvoiceId) {
@@ -487,26 +497,42 @@ const InvoiceManagement = () => {
   const handleExportExcel = () => {
     const rows = filtered.map((inv) => ({
       "Invoice No.": inv.invoiceNumber,
-      "Tenant": tenantName(inv.tenantId),
-      "Property": propertyName(inv.propertyId),
-      "Unit": unitName(inv.propertyUnitId),
-      "Type": inv.type,
-      "Status": inv.status,
+      Tenant: tenantName(inv.tenantId),
+      Property: propertyName(inv.propertyId),
+      Unit: unitName(inv.propertyUnitId),
+      Type: inv.type,
+      Status: inv.status,
       "Amount (UGX)": inv.amount,
       "Invoice Date": new Date(inv.invoiceDate).toLocaleDateString("en-GB"),
-      "Due Date": inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-GB") : "",
-      "Notes": inv.notes ?? "",
+      "Due Date": inv.dueDate
+        ? new Date(inv.dueDate).toLocaleDateString("en-GB")
+        : "",
+      Notes: inv.notes ?? "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     // Column widths
     ws["!cols"] = [
-      { wch: 20 }, { wch: 22 }, { wch: 24 }, { wch: 12 },
-      { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 30 },
+      { wch: 20 },
+      { wch: 22 },
+      { wch: 24 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 30 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Invoices");
-    XLSX.writeFile(wb, `invoices-${new Date().toISOString().split("T")[0]}.xlsx`);
-    toast({ title: "Exported", description: `${rows.length} invoice${rows.length !== 1 ? "s" : ""} exported to Excel.` });
+    XLSX.writeFile(
+      wb,
+      `invoices-${new Date().toISOString().split("T")[0]}.xlsx`,
+    );
+    toast({
+      title: "Exported",
+      description: `${rows.length} invoice${rows.length !== 1 ? "s" : ""} exported to Excel.`,
+    });
   };
 
   const handleDownloadPDF = (inv: Invoice) => {
@@ -776,7 +802,9 @@ const InvoiceManagement = () => {
     y += amtH + 7;
 
     // 04 Notes — strip the auto-generated security deposit line before rendering
-    const displayNotes = inv.notes?.replace(/^Security Deposit: UGX [\d,]+\n?/m, "").trim();
+    const displayNotes = inv.notes
+      ?.replace(/^Security Deposit: UGX [\d,]+\n?/m, "")
+      .trim();
     if (displayNotes) {
       checkNewPage(30);
       sectionBar("04  NOTES");
@@ -812,9 +840,19 @@ const InvoiceManagement = () => {
   const chargeInvoices = invoices.filter((i) => !isPaymentType(i.type));
 
   // Cash Payments = Manual Payment invoices that are Paid (matches dashboard logic)
-  const paidStatuses = ["paid", "successful", "success", "completed", "complete"];
+  const paidStatuses = [
+    "paid",
+    "successful",
+    "success",
+    "completed",
+    "complete",
+  ];
   const totalCashPayments = invoices
-    .filter((i) => isPaymentType(i.type) && paidStatuses.includes((i.status ?? "").toLowerCase()))
+    .filter(
+      (i) =>
+        isPaymentType(i.type) &&
+        paidStatuses.includes((i.status ?? "").toLowerCase()),
+    )
     .reduce((s, i) => s + i.amount, 0);
   const totalPending = chargeInvoices
     .filter((i) => i.status?.toLowerCase() === "pending")
@@ -833,7 +871,7 @@ const InvoiceManagement = () => {
       color: "text-blue-600",
     },
     {
-      label: "E-Payments",
+      label: "Cash Payments",
       value: formatUGX(ePaymentTotal),
       Icon: CheckCircle,
       border: "border-l-emerald-500",
@@ -841,7 +879,7 @@ const InvoiceManagement = () => {
       color: "text-emerald-600",
     },
     {
-      label: "Cash Payments",
+      label: "E-Payments",
       value: formatUGX(totalCashPayments),
       Icon: CreditCard,
       border: "border-l-amber-500",
@@ -1472,7 +1510,8 @@ const InvoiceManagement = () => {
                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                       Total invoiced:{" "}
                       <span className="font-semibold text-[#1D4ED8]">
-                        UGX {(
+                        UGX{" "}
+                        {(
                           Number(form.amount.replace(/,/g, "")) +
                           Number(form.securityDeposit.replace(/,/g, ""))
                         ).toLocaleString()}
@@ -1504,7 +1543,9 @@ const InvoiceManagement = () => {
                   <Input
                     placeholder="Optional transaction reference"
                     value={form.reference}
-                    onChange={(e) => setForm({ ...form, reference: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, reference: e.target.value })
+                    }
                     className="border-[#E2E8F0] focus:border-[#1D4ED8] focus-visible:ring-[#1D4ED8]/10"
                   />
                 </div>
