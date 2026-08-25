@@ -110,15 +110,26 @@ interface InvoiceRecord {
   tenant?: { fullName?: string };
 }
 
+interface OtherIncomeRecord {
+  id: number;
+  date: string;
+  amount: number;
+  category: string;
+  description: string;
+  propertyId?: number;
+}
+
 interface PropertyReport {
   property: Property;
   payments: PaymentRecord[];
   paidInvoices: InvoiceRecord[];
   allInvoices: InvoiceRecord[];
   expenses: ExpenseRecord[];
+  otherIncomes: OtherIncomeRecord[];
   totalCollections: number;
   totalExpenses: number;
   totalInvoiceAmount: number;
+  totalOtherIncome: number;
 }
 
 const EmptyState = ({ message }: { message: string }) => (
@@ -200,6 +211,17 @@ const LandlordReports = () => {
         allInvoices = invRes.data ?? [];
       } catch { /* ignore if endpoint fails */ }
 
+      // Fetch all other income once, then filter per property
+      let allOtherIncome: OtherIncomeRecord[] = [];
+      try {
+        const token = userData?.token;
+        const { data } = await axios.get<OtherIncomeRecord[]>(
+          `${apiUrl}/GetOtherIncomeByOwnerId/${userData.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        allOtherIncome = data ?? [];
+      } catch { /* non-fatal */ }
+
       const fromDate = new Date(from);
       const toDate = new Date(to + "T23:59:59");
 
@@ -231,13 +253,20 @@ const LandlordReports = () => {
           });
           const paidInvoices = propInvoices.filter((inv) => inv.status?.toLowerCase() === "paid");
 
+          const propOtherIncome: OtherIncomeRecord[] = allOtherIncome.filter((r) => {
+            if (r.propertyId !== prop.id) return false;
+            const d = (r.date ?? "").split("T")[0];
+            return d >= from && d <= to;
+          });
+
           const collectedPayments = payments.filter((payment) => isCollectedStatus(payment.paymentStatus));
           const paymentCollections = collectedPayments.reduce((s, p) => s + (p.amount ?? 0), 0);
           const invoiceCollections = paidInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
           const totalCollections = paymentCollections + invoiceCollections;
           const totalExpenses = expenses.reduce((s, e) => s + (e.amount ?? 0), 0);
           const totalInvoiceAmount = propInvoices.reduce((s, i) => s + (i.amount ?? 0), 0);
-          return { property: prop, payments, paidInvoices, allInvoices: propInvoices, expenses, totalCollections, totalExpenses, totalInvoiceAmount };
+          const totalOtherIncome = propOtherIncome.reduce((s, r) => s + (r.amount ?? 0), 0);
+          return { property: prop, payments, paidInvoices, allInvoices: propInvoices, expenses, otherIncomes: propOtherIncome, totalCollections, totalExpenses, totalInvoiceAmount, totalOtherIncome };
         })
       );
       setPropertyReports(reports);
@@ -788,12 +817,13 @@ const LandlordReports = () => {
           ) : (
             <>
               {/* Summary KPIs */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
                 {(() => {
                   const grandCollections = propertyReports.reduce((s, r) => s + r.totalCollections, 0);
                   const grandExpenses = propertyReports.reduce((s, r) => s + r.totalExpenses, 0);
                   const grandInvoiced = propertyReports.reduce((s, r) => s + r.totalInvoiceAmount, 0);
-                  const grandNet = grandCollections - grandExpenses;
+                  const grandOtherIncome = propertyReports.reduce((s, r) => s + r.totalOtherIncome, 0);
+                  const grandNet = grandCollections + grandOtherIncome - grandExpenses;
                   return (
                     <>
                       <div className="rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 border-l-blue-500 shadow-sm">
@@ -826,6 +856,16 @@ const LandlordReports = () => {
                         <p className="mt-3 text-2xl font-bold text-red-500">{formatUGX(grandExpenses)}</p>
                         <p className="mt-1 text-xs text-[#94A3B8]">{reportFrom} — {reportTo}</p>
                       </div>
+                      <div className="rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 border-l-emerald-500 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium text-[#64748B]">Other Income</p>
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50">
+                            <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />
+                          </div>
+                        </div>
+                        <p className="mt-3 text-2xl font-bold text-emerald-600">{formatUGX(grandOtherIncome)}</p>
+                        <p className="mt-1 text-xs text-[#94A3B8]">Parking, laundry, etc.</p>
+                      </div>
                       <div className={`rounded-xl border border-[#E2E8F0] bg-white p-5 border-l-4 ${grandNet >= 0 ? "border-l-blue-500" : "border-l-red-600"} shadow-sm`}>
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-medium text-[#64748B]">Net</p>
@@ -836,7 +876,7 @@ const LandlordReports = () => {
                           </div>
                         </div>
                         <p className={`mt-3 text-2xl font-bold ${grandNet >= 0 ? "text-blue-600" : "text-red-700"}`}>{formatUGX(grandNet)}</p>
-                        <p className="mt-1 text-xs text-[#94A3B8]">Payments minus expenses</p>
+                        <p className="mt-1 text-xs text-[#94A3B8]">Payments + other income − expenses</p>
                       </div>
                     </>
                   );
@@ -845,8 +885,8 @@ const LandlordReports = () => {
 
               {/* Per-property cards */}
               <div className="space-y-3">
-                {propertyReports.map(({ property, payments, paidInvoices, allInvoices: propInvoices, expenses, totalCollections, totalExpenses, totalInvoiceAmount }) => {
-                  const net = totalCollections - totalExpenses;
+                {propertyReports.map(({ property, payments, paidInvoices, allInvoices: propInvoices, expenses, otherIncomes, totalCollections, totalExpenses, totalInvoiceAmount, totalOtherIncome }) => {
+                  const net = totalCollections + totalOtherIncome - totalExpenses;
                   const isExpanded = expandedProperty === property.id;
                   const collectedPayments = payments.filter((payment) => isCollectedStatus(payment.paymentStatus));
                   return (
@@ -873,6 +913,10 @@ const LandlordReports = () => {
                           <div className="text-right hidden sm:block">
                             <p className="text-xs text-[#94A3B8]">Payments</p>
                             <p className="text-sm font-bold text-emerald-600">{formatUGX(totalCollections)}</p>
+                          </div>
+                          <div className="text-right hidden sm:block">
+                            <p className="text-xs text-[#94A3B8]">Other Income</p>
+                            <p className="text-sm font-bold text-emerald-600">{formatUGX(totalOtherIncome)}</p>
                           </div>
                           <div className="text-right hidden sm:block">
                             <p className="text-xs text-[#94A3B8]">Expenses</p>

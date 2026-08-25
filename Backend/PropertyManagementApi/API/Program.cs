@@ -80,6 +80,7 @@ builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
 builder.Services.AddScoped<IRentalContractService, RentalContractService>();
 builder.Services.AddScoped<IPropertyUnitService, PropertyUnitService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<IOtherIncomeService, OtherIncomeService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITenantInvoiceService, TenantInvoiceService>();
 builder.Services.AddSingleton<InvoiceSmsQueue>();

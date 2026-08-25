@@ -152,6 +152,7 @@ const LandlordDashboard = () => {
     cashPayments: 0,
     uncollected: 0,
     securityDeposits: 0,
+    otherIncome: 0,
   });
   const [revenueLoading, setRevenueLoading] = useState(false);
   const [filterFrom, setFilterFrom] = useState("");
@@ -235,12 +236,30 @@ const LandlordDashboard = () => {
       const { data } = await axios.get(
         `${apiUrl}/api/Accounting/dashboard-kpis/${userData.id}${qs}`,
       );
+      let otherIncome = 0;
+      try {
+        const { data: incomeData } = await axios.get(
+          `${apiUrl}/GetOtherIncomeByOwnerId/${userData.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const incomeList: any[] = Array.isArray(incomeData) ? incomeData : [];
+        otherIncome = incomeList
+          .filter((r) => {
+            const d = (r.date ?? "").split("T")[0];
+            if (from && d < from) return false;
+            if (to && d > to) return false;
+            if (propId && String(r.propertyId) !== propId) return false;
+            return true;
+          })
+          .reduce((s: number, r: any) => s + (r.amount ?? 0), 0);
+      } catch {}
       setRevenueKpis({
         revenueExpected:  Number(data.revenueExpected  ?? 0),
         collected:        Number(data.collected        ?? 0),
         cashPayments:     Number(data.cashPayments     ?? 0),
         uncollected:      Number(data.uncollected      ?? 0),
         securityDeposits: Number(data.securityDeposits ?? 0),
+        otherIncome,
       });
     } catch {} finally {
       setRevenueLoading(false);
@@ -825,7 +844,7 @@ const LandlordDashboard = () => {
       </div>
 
       {/* ── Revenue summary strip ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {[
           {
             label: "Revenue Expected",
@@ -847,6 +866,13 @@ const LandlordDashboard = () => {
             icon: CircleDollarSign,
             color: "text-amber-600",
             bg: "bg-amber-50",
+          },
+          {
+            label: "Other Income",
+            value: revenueKpis.otherIncome,
+            icon: TrendingUp,
+            color: "text-emerald-600",
+            bg: "bg-emerald-50",
           },
           {
             label: "Uncollected",

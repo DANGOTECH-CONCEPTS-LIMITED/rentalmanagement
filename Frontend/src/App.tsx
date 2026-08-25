@@ -46,6 +46,7 @@ import TrackPayments from "./pages/Landlord/TrackPayments";
 import UnitsManagement from "./pages/Landlord/UnitsManagement";
 import InvoiceManagement from "./pages/Landlord/InvoiceManagement";
 import ExpenseManagement from "./pages/Landlord/ExpenseManagement";
+import OtherIncomePage from "./pages/Landlord/OtherIncome";
 import LandlordReports from "./pages/Landlord/LandlordReports";
 import ManageCaretakers from "./pages/Landlord/ManageCaretakers";
 import Index from "./pages/Index";
@@ -169,6 +170,7 @@ const App = () => (
                 <Route path="units" element={<UnitsManagement />} />
                 <Route path="invoices" element={<InvoiceManagement />} />
                 <Route path="expenses" element={<ExpenseManagement />} />
+                <Route path="other-income" element={<OtherIncomePage />} />
                 <Route path="reports" element={<LandlordReports />} />
                 <Route path="utility-charge" element={<UtilityChargeConfig />} />
                 <Route path="invoice-settings" element={<LandlordInvoiceSettings />} />
