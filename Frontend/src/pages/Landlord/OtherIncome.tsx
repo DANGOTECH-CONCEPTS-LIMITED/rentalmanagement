@@ -343,7 +343,7 @@ const OtherIncomePage = () => {
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-800">Income Records</p>
-            <p className="text-xs text-slate-500">{filtered.length} entr{filtered.length === 1 ? "y" : "ies"} {filterMonth ? "this month" : "total"}</p>
+            <p className="text-xs text-slate-500">{filtered.length} entr{filtered.length === 1 ? "y" : "ies"} in selected range</p>
           </div>
         </div>
         {loadingData ? (
@@ -353,7 +353,7 @@ const OtherIncomePage = () => {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2 text-slate-400">
             <TrendingUp className="h-8 w-8 opacity-30" />
-            <p className="text-sm">No income recorded {filterMonth ? "for this month" : "yet"}</p>
+            <p className="text-sm">No income recorded for the selected period</p>
             <button onClick={openAdd} className="text-xs text-emerald-600 font-semibold hover:underline">+ Add first entry</button>
           </div>
         ) : (
