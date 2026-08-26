@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Pencil, Trash2, Filter, Loader2, X, AlertTriangle, Tag,
-  TrendingUp, Calendar, Home,
+  TrendingUp, Calendar, Home, Download,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -79,7 +79,10 @@ const OtherIncomePage = () => {
   const [form, setForm] = useState({ ...empty });
   const [customCategory, setCustomCategory] = useState("");
 
-  const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
+  const todayStr = new Date().toISOString().split("T")[0];
+  const firstOfMonth = new Date().toISOString().slice(0, 7) + "-01";
+  const [filterFrom, setFilterFrom] = useState(firstOfMonth);
+  const [filterTo, setFilterTo] = useState(todayStr);
   const [filterProperty, setFilterProperty] = useState("");
 
   const fetchRecords = async () => {
@@ -105,11 +108,13 @@ const OtherIncomePage = () => {
 
   const filtered = useMemo(() => {
     return records.filter((r) => {
-      const matchMonth = filterMonth ? r.date.slice(0, 7) === filterMonth : true;
+      const d = r.date.split("T")[0];
+      const matchFrom = filterFrom ? d >= filterFrom : true;
+      const matchTo = filterTo ? d <= filterTo : true;
       const matchProp = filterProperty ? String(r.propertyId) === filterProperty : true;
-      return matchMonth && matchProp;
+      return matchFrom && matchTo && matchProp;
     });
-  }, [records, filterMonth, filterProperty]);
+  }, [records, filterFrom, filterTo, filterProperty]);
 
   const monthTotal = useMemo(() => filtered.reduce((s, r) => s + r.amount, 0), [filtered]);
 
@@ -176,6 +181,33 @@ const OtherIncomePage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleExport = () => {
+    const escape = (v: string | number) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [
+      ["Date", "Category", "Description", "Property", "Received From", "Reference No.", "Amount (UGX)"],
+      ...filtered.map((r) => [
+        r.date.split("T")[0],
+        r.category,
+        r.description,
+        r.property?.name ?? "",
+        r.receivedFrom ?? "",
+        r.referenceNumber ?? "",
+        r.amount,
+      ]),
+      ["", "", "", "", "", "TOTAL", monthTotal],
+    ];
+    const csv = rows.map((row) => row.map(escape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `other-income-${filterFrom ?? "all"}-to-${filterTo ?? "all"}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleDelete = async () => {
@@ -252,31 +284,47 @@ const OtherIncomePage = () => {
         </div>
       </section>
 
-      {/* Month total KPI */}
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-5 flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
-          <TrendingUp className="h-5 w-5 text-white" />
+      {/* KPI + Export row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-5 flex items-center gap-4 flex-1 min-w-[220px]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
+            <TrendingUp className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+              {filterFrom && filterTo ? `${filterFrom} — ${filterTo}` : "All time"} · Other Income
+            </p>
+            <p className="text-2xl font-bold text-emerald-800">UGX {monthTotal.toLocaleString()}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
-            {filterMonth ? new Date(filterMonth + "-01").toLocaleDateString("en-GB", { month: "long", year: "numeric" }) : "All time"} — Other Income
-          </p>
-          <p className="text-2xl font-bold text-emerald-800">UGX {monthTotal.toLocaleString()}</p>
-        </div>
+        <button onClick={handleExport} disabled={filtered.length === 0}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-300 bg-white text-emerald-700 text-sm font-semibold hover:bg-emerald-50 transition-colors disabled:opacity-40">
+          <Download className="h-4 w-4" /> Export Excel
+        </button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
           <Calendar className="h-4 w-4 text-slate-400" />
-          <input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}
+          <span className="text-xs text-slate-400">From</span>
+          <input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)}
             className="text-sm text-slate-700 focus:outline-none" />
-          {filterMonth && (
-            <button onClick={() => setFilterMonth("")} className="text-slate-400 hover:text-slate-600">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <Calendar className="h-4 w-4 text-slate-400" />
+          <span className="text-xs text-slate-400">To</span>
+          <input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)}
+            className="text-sm text-slate-700 focus:outline-none" />
+        </div>
+        <button onClick={() => { setFilterFrom(new Date().toISOString().split("T")[0]); setFilterTo(new Date().toISOString().split("T")[0]); }}
+          className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50">
+          Today
+        </button>
+        <button onClick={() => { setFilterFrom(new Date().toISOString().slice(0,7) + "-01"); setFilterTo(new Date().toISOString().split("T")[0]); }}
+          className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50">
+          This Month
+        </button>
         <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
           <Filter className="h-4 w-4 text-slate-400" />
           <select value={filterProperty} onChange={(e) => setFilterProperty(e.target.value)}
