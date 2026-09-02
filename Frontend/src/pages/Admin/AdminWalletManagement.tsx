@@ -40,7 +40,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -112,7 +116,11 @@ interface WalletMutationPayload {
   performedByAdminId: string;
 }
 
-const SUPPORTED_ROLE_NAMES = new Set(["landlord", "utility payment", "utililty payment"]);
+const SUPPORTED_ROLE_NAMES = new Set([
+  "landlord",
+  "utility payment",
+  "utililty payment",
+]);
 
 const DEBIT_ENDPOINTS = [
   "/AdminDebitWallet",
@@ -182,9 +190,13 @@ const AdminWalletManagement = () => {
   const { toast } = useToast();
 
   const [users, setUsers] = useState<ApiUser[]>([]);
-  const [walletBalances, setWalletBalances] = useState<WalletBalanceRecord[]>([]);
+  const [walletBalances, setWalletBalances] = useState<WalletBalanceRecord[]>(
+    [],
+  );
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [statementEntries, setStatementEntries] = useState<WalletStatementEntry[]>([]);
+  const [statementEntries, setStatementEntries] = useState<
+    WalletStatementEntry[]
+  >([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
@@ -220,25 +232,32 @@ const AdminWalletManagement = () => {
       Authorization: `Bearer ${token}`,
       accept: "*/*",
     }),
-    [token]
+    [token],
   );
 
   const selectableUsers = useMemo(
     () =>
       users
-        .filter((user) => SUPPORTED_ROLE_NAMES.has(getRoleLabel(user).trim().toLowerCase()))
+        .filter((user) =>
+          SUPPORTED_ROLE_NAMES.has(getRoleLabel(user).trim().toLowerCase()),
+        )
         .sort((left, right) => left.fullName.localeCompare(right.fullName)),
-    [users]
+    [users],
   );
 
   const selectedUser = useMemo(
-    () => selectableUsers.find((user) => String(user.id) === selectedUserId) ?? null,
-    [selectableUsers, selectedUserId]
+    () =>
+      selectableUsers.find((user) => String(user.id) === selectedUserId) ??
+      null,
+    [selectableUsers, selectedUserId],
   );
 
   const selectedBalanceRecord = useMemo(
-    () => walletBalances.find((record) => String(record.user.id) === selectedUserId) ?? null,
-    [walletBalances, selectedUserId]
+    () =>
+      walletBalances.find(
+        (record) => String(record.user.id) === selectedUserId,
+      ) ?? null,
+    [walletBalances, selectedUserId],
   );
 
   const filteredBalanceRecords = useMemo(() => {
@@ -256,7 +275,11 @@ const AdminWalletManagement = () => {
         return true;
       }
 
-      const haystack = [record.user.fullName, record.user.email, getRoleLabel(record.user)]
+      const haystack = [
+        record.user.fullName,
+        record.user.email,
+        getRoleLabel(record.user),
+      ]
         .join(" ")
         .toLowerCase();
 
@@ -265,8 +288,12 @@ const AdminWalletManagement = () => {
   }, [walletBalances, listSearchTerm, roleFilter]);
 
   const statementRows = useMemo(
-    () => buildRunningBalanceStatement(statementEntries, selectedBalanceRecord?.balance ?? null),
-    [statementEntries, selectedBalanceRecord?.balance]
+    () =>
+      buildRunningBalanceStatement(
+        statementEntries,
+        selectedBalanceRecord?.balance ?? null,
+      ),
+    [statementEntries, selectedBalanceRecord?.balance],
   );
 
   const filteredStatementEntries = useMemo(() => {
@@ -278,25 +305,30 @@ const AdminWalletManagement = () => {
 
     return statementRows.filter((entry) => {
       const amountText = String(entry.amount);
-      const dateText = new Date(entry.transactionDate).toLocaleString().toLowerCase();
+      const dateText = new Date(entry.transactionDate)
+        .toLocaleString()
+        .toLowerCase();
       const descriptionText = (entry.description || "").toLowerCase();
-      return `${descriptionText} ${amountText} ${dateText}`.includes(normalizedSearch);
+      return `${descriptionText} ${amountText} ${dateText}`.includes(
+        normalizedSearch,
+      );
     });
   }, [statementRows, statementSearchTerm]);
 
   const statementCredits = useMemo(
     () => filteredStatementEntries.filter((entry) => entry.amount > 0),
-    [filteredStatementEntries]
+    [filteredStatementEntries],
   );
 
   const statementDebits = useMemo(
     () => filteredStatementEntries.filter((entry) => entry.amount < 0),
-    [filteredStatementEntries]
+    [filteredStatementEntries],
   );
 
   const totalTrackedBalance = useMemo(
-    () => walletBalances.reduce((sum, record) => sum + (record.balance || 0), 0),
-    [walletBalances]
+    () =>
+      walletBalances.reduce((sum, record) => sum + (record.balance || 0), 0),
+    [walletBalances],
   );
 
   const exportStatement = () => {
@@ -338,7 +370,9 @@ const AdminWalletManagement = () => {
   const fetchSelectableUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      const response = await axios.get(`${apiUrl}/GetAllUsers`, { headers: authHeaders });
+      const response = await axios.get(`${apiUrl}/GetAllUsers`, {
+        headers: authHeaders,
+      });
       setUsers(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Failed to fetch users", error);
@@ -355,7 +389,9 @@ const AdminWalletManagement = () => {
   const fetchStatement = async (userId: string) => {
     setIsLoadingStatement(true);
     try {
-      const response = await fetch(`${apiUrl}/GetStatement/${userId}`, { headers: authHeaders });
+      const response = await fetch(`${apiUrl}/GetStatement/${userId}`, {
+        headers: authHeaders,
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch statement: ${response.status}`);
@@ -369,7 +405,9 @@ const AdminWalletManagement = () => {
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to load the selected wallet statement.",
+          error instanceof Error
+            ? error.message
+            : "Failed to load the selected wallet statement.",
         variant: "destructive",
       });
     } finally {
@@ -377,7 +415,9 @@ const AdminWalletManagement = () => {
     }
   };
 
-  const fetchBalanceAndStatementSummary = async (user: ApiUser): Promise<WalletBalanceRecord> => {
+  const fetchBalanceAndStatementSummary = async (
+    user: ApiUser,
+  ): Promise<WalletBalanceRecord> => {
     try {
       const [balanceResponse, statementResponse] = await Promise.all([
         fetch(`${apiUrl}/GetBalance/${user.id}`, { headers: authHeaders }),
@@ -389,20 +429,27 @@ const AdminWalletManagement = () => {
       }
 
       if (!statementResponse.ok) {
-        throw new Error(`Failed to fetch statement: ${statementResponse.status}`);
+        throw new Error(
+          `Failed to fetch statement: ${statementResponse.status}`,
+        );
       }
 
       const balanceData = await balanceResponse.json();
       const statementData = await statementResponse.json();
       const entries = Array.isArray(statementData) ? statementData : [];
-      const lastStatementAt = entries.length > 0 ? entries[0]?.transactionDate ?? null : null;
+      const lastStatementAt =
+        entries.length > 0 ? (entries[0]?.transactionDate ?? null) : null;
 
       return {
         user,
-        balance: typeof balanceData?.balance === "number" ? balanceData.balance : Number(balanceData?.balance ?? 0),
-        balanceLabel: typeof balanceData?.balance === "number"
-          ? formatCurrency(balanceData.balance)
-          : formatCurrency(Number(balanceData?.balance ?? 0)),
+        balance:
+          typeof balanceData?.balance === "number"
+            ? balanceData.balance
+            : Number(balanceData?.balance ?? 0),
+        balanceLabel:
+          typeof balanceData?.balance === "number"
+            ? formatCurrency(balanceData.balance)
+            : formatCurrency(Number(balanceData?.balance ?? 0)),
         lastStatementAt,
         statementCount: entries.length,
         loading: false,
@@ -416,7 +463,10 @@ const AdminWalletManagement = () => {
         lastStatementAt: null,
         statementCount: null,
         loading: false,
-        error: error instanceof Error ? error.message : "Failed to load wallet balance",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load wallet balance",
       };
     }
   };
@@ -432,11 +482,13 @@ const AdminWalletManagement = () => {
         statementCount: null,
         loading: true,
         error: null,
-      }))
+      })),
     );
 
     try {
-      const records = await Promise.all(usersToLoad.map((user) => fetchBalanceAndStatementSummary(user)));
+      const records = await Promise.all(
+        usersToLoad.map((user) => fetchBalanceAndStatementSummary(user)),
+      );
       setWalletBalances(records);
 
       if (!selectedUserId && records.length > 0) {
@@ -448,7 +500,9 @@ const AdminWalletManagement = () => {
   };
 
   const refreshSelectedUserData = async (userId: string) => {
-    const matchingUser = selectableUsers.find((user) => String(user.id) === userId);
+    const matchingUser = selectableUsers.find(
+      (user) => String(user.id) === userId,
+    );
     if (!matchingUser) {
       return;
     }
@@ -457,8 +511,8 @@ const AdminWalletManagement = () => {
 
     setWalletBalances((current) =>
       current.map((record) =>
-        String(record.user.id) === userId ? updatedRecord : record
-      )
+        String(record.user.id) === userId ? updatedRecord : record,
+      ),
     );
 
     await fetchStatement(userId);
@@ -466,7 +520,7 @@ const AdminWalletManagement = () => {
 
   const runWalletMutation = async (
     endpoints: string[],
-    payload: WalletMutationPayload
+    payload: WalletMutationPayload,
   ) => {
     const missingCandidates: string[] = [];
 
@@ -493,7 +547,7 @@ const AdminWalletManagement = () => {
     }
 
     throw new Error(
-      `No supported wallet endpoint was found. Expected one of: ${missingCandidates.join(", ")}`
+      `No supported wallet endpoint was found. Expected one of: ${missingCandidates.join(", ")}`,
     );
   };
 
@@ -501,7 +555,8 @@ const AdminWalletManagement = () => {
     if (!selectedUser) {
       toast({
         title: "Select a wallet",
-        description: "Choose a landlord or utility user before debiting a wallet.",
+        description:
+          "Choose a landlord or utility user before debiting a wallet.",
         variant: "destructive",
       });
       return;
@@ -520,7 +575,8 @@ const AdminWalletManagement = () => {
     if (!debitReason.trim()) {
       toast({
         title: "Reason required",
-        description: "Add a reason so the debit appears clearly in the statement.",
+        description:
+          "Add a reason so the debit appears clearly in the statement.",
         variant: "destructive",
       });
       return;
@@ -547,7 +603,10 @@ const AdminWalletManagement = () => {
     } catch (error) {
       toast({
         title: "Debit failed",
-        description: error instanceof Error ? error.message : "Failed to debit the wallet.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to debit the wallet.",
         variant: "destructive",
       });
     } finally {
@@ -596,7 +655,8 @@ const AdminWalletManagement = () => {
     if (!transferReason.trim()) {
       toast({
         title: "Reason required",
-        description: "Add a reason so the transfer appears clearly in both wallet statements.",
+        description:
+          "Add a reason so the transfer appears clearly in both wallet statements.",
         variant: "destructive",
       });
       return;
@@ -612,7 +672,9 @@ const AdminWalletManagement = () => {
         performedByAdminId: adminUserId,
       });
 
-      const targetUser = selectableUsers.find((user) => String(user.id) === transferTargetUserId);
+      const targetUser = selectableUsers.find(
+        (user) => String(user.id) === transferTargetUserId,
+      );
 
       toast({
         title: "Transfer completed",
@@ -631,7 +693,10 @@ const AdminWalletManagement = () => {
     } catch (error) {
       toast({
         title: "Transfer failed",
-        description: error instanceof Error ? error.message : "Failed to transfer between wallets.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to transfer between wallets.",
         variant: "destructive",
       });
     } finally {
@@ -666,14 +731,18 @@ const AdminWalletManagement = () => {
     fetchStatement(selectedUserId);
   }, [selectedUserId]);
 
-  const selectedRoleFilter = roleFilter === "all" ? "All wallet roles" : roleFilter;
+  const selectedRoleFilter =
+    roleFilter === "all" ? "All wallet roles" : roleFilter;
   const selectedTransferTarget = useMemo(
-    () => selectableUsers.find((user) => String(user.id) === transferTargetUserId) ?? null,
-    [selectableUsers, transferTargetUserId]
+    () =>
+      selectableUsers.find(
+        (user) => String(user.id) === transferTargetUserId,
+      ) ?? null,
+    [selectableUsers, transferTargetUserId],
   );
   const transferTargets = useMemo(
     () => selectableUsers.filter((user) => String(user.id) !== selectedUserId),
-    [selectableUsers, selectedUserId]
+    [selectableUsers, selectedUserId],
   );
   const filteredTransferTargets = useMemo(() => {
     const normalizedSearch = transferTargetSearchTerm.trim().toLowerCase();
@@ -686,7 +755,7 @@ const AdminWalletManagement = () => {
       [user.fullName, user.email, getRoleLabel(user)]
         .join(" ")
         .toLowerCase()
-        .includes(normalizedSearch)
+        .includes(normalizedSearch),
     );
   }, [transferTargetSearchTerm, transferTargets]);
 
@@ -701,52 +770,62 @@ const AdminWalletManagement = () => {
   }, [selectedTransferTarget, selectedUserId, transferTargetUserId]);
 
   return (
-    <div className="space-y-8">
-      <section className="page-hero">
+    <div className="dark text-white min-h-full space-y-8">
+      <section className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-[28px] p-8">
         <div className="max-w-4xl space-y-3">
-          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <span className="inline-flex w-fit items-center rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
             Wallet Control
           </span>
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+            <h1 className="text-3xl font-semibold tracking-tight text-white">
               Admin wallet management
             </h1>
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-              Review wallet balances for all landlords and utility payment users, inspect statements, debit wallets with a reason, and transfer funds between wallets.
+            <p className="max-w-3xl text-sm leading-6 text-blue-200 md:text-base">
+              Review wallet balances for all landlords and utility payment
+              users, inspect statements, debit wallets with a reason, and
+              transfer funds between wallets.
             </p>
           </div>
         </div>
       </section>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="data-surface border-none shadow-none">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader className="pb-3">
-            <CardDescription>Tracked wallets</CardDescription>
-            <CardTitle className="text-3xl font-semibold text-slate-950">
+            <CardDescription className="text-blue-200">
+              Tracked wallets
+            </CardDescription>
+            <CardTitle className="text-3xl font-semibold text-white">
               {walletBalances.length}
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card className="data-surface border-none shadow-none">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader className="pb-3">
-            <CardDescription>Total balance in scope</CardDescription>
-            <CardTitle className="text-3xl font-semibold text-slate-950">
+            <CardDescription className="text-blue-200">
+              Total balance in scope
+            </CardDescription>
+            <CardTitle className="text-3xl font-semibold text-white">
               {formatCurrency(totalTrackedBalance)}
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card className="data-surface border-none shadow-none">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader className="pb-3">
-            <CardDescription>Statement rows for selected wallet</CardDescription>
-            <CardTitle className="text-3xl font-semibold text-slate-950">
+            <CardDescription className="text-blue-200">
+              Statement rows for selected wallet
+            </CardDescription>
+            <CardTitle className="text-3xl font-semibold text-white">
               {selectedUser ? filteredStatementEntries.length : 0}
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card className="data-surface border-none shadow-none">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader className="pb-3">
-            <CardDescription>Active filter</CardDescription>
-            <CardTitle className="text-lg font-semibold text-slate-950">
+            <CardDescription className="text-blue-200">
+              Active filter
+            </CardDescription>
+            <CardTitle className="text-lg font-semibold text-white">
               {selectedRoleFilter}
             </CardTitle>
           </CardHeader>
@@ -754,13 +833,14 @@ const AdminWalletManagement = () => {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <Card className="data-surface border-none shadow-none">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader className="space-y-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <CardTitle>Wallet balances</CardTitle>
-                <CardDescription>
-                  Search all landlord and utility payment wallets and open any statement from the same view.
+                <CardDescription className="text-blue-200">
+                  Search all landlord and utility payment wallets and open any
+                  statement from the same view.
                 </CardDescription>
               </div>
               <Button
@@ -768,6 +848,7 @@ const AdminWalletManagement = () => {
                 size="sm"
                 onClick={() => refreshWalletBalances(selectableUsers)}
                 disabled={isLoadingBalances || selectableUsers.length === 0}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               >
                 {isLoadingBalances ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -779,9 +860,10 @@ const AdminWalletManagement = () => {
             </div>
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-200" />
                 <Input
                   value={listSearchTerm}
+                  variant="dark"
                   onChange={(event) => setListSearchTerm(event.target.value)}
                   placeholder="Search by name, email, or role"
                   className="pl-10"
@@ -794,8 +876,12 @@ const AdminWalletManagement = () => {
                 <SelectContent>
                   <SelectItem value="all">All roles</SelectItem>
                   <SelectItem value="landlord">Landlords</SelectItem>
-                  <SelectItem value="utility payment">Utility payment</SelectItem>
-                  <SelectItem value="utililty payment">Utililty payment</SelectItem>
+                  <SelectItem value="utility payment">
+                    Utility payment
+                  </SelectItem>
+                  <SelectItem value="utililty payment">
+                    Utililty payment
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -808,7 +894,7 @@ const AdminWalletManagement = () => {
                 ))}
               </div>
             ) : filteredBalanceRecords.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-white/20 bg-white/10 px-6 py-10 text-center text-sm text-blue-200">
                 No wallet records match the current filters.
               </div>
             ) : (
@@ -828,19 +914,31 @@ const AdminWalletManagement = () => {
                       <TableRow
                         key={record.user.id}
                         className={cn(
-                          "cursor-pointer transition-colors hover:bg-slate-50/90",
-                          selectedUserId === String(record.user.id) && "bg-primary/5"
+                          "cursor-pointer transition-colors hover:bg-white/10",
+                          selectedUserId === String(record.user.id) &&
+                            "bg-blue-500/10",
                         )}
-                        onClick={() => setSelectedUserId(String(record.user.id))}
+                        onClick={() =>
+                          setSelectedUserId(String(record.user.id))
+                        }
                       >
                         <TableCell>
                           <div className="space-y-1">
-                            <p className="font-medium text-slate-950">{record.user.fullName}</p>
-                            <p className="text-xs text-muted-foreground">{record.user.email}</p>
+                            <p className="font-medium text-white">
+                              {record.user.fullName}
+                            </p>
+                            <p className="text-xs text-blue-200">
+                              {record.user.email}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{getRoleLabel(record.user)}</Badge>
+                          <Badge
+                            variant="secondary"
+                            className="bg-white/10 text-white border-white/10"
+                          >
+                            {getRoleLabel(record.user)}
+                          </Badge>
                         </TableCell>
                         <TableCell>{record.statementCount ?? "--"}</TableCell>
                         <TableCell>
@@ -848,9 +946,11 @@ const AdminWalletManagement = () => {
                             ? new Date(record.lastStatementAt).toLocaleString()
                             : "--"}
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-slate-950">
+                        <TableCell className="text-right font-semibold text-white">
                           {record.error ? (
-                            <span className="text-sm font-medium text-red-600">Unavailable</span>
+                            <span className="text-sm font-medium text-red-400">
+                              Unavailable
+                            </span>
                           ) : (
                             record.balanceLabel
                           )}
@@ -864,17 +964,23 @@ const AdminWalletManagement = () => {
           </CardContent>
         </Card>
 
-        <Card className="data-surface border-none shadow-none">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader className="space-y-4">
             <div>
               <CardTitle>Selected wallet</CardTitle>
-              <CardDescription>
-                Pick a wallet to review its balance, open the full statement, or perform admin actions.
+              <CardDescription className="text-blue-200">
+                Pick a wallet to review its balance, open the full statement, or
+                perform admin actions.
               </CardDescription>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="admin-wallet-account-picker">Landlord or utility user</Label>
-              <Popover open={accountPickerOpen} onOpenChange={setAccountPickerOpen}>
+              <Label htmlFor="admin-wallet-account-picker">
+                Landlord or utility user
+              </Label>
+              <Popover
+                open={accountPickerOpen}
+                onOpenChange={setAccountPickerOpen}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     id="admin-wallet-account-picker"
@@ -882,7 +988,7 @@ const AdminWalletManagement = () => {
                     variant="outline"
                     role="combobox"
                     disabled={selectableUsers.length === 0}
-                    className="h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm"
+                    className="h-12 w-full justify-between rounded-xl border-white/20 bg-white/10 px-4 py-3 font-normal shadow-sm text-white"
                   >
                     <span className="truncate">
                       {selectedUser
@@ -894,11 +1000,19 @@ const AdminWalletManagement = () => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search by name, email, or role" />
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0 bg-slate-900/95 border-white/20 text-white"
+                  align="start"
+                >
+                  <Command className="bg-slate-900/95 text-white">
+                    <CommandInput
+                      placeholder="Search by name, email, or role"
+                      className="placeholder:text-blue-200/60"
+                    />
                     <CommandList>
-                      <CommandEmpty>No wallet account found.</CommandEmpty>
+                      <CommandEmpty className="text-blue-200">
+                        No wallet account found.
+                      </CommandEmpty>
                       <CommandGroup>
                         {selectableUsers.map((user) => (
                           <CommandItem
@@ -908,18 +1022,26 @@ const AdminWalletManagement = () => {
                               setSelectedUserId(String(user.id));
                               setAccountPickerOpen(false);
                             }}
-                            className="flex items-start gap-3 py-3"
+                            className="flex items-start gap-3 py-3 text-white data-[selected=true]:bg-white/10"
                           >
                             <Check
                               className={cn(
                                 "mt-0.5 h-4 w-4",
-                                selectedUserId === String(user.id) ? "opacity-100" : "opacity-0"
+                                selectedUserId === String(user.id)
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-slate-900">{user.fullName}</p>
-                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
+                              <p className="truncate font-medium text-white">
+                                {user.fullName}
+                              </p>
+                              <p className="truncate text-xs text-blue-200">
+                                {user.email}
+                              </p>
+                              <p className="text-xs text-blue-200">
+                                {getRoleLabel(user)}
+                              </p>
                             </div>
                           </CommandItem>
                         ))}
@@ -932,29 +1054,47 @@ const AdminWalletManagement = () => {
           </CardHeader>
           <CardContent>
             {!selectedUser || !selectedBalanceRecord ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
-                Select a wallet from the table or search control to inspect its statement.
+              <div className="rounded-2xl border border-dashed border-white/20 bg-white/10 px-6 py-10 text-center text-sm text-blue-200">
+                Select a wallet from the table or search control to inspect its
+                statement.
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="rounded-[28px] border border-border/70 bg-white/95 p-5 shadow-sm">
+                <div className="rounded-[28px] border border-white/20 bg-white/10 p-5 shadow-sm backdrop-blur-xl">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
-                      <p className="text-lg font-semibold text-slate-950">{selectedUser.fullName}</p>
-                      <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                      <p className="text-lg font-semibold text-white">
+                        {selectedUser.fullName}
+                      </p>
+                      <p className="text-sm text-blue-200">
+                        {selectedUser.email}
+                      </p>
                     </div>
-                    <Badge variant="secondary">{getRoleLabel(selectedUser)}</Badge>
+                    <Badge
+                      variant="secondary"
+                      className="bg-white/10 text-white border-white/10"
+                    >
+                      {getRoleLabel(selectedUser)}
+                    </Badge>
                   </div>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Wallet balance</p>
-                      <p className="mt-2 text-2xl font-semibold text-slate-950">{selectedBalanceRecord.balanceLabel}</p>
+                    <div className="rounded-2xl bg-white/10 border border-white/10 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.14em] text-blue-200">
+                        Wallet balance
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        {selectedBalanceRecord.balanceLabel}
+                      </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Latest statement entry</p>
-                      <p className="mt-2 text-sm font-medium text-slate-950">
+                    <div className="rounded-2xl bg-white/10 border border-white/10 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.14em] text-blue-200">
+                        Latest statement entry
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-white">
                         {selectedBalanceRecord.lastStatementAt
-                          ? new Date(selectedBalanceRecord.lastStatementAt).toLocaleString()
+                          ? new Date(
+                              selectedBalanceRecord.lastStatementAt,
+                            ).toLocaleString()
                           : "No statement activity yet"}
                       </p>
                     </div>
@@ -962,22 +1102,27 @@ const AdminWalletManagement = () => {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Button onClick={() => setDebitDialogOpen(true)} className="h-11 rounded-xl">
+                  <Button
+                    onClick={() => setDebitDialogOpen(true)}
+                    className="h-11 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg"
+                  >
                     <Wallet className="mr-2 h-4 w-4" />
                     Debit wallet
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => setTransferDialogOpen(true)}
-                    className="h-11 rounded-xl"
+                    className="h-11 rounded-xl bg-white/10 border-white/20 text-white hover:bg-white/20"
                   >
                     <ArrowRightLeft className="mr-2 h-4 w-4" />
                     Transfer to another wallet
                   </Button>
                 </div>
 
-                <div className="rounded-[28px] border border-border/70 bg-slate-50/80 p-4 text-sm text-muted-foreground">
-                  Debits and transfers send the reason as both the reason and description fields so the backend can record them in the wallet statement alongside credits and withdrawals.
+                <div className="rounded-[28px] border border-white/20 bg-white/10 p-4 text-sm text-blue-200 backdrop-blur-xl">
+                  Debits and transfers send the reason as both the reason and
+                  description fields so the backend can record them in the
+                  wallet statement alongside credits and withdrawals.
                 </div>
               </div>
             )}
@@ -985,37 +1130,50 @@ const AdminWalletManagement = () => {
         </Card>
       </div>
 
-      <Card className="data-surface border-none shadow-none">
+      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <CardTitle>Wallet statement</CardTitle>
-              <CardDescription>
+              <CardDescription className="text-blue-200">
                 {selectedUser
                   ? `Full statement for ${selectedUser.fullName}`
                   : "Select a wallet to inspect statement activity."}
               </CardDescription>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-border/70 bg-white/90 px-4 py-3 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Rows</p>
-                <p className="mt-2 text-xl font-semibold text-slate-950">{filteredStatementEntries.length}</p>
+              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-center">
+                <p className="text-xs uppercase tracking-[0.14em] text-blue-200">
+                  Rows
+                </p>
+                <p className="mt-2 text-xl font-semibold text-white">
+                  {filteredStatementEntries.length}
+                </p>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-white/90 px-4 py-3 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Credits</p>
-                <p className="mt-2 text-xl font-semibold text-green-600">{statementCredits.length}</p>
+              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-center">
+                <p className="text-xs uppercase tracking-[0.14em] text-blue-200">
+                  Credits
+                </p>
+                <p className="mt-2 text-xl font-semibold text-green-400">
+                  {statementCredits.length}
+                </p>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-white/90 px-4 py-3 text-center">
-                <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Debits</p>
-                <p className="mt-2 text-xl font-semibold text-red-600">{statementDebits.length}</p>
+              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-center">
+                <p className="text-xs uppercase tracking-[0.14em] text-blue-200">
+                  Debits
+                </p>
+                <p className="mt-2 text-xl font-semibold text-red-400">
+                  {statementDebits.length}
+                </p>
               </div>
             </div>
           </div>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative max-w-md flex-1">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-200" />
               <Input
                 value={statementSearchTerm}
+                variant="dark"
                 onChange={(event) => setStatementSearchTerm(event.target.value)}
                 placeholder="Search statement description, amount, or date"
                 className="pl-10"
@@ -1026,7 +1184,10 @@ const AdminWalletManagement = () => {
               <Button
                 variant="outline"
                 onClick={exportStatement}
-                disabled={!selectedUser || filteredStatementEntries.length === 0}
+                disabled={
+                  !selectedUser || filteredStatementEntries.length === 0
+                }
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -1034,7 +1195,10 @@ const AdminWalletManagement = () => {
               <Button
                 variant="outline"
                 onClick={exportStatementPdf}
-                disabled={!selectedUser || filteredStatementEntries.length === 0}
+                disabled={
+                  !selectedUser || filteredStatementEntries.length === 0
+                }
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Export PDF
@@ -1044,7 +1208,7 @@ const AdminWalletManagement = () => {
         </CardHeader>
         <CardContent>
           {!selectedUser ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-white/20 bg-white/10 px-6 py-10 text-center text-sm text-blue-200">
               Choose a wallet first to load its statement.
             </div>
           ) : isLoadingStatement ? (
@@ -1054,7 +1218,7 @@ const AdminWalletManagement = () => {
               ))}
             </div>
           ) : filteredStatementEntries.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-white/20 bg-white/10 px-6 py-10 text-center text-sm text-blue-200">
               No statement entries match the current filters.
             </div>
           ) : (
@@ -1066,26 +1230,34 @@ const AdminWalletManagement = () => {
                     <TableHead>Description</TableHead>
                     <TableHead>Flow</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Running balance</TableHead>
+                    <TableHead className="text-right">
+                      Running balance
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStatementEntries.map((entry, index) => {
                     const flow = getStatementSign(entry);
                     return (
-                      <TableRow key={`${entry.transactionDate}-${entry.amount}-${index}`}>
-                        <TableCell>{new Date(entry.transactionDate).toLocaleString()}</TableCell>
+                      <TableRow
+                        key={`${entry.transactionDate}-${entry.amount}-${index}`}
+                      >
+                        <TableCell>
+                          {new Date(entry.transactionDate).toLocaleString()}
+                        </TableCell>
                         <TableCell className="min-w-[280px]">
-                          <div className="font-medium text-slate-950">{entry.description || "Wallet transaction"}</div>
+                          <div className="font-medium text-white">
+                            {entry.description || "Wallet transaction"}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {flow === "credit" ? (
-                              <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                              <ArrowDownLeft className="h-4 w-4 text-green-400" />
                             ) : flow === "debit" ? (
-                              <ArrowUpRight className="h-4 w-4 text-red-600" />
+                              <ArrowUpRight className="h-4 w-4 text-red-400" />
                             ) : (
-                              <SendHorizontal className="h-4 w-4 text-slate-500" />
+                              <SendHorizontal className="h-4 w-4 text-blue-200" />
                             )}
                             <span className="capitalize">{flow}</span>
                           </div>
@@ -1093,14 +1265,14 @@ const AdminWalletManagement = () => {
                         <TableCell
                           className={cn(
                             "text-right font-semibold",
-                            flow === "credit" && "text-green-600",
-                            flow === "debit" && "text-red-600"
+                            flow === "credit" && "text-green-400",
+                            flow === "debit" && "text-red-400",
                           )}
                         >
                           {entry.amount > 0 ? "+" : ""}
                           {formatCurrency(entry.amount)}
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-slate-950">
+                        <TableCell className="text-right font-semibold text-white">
                           {entry.runningBalance !== null
                             ? formatCurrency(entry.runningBalance)
                             : "--"}
@@ -1116,11 +1288,12 @@ const AdminWalletManagement = () => {
       </Card>
 
       <Dialog open={debitDialogOpen} onOpenChange={setDebitDialogOpen}>
-        <DialogContent className="rounded-[28px] sm:max-w-lg">
+        <DialogContent className="rounded-[28px] sm:max-w-lg bg-slate-900/95 border-white/20 text-white">
           <DialogHeader>
-            <DialogTitle>Debit wallet</DialogTitle>
-            <DialogDescription>
-              Remove funds from the selected wallet and record the reason in the statement.
+            <DialogTitle className="text-white">Debit wallet</DialogTitle>
+            <DialogDescription className="text-blue-200">
+              Remove funds from the selected wallet and record the reason in the
+              statement.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1129,6 +1302,7 @@ const AdminWalletManagement = () => {
               <Input
                 id="admin-wallet-debit-amount"
                 type="number"
+                variant="dark"
                 min="0"
                 step="0.01"
                 value={debitAmount}
@@ -1143,13 +1317,22 @@ const AdminWalletManagement = () => {
                 value={debitReason}
                 onChange={(event) => setDebitReason(event.target.value)}
                 placeholder="Explain why this wallet is being debited"
+                className="bg-white/10 border-white/20 text-white placeholder:text-blue-200/50 focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-400/30"
               />
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDebitDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setDebitDialogOpen(false)}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
                 Cancel
               </Button>
-              <Button onClick={submitDebit} disabled={isSubmittingDebit}>
+              <Button
+                onClick={submitDebit}
+                disabled={isSubmittingDebit}
+                className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg"
+              >
                 {isSubmittingDebit ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1165,11 +1348,14 @@ const AdminWalletManagement = () => {
       </Dialog>
 
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
-        <DialogContent className="rounded-[28px] sm:max-w-xl">
+        <DialogContent className="rounded-[28px] sm:max-w-xl bg-slate-900/95 border-white/20 text-white">
           <DialogHeader>
-            <DialogTitle>Transfer between wallets</DialogTitle>
-            <DialogDescription>
-              Move funds from the selected wallet to another landlord or utility payment wallet and preserve the reason in the statement.
+            <DialogTitle className="text-white">
+              Transfer between wallets
+            </DialogTitle>
+            <DialogDescription className="text-blue-200">
+              Move funds from the selected wallet to another landlord or utility
+              payment wallet and preserve the reason in the statement.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1190,7 +1376,7 @@ const AdminWalletManagement = () => {
                     variant="outline"
                     role="combobox"
                     disabled={transferTargets.length === 0}
-                    className="h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm"
+                    className="h-12 w-full justify-between rounded-xl border-white/20 bg-white/10 px-4 py-3 font-normal shadow-sm text-white"
                   >
                     <span className="truncate text-left">
                       {transferTargetUserId
@@ -1204,16 +1390,22 @@ const AdminWalletManagement = () => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-3" align="start">
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-3 bg-slate-900/95 border-white/20 text-white"
+                  align="start"
+                >
                   <div className="space-y-3">
                     <Input
                       value={transferTargetSearchTerm}
-                      onChange={(event) => setTransferTargetSearchTerm(event.target.value)}
+                      variant="dark"
+                      onChange={(event) =>
+                        setTransferTargetSearchTerm(event.target.value)
+                      }
                       placeholder="Search by name, email, or role"
                     />
                     <div className="max-h-64 space-y-1 overflow-y-auto">
                       {filteredTransferTargets.length === 0 ? (
-                        <div className="rounded-lg px-3 py-6 text-center text-sm text-muted-foreground">
+                        <div className="rounded-lg bg-white/5 px-3 py-6 text-center text-sm text-blue-200">
                           No destination wallet found.
                         </div>
                       ) : (
@@ -1227,20 +1419,29 @@ const AdminWalletManagement = () => {
                               setTransferTargetSearchTerm("");
                             }}
                             className={cn(
-                              "flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground",
-                              transferTargetUserId === String(user.id) && "bg-accent text-accent-foreground"
+                              "flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-white/10 hover:text-white",
+                              transferTargetUserId === String(user.id) &&
+                                "bg-white/10 text-white",
                             )}
                           >
                             <Check
                               className={cn(
                                 "mt-0.5 h-4 w-4 shrink-0",
-                                transferTargetUserId === String(user.id) ? "opacity-100" : "opacity-0"
+                                transferTargetUserId === String(user.id)
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium">{user.fullName}</p>
-                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
+                              <p className="truncate font-medium">
+                                {user.fullName}
+                              </p>
+                              <p className="truncate text-xs text-blue-200">
+                                {user.email}
+                              </p>
+                              <p className="text-xs text-blue-200">
+                                {getRoleLabel(user)}
+                              </p>
                             </div>
                           </button>
                         ))
@@ -1256,6 +1457,7 @@ const AdminWalletManagement = () => {
                 <Input
                   id="admin-wallet-transfer-amount"
                   type="number"
+                  variant="dark"
                   min="0"
                   step="0.01"
                   value={transferAmount}
@@ -1263,8 +1465,10 @@ const AdminWalletManagement = () => {
                   placeholder="Enter amount to transfer"
                 />
               </div>
-              <div className="rounded-2xl border border-border/70 bg-slate-50 px-4 py-3 text-sm text-muted-foreground">
-                Transfers debit the source wallet and should credit the destination wallet when the backend endpoint supports paired statement entries.
+              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-blue-200">
+                Transfers debit the source wallet and should credit the
+                destination wallet when the backend endpoint supports paired
+                statement entries.
               </div>
             </div>
             <div className="space-y-2">
@@ -1274,13 +1478,22 @@ const AdminWalletManagement = () => {
                 value={transferReason}
                 onChange={(event) => setTransferReason(event.target.value)}
                 placeholder="Explain why the funds are moving between wallets"
+                className="bg-white/10 border-white/20 text-white placeholder:text-blue-200/50 focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-400/30"
               />
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setTransferDialogOpen(false)}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
                 Cancel
               </Button>
-              <Button onClick={submitTransfer} disabled={isSubmittingTransfer}>
+              <Button
+                onClick={submitTransfer}
+                disabled={isSubmittingTransfer}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+              >
                 {isSubmittingTransfer ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

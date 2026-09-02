@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
-import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,7 +11,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
 import {
   Command,
   CommandEmpty,
@@ -19,21 +19,40 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Cable, Check, ChevronsUpDown, MapPin, UserRound, Waves } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/command";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Cable,
+  Check,
+  ChevronsUpDown,
+  MapPin,
+  UserRound,
+  Waves,
+} from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const meterSchema = z.object({
-  meterType: z.string().min(1, { message: 'Meter type is required' }),
-  meterNumber: z.string().min(1, { message: 'Meter number is required' }),
-  nwscAccount: z.string().min(1, { message: 'NWSC account is required' }),
-  locationOfNwscMeter: z.string().min(1, { message: 'Location of NWSC meter is required' }),
-  landLordId: z.string().min(1, { message: 'Landlord selection is required' }),
+  meterType: z.string().min(1, { message: "Meter type is required" }),
+  meterNumber: z.string().min(1, { message: "Meter number is required" }),
+  nwscAccount: z.string().min(1, { message: "NWSC account is required" }),
+  locationOfNwscMeter: z
+    .string()
+    .min(1, { message: "Location of NWSC meter is required" }),
+  landLordId: z.string().min(1, { message: "Landlord selection is required" }),
 });
 
 interface User {
@@ -54,17 +73,17 @@ const AddUtilityMeter = () => {
   const [userPickerOpen, setUserPickerOpen] = useState(false);
   const { toast } = useToast();
 
-  let token = '';
+  let token = "";
   try {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     if (user) {
       const userData = JSON.parse(user);
       token = userData.token;
     } else {
-      console.error('No user found in localStorage');
+      console.error("No user found in localStorage");
     }
   } catch (error) {
-    console.error('Error parsing user data:', error);
+    console.error("Error parsing user data:", error);
   }
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -72,30 +91,31 @@ const AddUtilityMeter = () => {
   const form = useForm<z.infer<typeof meterSchema>>({
     resolver: zodResolver(meterSchema),
     defaultValues: {
-      meterType: '',
-      meterNumber: '',
-      nwscAccount: '',
-      locationOfNwscMeter: '',
-      landLordId: '',
+      meterType: "",
+      meterNumber: "",
+      nwscAccount: "",
+      locationOfNwscMeter: "",
+      landLordId: "",
     },
   });
 
   useEffect(() => {
     setIsLoadingUsers(true);
-    axios.get(`${apiUrl}/GetAllUsers`, {
-      headers: {
-        accept: '*/*',
-        Authorization: `Bearer ${token}`,
-      },
-    })
+    axios
+      .get(`${apiUrl}/GetAllUsers`, {
+        headers: {
+          accept: "*/*",
+          Authorization: `Bearer ${token}`,
+        },
+      })
       .then((res) => {
         setUsers(res.data);
       })
       .catch(() => {
         toast({
-          title: 'Error',
-          description: 'Failed to fetch users',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to fetch users",
+          variant: "destructive",
         });
       })
       .finally(() => setIsLoadingUsers(false));
@@ -105,16 +125,24 @@ const AddUtilityMeter = () => {
     () =>
       users
         .filter((user) => {
-          const normalizedRole = user.systemRole?.name?.trim().toLowerCase() ?? '';
-          return normalizedRole === 'landlord' || normalizedRole === 'utility payment' || normalizedRole === 'utililty payment';
+          const normalizedRole =
+            user.systemRole?.name?.trim().toLowerCase() ?? "";
+          return (
+            normalizedRole === "landlord" ||
+            normalizedRole === "utility payment" ||
+            normalizedRole === "utililty payment"
+          );
         })
         .sort((left, right) => left.fullName.localeCompare(right.fullName)),
-    [users]
+    [users],
   );
 
   const selectedUser = useMemo(
-    () => selectableUsers.find((user) => user.id.toString() === form.watch('landLordId')),
-    [form, selectableUsers]
+    () =>
+      selectableUsers.find(
+        (user) => user.id.toString() === form.watch("landLordId"),
+      ),
+    [form, selectableUsers],
   );
 
   const onSubmit = async (values: z.infer<typeof meterSchema>) => {
@@ -130,27 +158,27 @@ const AddUtilityMeter = () => {
 
       await axios.post(`${apiUrl}/AddUtilityMeter`, payload, {
         headers: {
-          accept: '*/*',
+          accept: "*/*",
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       toast({
-        title: 'Success',
-        description: 'Utility meter added successfully',
+        title: "Success",
+        description: "Utility meter added successfully",
       });
 
       form.reset();
     } catch (error) {
-      let errorMessage = 'Failed to add utility meter';
+      let errorMessage = "Failed to add utility meter";
       if (axios.isAxiosError(error)) {
         errorMessage = error.response?.data?.message || errorMessage;
       }
 
       toast({
-        variant: 'destructive',
-        title: 'Error',
+        variant: "destructive",
+        title: "Error",
         description: errorMessage,
       });
     } finally {
@@ -159,169 +187,212 @@ const AddUtilityMeter = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <section className="page-hero">
+    <div className="dark text-white min-h-full space-y-8">
+      <section className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-[28px] p-8">
         <div className="max-w-3xl space-y-3">
-          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <span className="inline-flex w-fit items-center rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
             Utility Setup
           </span>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-semibold tracking-tight text-white">
             Add a new utility meter
           </h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-            Register a meter against the correct landlord with a cleaner, more balanced form layout.
+          <p className="max-w-2xl text-sm leading-6 text-blue-200 md:text-base">
+            Register a meter against the correct landlord with a cleaner, more
+            balanced form layout.
           </p>
         </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="form-shell border-none shadow-none">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
           <CardHeader>
-            <CardTitle>Add New Utility Meter</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Add New Utility Meter</CardTitle>
+            <CardDescription className="text-blue-200">
               Fill in the details below to register and assign a utility meter.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
                 <div className="grid gap-5 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="landLordId"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>User</FormLabel>
-                      <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              role="combobox"
-                              disabled={isLoadingUsers}
-                              className={cn(
-                                'w-full justify-between font-normal',
-                                !field.value && 'text-muted-foreground'
-                              )}
-                            >
-                              {selectedUser
-                                ? `${selectedUser.fullName} (${selectedUser.systemRole?.name ?? 'User'})`
-                                : isLoadingUsers
-                                  ? 'Loading users...'
-                                  : 'Search landlord or utility payment user'}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search by name, email, or role" />
-                            <CommandList>
-                              <CommandEmpty>No landlord or utility payment user found.</CommandEmpty>
-                              <CommandGroup>
-                                {selectableUsers.map((user) => (
-                                  <CommandItem
-                                    key={user.id}
-                                    value={`${user.fullName} ${user.email} ${user.systemRole?.name ?? ''}`}
-                                    onSelect={() => {
-                                      field.onChange(user.id.toString());
-                                      setUserPickerOpen(false);
-                                    }}
-                                    className="flex items-start gap-3 py-3"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        'mt-0.5 h-4 w-4',
-                                        field.value === user.id.toString() ? 'opacity-100' : 'opacity-0'
-                                      )}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate font-medium text-slate-900">{user.fullName}</p>
-                                      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {user.systemRole?.name ?? 'User'}
-                                        {user.verified ? ' • Verified' : ''}
-                                      </p>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormDescription>
-                        Search and select only landlord and utility payment users.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="landLordId"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>User</FormLabel>
+                        <Popover
+                          open={userPickerOpen}
+                          onOpenChange={setUserPickerOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                role="combobox"
+                                disabled={isLoadingUsers}
+                                className={cn(
+                                  "w-full justify-between font-normal bg-white/10 border-white/20 text-white hover:bg-white/20 h-12 px-4",
+                                  !field.value && "text-blue-200/70",
+                                )}
+                              >
+                                {selectedUser
+                                  ? `${selectedUser.fullName} (${selectedUser.systemRole?.name ?? "User"})`
+                                  : isLoadingUsers
+                                    ? "Loading users..."
+                                    : "Search landlord or utility payment user"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-[var(--radix-popover-trigger-width)] p-0 bg-slate-900/95 border-white/20 text-white"
+                            align="start"
+                          >
+                            <Command className="bg-slate-900/95 text-white">
+                              <CommandInput
+                                placeholder="Search by name, email, or role"
+                                className="placeholder:text-blue-200/60"
+                              />
+                              <CommandList>
+                                <CommandEmpty className="text-blue-200">
+                                  No landlord or utility payment user found.
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {selectableUsers.map((user) => (
+                                    <CommandItem
+                                      key={user.id}
+                                      value={`${user.fullName} ${user.email} ${user.systemRole?.name ?? ""}`}
+                                      onSelect={() => {
+                                        field.onChange(user.id.toString());
+                                        setUserPickerOpen(false);
+                                      }}
+                                      className="flex items-start gap-3 py-3 text-white data-[selected=true]:bg-white/10"
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mt-0.5 h-4 w-4",
+                                          field.value === user.id.toString()
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="truncate font-medium text-white">
+                                          {user.fullName}
+                                        </p>
+                                        <p className="truncate text-xs text-blue-200">
+                                          {user.email}
+                                        </p>
+                                        <p className="text-xs text-blue-200">
+                                          {user.systemRole?.name ?? "User"}
+                                          {user.verified ? " • Verified" : ""}
+                                        </p>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription className="text-blue-200/80">
+                          Search and select only landlord and utility payment
+                          users.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="meterType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meter Type</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Electricity, Water" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="meterType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meter Type</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Electricity, Water"
+                            variant="dark"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="meterNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Meter Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter meter number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="meterNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meter Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter meter number"
+                            variant="dark"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="nwscAccount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>NWSC Account</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter NWSC account number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="nwscAccount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>NWSC Account</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter NWSC account number"
+                            variant="dark"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="locationOfNwscMeter"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Location of NWSC Meter</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter location of NWSC meter" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="locationOfNwscMeter"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Location of NWSC Meter</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter location of NWSC meter"
+                            variant="dark"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                <div className="flex flex-col gap-3 border-t border-border/70 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Review the selected account and meter identifiers before saving.
+                <div className="flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-blue-200">
+                    Review the selected account and meter identifiers before
+                    saving.
                   </p>
-                  <Button type="submit" disabled={isSubmitting} className="min-w-36">
-                    {isSubmitting ? 'Adding...' : 'Add Meter'}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="min-w-36 bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+                  >
+                    {isSubmitting ? "Adding..." : "Add Meter"}
                   </Button>
                 </div>
               </form>
@@ -330,40 +401,55 @@ const AddUtilityMeter = () => {
         </Card>
 
         <div className="space-y-6">
-          <Card className="data-surface">
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
             <CardHeader>
-              <CardTitle className="text-lg">What this captures</CardTitle>
-              <CardDescription>
-                Keep submissions clean and consistent across all utility records.
+              <CardTitle className="text-lg text-white">
+                What this captures
+              </CardTitle>
+              <CardDescription className="text-blue-200">
+                Keep submissions clean and consistent across all utility
+                records.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <UserRound className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3 rounded-2xl bg-white/10 border border-white/10 p-4">
+                <UserRound className="mt-0.5 h-5 w-5 text-blue-300" />
                 <div>
-                  <p className="font-medium text-slate-900">Verified landlord</p>
-                  <p className="text-sm text-muted-foreground">Assign each meter to the right user account owner.</p>
+                  <p className="font-medium text-white">Verified landlord</p>
+                  <p className="text-sm text-blue-200">
+                    Assign each meter to the right user account owner.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <Cable className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3 rounded-2xl bg-white/10 border border-white/10 p-4">
+                <Cable className="mt-0.5 h-5 w-5 text-blue-300" />
                 <div>
-                  <p className="font-medium text-slate-900">Meter identity</p>
-                  <p className="text-sm text-muted-foreground">Store the meter type and meter number in a consistent format.</p>
+                  <p className="font-medium text-white">Meter identity</p>
+                  <p className="text-sm text-blue-200">
+                    Store the meter type and meter number in a consistent
+                    format.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <Waves className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3 rounded-2xl bg-white/10 border border-white/10 p-4">
+                <Waves className="mt-0.5 h-5 w-5 text-blue-300" />
                 <div>
-                  <p className="font-medium text-slate-900">Billing reference</p>
-                  <p className="text-sm text-muted-foreground">The NWSC account makes reconciliation much easier later.</p>
+                  <p className="font-medium text-white">Billing reference</p>
+                  <p className="text-sm text-blue-200">
+                    The NWSC account makes reconciliation much easier later.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <MapPin className="mt-0.5 h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3 rounded-2xl bg-white/10 border border-white/10 p-4">
+                <MapPin className="mt-0.5 h-5 w-5 text-blue-300" />
                 <div>
-                  <p className="font-medium text-slate-900">Installation location</p>
-                  <p className="text-sm text-muted-foreground">Use a clear location label so support and admins can identify the unit fast.</p>
+                  <p className="font-medium text-white">
+                    Installation location
+                  </p>
+                  <p className="text-sm text-blue-200">
+                    Use a clear location label so support and admins can
+                    identify the unit fast.
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -374,4 +460,4 @@ const AddUtilityMeter = () => {
   );
 };
 
-export default AddUtilityMeter; 
+export default AddUtilityMeter;

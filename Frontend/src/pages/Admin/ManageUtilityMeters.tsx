@@ -226,7 +226,7 @@ const ManageUtilityMeters = () => {
             accept: "*/*",
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       toast({
@@ -282,18 +282,21 @@ const ManageUtilityMeters = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center">Loading utility meters...</div>
+      <div className="dark text-white min-h-full p-6">
+        <div className="text-center text-blue-100">
+          Loading utility meters...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="dark text-white min-h-full p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Manage Utility Meters</h1>
+        <h1 className="text-2xl font-bold text-white">Manage Utility Meters</h1>
         <Input
           type="text"
+          variant="dark"
           placeholder="Search by meter type, number, account, location, or landlord..."
           value={search}
           onChange={(e) => {
@@ -304,7 +307,7 @@ const ManageUtilityMeters = () => {
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-4">
         <Table>
           <TableHeader>
             <TableRow>
@@ -331,6 +334,7 @@ const ManageUtilityMeters = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="bg-white/10 border-blue-400/30 text-blue-300 hover:bg-blue-500/10 hover:text-blue-100"
                     onClick={() => handleViewPayments(meter.landLordId)}
                   >
                     <Eye className="h-4 w-4 mr-1" /> View
@@ -341,6 +345,7 @@ const ManageUtilityMeters = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="bg-white/10 border-green-400/30 text-green-300 hover:bg-green-500/10 hover:text-green-100"
                       onClick={() => handleEdit(meter)}
                     >
                       <Edit className="h-4 w-4" />
@@ -356,8 +361,9 @@ const ManageUtilityMeters = () => {
                     >
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="destructive"
+                          variant="outline"
                           size="sm"
+                          className="bg-white/10 border-red-400/30 text-red-300 hover:bg-red-500/10 hover:text-red-100"
                           onClick={() => {
                             setMeterToDelete(meter);
                             setDeleteDialogOpen(true);
@@ -367,21 +373,24 @@ const ManageUtilityMeters = () => {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
+                      <AlertDialogContent className="bg-slate-900/95 border-white/20 text-white">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>
+                          <AlertDialogTitle className="text-white">
                             Delete Utility Meter
                           </AlertDialogTitle>
-                          <AlertDialogDescription>
+                          <AlertDialogDescription className="text-blue-200">
                             Are you sure you want to delete this utility meter?
                             This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                            Cancel
+                          </AlertDialogCancel>
                           <AlertDialogAction
                             onClick={handleDelete}
                             disabled={isDeleting}
+                            className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
                           >
                             {isDeleting ? "Deleting..." : "Delete"}
                           </AlertDialogAction>
@@ -402,17 +411,19 @@ const ManageUtilityMeters = () => {
               <Button
                 variant="ghost"
                 size="icon"
+                className="text-white hover:bg-white/10"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm">
+              <span className="text-sm text-blue-200">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
                 variant="ghost"
                 size="icon"
+                className="text-white hover:bg-white/10"
                 onClick={() =>
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
@@ -427,10 +438,10 @@ const ManageUtilityMeters = () => {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-slate-900/95 border-white/20 text-white">
           <DialogHeader>
-            <DialogTitle>Edit Utility Meter</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">Edit Utility Meter</DialogTitle>
+            <DialogDescription className="text-blue-200">
               Update the utility meter information below.
             </DialogDescription>
           </DialogHeader>
@@ -447,6 +458,7 @@ const ManageUtilityMeters = () => {
                     <FormLabel>Meter Type</FormLabel>
                     <FormControl>
                       <Input
+                        variant="dark"
                         placeholder="e.g., Electricity, Water"
                         {...field}
                       />
@@ -463,7 +475,11 @@ const ManageUtilityMeters = () => {
                   <FormItem>
                     <FormLabel>Meter Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter meter number" {...field} />
+                      <Input
+                        variant="dark"
+                        placeholder="Enter meter number"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -478,6 +494,7 @@ const ManageUtilityMeters = () => {
                     <FormLabel>NWSC Account</FormLabel>
                     <FormControl>
                       <Input
+                        variant="dark"
                         placeholder="Enter NWSC account number"
                         {...field}
                       />
@@ -495,6 +512,7 @@ const ManageUtilityMeters = () => {
                     <FormLabel>Location of NWSC Meter</FormLabel>
                     <FormControl>
                       <Input
+                        variant="dark"
                         placeholder="Enter location of NWSC meter"
                         {...field}
                       />
@@ -536,6 +554,7 @@ const ManageUtilityMeters = () => {
                 <Button
                   type="button"
                   variant="outline"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                   onClick={() => {
                     setIsEditDialogOpen(false);
                     setEditingMeter(null);
@@ -544,7 +563,12 @@ const ManageUtilityMeters = () => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Update Meter</Button>
+                <Button
+                  type="submit"
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+                >
+                  Update Meter
+                </Button>
               </div>
             </form>
           </Form>

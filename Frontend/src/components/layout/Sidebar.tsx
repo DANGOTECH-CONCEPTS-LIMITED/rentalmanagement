@@ -20,6 +20,7 @@ import {
   FileSearch,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import logo from "../../assets/logo.png";
 
 interface SidebarProps {
   role: number;
@@ -58,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         {/* Mobile trigger button */}
         <button
           onClick={() => setIsMobileOpen(true)}
-          className="fixed top-4 left-4 z-30 p-2 rounded-md bg-primary text-white shadow-md"
+          className="fixed top-4 left-4 z-30 p-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg"
         >
           <Menu size={20} />
         </button>
@@ -66,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         {/* Mobile sidebar overlay */}
         {isMobileOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40"
+            className="fixed inset-0 bg-black/60 z-40"
             onClick={() => setIsMobileOpen(false)}
           ></div>
         )}
@@ -76,18 +77,22 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
           initial={{ x: "-100%" }}
           animate={{ x: isMobileOpen ? 0 : "-100%" }}
           transition={{ duration: 0.3 }}
-          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-sidebar/95 border-r border-sidebar-border shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] backdrop-blur overflow-y-auto"
+          className="fixed top-0 left-0 z-50 h-screen w-4/5 max-w-xs bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 border-r border-white/20 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.5)] overflow-y-auto"
         >
-          <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/20">
             <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <House className="text-white" size={16} />
-              </div>
-              <h1 className="ml-3 font-semibold text-lg">Property Hub</h1>
+              <img
+                src={logo}
+                alt="NYUMBA YO"
+                className="h-8 w-8 object-contain"
+              />
+              <h1 className="ml-3 font-semibold text-lg text-white">
+                Nyumba Yo
+              </h1>
             </div>
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="p-1 rounded-md hover:bg-sidebar-accent transition-colors"
+              className="p-1 rounded-md hover:bg-white/10 text-white transition-colors"
             >
               <X size={18} />
             </button>
@@ -110,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
                     }
                     onClick={() => setIsMobileOpen(false)}
                   >
-                    <span>{item.icon}</span>
+                    <span className="text-white">{item.icon}</span>
                     <span className="flex-1">{item.label}</span>
                     {item.hasSubItems && <ChevronRight size={16} />}
                   </NavLink>
@@ -119,10 +124,10 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
             </ul>
           </nav>
 
-          <div className="p-4 border-t border-sidebar-border">
+          <div className="p-4 border-t border-white/20">
             <button
               onClick={logout}
-              className="w-full sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600"
+              className="w-full sidebar-link !text-red-300 hover:bg-red-500/10 hover:!text-red-200"
             >
               <LogOut size={18} />
               <span>Logout</span>
@@ -142,21 +147,19 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
       className={cn(
         "h-screen fixed top-0 left-0 z-30 overflow-hidden transition-all duration-300 ease-in-out",
         sidebarWidth,
-        "bg-sidebar/92 backdrop-blur flex flex-col border-r border-sidebar-border shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)]"
+        "bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex flex-col border-r border-white/20 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]",
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border/80">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-white/20">
         <div className="flex items-center">
-          <div className="h-9 w-9 rounded-2xl bg-primary flex items-center justify-center shadow-[0_16px_32px_-18px_rgba(37,99,235,0.9)]">
-            <House className="text-white" size={16} />
-          </div>
+          <img src={logo} alt="NYUMBA YO" className="h-9 w-9 object-contain" />
           {(!isCollapsed || isHovering) && (
             <motion.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="ml-3 font-semibold text-lg"
+              className="ml-3 font-semibold text-lg text-white"
             >
               Nyumba Yo
             </motion.h1>
@@ -164,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </div>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1 rounded-md hover:bg-sidebar-accent transition-colors"
+          className="p-1 rounded-md hover:bg-white/10 text-blue-200 hover:text-white transition-colors"
         >
           <Menu size={18} />
         </button>
@@ -186,11 +189,11 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
                   cn(
                     "sidebar-link",
                     isActive ? "active" : "",
-                    isCollapsed && !isHovering ? "justify-center px-2" : ""
+                    isCollapsed && !isHovering ? "justify-center px-2" : "",
                   )
                 }
               >
-                <span>{item.icon}</span>
+                <span className="text-white">{item.icon}</span>
                 {(!isCollapsed || isHovering) && (
                   <span className="flex-1">{item.label}</span>
                 )}
@@ -203,12 +206,12 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-white/20">
         <button
           onClick={logout}
           className={cn(
-            "w-full sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600",
-            isCollapsed && !isHovering ? "justify-center px-2" : ""
+            "w-full sidebar-link !text-red-300 hover:bg-red-500/10 hover:!text-red-200",
+            isCollapsed && !isHovering ? "justify-center px-2" : "",
           )}
         >
           <LogOut size={18} />
@@ -397,10 +400,6 @@ function getNavItems(role: number): NavItem[] {
         icon: <MessageSquare size={18} />,
         path: "/tenant-dashboard/send-sms",
       },
-
-
-
-
     ];
   }
 
@@ -421,7 +420,7 @@ function getNavItems(role: number): NavItem[] {
         label: "Payment Dashboard",
         icon: <FileText size={18} />,
         path: "/utility-dashboard/utility-payment-dashboard",
-      }
+      },
     ];
   }
 
