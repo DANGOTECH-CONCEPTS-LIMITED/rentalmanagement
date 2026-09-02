@@ -71,6 +71,28 @@ const toInputDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const destinationClass = (dest?: string | null) => {
+  if (!dest) return "bg-white/10 text-white border-white/20";
+  const d = dest.toLowerCase();
+  if (d.includes("bulk"))
+    return "bg-purple-500/20 text-purple-300 border-purple-500/30";
+  if (d.includes("flexi") || d.includes("flexipay"))
+    return "bg-blue-500/20 text-blue-300 border-blue-500/30";
+  if (d.includes("sms"))
+    return "bg-orange-500/20 text-orange-300 border-orange-500/30";
+  return "bg-white/10 text-white border-white/20";
+};
+
+const endpointStatusClass = (status?: string | null) => {
+  if (!status) return "bg-white/10 text-white border-white/20";
+  const s = status.toLowerCase();
+  if (s.includes("success"))
+    return "bg-green-500/20 text-green-300 border-green-500/30";
+  if (s.includes("fail") || s.includes("error"))
+    return "bg-red-500/20 text-red-300 border-red-500/30";
+  return "bg-white/10 text-white border-white/20";
+};
+
 const CollectoWithdrawLogs = () => {
   const { toast } = useToast();
   const formatCurrency = useCurrencyFormatter();
@@ -86,7 +108,8 @@ const CollectoWithdrawLogs = () => {
   const [destinationFilter, setDestinationFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<CollectoWithdrawHistoryEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] =
+    useState<CollectoWithdrawHistoryEntry | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const rowsPerPage = 10;
@@ -122,7 +145,7 @@ const CollectoWithdrawLogs = () => {
             Authorization: `Bearer ${token}`,
             accept: "*/*",
           },
-        }
+        },
       );
 
       setEntries(response.data ?? []);
@@ -148,9 +171,11 @@ const CollectoWithdrawLogs = () => {
 
     return entries.filter((entry) => {
       const matchesDestination =
-        destinationFilter === "all" || entry.withdrawTo.toLowerCase() === destinationFilter.toLowerCase();
+        destinationFilter === "all" ||
+        entry.withdrawTo.toLowerCase() === destinationFilter.toLowerCase();
       const matchesStatus =
-        statusFilter === "all" || entry.endpointStatus.toLowerCase() === statusFilter.toLowerCase();
+        statusFilter === "all" ||
+        entry.endpointStatus.toLowerCase() === statusFilter.toLowerCase();
       const matchesQuery =
         !query ||
         [
@@ -173,7 +198,10 @@ const CollectoWithdrawLogs = () => {
     });
   }, [destinationFilter, entries, searchTerm, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredEntries.length / rowsPerPage),
+  );
 
   const paginatedEntries = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
@@ -222,7 +250,7 @@ const CollectoWithdrawLogs = () => {
           entry.errorMessage,
         ]
           .map(escapeCsvCell)
-          .join(",")
+          .join(","),
       ),
     ];
 
@@ -240,39 +268,51 @@ const CollectoWithdrawLogs = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="dark text-white min-h-full space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Collecto Withdraw Logs</h1>
-        <p className="text-muted-foreground">
-          Review every admin withdraw request sent through the local endpoint and the downstream Collecto wallet call it triggered.
+        <h1 className="text-2xl font-semibold tracking-tight text-white">
+          Collecto Withdraw Logs
+        </h1>
+        <p className="text-blue-200">
+          Review every admin withdraw request sent through the local endpoint
+          and the downstream Collecto wallet call it triggered.
         </p>
       </div>
 
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
         <div className="grid gap-4 md:grid-cols-[repeat(2,minmax(0,180px))_repeat(2,minmax(0,180px))_minmax(0,1fr)_auto]">
           <div className="space-y-2">
-            <Label htmlFor="collecto-start-date">Start date</Label>
+            <Label htmlFor="collecto-start-date" className="text-blue-100">
+              Start date
+            </Label>
             <Input
               id="collecto-start-date"
               type="date"
+              variant="dark"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
               max={endDate || undefined}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="collecto-end-date">End date</Label>
+            <Label htmlFor="collecto-end-date" className="text-blue-100">
+              End date
+            </Label>
             <Input
               id="collecto-end-date"
               type="date"
+              variant="dark"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
               min={startDate || undefined}
             />
           </div>
           <div className="space-y-2">
-            <Label>Destination</Label>
-            <Select value={destinationFilter} onValueChange={setDestinationFilter}>
+            <Label className="text-blue-100">Destination</Label>
+            <Select
+              value={destinationFilter}
+              onValueChange={setDestinationFilter}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="All destinations" />
               </SelectTrigger>
@@ -285,7 +325,7 @@ const CollectoWithdrawLogs = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Status</Label>
+            <Label className="text-blue-100">Status</Label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="All statuses" />
@@ -298,19 +338,30 @@ const CollectoWithdrawLogs = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="collecto-log-search">Search</Label>
+            <Label htmlFor="collecto-log-search" className="text-blue-100">
+              Search
+            </Label>
             <Input
               id="collecto-log-search"
+              variant="dark"
               placeholder="Search by reference, payload, user, or error"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
           </div>
           <div className="flex items-end gap-2">
-            <Button onClick={fetchHistory} className="w-full md:w-auto">
+            <Button
+              onClick={fetchHistory}
+              className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+            >
               Retrieve Logs
             </Button>
-            <Button variant="outline" onClick={exportCsv} disabled={filteredEntries.length === 0}>
+            <Button
+              variant="outline"
+              onClick={exportCsv}
+              disabled={filteredEntries.length === 0}
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+            >
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
@@ -318,20 +369,22 @@ const CollectoWithdrawLogs = () => {
         </div>
       </Card>
 
-      <Card className="p-4">
+      <Card className="p-4 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
         {isLoading ? (
-          <div className="py-8 text-center text-muted-foreground">Loading withdrawal history...</div>
+          <div className="py-8 text-center text-blue-200">
+            Loading withdrawal history...
+          </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">
+          <div className="py-8 text-center text-blue-200">
             No withdrawal history found for the selected criteria.
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-blue-200">
                 Showing {filteredEntries.length} matching withdrawal records.
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-blue-200">
                 Page {currentPage} of {totalPages}
               </p>
             </div>
@@ -356,16 +409,35 @@ const CollectoWithdrawLogs = () => {
                       <TableCell>{formatDate(entry.createdAt)}</TableCell>
                       <TableCell>{entry.reference}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{entry.withdrawTo}</Badge>
+                        <Badge
+                          variant="outline"
+                          className={destinationClass(entry.withdrawTo)}
+                        >
+                          {entry.withdrawTo}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[240px] truncate">{entry.requestedByEmail}</TableCell>
+                      <TableCell className="max-w-[240px] truncate">
+                        {entry.requestedByEmail}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant={entry.endpointStatus === "SUCCESS" ? "secondary" : "destructive"}>
+                        <Badge
+                          variant="outline"
+                          className={endpointStatusClass(entry.endpointStatus)}
+                        >
                           {entry.endpointStatus}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={entry.isSuccess ? "secondary" : "destructive"}>
+                        <Badge
+                          variant="outline"
+                          className={
+                            entry.collectoStatus
+                              ? endpointStatusClass(entry.collectoStatus)
+                              : entry.isSuccess
+                                ? "bg-green-500/20 text-green-300 border-green-500/30"
+                                : "bg-red-500/20 text-red-300 border-red-500/30"
+                          }
+                        >
                           {entry.collectoStatus}
                         </Badge>
                       </TableCell>
@@ -373,7 +445,12 @@ const CollectoWithdrawLogs = () => {
                         {formatCurrency(entry.amount)}
                       </TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedEntry(entry)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedEntry(entry)}
+                          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </Button>
@@ -390,17 +467,25 @@ const CollectoWithdrawLogs = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
                     disabled={currentPage === 1}
+                    className="text-white hover:bg-white/10"
                   >
                     <ChevronsLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm">Page {currentPage} of {totalPages}</span>
+                  <span className="text-sm text-blue-200">
+                    Page {currentPage} of {totalPages}
+                  </span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    onClick={() =>
+                      setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    }
                     disabled={currentPage === totalPages}
+                    className="text-white hover:bg-white/10"
                   >
                     <ChevronsRight className="h-4 w-4" />
                   </Button>
@@ -411,75 +496,147 @@ const CollectoWithdrawLogs = () => {
         )}
       </Card>
 
-      <Dialog open={!!selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)}>
-        <DialogContent className="max-w-5xl rounded-[28px]">
+      <Dialog
+        open={!!selectedEntry}
+        onOpenChange={(open) => !open && setSelectedEntry(null)}
+      >
+        <DialogContent className="max-w-5xl rounded-[28px] bg-slate-900/95 border border-white/20 text-white">
           <DialogHeader>
-            <DialogTitle>Withdraw log details</DialogTitle>
+            <DialogTitle className="text-white">
+              Withdraw log details
+            </DialogTitle>
           </DialogHeader>
 
           {selectedEntry && (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-3">
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Reference</p>
-                  <p className="mt-2 font-semibold text-slate-950">{selectedEntry.reference}</p>
+                <Card className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                  <p className="text-xs uppercase tracking-[0.16em] text-blue-200">
+                    Reference
+                  </p>
+                  <p className="mt-2 font-semibold text-white">
+                    {selectedEntry.reference}
+                  </p>
                 </Card>
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Amount</p>
-                  <p className="mt-2 font-semibold text-slate-950">{formatCurrency(selectedEntry.amount)}</p>
+                <Card className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                  <p className="text-xs uppercase tracking-[0.16em] text-blue-200">
+                    Amount
+                  </p>
+                  <p className="mt-2 font-semibold text-white">
+                    {formatCurrency(selectedEntry.amount)}
+                  </p>
                 </Card>
-                <Card className="p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Destination</p>
-                  <p className="mt-2 font-semibold text-slate-950">{selectedEntry.withdrawTo}</p>
+                <Card className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                  <p className="text-xs uppercase tracking-[0.16em] text-blue-200">
+                    Destination
+                  </p>
+                  <p className="mt-2 font-semibold text-white">
+                    {selectedEntry.withdrawTo}
+                  </p>
                 </Card>
               </div>
 
               <div className="grid gap-6 lg:grid-cols-2">
-                <Card className="space-y-4 p-4">
+                <Card className="space-y-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
                   <div>
-                    <h3 className="font-semibold text-slate-950">Local endpoint log</h3>
-                    <p className="text-sm text-muted-foreground">Request made to `/withdrawFromCollectoWallet`</p>
+                    <h3 className="font-semibold text-white">
+                      Local endpoint log
+                    </h3>
+                    <p className="text-sm text-blue-200">
+                      Request made to `/withdrawFromCollectoWallet`
+                    </p>
                   </div>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Status:</span> {selectedEntry.endpointStatus}</p>
-                    <p><span className="font-medium">URL:</span> {selectedEntry.endpointRequestUrl}</p>
-                    <p><span className="font-medium">Requested By:</span> {selectedEntry.requestedByEmail}</p>
+                    <p className="flex items-center gap-2">
+                      <span className="font-medium">Status:</span>{" "}
+                      <Badge
+                        variant="outline"
+                        className={endpointStatusClass(
+                          selectedEntry.endpointStatus,
+                        )}
+                      >
+                        {selectedEntry.endpointStatus}
+                      </Badge>
+                    </p>
+                    <p>
+                      <span className="font-medium">URL:</span>{" "}
+                      {selectedEntry.endpointRequestUrl}
+                    </p>
+                    <p>
+                      <span className="font-medium">Requested By:</span>{" "}
+                      {selectedEntry.requestedByEmail}
+                    </p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Request payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.endpointRequestPayload || "-"}</pre>
+                    <Label className="text-blue-100">Request payload</Label>
+                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950/80 border border-white/10 p-4 text-xs text-blue-100">
+                      {selectedEntry.endpointRequestPayload || "-"}
+                    </pre>
                   </div>
                   <div className="space-y-2">
-                    <Label>Response payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.endpointResponsePayload || "-"}</pre>
+                    <Label className="text-blue-100">Response payload</Label>
+                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950/80 border border-white/10 p-4 text-xs text-blue-100">
+                      {selectedEntry.endpointResponsePayload || "-"}
+                    </pre>
                   </div>
                 </Card>
 
-                <Card className="space-y-4 p-4">
+                <Card className="space-y-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
                   <div>
-                    <h3 className="font-semibold text-slate-950">Collecto endpoint log</h3>
-                    <p className="text-sm text-muted-foreground">Outbound request made to the Collecto `withdrawFromWallet` endpoint</p>
+                    <h3 className="font-semibold text-white">
+                      Collecto endpoint log
+                    </h3>
+                    <p className="text-sm text-blue-200">
+                      Outbound request made to the Collecto `withdrawFromWallet`
+                      endpoint
+                    </p>
                   </div>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Status:</span> {selectedEntry.collectoStatus}</p>
-                    <p><span className="font-medium">HTTP status:</span> {selectedEntry.collectoHttpStatusCode}</p>
-                    <p><span className="font-medium">URL:</span> {selectedEntry.collectoRequestUrl || "-"}</p>
+                    <p className="flex items-center gap-2">
+                      <span className="font-medium">Status:</span>{" "}
+                      <Badge
+                        variant="outline"
+                        className={
+                          selectedEntry.collectoStatus
+                            ? endpointStatusClass(selectedEntry.collectoStatus)
+                            : selectedEntry.isSuccess
+                              ? "bg-green-500/20 text-green-300 border-green-500/30"
+                              : "bg-red-500/20 text-red-300 border-red-500/30"
+                        }
+                      >
+                        {selectedEntry.collectoStatus}
+                      </Badge>
+                    </p>
+                    <p>
+                      <span className="font-medium">HTTP status:</span>{" "}
+                      {selectedEntry.collectoHttpStatusCode}
+                    </p>
+                    <p>
+                      <span className="font-medium">URL:</span>{" "}
+                      {selectedEntry.collectoRequestUrl || "-"}
+                    </p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Request payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.collectoRequestPayload || "-"}</pre>
+                    <Label className="text-blue-100">Request payload</Label>
+                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950/80 border border-white/10 p-4 text-xs text-blue-100">
+                      {selectedEntry.collectoRequestPayload || "-"}
+                    </pre>
                   </div>
                   <div className="space-y-2">
-                    <Label>Response payload</Label>
-                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{selectedEntry.collectoResponsePayload || "-"}</pre>
+                    <Label className="text-blue-100">Response payload</Label>
+                    <pre className="max-h-56 overflow-auto rounded-2xl bg-slate-950/80 border border-white/10 p-4 text-xs text-blue-100">
+                      {selectedEntry.collectoResponsePayload || "-"}
+                    </pre>
                   </div>
                 </Card>
               </div>
 
               {selectedEntry.errorMessage ? (
-                <Card className="border-red-200 bg-red-50 p-4">
-                  <p className="font-medium text-red-700">Error</p>
-                  <pre className="mt-2 whitespace-pre-wrap text-sm text-red-700">{selectedEntry.errorMessage}</pre>
+                <Card className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
+                  <p className="font-medium text-red-300">Error</p>
+                  <pre className="mt-2 whitespace-pre-wrap text-sm text-red-200">
+                    {selectedEntry.errorMessage}
+                  </pre>
                 </Card>
               ) : null}
             </div>

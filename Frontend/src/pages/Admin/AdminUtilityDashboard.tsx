@@ -54,7 +54,11 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -185,8 +189,22 @@ interface AdminTransactionRow {
   landlordEmail: string;
 }
 
-const STATUS_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#0891b2"];
-const METHOD_COLORS = ["#0f766e", "#2563eb", "#f97316", "#7c3aed", "#16a34a", "#e11d48"];
+const STATUS_COLORS = [
+  "#2563eb",
+  "#16a34a",
+  "#f59e0b",
+  "#dc2626",
+  "#7c3aed",
+  "#0891b2",
+];
+const METHOD_COLORS = [
+  "#0f766e",
+  "#2563eb",
+  "#f97316",
+  "#7c3aed",
+  "#16a34a",
+  "#e11d48",
+];
 
 const successfulStatuses = new Set([
   "SUCCESSFUL",
@@ -234,7 +252,8 @@ const AdminUtilityDashboard = () => {
   const [currentDetailPage, setCurrentDetailPage] = useState(1);
   const [detailSort, setDetailSort] = useState<DetailSortConfig | null>(null);
   const [selectedMeterNumber, setSelectedMeterNumber] = useState("");
-  const [previousDetailView, setPreviousDetailView] = useState<DetailViewKey>(null);
+  const [previousDetailView, setPreviousDetailView] =
+    useState<DetailViewKey>(null);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
   const [vendorFilter, setVendorFilter] = useState("all");
   const [transactionIdFilter, setTransactionIdFilter] = useState("");
@@ -261,7 +280,8 @@ const AdminUtilityDashboard = () => {
     }
   };
 
-  const normalizeStatus = (value?: string | null) => (value ?? "").trim().toUpperCase();
+  const normalizeStatus = (value?: string | null) =>
+    (value ?? "").trim().toUpperCase();
 
   const normalizeRoleName = (value?: string | null) =>
     (value ?? "").trim().toLowerCase();
@@ -287,7 +307,10 @@ const AdminUtilityDashboard = () => {
     }
 
     const normalizedRole = normalizeRoleName(user.systemRole?.name);
-    if (normalizedRole === "utility payment" || normalizedRole === "utililty payment") {
+    if (
+      normalizedRole === "utility payment" ||
+      normalizedRole === "utililty payment"
+    ) {
       return "Utility";
     }
 
@@ -333,8 +356,10 @@ const AdminUtilityDashboard = () => {
     () =>
       selectedAccountId === ALL_ACCOUNT_VALUE
         ? null
-        : selectableUsers.find((user) => String(user.id) === selectedAccountId) ?? null,
-    [selectableUsers, selectedAccountId]
+        : (selectableUsers.find(
+            (user) => String(user.id) === selectedAccountId,
+          ) ?? null),
+    [selectableUsers, selectedAccountId],
   );
 
   const selectedScopeLabel = selectedAccount
@@ -363,7 +388,7 @@ const AdminUtilityDashboard = () => {
         }
 
         const hasCurrentSelection = users.some(
-          (user) => String(user.id) === currentSelection
+          (user) => String(user.id) === currentSelection,
         );
 
         return hasCurrentSelection ? currentSelection : ALL_ACCOUNT_VALUE;
@@ -471,12 +496,12 @@ const AdminUtilityDashboard = () => {
 
   const filteredMeters = useMemo(
     () => utilityMeters.filter((meter) => isWithinRange(meter.dateCreated)),
-    [endDate, startDate, utilityMeters]
+    [endDate, startDate, utilityMeters],
   );
 
   const filteredPayments = useMemo(
     () => utilityPayments.filter((payment) => isWithinRange(payment.createdAt)),
-    [endDate, startDate, utilityPayments]
+    [endDate, startDate, utilityPayments],
   );
 
   const meterLookup = useMemo(() => {
@@ -490,49 +515,73 @@ const AdminUtilityDashboard = () => {
   }, [filteredMeters]);
 
   const successfulPayments = useMemo(
-    () => filteredPayments.filter((payment) => successfulStatuses.has(normalizeStatus(payment.status))),
-    [filteredPayments]
+    () =>
+      filteredPayments.filter((payment) =>
+        successfulStatuses.has(normalizeStatus(payment.status)),
+      ),
+    [filteredPayments],
   );
 
   const pendingPayments = useMemo(
-    () => filteredPayments.filter((payment) => pendingStatuses.has(normalizeStatus(payment.status))),
-    [filteredPayments]
+    () =>
+      filteredPayments.filter((payment) =>
+        pendingStatuses.has(normalizeStatus(payment.status)),
+      ),
+    [filteredPayments],
   );
 
   const failedPayments = useMemo(
-    () => filteredPayments.filter((payment) => failedStatuses.has(normalizeStatus(payment.status))),
-    [filteredPayments]
+    () =>
+      filteredPayments.filter((payment) =>
+        failedStatuses.has(normalizeStatus(payment.status)),
+      ),
+    [filteredPayments],
   );
 
   const activeMeterNumbers = useMemo(
-    () => new Set(filteredPayments.map((payment) => payment.meterNumber).filter(Boolean)),
-    [filteredPayments]
+    () =>
+      new Set(
+        filteredPayments.map((payment) => payment.meterNumber).filter(Boolean),
+      ),
+    [filteredPayments],
   );
 
   const activeMeters = useMemo(
-    () => filteredMeters.filter((meter) => activeMeterNumbers.has(meter.meterNumber)),
-    [activeMeterNumbers, filteredMeters]
+    () =>
+      filteredMeters.filter((meter) =>
+        activeMeterNumbers.has(meter.meterNumber),
+      ),
+    [activeMeterNumbers, filteredMeters],
   );
 
   const inactiveMeters = useMemo(
-    () => filteredMeters.filter((meter) => !activeMeterNumbers.has(meter.meterNumber)),
-    [activeMeterNumbers, filteredMeters]
+    () =>
+      filteredMeters.filter(
+        (meter) => !activeMeterNumbers.has(meter.meterNumber),
+      ),
+    [activeMeterNumbers, filteredMeters],
   );
 
   const overdueMeters = useMemo(() => {
     const latestSuccessfulPaymentByMeter = new Map<string, number>();
 
     utilityPayments.forEach((payment) => {
-      if (!payment.meterNumber || !successfulStatuses.has(normalizeStatus(payment.status))) {
+      if (
+        !payment.meterNumber ||
+        !successfulStatuses.has(normalizeStatus(payment.status))
+      ) {
         return;
       }
 
-      const timestamp = payment.createdAt ? new Date(payment.createdAt).getTime() : Number.NaN;
+      const timestamp = payment.createdAt
+        ? new Date(payment.createdAt).getTime()
+        : Number.NaN;
       if (Number.isNaN(timestamp)) {
         return;
       }
 
-      const currentLatest = latestSuccessfulPaymentByMeter.get(payment.meterNumber) ?? 0;
+      const currentLatest =
+        latestSuccessfulPaymentByMeter.get(payment.meterNumber) ?? 0;
       if (timestamp > currentLatest) {
         latestSuccessfulPaymentByMeter.set(payment.meterNumber, timestamp);
       }
@@ -541,8 +590,12 @@ const AdminUtilityDashboard = () => {
     const overdueThreshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     return filteredMeters.filter((meter) => {
-      const latestPaymentTimestamp = latestSuccessfulPaymentByMeter.get(meter.meterNumber);
-      return !latestPaymentTimestamp || latestPaymentTimestamp < overdueThreshold;
+      const latestPaymentTimestamp = latestSuccessfulPaymentByMeter.get(
+        meter.meterNumber,
+      );
+      return (
+        !latestPaymentTimestamp || latestPaymentTimestamp < overdueThreshold
+      );
     });
   }, [filteredMeters, utilityPayments]);
 
@@ -555,10 +608,23 @@ const AdminUtilityDashboard = () => {
       successfulPayments: successfulPayments.length,
       pendingPayments: pendingPayments.length,
       failedPayments: failedPayments.length,
-      totalAmount: successfulPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0),
-      totalCharges: successfulPayments.reduce((sum, payment) => sum + (payment.charges || 0), 0),
+      totalAmount: successfulPayments.reduce(
+        (sum, payment) => sum + (payment.amount || 0),
+        0,
+      ),
+      totalCharges: successfulPayments.reduce(
+        (sum, payment) => sum + (payment.charges || 0),
+        0,
+      ),
     }),
-    [activeMeters.length, failedPayments.length, filteredMeters.length, filteredPayments.length, pendingPayments.length, successfulPayments]
+    [
+      activeMeters.length,
+      failedPayments.length,
+      filteredMeters.length,
+      filteredPayments.length,
+      pendingPayments.length,
+      successfulPayments,
+    ],
   );
 
   const sortedPayments = useMemo(
@@ -566,17 +632,17 @@ const AdminUtilityDashboard = () => {
       [...filteredPayments].sort(
         (left, right) =>
           new Date(right.createdAt ?? 0).getTime() -
-          new Date(left.createdAt ?? 0).getTime()
+          new Date(left.createdAt ?? 0).getTime(),
       ),
-    [filteredPayments]
+    [filteredPayments],
   );
 
   const selectedMeterPayments = useMemo(
     () =>
       sortedPayments.filter(
-        (payment) => payment.meterNumber === selectedMeterNumber
+        (payment) => payment.meterNumber === selectedMeterNumber,
       ),
-    [selectedMeterNumber, sortedPayments]
+    [selectedMeterNumber, sortedPayments],
   );
 
   const openMeterPayments = (meterNumber: string) => {
@@ -603,28 +669,32 @@ const AdminUtilityDashboard = () => {
       case "activeMeters":
         return {
           title: "Active Meters",
-          description: "Meters that have at least one payment in the selected scope and period.",
+          description:
+            "Meters that have at least one payment in the selected scope and period.",
           type: "meters" as const,
           rows: activeMeters,
         };
       case "inactiveMeters":
         return {
           title: "Inactive Meters",
-          description: "Meters with no payments in the selected scope and period.",
+          description:
+            "Meters with no payments in the selected scope and period.",
           type: "meters" as const,
           rows: inactiveMeters,
         };
       case "overdueMeters":
         return {
           title: "Meters Over 30 Days Without Payment",
-          description: "Meters with no successful payment recorded in the last 30 days.",
+          description:
+            "Meters with no successful payment recorded in the last 30 days.",
           type: "meters" as const,
           rows: overdueMeters,
         };
       case "totalPayments":
         return {
           title: "All Payments",
-          description: "All utility payment transactions in the selected scope and period.",
+          description:
+            "All utility payment transactions in the selected scope and period.",
           type: "payments" as const,
           rows: sortedPayments,
         };
@@ -645,28 +715,32 @@ const AdminUtilityDashboard = () => {
       case "failedPayments":
         return {
           title: "Failed Payments",
-          description: "Transactions that failed in the selected scope and period.",
+          description:
+            "Transactions that failed in the selected scope and period.",
           type: "payments" as const,
           rows: failedPayments,
         };
       case "totalAmount":
         return {
           title: "Payments Contributing to Total Amount",
-          description: "Successful transactions included in the total amount figure.",
+          description:
+            "Successful transactions included in the total amount figure.",
           type: "payments" as const,
           rows: successfulPayments,
         };
       case "totalCharges":
         return {
           title: "Payments Contributing to Total Charges",
-          description: "Successful transactions included in the total charges figure.",
+          description:
+            "Successful transactions included in the total charges figure.",
           type: "payments" as const,
           rows: successfulPayments,
         };
       case "meterPayments":
         return {
           title: `Payments for Meter ${selectedMeterNumber}`,
-          description: "All transactions related to the selected meter in the active scope and period.",
+          description:
+            "All transactions related to the selected meter in the active scope and period.",
           type: "payments" as const,
           rows: selectedMeterPayments,
         };
@@ -687,14 +761,21 @@ const AdminUtilityDashboard = () => {
     successfulPayments,
   ]);
 
-  const detailGetSortValue = (row: UtilityMeter | UtilityPayment, key: string) => {
+  const detailGetSortValue = (
+    row: UtilityMeter | UtilityPayment,
+    key: string,
+  ) => {
     const value = row[key as keyof typeof row];
 
     if (typeof value === "number") {
       return value;
     }
 
-    if (key === "createdAt" || key === "dateCreated" || key === "vendorPaymentDate") {
+    if (
+      key === "createdAt" ||
+      key === "dateCreated" ||
+      key === "vendorPaymentDate"
+    ) {
       if (!value) {
         return 0;
       }
@@ -754,7 +835,9 @@ const AdminUtilityDashboard = () => {
           formatDateDmy(meter.dateCreated),
         ]
           .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(normalizedSearch))
+          .some((value) =>
+            String(value).toLowerCase().includes(normalizedSearch),
+          ),
       );
     }
 
@@ -771,7 +854,9 @@ const AdminUtilityDashboard = () => {
         formatDateTimeDmy(payment.createdAt),
       ]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedSearch))
+        .some((value) =>
+          String(value).toLowerCase().includes(normalizedSearch),
+        ),
     );
   }, [detailContent, detailSearchTerm]);
 
@@ -798,7 +883,7 @@ const AdminUtilityDashboard = () => {
 
   const totalDetailPages = Math.max(
     1,
-    Math.ceil(sortedDetailRows.length / detailRowsPerPage)
+    Math.ceil(sortedDetailRows.length / detailRowsPerPage),
   );
 
   const paginatedDetailRows = useMemo(() => {
@@ -832,14 +917,9 @@ const AdminUtilityDashboard = () => {
 
     if (detailContent.type === "meters") {
       csvRows = [
-        [
-          "Meter Number",
-          "Type",
-          "NWSC Account",
-          "Location",
-          "User",
-          "Created",
-        ].map(escapeCsvCell).join(","),
+        ["Meter Number", "Type", "NWSC Account", "Location", "User", "Created"]
+          .map(escapeCsvCell)
+          .join(","),
         ...filteredDetailRows.map((meter) =>
           [
             meter.meterNumber,
@@ -850,7 +930,7 @@ const AdminUtilityDashboard = () => {
             formatDateDmy(meter.dateCreated),
           ]
             .map(escapeCsvCell)
-            .join(",")
+            .join(","),
         ),
       ];
     } else {
@@ -864,7 +944,9 @@ const AdminUtilityDashboard = () => {
           "Transaction ID",
           "Vendor Ref",
           "Created",
-        ].map(escapeCsvCell).join(","),
+        ]
+          .map(escapeCsvCell)
+          .join(","),
         ...filteredDetailRows.map((payment) =>
           [
             payment.status || "",
@@ -877,7 +959,7 @@ const AdminUtilityDashboard = () => {
             formatDateTimeDmy(payment.createdAt),
           ]
             .map(escapeCsvCell)
-            .join(",")
+            .join(","),
         ),
       ];
     }
@@ -896,7 +978,10 @@ const AdminUtilityDashboard = () => {
   };
 
   const monthlyTrendData = useMemo(() => {
-    const grouped = new Map<string, { label: string; payments: number; amount: number; charges: number }>();
+    const grouped = new Map<
+      string,
+      { label: string; payments: number; amount: number; charges: number }
+    >();
 
     filteredPayments.forEach((payment) => {
       const date = payment.createdAt ? new Date(payment.createdAt) : null;
@@ -905,8 +990,16 @@ const AdminUtilityDashboard = () => {
       }
 
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const label = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-      const current = grouped.get(key) ?? { label, payments: 0, amount: 0, charges: 0 };
+      const label = date.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+      const current = grouped.get(key) ?? {
+        label,
+        payments: 0,
+        amount: 0,
+        charges: 0,
+      };
       current.payments += 1;
       current.amount += payment.amount || 0;
       current.charges += payment.charges || 0;
@@ -919,12 +1012,13 @@ const AdminUtilityDashboard = () => {
   }, [filteredPayments]);
 
   const statusChartData = useMemo(
-    () => [
-      { name: "Successful", value: successfulPayments.length },
-      { name: "Pending", value: pendingPayments.length },
-      { name: "Failed", value: failedPayments.length },
-    ].filter((entry) => entry.value > 0),
-    [failedPayments.length, pendingPayments.length, successfulPayments.length]
+    () =>
+      [
+        { name: "Successful", value: successfulPayments.length },
+        { name: "Pending", value: pendingPayments.length },
+        { name: "Failed", value: failedPayments.length },
+      ].filter((entry) => entry.value > 0),
+    [failedPayments.length, pendingPayments.length, successfulPayments.length],
   );
 
   const paymentMethodChartData = useMemo(() => {
@@ -946,10 +1040,10 @@ const AdminUtilityDashboard = () => {
         new Set(
           utilityPayments
             .map((payment) => payment.status?.trim())
-            .filter((value): value is string => Boolean(value))
-        )
+            .filter((value): value is string => Boolean(value)),
+        ),
       ).sort((left, right) => left.localeCompare(right)),
-    [utilityPayments]
+    [utilityPayments],
   );
 
   const paymentMethodOptions = useMemo(
@@ -958,10 +1052,10 @@ const AdminUtilityDashboard = () => {
         new Set(
           utilityPayments
             .map((payment) => payment.paymentMethod?.trim())
-            .filter((value): value is string => Boolean(value))
-        )
+            .filter((value): value is string => Boolean(value)),
+        ),
       ).sort((left, right) => left.localeCompare(right)),
-    [utilityPayments]
+    [utilityPayments],
   );
 
   const vendorOptions = useMemo(
@@ -970,18 +1064,25 @@ const AdminUtilityDashboard = () => {
         new Set(
           utilityPayments
             .map((payment) => payment.vendor?.trim())
-            .filter((value): value is string => Boolean(value))
-        )
+            .filter((value): value is string => Boolean(value)),
+        ),
       ).sort((left, right) => left.localeCompare(right)),
-    [utilityPayments]
+    [utilityPayments],
   );
 
   const topMetersData = useMemo(() => {
-    const counts = new Map<string, { meterNumber: string; payments: number; amount: number }>();
+    const counts = new Map<
+      string,
+      { meterNumber: string; payments: number; amount: number }
+    >();
 
     filteredPayments.forEach((payment) => {
       const key = payment.meterNumber || "Unknown";
-      const current = counts.get(key) ?? { meterNumber: key, payments: 0, amount: 0 };
+      const current = counts.get(key) ?? {
+        meterNumber: key,
+        payments: 0,
+        amount: 0,
+      };
       current.payments += 1;
       current.amount += payment.amount || 0;
       counts.set(key, current);
@@ -1033,11 +1134,17 @@ const AdminUtilityDashboard = () => {
     const normalizedTransactionId = transactionIdFilter.trim().toLowerCase();
 
     return transactionRows.filter((row) => {
-      if (statusFilter !== "all" && normalizeStatus(row.status) !== normalizeStatus(statusFilter)) {
+      if (
+        statusFilter !== "all" &&
+        normalizeStatus(row.status) !== normalizeStatus(statusFilter)
+      ) {
         return false;
       }
 
-      if (paymentMethodFilter !== "all" && row.paymentMethod !== paymentMethodFilter) {
+      if (
+        paymentMethodFilter !== "all" &&
+        row.paymentMethod !== paymentMethodFilter
+      ) {
         return false;
       }
 
@@ -1045,15 +1152,24 @@ const AdminUtilityDashboard = () => {
         return false;
       }
 
-      if (normalizedPhone && !row.phoneNumber.toLowerCase().includes(normalizedPhone)) {
+      if (
+        normalizedPhone &&
+        !row.phoneNumber.toLowerCase().includes(normalizedPhone)
+      ) {
         return false;
       }
 
-      if (normalizedMeter && !row.meterNumber.toLowerCase().includes(normalizedMeter)) {
+      if (
+        normalizedMeter &&
+        !row.meterNumber.toLowerCase().includes(normalizedMeter)
+      ) {
         return false;
       }
 
-      if (normalizedTransactionId && !row.transactionID.toLowerCase().includes(normalizedTransactionId)) {
+      if (
+        normalizedTransactionId &&
+        !row.transactionID.toLowerCase().includes(normalizedTransactionId)
+      ) {
         return false;
       }
 
@@ -1062,7 +1178,9 @@ const AdminUtilityDashboard = () => {
       }
 
       return Object.values(row).some((value) =>
-        String(value ?? "").toLowerCase().includes(normalizedSearch)
+        String(value ?? "")
+          .toLowerCase()
+          .includes(normalizedSearch),
       );
     });
   }, [
@@ -1076,7 +1194,10 @@ const AdminUtilityDashboard = () => {
     vendorFilter,
   ]);
 
-  const getSortValue = (row: AdminTransactionRow, key: keyof AdminTransactionRow) => {
+  const getSortValue = (
+    row: AdminTransactionRow,
+    key: keyof AdminTransactionRow,
+  ) => {
     const value = row[key];
 
     if (typeof value === "number") {
@@ -1116,7 +1237,10 @@ const AdminUtilityDashboard = () => {
     });
   }, [filteredTransactionRows, sortConfig]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedTransactionRows.length / rowsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedTransactionRows.length / rowsPerPage),
+  );
 
   const paginatedRows = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
@@ -1246,11 +1370,13 @@ const AdminUtilityDashboard = () => {
           row.landlordEmail,
         ]
           .map(escapeCsvCell)
-          .join(",")
+          .join(","),
       ),
     ];
 
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([csvRows.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -1262,16 +1388,66 @@ const AdminUtilityDashboard = () => {
   };
 
   const cards = [
-    { key: "totalMeters" as const, title: "Total Meters", value: stats.totalMeters, icon: <Zap className="h-6 w-6" /> },
-    { key: "activeMeters" as const, title: "Active Meters", value: stats.activeMeters, icon: <CheckCircle className="h-6 w-6" /> },
-    { key: "inactiveMeters" as const, title: "Inactive Meters", value: stats.inactiveMeters, icon: <Clock className="h-6 w-6" /> },
-    { key: "overdueMeters" as const, title: "30+ Days Without Payment", value: overdueMeters.length, icon: <AlertTriangle className="h-6 w-6" /> },
-    { key: "totalPayments" as const, title: "Total Payments", value: stats.totalPayments, icon: <CircleDollarSign className="h-6 w-6" /> },
-    { key: "successfulPayments" as const, title: "Successful Payments", value: stats.successfulPayments, icon: <CheckCircle className="h-6 w-6" /> },
-    { key: "pendingPayments" as const, title: "Pending Payments", value: stats.pendingPayments, icon: <Clock className="h-6 w-6" /> },
-    { key: "failedPayments" as const, title: "Failed Payments", value: stats.failedPayments, icon: <XCircle className="h-6 w-6" /> },
-    { key: "totalAmount" as const, title: "Total Amount", value: formatCurrency(stats.totalAmount), icon: <TrendingUp className="h-6 w-6" /> },
-    { key: "totalCharges" as const, title: "Total Charges", value: formatCurrency(stats.totalCharges), icon: <CircleDollarSign className="h-6 w-6" /> },
+    {
+      key: "totalMeters" as const,
+      title: "Total Meters",
+      value: stats.totalMeters,
+      icon: <Zap className="h-6 w-6" />,
+    },
+    {
+      key: "activeMeters" as const,
+      title: "Active Meters",
+      value: stats.activeMeters,
+      icon: <CheckCircle className="h-6 w-6" />,
+    },
+    {
+      key: "inactiveMeters" as const,
+      title: "Inactive Meters",
+      value: stats.inactiveMeters,
+      icon: <Clock className="h-6 w-6" />,
+    },
+    {
+      key: "overdueMeters" as const,
+      title: "30+ Days Without Payment",
+      value: overdueMeters.length,
+      icon: <AlertTriangle className="h-6 w-6" />,
+    },
+    {
+      key: "totalPayments" as const,
+      title: "Total Payments",
+      value: stats.totalPayments,
+      icon: <CircleDollarSign className="h-6 w-6" />,
+    },
+    {
+      key: "successfulPayments" as const,
+      title: "Successful Payments",
+      value: stats.successfulPayments,
+      icon: <CheckCircle className="h-6 w-6" />,
+    },
+    {
+      key: "pendingPayments" as const,
+      title: "Pending Payments",
+      value: stats.pendingPayments,
+      icon: <Clock className="h-6 w-6" />,
+    },
+    {
+      key: "failedPayments" as const,
+      title: "Failed Payments",
+      value: stats.failedPayments,
+      icon: <XCircle className="h-6 w-6" />,
+    },
+    {
+      key: "totalAmount" as const,
+      title: "Total Amount",
+      value: formatCurrency(stats.totalAmount),
+      icon: <TrendingUp className="h-6 w-6" />,
+    },
+    {
+      key: "totalCharges" as const,
+      title: "Total Charges",
+      value: formatCurrency(stats.totalCharges),
+      icon: <CircleDollarSign className="h-6 w-6" />,
+    },
   ];
 
   const handleExportPdf = async () => {
@@ -1291,7 +1467,10 @@ const AdminUtilityDashboard = () => {
     } catch (error) {
       toast({
         title: "Export Failed",
-        description: error instanceof Error ? error.message : "Failed to export dashboard to PDF.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to export dashboard to PDF.",
         variant: "destructive",
       });
     }
@@ -1304,8 +1483,24 @@ const AdminUtilityDashboard = () => {
             sheetName: detailContent.title,
             columns:
               detailContent.type === "meters"
-                ? ["Meter Number", "Type", "NWSC Account", "Location", "Landlord", "Created"]
-                : ["Status", "Amount", "Charges", "Meter", "Phone", "Transaction ID", "Vendor Ref", "Created"],
+                ? [
+                    "Meter Number",
+                    "Type",
+                    "NWSC Account",
+                    "Location",
+                    "Landlord",
+                    "Created",
+                  ]
+                : [
+                    "Status",
+                    "Amount",
+                    "Charges",
+                    "Meter",
+                    "Phone",
+                    "Transaction ID",
+                    "Vendor Ref",
+                    "Created",
+                  ],
             rows:
               detailContent.type === "meters"
                 ? filteredDetailRows.map((meter) => [
@@ -1334,7 +1529,13 @@ const AdminUtilityDashboard = () => {
         fileNamePrefix: "admin-utility-dashboard",
         metadata: [
           { label: "Scope", value: selectedScopeLabel },
-          { label: "Date Range", value: startDate || endDate ? `${startDate || "..."} to ${endDate || "..."}` : "All time" },
+          {
+            label: "Date Range",
+            value:
+              startDate || endDate
+                ? `${startDate || "..."} to ${endDate || "..."}`
+                : "All time",
+          },
           { label: "Status Filter", value: statusFilter },
           { label: "Payment Method Filter", value: paymentMethodFilter },
           { label: "Vendor Filter", value: vendorFilter },
@@ -1355,7 +1556,12 @@ const AdminUtilityDashboard = () => {
           {
             sheetName: "Trend",
             columns: ["Month", "Payments", "Amount", "Charges"],
-            rows: monthlyTrendData.map((item) => [item.label, item.payments, item.amount, item.charges]),
+            rows: monthlyTrendData.map((item) => [
+              item.label,
+              item.payments,
+              item.amount,
+              item.charges,
+            ]),
           },
           {
             sheetName: "Status Breakdown",
@@ -1370,11 +1576,23 @@ const AdminUtilityDashboard = () => {
           {
             sheetName: "Top Meters",
             columns: ["Meter Number", "Payments", "Amount"],
-            rows: topMetersData.map((item) => [item.meterNumber, item.payments, item.amount]),
+            rows: topMetersData.map((item) => [
+              item.meterNumber,
+              item.payments,
+              item.amount,
+            ]),
           },
           {
             sheetName: "Meters",
-            columns: ["Meter Number", "Type", "NWSC Account", "Location", "Landlord", "Email", "Created"],
+            columns: [
+              "Meter Number",
+              "Type",
+              "NWSC Account",
+              "Location",
+              "Landlord",
+              "Email",
+              "Created",
+            ],
             rows: filteredMeters.map((meter) => [
               meter.meterNumber,
               meter.meterType || "",
@@ -1467,24 +1685,31 @@ const AdminUtilityDashboard = () => {
     } catch (error) {
       toast({
         title: "Export Failed",
-        description: error instanceof Error ? error.message : "Failed to export dashboard to Excel.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to export dashboard to Excel.",
         variant: "destructive",
       });
     }
   };
 
   return (
-    <div ref={dashboardRef} className="space-y-8">
-      <section className="page-hero">
+    <div ref={dashboardRef} className="dark text-white min-h-full space-y-8">
+      <section className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-[28px] p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <span className="inline-flex w-fit items-center rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
               Admin Utility Analytics
             </span>
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Statistics Dashboard</h1>
-              <p className="mt-2 text-sm text-muted-foreground md:text-base">
-                Review the same utility statistics experience available to other users, then narrow it to one landlord or utility account when needed.
+              <h1 className="text-3xl font-semibold tracking-tight text-white">
+                Statistics Dashboard
+              </h1>
+              <p className="mt-2 text-sm text-blue-200 md:text-base">
+                Review the same utility statistics experience available to other
+                users, then narrow it to one landlord or utility account when
+                needed.
               </p>
             </div>
           </div>
@@ -1495,16 +1720,24 @@ const AdminUtilityDashboard = () => {
         </div>
       </section>
 
-      <Card className="data-surface border-none shadow-none">
+      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Select an account scope, then limit analytics and transaction results to a specific period.</CardDescription>
+          <CardTitle className="text-white">Filters</CardTitle>
+          <CardDescription className="text-blue-200">
+            Select an account scope, then limit analytics and transaction
+            results to a specific period.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))_minmax(0,1.2fr)_auto]">
             <div className="space-y-2">
-              <Label htmlFor="admin-utility-account-filter">Landlord or utility user</Label>
-              <Popover open={accountPickerOpen} onOpenChange={setAccountPickerOpen}>
+              <Label htmlFor="admin-utility-account-filter">
+                Landlord or utility user
+              </Label>
+              <Popover
+                open={accountPickerOpen}
+                onOpenChange={setAccountPickerOpen}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     id="admin-utility-account-filter"
@@ -1513,8 +1746,8 @@ const AdminUtilityDashboard = () => {
                     role="combobox"
                     disabled={isLoadingUsers}
                     className={cn(
-                      "h-12 w-full justify-between rounded-xl border-input/90 bg-white/95 px-4 py-3 font-normal shadow-sm",
-                      !selectedAccountId && "text-muted-foreground"
+                      "h-12 w-full justify-between rounded-xl border-white/20 bg-white/10 px-4 py-3 font-normal shadow-sm text-white",
+                      !selectedAccountId && "text-blue-200/70",
                     )}
                   >
                     <span className="truncate">
@@ -1525,11 +1758,19 @@ const AdminUtilityDashboard = () => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search by name, email, or role" />
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0 bg-slate-900/95 border-white/20 text-white"
+                  align="start"
+                >
+                  <Command className="bg-slate-900/95 text-white">
+                    <CommandInput
+                      placeholder="Search by name, email, or role"
+                      className="placeholder:text-blue-200/60"
+                    />
                     <CommandList>
-                      <CommandEmpty>No landlord or utility user found.</CommandEmpty>
+                      <CommandEmpty className="text-blue-200">
+                        No landlord or utility user found.
+                      </CommandEmpty>
                       <CommandGroup>
                         <CommandItem
                           value="all landlord utility accounts"
@@ -1537,17 +1778,23 @@ const AdminUtilityDashboard = () => {
                             setSelectedAccountId(ALL_ACCOUNT_VALUE);
                             setAccountPickerOpen(false);
                           }}
-                          className="flex items-start gap-3 py-3"
+                          className="flex items-start gap-3 py-3 text-white data-[selected=true]:bg-white/10"
                         >
                           <Check
                             className={cn(
                               "mt-0.5 h-4 w-4",
-                              selectedAccountId === ALL_ACCOUNT_VALUE ? "opacity-100" : "opacity-0"
+                              selectedAccountId === ALL_ACCOUNT_VALUE
+                                ? "opacity-100"
+                                : "opacity-0",
                             )}
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-slate-900">All landlord and utility accounts</p>
-                            <p className="text-xs text-muted-foreground">Show statistics across the full admin scope</p>
+                            <p className="truncate font-medium text-white">
+                              All landlord and utility accounts
+                            </p>
+                            <p className="text-xs text-blue-200">
+                              Show statistics across the full admin scope
+                            </p>
                           </div>
                         </CommandItem>
                         {selectableUsers.map((user) => (
@@ -1558,18 +1805,26 @@ const AdminUtilityDashboard = () => {
                               setSelectedAccountId(String(user.id));
                               setAccountPickerOpen(false);
                             }}
-                            className="flex items-start gap-3 py-3"
+                            className="flex items-start gap-3 py-3 text-white data-[selected=true]:bg-white/10"
                           >
                             <Check
                               className={cn(
                                 "mt-0.5 h-4 w-4",
-                                selectedAccountId === String(user.id) ? "opacity-100" : "opacity-0"
+                                selectedAccountId === String(user.id)
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-slate-900">{user.fullName}</p>
-                              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{getRoleLabel(user)}</p>
+                              <p className="truncate font-medium text-white">
+                                {user.fullName}
+                              </p>
+                              <p className="truncate text-xs text-blue-200">
+                                {user.email}
+                              </p>
+                              <p className="text-xs text-blue-200">
+                                {getRoleLabel(user)}
+                              </p>
                             </div>
                           </CommandItem>
                         ))}
@@ -1585,6 +1840,7 @@ const AdminUtilityDashboard = () => {
               <Input
                 id="admin-utility-start-date"
                 type="date"
+                variant="dark"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
                 max={endDate || undefined}
@@ -1595,6 +1851,7 @@ const AdminUtilityDashboard = () => {
               <Input
                 id="admin-utility-end-date"
                 type="date"
+                variant="dark"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
                 min={startDate || undefined}
@@ -1603,9 +1860,10 @@ const AdminUtilityDashboard = () => {
             <div className="space-y-2">
               <Label htmlFor="admin-utility-search">Global search</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-200" />
                 <Input
                   id="admin-utility-search"
+                  variant="dark"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search any transaction field, meter, vendor, token, phone, or landlord"
@@ -1614,7 +1872,11 @@ const AdminUtilityDashboard = () => {
               </div>
             </div>
             <div className="flex items-end gap-2">
-              <Button variant="outline" onClick={clearFilters} className="w-full">
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
                 Clear Filters
               </Button>
             </div>
@@ -1642,6 +1904,7 @@ const AdminUtilityDashboard = () => {
               <Label htmlFor="admin-utility-phone-filter">Phone number</Label>
               <Input
                 id="admin-utility-phone-filter"
+                variant="dark"
                 value={phoneFilter}
                 onChange={(event) => setPhoneFilter(event.target.value)}
                 placeholder="Filter by phone number"
@@ -1652,6 +1915,7 @@ const AdminUtilityDashboard = () => {
               <Label htmlFor="admin-utility-meter-filter">Meter number</Label>
               <Input
                 id="admin-utility-meter-filter"
+                variant="dark"
                 value={meterFilter}
                 onChange={(event) => setMeterFilter(event.target.value)}
                 placeholder="Filter by meter number"
@@ -1659,8 +1923,13 @@ const AdminUtilityDashboard = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="admin-utility-method-filter">Payment method</Label>
-              <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+              <Label htmlFor="admin-utility-method-filter">
+                Payment method
+              </Label>
+              <Select
+                value={paymentMethodFilter}
+                onValueChange={setPaymentMethodFilter}
+              >
                 <SelectTrigger id="admin-utility-method-filter">
                   <SelectValue placeholder="All methods" />
                 </SelectTrigger>
@@ -1693,9 +1962,12 @@ const AdminUtilityDashboard = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="admin-utility-transaction-filter">Transaction ID</Label>
+              <Label htmlFor="admin-utility-transaction-filter">
+                Transaction ID
+              </Label>
               <Input
                 id="admin-utility-transaction-filter"
+                variant="dark"
                 value={transactionIdFilter}
                 onChange={(event) => setTransactionIdFilter(event.target.value)}
                 placeholder="Filter by transaction ID"
@@ -1706,27 +1978,52 @@ const AdminUtilityDashboard = () => {
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge variant="secondary">Scope: {selectedScopeLabel}</Badge>
             <Badge variant="secondary">
-              Period: {startDate || endDate ? `${startDate || "..."} to ${endDate || "..."}` : "All time"}
+              Period:{" "}
+              {startDate || endDate
+                ? `${startDate || "..."} to ${endDate || "..."}`
+                : "All time"}
             </Badge>
             <Badge variant="outline">Meters: {filteredMeters.length}</Badge>
-            <Badge variant="outline">Transactions: {filteredPayments.length}</Badge>
-            <Badge variant="outline">Filtered rows: {filteredTransactionRows.length}</Badge>
+            <Badge variant="outline">
+              Transactions: {filteredPayments.length}
+            </Badge>
+            <Badge variant="outline">
+              Filtered rows: {filteredTransactionRows.length}
+            </Badge>
             {!isLoadingUsers && selectableUsers.length === 0 && (
-              <Badge variant="outline">No landlord or utility users found</Badge>
+              <Badge variant="outline">
+                No landlord or utility users found
+              </Badge>
             )}
-            {statusFilter !== "all" && <Badge variant="outline">Status: {statusFilter}</Badge>}
-            {phoneFilter && <Badge variant="outline">Phone: {phoneFilter}</Badge>}
-            {meterFilter && <Badge variant="outline">Meter: {meterFilter}</Badge>}
-            {paymentMethodFilter !== "all" && <Badge variant="outline">Method: {paymentMethodFilter}</Badge>}
-            {vendorFilter !== "all" && <Badge variant="outline">Vendor: {vendorFilter}</Badge>}
-            {transactionIdFilter && <Badge variant="outline">Transaction: {transactionIdFilter}</Badge>}
+            {statusFilter !== "all" && (
+              <Badge variant="outline">Status: {statusFilter}</Badge>
+            )}
+            {phoneFilter && (
+              <Badge variant="outline">Phone: {phoneFilter}</Badge>
+            )}
+            {meterFilter && (
+              <Badge variant="outline">Meter: {meterFilter}</Badge>
+            )}
+            {paymentMethodFilter !== "all" && (
+              <Badge variant="outline">Method: {paymentMethodFilter}</Badge>
+            )}
+            {vendorFilter !== "all" && (
+              <Badge variant="outline">Vendor: {vendorFilter}</Badge>
+            )}
+            {transactionIdFilter && (
+              <Badge variant="outline">
+                Transaction: {transactionIdFilter}
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {isLoading ? (
-        <Card className="data-surface border-none shadow-none">
-          <CardContent className="py-10 text-sm text-muted-foreground">Loading admin utility dashboard...</CardContent>
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+          <CardContent className="py-10 text-sm text-blue-200">
+            Loading admin utility dashboard...
+          </CardContent>
         </Card>
       ) : (
         <>
@@ -1756,23 +2053,30 @@ const AdminUtilityDashboard = () => {
             ))}
           </div>
 
-          <Card className="data-surface border-none shadow-none">
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
             <CardContent className="pt-6">
               {detailContent ? (
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-semibold">{detailContent.title}</h2>
-                      <p className="text-sm text-muted-foreground">
+                      <h2 className="text-lg font-semibold text-white">
+                        {detailContent.title}
+                      </h2>
+                      <p className="text-sm text-blue-200">
                         {detailContent.description}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {activeDetailView === "meterPayments" && previousDetailView && (
-                        <Button variant="outline" onClick={returnToPreviousView}>
-                          Back to meters
-                        </Button>
-                      )}
+                      {activeDetailView === "meterPayments" &&
+                        previousDetailView && (
+                          <Button
+                            variant="outline"
+                            onClick={returnToPreviousView}
+                            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                          >
+                            Back to meters
+                          </Button>
+                        )}
                       <Button
                         variant="ghost"
                         onClick={() => {
@@ -1780,6 +2084,7 @@ const AdminUtilityDashboard = () => {
                           setSelectedMeterNumber("");
                           setPreviousDetailView(null);
                         }}
+                        className="text-white hover:bg-white/10"
                       >
                         Close
                       </Button>
@@ -1789,7 +2094,10 @@ const AdminUtilityDashboard = () => {
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <Input
                       value={detailSearchTerm}
-                      onChange={(event) => setDetailSearchTerm(event.target.value)}
+                      variant="dark"
+                      onChange={(event) =>
+                        setDetailSearchTerm(event.target.value)
+                      }
                       placeholder={
                         detailContent.type === "meters"
                           ? "Search meters by number, type, location, or landlord"
@@ -1798,7 +2106,9 @@ const AdminUtilityDashboard = () => {
                       className="md:max-w-md"
                     />
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">Results: {sortedDetailRows.length}</Badge>
+                      <Badge variant="outline">
+                        Results: {sortedDetailRows.length}
+                      </Badge>
                       <Badge variant="outline">
                         Page: {currentDetailPage} / {totalDetailPages}
                       </Badge>
@@ -1806,6 +2116,7 @@ const AdminUtilityDashboard = () => {
                         variant="outline"
                         onClick={exportDetailRows}
                         disabled={filteredDetailRows.length === 0}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                       >
                         Export CSV
                       </Button>
@@ -1818,32 +2129,54 @@ const AdminUtilityDashboard = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterNumber")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("meterNumber")}
+                              >
                                 Meter Number
                                 {renderDetailSortIcon("meterNumber")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterType")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("meterType")}
+                              >
                                 Type
                                 {renderDetailSortIcon("meterType")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("nwscAccount")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("nwscAccount")}
+                              >
                                 NWSC Account
                                 {renderDetailSortIcon("nwscAccount")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("locationOfNwscMeter")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() =>
+                                  toggleDetailSort("locationOfNwscMeter")
+                                }
+                              >
                                 Location
                                 {renderDetailSortIcon("locationOfNwscMeter")}
                               </button>
                             </TableHead>
                             <TableHead>Landlord</TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("dateCreated")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("dateCreated")}
+                              >
                                 Created
                                 {renderDetailSortIcon("dateCreated")}
                               </button>
@@ -1853,7 +2186,10 @@ const AdminUtilityDashboard = () => {
                         <TableBody>
                           {sortedDetailRows.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center text-muted-foreground">
+                              <TableCell
+                                colSpan={6}
+                                className="text-center text-blue-200"
+                              >
                                 No meters found for this selection.
                               </TableCell>
                             </TableRow>
@@ -1863,17 +2199,27 @@ const AdminUtilityDashboard = () => {
                                 <TableCell className="font-medium">
                                   <button
                                     type="button"
-                                    onClick={() => openMeterPayments(meter.meterNumber)}
-                                    className="text-primary underline-offset-4 hover:underline"
+                                    onClick={() =>
+                                      openMeterPayments(meter.meterNumber)
+                                    }
+                                    className="text-blue-300 underline-offset-4 hover:text-blue-100 hover:underline"
                                   >
                                     {meter.meterNumber}
                                   </button>
                                 </TableCell>
                                 <TableCell>{meter.meterType || "-"}</TableCell>
-                                <TableCell>{meter.nwscAccount || "-"}</TableCell>
-                                <TableCell>{meter.locationOfNwscMeter || "-"}</TableCell>
-                                <TableCell>{meter.user?.fullName || "-"}</TableCell>
-                                <TableCell>{formatDateDmy(meter.dateCreated)}</TableCell>
+                                <TableCell>
+                                  {meter.nwscAccount || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {meter.locationOfNwscMeter || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {meter.user?.fullName || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {formatDateDmy(meter.dateCreated)}
+                                </TableCell>
                               </TableRow>
                             ))
                           )}
@@ -1884,49 +2230,83 @@ const AdminUtilityDashboard = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("status")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("status")}
+                              >
                                 Status
                                 {renderDetailSortIcon("status")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("amount")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("amount")}
+                              >
                                 Amount
                                 {renderDetailSortIcon("amount")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("charges")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("charges")}
+                              >
                                 Charges
                                 {renderDetailSortIcon("charges")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("meterNumber")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("meterNumber")}
+                              >
                                 Meter
                                 {renderDetailSortIcon("meterNumber")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("phoneNumber")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("phoneNumber")}
+                              >
                                 Phone
                                 {renderDetailSortIcon("phoneNumber")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("transactionID")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() =>
+                                  toggleDetailSort("transactionID")
+                                }
+                              >
                                 Transaction ID
                                 {renderDetailSortIcon("transactionID")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("vendorTranId")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("vendorTranId")}
+                              >
                                 Vendor Ref
                                 {renderDetailSortIcon("vendorTranId")}
                               </button>
                             </TableHead>
                             <TableHead>
-                              <button type="button" className="flex items-center gap-1" onClick={() => toggleDetailSort("createdAt")}>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1"
+                                onClick={() => toggleDetailSort("createdAt")}
+                              >
                                 Created
                                 {renderDetailSortIcon("createdAt")}
                               </button>
@@ -1936,7 +2316,10 @@ const AdminUtilityDashboard = () => {
                         <TableBody>
                           {sortedDetailRows.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center text-muted-foreground">
+                              <TableCell
+                                colSpan={8}
+                                className="text-center text-blue-200"
+                              >
                                 No transactions found for this selection.
                               </TableCell>
                             </TableRow>
@@ -1944,13 +2327,27 @@ const AdminUtilityDashboard = () => {
                             paginatedPaymentRows.map((payment) => (
                               <TableRow key={payment.id}>
                                 <TableCell>{payment.status || "-"}</TableCell>
-                                <TableCell>{formatCurrency(payment.amount || 0)}</TableCell>
-                                <TableCell>{formatCurrency(payment.charges || 0)}</TableCell>
-                                <TableCell>{payment.meterNumber || "-"}</TableCell>
-                                <TableCell>{payment.phoneNumber || "-"}</TableCell>
-                                <TableCell>{payment.transactionID || "-"}</TableCell>
-                                <TableCell>{payment.vendorTranId || "-"}</TableCell>
-                                <TableCell>{formatDateTimeDmy(payment.createdAt)}</TableCell>
+                                <TableCell>
+                                  {formatCurrency(payment.amount || 0)}
+                                </TableCell>
+                                <TableCell>
+                                  {formatCurrency(payment.charges || 0)}
+                                </TableCell>
+                                <TableCell>
+                                  {payment.meterNumber || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {payment.phoneNumber || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {payment.transactionID || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {payment.vendorTranId || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {formatDateTimeDmy(payment.createdAt)}
+                                </TableCell>
                               </TableRow>
                             ))
                           )}
@@ -1966,13 +2363,16 @@ const AdminUtilityDashboard = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() =>
-                            setCurrentDetailPage((page) => Math.max(1, page - 1))
+                            setCurrentDetailPage((page) =>
+                              Math.max(1, page - 1),
+                            )
                           }
                           disabled={currentDetailPage === 1}
+                          className="text-white hover:bg-white/10"
                         >
                           <ChevronsLeft className="h-4 w-4" />
                         </Button>
-                        <span className="text-sm">
+                        <span className="text-sm text-blue-200">
                           Page {currentDetailPage} of {totalDetailPages}
                         </span>
                         <Button
@@ -1980,10 +2380,11 @@ const AdminUtilityDashboard = () => {
                           size="icon"
                           onClick={() =>
                             setCurrentDetailPage((page) =>
-                              Math.min(totalDetailPages, page + 1)
+                              Math.min(totalDetailPages, page + 1),
                             )
                           }
                           disabled={currentDetailPage === totalDetailPages}
+                          className="text-white hover:bg-white/10"
                         >
                           <ChevronsRight className="h-4 w-4" />
                         </Button>
@@ -1992,7 +2393,7 @@ const AdminUtilityDashboard = () => {
                   )}
                 </div>
               ) : (
-                <div className="py-10 text-center text-sm text-muted-foreground">
+                <div className="py-10 text-center text-sm text-blue-200">
                   Click a stat card to view the records behind that metric.
                 </div>
               )}
@@ -2000,33 +2401,73 @@ const AdminUtilityDashboard = () => {
           </Card>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <Card ref={paymentTrendChartRef} className="data-surface border-none shadow-none">
+            <Card
+              ref={paymentTrendChartRef}
+              className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl"
+            >
               <CardHeader>
-                <CardTitle>Payment Trend</CardTitle>
-                <CardDescription>Monthly transaction volume and successful amount collected.</CardDescription>
+                <CardTitle className="text-white">Payment Trend</CardTitle>
+                <CardDescription className="text-blue-200">
+                  Monthly transaction volume and successful amount collected.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={monthlyTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="label" />
-                      <YAxis yAxisId="left" allowDecimals={false} />
-                      <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar yAxisId="left" dataKey="payments" fill="#2563eb" radius={[8, 8, 0, 0]} />
-                      <Line yAxisId="right" type="monotone" dataKey="amount" stroke="#0f766e" strokeWidth={3} dot={{ r: 3 }} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(255,255,255,0.15)"
+                      />
+                      <XAxis dataKey="label" tick={{ fill: "#fff" }} />
+                      <YAxis
+                        yAxisId="left"
+                        allowDecimals={false}
+                        tick={{ fill: "#fff" }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        tick={{ fill: "#fff" }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(15, 23, 42, 0.9)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: "12px",
+                          color: "#fff",
+                        }}
+                      />
+                      <Legend wrapperStyle={{ color: "#fff" }} />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="payments"
+                        fill="#2563eb"
+                        radius={[8, 8, 0, 0]}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="#0f766e"
+                        strokeWidth={3}
+                        dot={{ r: 3 }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            <Card ref={statusBreakdownChartRef} className="data-surface border-none shadow-none">
+            <Card
+              ref={statusBreakdownChartRef}
+              className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl"
+            >
               <CardHeader>
-                <CardTitle>Status Breakdown</CardTitle>
-                <CardDescription>Distribution of payment states in the active period.</CardDescription>
+                <CardTitle className="text-white">Status Breakdown</CardTitle>
+                <CardDescription className="text-blue-200">
+                  Distribution of payment states in the active period.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[320px] w-full">
@@ -2039,24 +2480,41 @@ const AdminUtilityDashboard = () => {
                         outerRadius={110}
                         dataKey="value"
                         nameKey="name"
-                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                        label={({ name, percent }) =>
+                          `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                        }
                       >
                         {statusChartData.map((entry, index) => (
-                          <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+                          <Cell
+                            key={entry.name}
+                            fill={STATUS_COLORS[index % STATUS_COLORS.length]}
+                          />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(15, 23, 42, 0.9)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: "12px",
+                          color: "#fff",
+                        }}
+                      />
+                      <Legend wrapperStyle={{ color: "#fff" }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            <Card ref={paymentMethodsChartRef} className="data-surface border-none shadow-none">
+            <Card
+              ref={paymentMethodsChartRef}
+              className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl"
+            >
               <CardHeader>
-                <CardTitle>Payment Methods</CardTitle>
-                <CardDescription>Share of transactions by payment method.</CardDescription>
+                <CardTitle className="text-white">Payment Methods</CardTitle>
+                <CardDescription className="text-blue-200">
+                  Share of transactions by payment method.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[320px] w-full">
@@ -2072,31 +2530,73 @@ const AdminUtilityDashboard = () => {
                         nameKey="name"
                       >
                         {paymentMethodChartData.map((entry, index) => (
-                          <Cell key={entry.name} fill={METHOD_COLORS[index % METHOD_COLORS.length]} />
+                          <Cell
+                            key={entry.name}
+                            fill={METHOD_COLORS[index % METHOD_COLORS.length]}
+                          />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(15, 23, 42, 0.9)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: "12px",
+                          color: "#fff",
+                        }}
+                      />
+                      <Legend wrapperStyle={{ color: "#fff" }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            <Card ref={topMeterActivityChartRef} className="data-surface border-none shadow-none">
+            <Card
+              ref={topMeterActivityChartRef}
+              className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl"
+            >
               <CardHeader>
-                <CardTitle>Top Meter Activity</CardTitle>
-                <CardDescription>Most active meters by transaction count.</CardDescription>
+                <CardTitle className="text-white">Top Meter Activity</CardTitle>
+                <CardDescription className="text-blue-200">
+                  Most active meters by transaction count.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topMetersData} layout="vertical" margin={{ left: 12, right: 12 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" allowDecimals={false} />
-                      <YAxis type="category" dataKey="meterNumber" width={110} />
-                      <Tooltip />
-                      <Bar dataKey="payments" fill="#7c3aed" radius={[0, 8, 8, 0]} />
+                    <BarChart
+                      data={topMetersData}
+                      layout="vertical"
+                      margin={{ left: 12, right: 12 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(255,255,255,0.15)"
+                      />
+                      <XAxis
+                        type="number"
+                        allowDecimals={false}
+                        tick={{ fill: "#fff" }}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="meterNumber"
+                        width={110}
+                        tick={{ fill: "#fff" }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "rgba(15, 23, 42, 0.9)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: "12px",
+                          color: "#fff",
+                        }}
+                      />
+                      <Bar
+                        dataKey="payments"
+                        fill="#7c3aed"
+                        radius={[0, 8, 8, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -2104,20 +2604,34 @@ const AdminUtilityDashboard = () => {
             </Card>
           </div>
 
-          <Card className="data-surface border-none shadow-none">
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
             <CardHeader>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <CardTitle>All Meter Transactions</CardTitle>
-                  <CardDescription>
-                    Search across the current account scope and inspect every transaction column in one place.
+                  <CardTitle className="text-white">
+                    All Meter Transactions
+                  </CardTitle>
+                  <CardDescription className="text-blue-200">
+                    Search across the current account scope and inspect every
+                    transaction column in one place.
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">Rows: {sortedTransactionRows.length}</Badge>
-                  <Badge variant="outline">Page: {currentPage} / {totalPages}</Badge>
-                  <Badge variant="secondary">Charges: {formatCurrency(stats.totalCharges)}</Badge>
-                  <Button variant="outline" onClick={exportTransactions} disabled={sortedTransactionRows.length === 0}>
+                  <Badge variant="outline">
+                    Rows: {sortedTransactionRows.length}
+                  </Badge>
+                  <Badge variant="outline">
+                    Page: {currentPage} / {totalPages}
+                  </Badge>
+                  <Badge variant="secondary">
+                    Charges: {formatCurrency(stats.totalCharges)}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    onClick={exportTransactions}
+                    disabled={sortedTransactionRows.length === 0}
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
                     <Download className="mr-2 h-4 w-4" />
                     Export CSV
                   </Button>
@@ -2160,7 +2674,9 @@ const AdminUtilityDashboard = () => {
                           <button
                             type="button"
                             className="flex items-center gap-1 whitespace-nowrap"
-                            onClick={() => toggleSort(key as keyof AdminTransactionRow)}
+                            onClick={() =>
+                              toggleSort(key as keyof AdminTransactionRow)
+                            }
                           >
                             {label}
                             {renderSortIcon(key as keyof AdminTransactionRow)}
@@ -2172,7 +2688,10 @@ const AdminUtilityDashboard = () => {
                   <TableBody>
                     {sortedTransactionRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={25} className="py-10 text-center text-muted-foreground">
+                        <TableCell
+                          colSpan={25}
+                          className="py-10 text-center text-blue-200"
+                        >
                           No utility transactions matched the current filters.
                         </TableCell>
                       </TableRow>
@@ -2181,12 +2700,20 @@ const AdminUtilityDashboard = () => {
                         <TableRow key={row.id}>
                           <TableCell>{row.id}</TableCell>
                           <TableCell>{row.status || "-"}</TableCell>
-                          <TableCell>{formatCurrency(row.amount || 0)}</TableCell>
-                          <TableCell>{formatCurrency(row.charges || 0)}</TableCell>
-                          <TableCell className="font-medium">{row.meterNumber || "-"}</TableCell>
+                          <TableCell>
+                            {formatCurrency(row.amount || 0)}
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(row.charges || 0)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {row.meterNumber || "-"}
+                          </TableCell>
                           <TableCell>{row.meterType || "-"}</TableCell>
                           <TableCell>{row.nwscAccount || "-"}</TableCell>
-                          <TableCell>{row.locationOfNwscMeter || "-"}</TableCell>
+                          <TableCell>
+                            {row.locationOfNwscMeter || "-"}
+                          </TableCell>
                           <TableCell>{row.phoneNumber || "-"}</TableCell>
                           <TableCell>{row.paymentMethod || "-"}</TableCell>
                           <TableCell>{row.utilityType || "-"}</TableCell>
@@ -2197,11 +2724,19 @@ const AdminUtilityDashboard = () => {
                           <TableCell>{row.reasonAtTelecom || "-"}</TableCell>
                           <TableCell>{row.units || "-"}</TableCell>
                           <TableCell>{row.token || "-"}</TableCell>
-                          <TableCell>{row.utilityAccountNumber || "-"}</TableCell>
-                          <TableCell>{row.isTokenGenerated ? "Yes" : "No"}</TableCell>
+                          <TableCell>
+                            {row.utilityAccountNumber || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {row.isTokenGenerated ? "Yes" : "No"}
+                          </TableCell>
                           <TableCell>{row.isSmsSent ? "Yes" : "No"}</TableCell>
-                          <TableCell>{formatDateTimeDmy(row.createdAt)}</TableCell>
-                          <TableCell>{formatDateTimeDmy(row.vendorPaymentDate)}</TableCell>
+                          <TableCell>
+                            {formatDateTimeDmy(row.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            {formatDateTimeDmy(row.vendorPaymentDate)}
+                          </TableCell>
                           <TableCell>{row.landlordName || "-"}</TableCell>
                           <TableCell>{row.landlordEmail || "-"}</TableCell>
                         </TableRow>
@@ -2217,19 +2752,25 @@ const AdminUtilityDashboard = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      onClick={() =>
+                        setCurrentPage((page) => Math.max(1, page - 1))
+                      }
                       disabled={currentPage === 1}
+                      className="text-white hover:bg-white/10"
                     >
                       <ChevronsLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-blue-200">
                       Page {currentPage} of {totalPages}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                      onClick={() =>
+                        setCurrentPage((page) => Math.min(totalPages, page + 1))
+                      }
                       disabled={currentPage === totalPages}
+                      className="text-white hover:bg-white/10"
                     >
                       <ChevronsRight className="h-4 w-4" />
                     </Button>

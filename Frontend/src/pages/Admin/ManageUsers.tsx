@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import GradientButton from "@/components/ui/button/Button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -156,7 +157,7 @@ const UserDetails = ({
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
-        <div className="w-60 h-60 bg-gray-200 p-2 rounded-full overflow-hidden">
+        <div className="w-60 h-60 bg-white/20 p-2 rounded-full overflow-hidden">
           <img
             src={`${
               import.meta.env.VITE_API_BASE_URL
@@ -173,46 +174,56 @@ const UserDetails = ({
         </div>
         <div>
           <h3 className="text-lg font-semibold">{user.name}</h3>
-          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <p className="text-sm text-blue-200">{user.email}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-1 bg-secondary/20 p-3 rounded-md">
-          <div className="text-xs font-medium text-muted-foreground mb-1">
-            Role
+        <div className="relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-lg">
+          <div className="absolute -right-3 -bottom-3 w-16 h-16 rounded-full opacity-10 bg-blue-400" />
+          <div className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-lg">
+            <User className="h-4 w-4" />
           </div>
+          <div className="text-xs font-medium text-blue-200 mb-2">Role</div>
           <Badge
             variant={
               user.role === "Administrator"
                 ? "destructive"
                 : user.role === "Landlord"
-                ? "default"
-                : "secondary"
+                  ? "default"
+                  : "secondary"
             }
           >
             {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
           </Badge>
         </div>
-        <div className="col-span-1 bg-secondary/20 p-3 rounded-md">
-          <div className="text-xs font-medium text-muted-foreground mb-1">
-            Status
+        <div className="relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-lg">
+          <div className="absolute -right-3 -bottom-3 w-16 h-16 rounded-full opacity-10 bg-blue-400" />
+          <div className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-400 flex items-center justify-center text-white shadow-lg">
+            {user.status === "active" ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )}
           </div>
+          <div className="text-xs font-medium text-blue-200 mb-2">Status</div>
           {user.status === "active" ? (
-            <span className="flex items-center gap-1 text-green-600 text-sm">
-              <CheckCircle className="h-3 w-3" /> Active
+            <span className="flex items-center gap-1 text-green-400 text-sm font-semibold">
+              Active
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-red-600 text-sm">
-              <XCircle className="h-3 w-3" /> Inactive
+            <span className="flex items-center gap-1 text-red-400 text-sm font-semibold">
+              Inactive
             </span>
           )}
         </div>
-        <div className="col-span-1 bg-secondary/20 p-3 rounded-md">
-          <div className="text-xs font-medium text-muted-foreground mb-1">
-            User ID
+        <div className="relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-lg">
+          <div className="absolute -right-3 -bottom-3 w-16 h-16 rounded-full opacity-10 bg-blue-400" />
+          <div className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-400 flex items-center justify-center text-white shadow-lg">
+            <FileText className="h-4 w-4" />
           </div>
-          <div className="text-sm font-mono">{user.id}</div>
+          <div className="text-xs font-medium text-blue-200 mb-2">User ID</div>
+          <div className="text-sm font-mono text-white truncate">{user.id}</div>
         </div>
       </div>
 
@@ -224,30 +235,30 @@ const UserDetails = ({
           <Card className="p-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-blue-200 mb-1">
                   Property Name
                 </div>
                 <div className="text-sm">{assignedProperty.name}</div>
               </div>
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-blue-200 mb-1">
                   Property Type
                 </div>
                 <div className="text-sm">{assignedProperty.type}</div>
               </div>
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-blue-200 mb-1">
                   Address
                 </div>
                 <div className="text-sm">{assignedProperty.address}</div>
               </div>
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-blue-200 mb-1">
                   Rent Amount
                 </div>
                 <div className="text-sm font-semibold">
                   {formatCurrency(
-                    user.rentAmount || assignedProperty.rentAmount
+                    user.rentAmount || assignedProperty.rentAmount,
                   )}
                 </div>
               </div>
@@ -264,13 +275,13 @@ const UserDetails = ({
           <Card className="p-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-blue-200 mb-1">
                   Name
                 </div>
                 <div className="text-sm">{assignedLandlord.name}</div>
               </div>
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-blue-200 mb-1">
                   Email
                 </div>
                 <div className="text-sm">{assignedLandlord.email}</div>
@@ -353,16 +364,16 @@ const UserDetails = ({
                       {tenant.rentAmount
                         ? formatCurrency(tenant.rentAmount)
                         : tenantProperty
-                        ? formatCurrency(tenantProperty.rentAmount)
-                        : "N/A"}
+                          ? formatCurrency(tenantProperty.rentAmount)
+                          : "N/A"}
                     </TableCell>
                     <TableCell>
                       {tenant.status === "active" ? (
-                        <span className="flex items-center gap-1 text-green-600">
+                        <span className="flex items-center gap-1 text-green-400">
                           <CheckCircle className="h-3 w-3" /> Active
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-red-600">
+                        <span className="flex items-center gap-1 text-red-400">
                           <XCircle className="h-3 w-3" /> Inactive
                         </span>
                       )}
@@ -476,7 +487,7 @@ const ManageUsers = () => {
   const fetchRoles = async () => {
     try {
       const { data } = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/GetAllRoles`
+        `${import.meta.env.VITE_API_BASE_URL}/GetAllRoles`,
       );
 
       setRoles(data);
@@ -491,7 +502,7 @@ const ManageUsers = () => {
   const fetchUsers = async () => {
     try {
       const { data } = await axios.get<ApiUser[]>(
-        `${import.meta.env.VITE_API_BASE_URL}/GetAllUsers`
+        `${import.meta.env.VITE_API_BASE_URL}/GetAllUsers`,
       );
 
       const formattedUsers: User[] = data.map((item) => ({
@@ -536,7 +547,7 @@ const ManageUsers = () => {
   const openEditModal = (user: User) => {
     axios
       .get<ApiUser>(
-        `${import.meta.env.VITE_API_BASE_URL}/GetUserById/${user.id}`
+        `${import.meta.env.VITE_API_BASE_URL}/GetUserById/${user.id}`,
       )
       .then((response) => {
         const userData = response.data;
@@ -835,7 +846,7 @@ const ManageUsers = () => {
         formData.append("Verified", editFormData.verified.toString());
         formData.append(
           "NationalIdNumber",
-          editFormData.nationalIdNumber || ""
+          editFormData.nationalIdNumber || "",
         );
 
         const files = [];
@@ -874,7 +885,7 @@ const ManageUsers = () => {
               Authorization: `Bearer ${token}`,
               "Content-Type": "multipart/form-data",
             },
-          }
+          },
         );
 
         if (status >= 200 && status < 300) {
@@ -898,7 +909,7 @@ const ManageUsers = () => {
 
   const handleEditFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+    fileType: "PassportPhoto" | "IdFront" | "IdBack",
   ) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -915,7 +926,7 @@ const ManageUsers = () => {
   };
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+    fileType: "PassportPhoto" | "IdFront" | "IdBack",
   ) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -933,7 +944,7 @@ const ManageUsers = () => {
 
   const handleDrop = (
     e: React.DragEvent<HTMLDivElement>,
-    fileType: "PassportPhoto" | "IdFront" | "IdBack"
+    fileType: "PassportPhoto" | "IdFront" | "IdBack",
   ) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -957,7 +968,7 @@ const ManageUsers = () => {
 
   const isBackSideRequired = () => {
     const selectedIdType = idTypes.find(
-      (type) => type.value === formData.IdType
+      (type) => type.value === formData.IdType,
     );
     return selectedIdType ? selectedIdType.requiresBack : false;
   };
@@ -1036,23 +1047,28 @@ const ManageUsers = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="page-hero">
+    <div className="dark text-white min-h-full space-y-6">
+      <section className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-[28px] p-6 md:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <span className="inline-flex w-fit items-center rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
               User Administration
             </span>
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Manage Users</h1>
-              <p className="mt-2 text-muted-foreground">View, filter, and maintain system users.</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-white">
+                Manage Users
+              </h1>
+              <p className="mt-2 text-blue-200">
+                View, filter, and maintain system users.
+              </p>
             </div>
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
             <div className="relative flex-1 sm:min-w-[320px]">
-              <Search className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-4 h-4 w-4 text-blue-200" />
               <Input
+                variant="dark"
                 placeholder="Search users by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -1064,9 +1080,9 @@ const ManageUsers = () => {
         </div>
       </section>
 
-      <Card className="data-surface border-none shadow-none">
+      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl">
         <Tabs defaultValue="all" className="p-4 md:p-6">
-          <TabsList className="mb-6 h-auto flex-wrap justify-start gap-2 rounded-2xl bg-slate-50 p-2">
+          <TabsList className="mb-6 h-auto flex-wrap justify-start gap-2 rounded-2xl bg-white/10 p-2">
             <TabsTrigger value="all">
               All Users ({getFilteredUsers().length})
             </TabsTrigger>
@@ -1134,20 +1150,24 @@ const ManageUsers = () => {
         open={!!selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
       >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="dark max-w-2xl bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 border border-white/20 text-white rounded-[28px] p-0 backdrop-blur-xl shadow-2xl">
+          <DialogHeader className="p-6 border-b border-white/20">
+            <DialogTitle className="text-white text-xl">
+              User Details
+            </DialogTitle>
+            <DialogDescription className="text-blue-200">
               Detailed information about the selected user.
             </DialogDescription>
           </DialogHeader>
           {selectedUser && (
-            <UserDetails
-              user={selectedUser}
-              properties={properties}
-              users={users}
-              onClose={() => setSelectedUser(null)}
-            />
+            <div className="p-6">
+              <UserDetails
+                user={selectedUser}
+                properties={properties}
+                users={users}
+                onClose={() => setSelectedUser(null)}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -1159,22 +1179,23 @@ const ManageUsers = () => {
         title="Add new user"
         size="xl"
         footer={
-          <div className="flex justify-end space-x-6">
-            <button
+          <div className="flex justify-end space-x-4">
+            <GradientButton
               type="button"
-              className="px-6 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition"
+              variant="outline"
+              size="sm"
               onClick={closeModal}
             >
               Cancel
-            </button>
-            <button
+            </GradientButton>
+            <GradientButton
               onClick={handleSubmit}
               type="submit"
               form="userForm"
-              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
+              size="sm"
             >
               Add user
-            </button>
+            </GradientButton>
           </div>
         }
       >
@@ -1184,7 +1205,9 @@ const ManageUsers = () => {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Full Name</label>
+              <label className="text-sm font-medium text-blue-100">
+                Full Name
+              </label>
               <input
                 type="text"
                 name="FullName"
@@ -1197,7 +1220,9 @@ const ManageUsers = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Phone Number</label>
+              <label className="text-sm font-medium text-blue-100">
+                Phone Number
+              </label>
               <input
                 type="tel"
                 name="PhoneNumber"
@@ -1210,7 +1235,7 @@ const ManageUsers = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
+              <label className="text-sm font-medium text-blue-100">Email</label>
               <input
                 type="email"
                 name="Email"
@@ -1224,7 +1249,7 @@ const ManageUsers = () => {
             <div className="space-y-2">
               <label
                 htmlFor="systemRoleId"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-blue-100 mb-1"
               >
                 System Role
               </label>
@@ -1233,10 +1258,10 @@ const ManageUsers = () => {
                 name="systemRoleId"
                 value={formData.systemRoleId}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
+                className={`w-full h-12 px-3 py-2 border rounded-xl bg-white/10 text-white focus:outline-none focus:ring-1 ${
                   errors.systemRoleId
                     ? "border-red-500 focus:ring-red-300 "
-                    : "border-gray-300 focus:ring-blue-300"
+                    : "border-white/20 focus:ring-blue-400"
                 }`}
               >
                 <option value="">Select a role</option>
@@ -1247,14 +1272,16 @@ const ManageUsers = () => {
                 ))}
               </select>
               {errors.systemRoleId && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-red-400">
                   {errors.systemRoleId}
                 </p>
               )}
             </div>
 
             <div className="md:col-span-2 space-y-4">
-              <label className="text-sm font-medium">Identification Type</label>
+              <label className="text-sm font-medium text-blue-100">
+                Identification Type
+              </label>
               <div className="flex flex-wrap gap-4">
                 {idTypes.map((type) => (
                   <label
@@ -1269,14 +1296,14 @@ const ManageUsers = () => {
                       onChange={handleRadioChange}
                       className="radio-input"
                     />
-                    <span>{type.label}</span>
+                    <span className="text-white">{type.label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">
+              <label className="text-sm font-medium text-blue-100">
                 {getIdTypeLabel(formData.IdType)} Number
               </label>
               <input
@@ -1286,7 +1313,7 @@ const ManageUsers = () => {
                 onChange={handleInputChange}
                 className="input-field w-full"
                 placeholder={`Enter ${getIdTypeLabel(
-                  formData.IdType
+                  formData.IdType,
                 ).toLowerCase()} number`}
                 required
               />
@@ -1301,7 +1328,7 @@ const ManageUsers = () => {
                 Passport Photo
               </label>
               <div
-                className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                className="border-2 border-dashed border-white/20 bg-white/5 rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-blue-400 text-white"
                 onDragOver={(e) => e.preventDefault()}
                 onDragLeave={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, "PassportPhoto")}
@@ -1323,9 +1350,9 @@ const ManageUsers = () => {
                   </div>
                 ) : (
                   <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                    <Upload className="mx-auto h-8 w-8 text-blue-200" />
                     <div className="mt-2 text-xs">
-                      <label className="cursor-pointer text-primary hover:text-primary/80">
+                      <label className="cursor-pointer text-blue-300 hover:text-blue-200">
                         Upload photo
                         <input
                           type="file"
@@ -1354,7 +1381,7 @@ const ManageUsers = () => {
                   : `${getIdTypeLabel(formData.IdType)} Front`}
               </label>
               <div
-                className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                className="border-2 border-dashed border-white/20 bg-white/5 rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-blue-400 text-white"
                 onDragOver={(e) => e.preventDefault()}
                 onDragLeave={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, "IdFront")}
@@ -1376,9 +1403,9 @@ const ManageUsers = () => {
                   </div>
                 ) : (
                   <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                    <Upload className="mx-auto h-8 w-8 text-blue-200" />
                     <div className="mt-2 text-xs">
-                      <label className="cursor-pointer text-primary hover:text-primary/80">
+                      <label className="cursor-pointer text-blue-300 hover:text-blue-200">
                         Upload{" "}
                         {formData.IdType === "passport" ? "page" : "front"}
                         <input
@@ -1403,7 +1430,7 @@ const ManageUsers = () => {
                   {getIdTypeLabel(formData.IdType)} Back
                 </label>
                 <div
-                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  className="border-2 border-dashed border-white/20 bg-white/5 rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-blue-400 text-white"
                   onDragOver={(e) => e.preventDefault()}
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "IdBack")}
@@ -1425,9 +1452,9 @@ const ManageUsers = () => {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <Upload className="mx-auto h-8 w-8 text-blue-200" />
                       <div className="mt-2 text-xs">
-                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                        <label className="cursor-pointer text-blue-300 hover:text-blue-200">
                           Upload back
                           <input
                             type="file"
@@ -1454,21 +1481,18 @@ const ManageUsers = () => {
         title="Edit user"
         size="xl"
         footer={
-          <div className="flex justify-end space-x-6">
-            <button
+          <div className="flex justify-end space-x-4">
+            <GradientButton
               type="button"
-              className="px-6 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition"
+              variant="outline"
+              size="sm"
               onClick={closeEditModal}
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              form="editUserForm"
-              className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition"
-            >
+            </GradientButton>
+            <GradientButton type="submit" form="editUserForm" size="sm">
               Update user
-            </button>
+            </GradientButton>
           </div>
         }
       >
@@ -1480,10 +1504,11 @@ const ManageUsers = () => {
           <div className="grid grid-cols-1  gap-2">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="font-medium">Basic Information</h3>
+              <h3 className="font-medium text-white">Basic Information</h3>
               <div>
                 <Label htmlFor="edit-fullName">Full Name</Label>
                 <Input
+                  variant="dark"
                   id="edit-fullName"
                   name="fullName"
                   value={editFormData.fullName}
@@ -1494,6 +1519,7 @@ const ManageUsers = () => {
               <div>
                 <Label htmlFor="edit-email">Email</Label>
                 <Input
+                  variant="dark"
                   id="edit-email"
                   type="email"
                   name="email"
@@ -1505,6 +1531,7 @@ const ManageUsers = () => {
               <div>
                 <Label htmlFor="edit-phoneNumber">Phone Number</Label>
                 <Input
+                  variant="dark"
                   id="edit-phoneNumber"
                   name="phoneNumber"
                   value={editFormData.phoneNumber}
@@ -1515,7 +1542,7 @@ const ManageUsers = () => {
 
             {/* Role and Status */}
             <div className="space-y-4">
-              <h3 className="font-medium">Role & Status</h3>
+              <h3 className="font-medium text-white">Role & Status</h3>
               <div>
                 <Label htmlFor="edit-systemRoleId">System Role</Label>
                 <Select
@@ -1567,7 +1594,7 @@ const ManageUsers = () => {
               </div>
 
               <div className="md:col-span-2 space-y-4">
-                <label className="text-sm font-medium">
+                <label className="text-sm font-medium text-blue-100">
                   Identification Type
                 </label>
                 <div className="flex flex-wrap gap-4">
@@ -1591,10 +1618,11 @@ const ManageUsers = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <label className="text-sm font-medium text-blue-100">
                   {getIdTypeLabel(formData.IdType)} Number
                 </label>
                 <Input
+                  variant="dark"
                   id="edit-nationalIdNumber"
                   name="nationalIdNumber"
                   value={editFormData.nationalIdNumber}
@@ -1604,7 +1632,7 @@ const ManageUsers = () => {
             </div>
 
             {/* Document Uploads */}
-            <h3 className="font-medium">Documents</h3>
+            <h3 className="font-medium text-white">Documents</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium flex items-center">
@@ -1612,7 +1640,7 @@ const ManageUsers = () => {
                   Passport Photo
                 </label>
                 <div
-                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  className="border-2 border-dashed border-white/20 bg-white/5 rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-blue-400 text-white"
                   onDragOver={(e) => e.preventDefault()}
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "PassportPhoto")}
@@ -1634,9 +1662,9 @@ const ManageUsers = () => {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <Upload className="mx-auto h-8 w-8 text-blue-200" />
                       <div className="mt-2 text-xs">
-                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                        <label className="cursor-pointer text-blue-300 hover:text-blue-200">
                           Upload photo
                           <input
                             type="file"
@@ -1665,7 +1693,7 @@ const ManageUsers = () => {
                     : `${getIdTypeLabel(formData.IdType)} Front`}
                 </label>
                 <div
-                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  className="border-2 border-dashed border-white/20 bg-white/5 rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-blue-400 text-white"
                   onDragOver={(e) => e.preventDefault()}
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "IdFront")}
@@ -1687,9 +1715,9 @@ const ManageUsers = () => {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <Upload className="mx-auto h-8 w-8 text-blue-200" />
                       <div className="mt-2 text-xs">
-                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                        <label className="cursor-pointer text-blue-300 hover:text-blue-200">
                           Upload{" "}
                           {formData.IdType === "passport" ? "page" : "front"}
                           <input
@@ -1711,7 +1739,7 @@ const ManageUsers = () => {
                   {getIdTypeLabel(formData.IdType)} Back
                 </label>
                 <div
-                  className="border-2 border-dashed rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-primary"
+                  className="border-2 border-dashed border-white/20 bg-white/5 rounded-xl p-4 transition-colors h-40 flex items-center justify-center hover:border-blue-400 text-white"
                   onDragOver={(e) => e.preventDefault()}
                   onDragLeave={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, "IdBack")}
@@ -1733,9 +1761,9 @@ const ManageUsers = () => {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <Upload className="mx-auto h-8 w-8 text-blue-200" />
                       <div className="mt-2 text-xs">
-                        <label className="cursor-pointer text-primary hover:text-primary/80">
+                        <label className="cursor-pointer text-blue-300 hover:text-blue-200">
                           Upload back
                           <input
                             type="file"
@@ -1788,7 +1816,7 @@ const UserTable = ({
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       if (status >= 200 && status < 300) {
         toast({
@@ -1822,10 +1850,7 @@ const UserTable = ({
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={5}
-                className="text-center py-8 text-muted-foreground"
-              >
+              <TableCell colSpan={5} className="text-center py-8 text-blue-200">
                 No users found
               </TableCell>
             </TableRow>
@@ -1834,19 +1859,19 @@ const UserTable = ({
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   <div className="space-y-1">
-                    <p className="font-semibold text-slate-900">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">ID: {user.id}</p>
+                    <p className="font-semibold text-white">{user.name}</p>
+                    <p className="text-xs text-blue-200">ID: {user.id}</p>
                   </div>
                 </TableCell>
-                <TableCell className="text-slate-600">{user.email}</TableCell>
+                <TableCell className="text-blue-100">{user.email}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
                       user.role === "Administrator"
                         ? "destructive"
                         : user.role === "Landlord"
-                        ? "default"
-                        : "secondary"
+                          ? "default"
+                          : "secondary"
                     }
                   >
                     {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
@@ -1854,15 +1879,15 @@ const UserTable = ({
                 </TableCell>
                 <TableCell>
                   {user.status === "active" ? (
-                    <span className="flex items-center gap-1 text-green-600">
+                    <span className="flex items-center gap-1 text-green-400">
                       <CheckCircle className="h-4 w-4" /> Active
                     </span>
                   ) : user.status === "inactive" ? (
-                    <span className="flex items-center gap-1 text-yellow-600">
+                    <span className="flex items-center gap-1 text-yellow-400">
                       <XCircle className="h-4 w-4" /> Inactive
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-gray-600">
+                    <span className="flex items-center gap-1 text-blue-100">
                       <Clock className="h-4 w-4" /> Pending Verification
                     </span>
                   )}
@@ -1872,6 +1897,7 @@ const UserTable = ({
                     <Button
                       variant="outline"
                       size="icon"
+                      className="bg-transparent border-blue-400/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
                       onClick={() => onViewDetails(user)}
                     >
                       <Eye className="h-4 w-4" />
@@ -1879,6 +1905,7 @@ const UserTable = ({
                     <Button
                       variant="outline"
                       size="icon"
+                      className="bg-transparent border-green-400/30 text-green-400 hover:bg-green-500/10 hover:text-green-300"
                       onClick={() => onEditUser(user)}
                     >
                       <Edit className="h-4 w-4" />
@@ -1886,6 +1913,7 @@ const UserTable = ({
                     <Button
                       variant="outline"
                       size="icon"
+                      className="bg-transparent border-red-400/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                       onClick={() => {
                         setDeletedUser(user);
                         setIsDeleteModalOpen(true);

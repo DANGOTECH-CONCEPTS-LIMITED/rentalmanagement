@@ -27,7 +27,54 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronsLeft, ChevronsRight, Download, Eye, FileText } from "lucide-react";
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  Download,
+  Eye,
+  FileText,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+const httpMethodClass = (method?: string | null) => {
+  if (!method) return "bg-white/10 text-white border-white/20";
+  switch (method.toUpperCase()) {
+    case "GET":
+      return "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+    case "POST":
+      return "bg-blue-500/20 text-blue-300 border-blue-500/30";
+    case "PUT":
+      return "bg-amber-500/20 text-amber-300 border-amber-500/30";
+    case "PATCH":
+      return "bg-orange-500/20 text-orange-300 border-orange-500/30";
+    case "DELETE":
+      return "bg-red-500/20 text-red-300 border-red-500/30";
+    default:
+      return "bg-white/10 text-white border-white/20";
+  }
+};
+
+const httpStatusClass = (status?: string | number | null) => {
+  if (status === undefined || status === null || status === "")
+    return "bg-white/10 text-white border-white/20";
+  const s = Number(status);
+  if (Number.isNaN(s)) {
+    const str = String(status).toLowerCase();
+    if (str.includes("success") || str.includes("ok"))
+      return "bg-green-500/20 text-green-300 border-green-500/30";
+    if (str.includes("fail") || str.includes("error"))
+      return "bg-red-500/20 text-red-300 border-red-500/30";
+    return "bg-white/10 text-white border-white/20";
+  }
+  if (s >= 200 && s < 300)
+    return "bg-green-500/20 text-green-300 border-green-500/30";
+  if (s >= 300 && s < 400)
+    return "bg-amber-500/20 text-amber-300 border-amber-500/30";
+  if (s >= 400 && s < 500)
+    return "bg-orange-500/20 text-orange-300 border-orange-500/30";
+  if (s >= 500) return "bg-red-500/20 text-red-300 border-red-500/30";
+  return "bg-white/10 text-white border-white/20";
+};
 
 interface HttpLogEntry {
   id: number;
@@ -145,13 +192,13 @@ const HttpLogs = () => {
             Authorization: `Bearer ${token}`,
             accept: "*/*",
           },
-        }
+        },
       );
 
       const sortedLogs = [...(response.data ?? [])].sort(
         (left, right) =>
           new Date(right.createdAt ?? 0).getTime() -
-          new Date(left.createdAt ?? 0).getTime()
+          new Date(left.createdAt ?? 0).getTime(),
       );
 
       setLogs(sortedLogs);
@@ -185,7 +232,7 @@ const HttpLogs = () => {
             Authorization: `Bearer ${token}`,
             accept: "*/*",
           },
-        }
+        },
       );
 
       setSerilogFiles(response.data ?? []);
@@ -219,7 +266,7 @@ const HttpLogs = () => {
             Authorization: `Bearer ${token}`,
             accept: "*/*",
           },
-        }
+        },
       );
 
       setSelectedSerilogFile(response.data);
@@ -241,13 +288,17 @@ const HttpLogs = () => {
   }, []);
 
   const availableMethods = useMemo(
-    () => Array.from(new Set(logs.map((log) => log.requestType).filter(Boolean))).sort(),
-    [logs]
+    () =>
+      Array.from(
+        new Set(logs.map((log) => log.requestType).filter(Boolean)),
+      ).sort(),
+    [logs],
   );
 
   const availableStatuses = useMemo(
-    () => Array.from(new Set(logs.map((log) => log.status).filter(Boolean))).sort(),
-    [logs]
+    () =>
+      Array.from(new Set(logs.map((log) => log.status).filter(Boolean))).sort(),
+    [logs],
   );
 
   const filteredLogs = useMemo(() => {
@@ -320,7 +371,7 @@ const HttpLogs = () => {
           log.response || "",
         ]
           .map(escapeCsvCell)
-          .join(",")
+          .join(","),
       ),
     ];
 
@@ -338,45 +389,64 @@ const HttpLogs = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="dark text-white min-h-full space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">HTTP Logs</h1>
-        <p className="text-muted-foreground">
-          Retrieve and inspect outbound HTTP requests and responses by date range.
+        <h1 className="text-2xl font-semibold tracking-tight text-white">
+          HTTP Logs
+        </h1>
+        <p className="text-blue-200">
+          Retrieve and inspect outbound HTTP requests and responses by date
+          range.
         </p>
       </div>
 
       <Tabs defaultValue="database" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="database">HTTP Request / Response</TabsTrigger>
-          <TabsTrigger value="files">Raw Serilog Files</TabsTrigger>
+        <TabsList className="bg-white/10 border border-white/20 p-1 rounded-xl">
+          <TabsTrigger
+            value="database"
+            className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg text-blue-100"
+          >
+            HTTP Request / Response
+          </TabsTrigger>
+          <TabsTrigger
+            value="files"
+            className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg text-blue-100"
+          >
+            Raw Serilog Files
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="database" className="space-y-4">
-          <Card className="p-4 space-y-4">
-            <div className="grid gap-4 md:grid-cols-[repeat(2,minmax(0,180px))_repeat(2,minmax(0,180px))_minmax(0,1fr)_auto]">
+          <Card className="p-4 space-y-4 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-2">
-                <Label htmlFor="start-date">Start date</Label>
+                <Label htmlFor="start-date" className="text-blue-100">
+                  Start date
+                </Label>
                 <Input
                   id="start-date"
                   type="date"
+                  variant="dark"
                   value={startDate}
                   onChange={(event) => setStartDate(event.target.value)}
                   max={endDate || undefined}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="end-date">End date</Label>
+                <Label htmlFor="end-date" className="text-blue-100">
+                  End date
+                </Label>
                 <Input
                   id="end-date"
                   type="date"
+                  variant="dark"
                   value={endDate}
                   onChange={(event) => setEndDate(event.target.value)}
                   min={startDate || undefined}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Method</Label>
+                <Label className="text-blue-100">Method</Label>
                 <Select value={methodFilter} onValueChange={setMethodFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="All methods" />
@@ -392,7 +462,7 @@ const HttpLogs = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label className="text-blue-100">Status</Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
@@ -407,23 +477,32 @@ const HttpLogs = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="log-search">Search logs</Label>
+            </div>
+            <div className="flex flex-col gap-4 md:flex-row md:items-end">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="log-search" className="text-blue-100">
+                  Search logs
+                </Label>
                 <Input
                   id="log-search"
+                  variant="dark"
                   placeholder="Search by URL, method, status, or content"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
               <div className="flex items-end gap-2">
-                <Button onClick={fetchLogs} className="w-full md:w-auto">
+                <Button
+                  onClick={fetchLogs}
+                  className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+                >
                   Retrieve Logs
                 </Button>
                 <Button
                   variant="outline"
                   onClick={exportLogsCsv}
                   disabled={filteredLogs.length === 0}
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Export CSV
@@ -432,20 +511,22 @@ const HttpLogs = () => {
             </div>
           </Card>
 
-          <Card className="p-4">
+          <Card className="p-4 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
             {isLoading ? (
-              <div className="py-8 text-center text-muted-foreground">Loading logs...</div>
+              <div className="py-8 text-center text-blue-200">
+                Loading logs...
+              </div>
             ) : filteredLogs.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
+              <div className="py-8 text-center text-blue-200">
                 No request/response logs found for the selected criteria.
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-blue-200">
                     Showing {filteredLogs.length} matching log entries.
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-blue-200">
                     Page {currentPage} of {totalPages}
                   </p>
                 </div>
@@ -466,11 +547,25 @@ const HttpLogs = () => {
                       {paginatedLogs.map((log) => (
                         <TableRow key={log.id}>
                           <TableCell>{formatDate(log.createdAt)}</TableCell>
-                          <TableCell>{log.requestType || "-"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={httpMethodClass(log.requestType)}
+                            >
+                              {log.requestType || "-"}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="max-w-[360px] truncate">
                             {log.requestUrl || "-"}
                           </TableCell>
-                          <TableCell>{log.status || "-"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={httpStatusClass(log.status)}
+                            >
+                              {log.status || "-"}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="max-w-[240px] truncate">
                             {log.errorMessage || "-"}
                           </TableCell>
@@ -479,6 +574,7 @@ const HttpLogs = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => setSelectedLog(log)}
+                              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               View
@@ -496,21 +592,27 @@ const HttpLogs = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                        onClick={() =>
+                          setCurrentPage((page) => Math.max(1, page - 1))
+                        }
                         disabled={currentPage === 1}
+                        className="text-white hover:bg-white/10"
                       >
                         <ChevronsLeft className="h-4 w-4" />
                       </Button>
-                      <span className="text-sm">
+                      <span className="text-sm text-blue-200">
                         Page {currentPage} of {totalPages}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() =>
-                          setCurrentPage((page) => Math.min(totalPages, page + 1))
+                          setCurrentPage((page) =>
+                            Math.min(totalPages, page + 1),
+                          )
                         }
                         disabled={currentPage === totalPages}
+                        className="text-white hover:bg-white/10"
                       >
                         <ChevronsRight className="h-4 w-4" />
                       </Button>
@@ -523,23 +625,29 @@ const HttpLogs = () => {
         </TabsContent>
 
         <TabsContent value="files" className="space-y-4">
-          <Card className="p-4 space-y-4">
+          <Card className="p-4 space-y-4 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold">Serilog Files</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-blue-200">
                   Browse raw API file logs written to the backend logs folder.
                 </p>
               </div>
-              <Button variant="outline" onClick={fetchSerilogFiles}>
+              <Button
+                variant="outline"
+                onClick={fetchSerilogFiles}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
                 Retrieve Files
               </Button>
             </div>
 
             {isLoadingSerilogFiles ? (
-              <div className="py-8 text-center text-muted-foreground">Loading file logs...</div>
+              <div className="py-8 text-center text-blue-200">
+                Loading file logs...
+              </div>
             ) : serilogFiles.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
+              <div className="py-8 text-center text-blue-200">
                 No raw Serilog log files were found.
               </div>
             ) : (
@@ -563,7 +671,10 @@ const HttpLogs = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => fetchSerilogFileContent(file.fileName)}
+                            onClick={() =>
+                              fetchSerilogFileContent(file.fileName)
+                            }
+                            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                           >
                             <FileText className="mr-2 h-4 w-4" />
                             Open
@@ -579,36 +690,66 @@ const HttpLogs = () => {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+      <Dialog
+        open={!!selectedLog}
+        onOpenChange={(open) => !open && setSelectedLog(null)}
+      >
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto bg-slate-900/95 border border-white/20 text-white rounded-[28px]">
           <DialogHeader>
-            <DialogTitle>HTTP Request / Response Log</DialogTitle>
+            <DialogTitle className="text-white">
+              HTTP Request / Response Log
+            </DialogTitle>
           </DialogHeader>
           {selectedLog && (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <Card className="p-4">
+                <Card className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Date:</span> {formatDate(selectedLog.createdAt)}</p>
-                    <p><span className="font-medium">Method:</span> {selectedLog.requestType || "-"}</p>
-                    <p><span className="font-medium">Status:</span> {selectedLog.status || "-"}</p>
-                    <p><span className="font-medium">URL:</span> {selectedLog.requestUrl || "-"}</p>
-                    <p><span className="font-medium">Error:</span> {selectedLog.errorMessage || "-"}</p>
+                    <p>
+                      <span className="font-medium">Date:</span>{" "}
+                      {formatDate(selectedLog.createdAt)}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="font-medium">Method:</span>{" "}
+                      <Badge
+                        variant="outline"
+                        className={httpMethodClass(selectedLog.requestType)}
+                      >
+                        {selectedLog.requestType || "-"}
+                      </Badge>
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="font-medium">Status:</span>{" "}
+                      <Badge
+                        variant="outline"
+                        className={httpStatusClass(selectedLog.status)}
+                      >
+                        {selectedLog.status || "-"}
+                      </Badge>
+                    </p>
+                    <p>
+                      <span className="font-medium">URL:</span>{" "}
+                      {selectedLog.requestUrl || "-"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Error:</span>{" "}
+                      {selectedLog.errorMessage || "-"}
+                    </p>
                   </div>
                 </Card>
               </div>
 
               <div className="grid gap-4 lg:grid-cols-2">
-                <Card className="p-4 space-y-2">
+                <Card className="p-4 space-y-2 bg-white/5 border border-white/10 rounded-2xl">
                   <h3 className="font-semibold">Request</h3>
-                  <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
+                  <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950/80 border border-white/10 p-4 text-xs text-blue-100">
                     {selectedLog.request || "No request payload recorded."}
                   </pre>
                 </Card>
 
-                <Card className="p-4 space-y-2">
+                <Card className="p-4 space-y-2 bg-white/5 border border-white/10 rounded-2xl">
                   <h3 className="font-semibold">Response</h3>
-                  <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
+                  <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950/80 border border-white/10 p-4 text-xs text-blue-100">
                     {selectedLog.response || "No response payload recorded."}
                   </pre>
                 </Card>
@@ -626,29 +767,34 @@ const HttpLogs = () => {
           }
         }}
       >
-        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto bg-slate-900/95 border border-white/20 text-white rounded-[28px]">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-white">
               {selectedSerilogFile?.fileName || "Raw Serilog Log File"}
             </DialogTitle>
           </DialogHeader>
           {isLoadingSerilogContent ? (
-            <div className="py-8 text-center text-muted-foreground">Loading file content...</div>
+            <div className="py-8 text-center text-blue-200">
+              Loading file content...
+            </div>
           ) : selectedSerilogFile ? (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
-                <Card className="p-4 text-sm">
-                  <span className="font-medium">File:</span> {selectedSerilogFile.fileName}
+                <Card className="p-4 text-sm bg-white/5 border border-white/10 rounded-2xl">
+                  <span className="font-medium">File:</span>{" "}
+                  {selectedSerilogFile.fileName}
                 </Card>
-                <Card className="p-4 text-sm">
-                  <span className="font-medium">Modified:</span> {formatDate(selectedSerilogFile.lastModified)}
+                <Card className="p-4 text-sm bg-white/5 border border-white/10 rounded-2xl">
+                  <span className="font-medium">Modified:</span>{" "}
+                  {formatDate(selectedSerilogFile.lastModified)}
                 </Card>
-                <Card className="p-4 text-sm">
-                  <span className="font-medium">Size:</span> {formatSize(selectedSerilogFile.sizeBytes)}
+                <Card className="p-4 text-sm bg-white/5 border border-white/10 rounded-2xl">
+                  <span className="font-medium">Size:</span>{" "}
+                  {formatSize(selectedSerilogFile.sizeBytes)}
                 </Card>
               </div>
-              <Card className="p-4">
-                <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
+              <Card className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950/80 border border-white/10 p-4 text-xs text-blue-100">
                   {selectedSerilogFile.content || "No file content available."}
                 </pre>
               </Card>

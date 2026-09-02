@@ -69,7 +69,7 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
@@ -79,7 +79,7 @@ const Modal: React.FC<ModalProps> = ({
 
       {/* Modal Container */}
       <div
-        className={`relative z-10 bg-white rounded-lg shadow-xl w-full mx-4 overflow-hidden ${sizeClasses[size]} ${className}`}
+        className={`dark relative z-10 bg-slate-900/95 border border-white/20 text-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden ${sizeClasses[size]} ${className}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -88,20 +88,17 @@ const Modal: React.FC<ModalProps> = ({
         {/* Modal Header */}
         {(title || showCloseButton) && (
           <div
-            className={`flex items-center justify-between p-4 border-b border-gray-200 ${headerClassName}`}
+            className={`flex items-center justify-between p-4 border-b border-white/20 ${headerClassName}`}
           >
             {title && (
-              <h3
-                id="modal-title"
-                className="text-lg font-medium text-gray-900"
-              >
+              <h3 id="modal-title" className="text-lg font-medium text-white">
                 {title}
               </h3>
             )}
             {showCloseButton && (
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="text-blue-200 hover:text-white focus:outline-none"
                 onClick={onClose}
                 aria-label="Close modal"
               >
@@ -129,7 +126,7 @@ const Modal: React.FC<ModalProps> = ({
 
         {/* Modal Footer */}
         {footer && (
-          <div className={`p-4 border-t border-gray-200 ${footerClassName}`}>
+          <div className={`p-4 border-t border-white/20 ${footerClassName}`}>
             {footer}
           </div>
         )}

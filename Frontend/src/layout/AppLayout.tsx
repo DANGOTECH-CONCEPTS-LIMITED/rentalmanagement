@@ -17,7 +17,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ role }) => {
   const effectiveRole = user?.systemRoleId || role;
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       <Sidebar role={effectiveRole} />
 
       <div

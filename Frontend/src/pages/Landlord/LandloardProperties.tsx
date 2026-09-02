@@ -105,7 +105,7 @@ const Properties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(
-    null
+    null,
   );
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -285,7 +285,7 @@ const Properties = () => {
 
   // Handle region change
   const handleRegionChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
+    e: React.ChangeEvent<HTMLSelectElement>,
   ): void => {
     setSelectedRegion(e.target.value as Region | "");
     setSelectedDistrict("");
@@ -307,7 +307,7 @@ const Properties = () => {
             accept: "*/*",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -320,7 +320,9 @@ const Properties = () => {
       setError(null); // Clear any previous errors
     } catch (err) {
       console.error("Error fetching properties:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch properties");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch properties",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -347,7 +349,8 @@ const Properties = () => {
       console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch landlords",
+        description:
+          error instanceof Error ? error.message : "Failed to fetch landlords",
         variant: "destructive",
       });
     } finally {
@@ -359,7 +362,7 @@ const Properties = () => {
     (property) =>
       property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+      property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleDeleteProperty = async (id: number) => {
@@ -385,7 +388,8 @@ const Properties = () => {
       console.error("Error deleting property:", err);
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to delete property",
+        description:
+          err instanceof Error ? err.message : "Failed to delete property",
         variant: "destructive",
       });
     }
@@ -433,7 +437,7 @@ const Properties = () => {
   };
 
   const handleAddInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -458,7 +462,7 @@ const Properties = () => {
 
   const filteredDistricts: string[] = selectedRegion
     ? districtsByRegion[selectedRegion].filter((district) =>
-        district.toLowerCase().startsWith(searchTerm.toLowerCase())
+        district.toLowerCase().startsWith(searchTerm.toLowerCase()),
       )
     : [];
 
@@ -602,13 +606,13 @@ const Properties = () => {
       formDataToSend.append("Address", editingProperty.address);
       formDataToSend.append(
         "NumberOfRooms",
-        editingProperty.numberOfRooms.toString()
+        editingProperty.numberOfRooms.toString(),
       );
       formDataToSend.append("Type", editingProperty.type);
       formDataToSend.append("Description", editingProperty.description);
       formDataToSend.append(
         "Occupied",
-        editingProperty.occupied ? "true" : "false"
+        editingProperty.occupied ? "true" : "false",
       );
 
       propertyPhotos.forEach((photo, index) => {
@@ -630,8 +634,8 @@ const Properties = () => {
       // Update the properties list with the edited property
       setProperties((prev) =>
         prev.map((prop) =>
-          prop.id === editingProperty.id ? editingProperty : prop
-        )
+          prop.id === editingProperty.id ? editingProperty : prop,
+        ),
       );
 
       setEditingProperty(null);
@@ -657,7 +661,7 @@ const Properties = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     // if (!editingProperty) return;
@@ -681,7 +685,7 @@ const Properties = () => {
 
       if (name === "OwnerId") {
         const selectedLandlord = landlords.find(
-          (landlord) => landlord.id.toString() === value
+          (landlord) => landlord.id.toString() === value,
         );
         if (selectedLandlord) {
           return {
@@ -706,13 +710,13 @@ const Properties = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="dark text-white min-h-full space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between p-4 sm:p-0">
         <div className="mb-4 sm:mb-0">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
             Landlord Properties
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
+          <p className="text-sm sm:text-base text-blue-200">
             View and manage all properties registered in the system
           </p>
         </div>
@@ -727,8 +731,9 @@ const Properties = () => {
       <Card>
         <CardContent className="pt-6">
           <div className="mb-6 flex items-center relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-blue-200" />
             <Input
+              variant="dark"
               placeholder="Search by property name, address, or landlord..."
               className="pl-10"
               value={searchTerm}
@@ -747,9 +752,9 @@ const Properties = () => {
             </div>
           ) : filteredProperties.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center">
-              <House className="h-12 w-12 text-muted-foreground mb-4" />
+              <House className="h-12 w-12 text-blue-200 mb-4" />
               <h3 className="text-lg font-medium">No properties found</h3>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-blue-200 mt-1">
                 {searchTerm
                   ? "Try adjusting your search query"
                   : "Start by adding a new property"}
@@ -791,6 +796,7 @@ const Properties = () => {
                           <Button
                             variant="outline"
                             size="icon"
+                            className="bg-transparent border-blue-400/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
                             onClick={() => setSelectedProperty(property)}
                           >
                             <Eye className="h-4 w-4" />
@@ -798,6 +804,7 @@ const Properties = () => {
                           <Button
                             variant="outline"
                             size="icon"
+                            className="bg-transparent border-green-400/30 text-green-400 hover:bg-green-500/10 hover:text-green-300"
                             onClick={() => handleEditProperty(property)}
                           >
                             <Edit className="h-4 w-4" />
@@ -805,7 +812,7 @@ const Properties = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="text-red-500"
+                            className="bg-transparent border-red-400/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                             onClick={() => handleDeleteProperty(property.id)}
                           >
                             <Trash className="h-4 w-4" />
@@ -823,11 +830,11 @@ const Properties = () => {
 
       {/* View Property Dialog */}
       {selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-24 z-50 p-4">
+          <div className="dark bg-slate-900/95 border border-white/20 text-white rounded-2xl max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl backdrop-blur-xl">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold">
+                <h2 className="text-lg sm:text-xl font-semibold text-white">
                   {selectedProperty.name}
                 </h2>
                 <Button
@@ -842,7 +849,7 @@ const Properties = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="mb-4">
-                    <h3 className="text-sm sm:text-base font-medium text-gray-500">
+                    <h3 className="text-sm sm:text-base font-medium text-blue-200">
                       Property Details
                     </h3>
                     <p className="mt-1">
@@ -872,7 +879,7 @@ const Properties = () => {
                   </div>
 
                   <div>
-                    <h3 className="text-sm sm:text-base font-medium text-gray-500">
+                    <h3 className="text-sm sm:text-base font-medium text-blue-200">
                       Landlord Information
                     </h3>
                     <p className="mt-1">
@@ -891,7 +898,7 @@ const Properties = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">
+                  <h3 className="text-sm sm:text-base font-medium text-blue-200 mb-2">
                     Property Image
                   </h3>
                   <img
@@ -918,7 +925,7 @@ const Properties = () => {
                     // setSelectedProperty(null);
                     sessionStorage.setItem(
                       "propertyId",
-                      selectedProperty.id.toString()
+                      selectedProperty.id.toString(),
                     );
                     navigate("/admin-dashboard/transactions");
                   }}
@@ -956,6 +963,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="Name">Property Name*</Label>
                   <Input
+                    variant="dark"
                     id="Name"
                     name="Name"
                     value={formData.Name}
@@ -993,7 +1001,7 @@ const Properties = () => {
                     id="region"
                     value={selectedRegion}
                     onChange={handleRegionChange}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
                   >
                     <option value="">-- Select Region --</option>
                     {Object.keys(districtsByRegion).map((region) => (
@@ -1012,7 +1020,7 @@ const Properties = () => {
                     </Label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+                        <Search className="h-5 w-5 text-blue-200" />
                       </div>
                       <input
                         type="text"
@@ -1021,12 +1029,12 @@ const Properties = () => {
                         value={searchTerm1}
                         onChange={handleSearchChange}
                         onClick={() => setIsDropdownOpen(true)}
-                        className="pl-10 w-full px-3 py-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+                        className="pl-10 w-full px-3 py-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
                       />
                     </div>
 
                     {isDropdownOpen && filteredDistricts.length > 0 && (
-                      <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <ul className="absolute z-10 w-full mt-1 bg-slate-900/95 border border-white/20 rounded-md shadow-lg max-h-60 overflow-y-auto text-white">
                         {filteredDistricts.map((district) => (
                           <li
                             key={district}
@@ -1042,7 +1050,7 @@ const Properties = () => {
                     {isDropdownOpen &&
                       searchTerm1 &&
                       filteredDistricts.length === 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-center text-gray-500">
+                        <div className="absolute z-10 w-full mt-1 bg-slate-900/95 border border-white/20 rounded-md shadow-lg p-4 text-center text-blue-200">
                           No districts found starting with "{searchTerm1}"
                         </div>
                       )}
@@ -1052,6 +1060,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="Address">Street Address*</Label>
                   <Input
+                    variant="dark"
                     id="Address"
                     name="Address"
                     value={formData.Address}
@@ -1063,6 +1072,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="Zipcode">ZIP Code*</Label>
                   <Input
+                    variant="dark"
                     id="Zipcode"
                     name="Zipcode"
                     value={formData.Zipcode}
@@ -1074,6 +1084,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="NumberOfRooms">Number of Rooms*</Label>
                   <Input
+                    variant="dark"
                     id="NumberOfRooms"
                     name="NumberOfRooms"
                     type="number"
@@ -1087,6 +1098,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="Price">Price*</Label>
                   <Input
+                    variant="dark"
                     id="Price"
                     name="Price"
                     type="text"
@@ -1149,7 +1161,7 @@ const Properties = () => {
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
-                            "/placeholder-property.jpg";
+                            "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTRhM2I4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+";
                         }}
                       />
                       <button
@@ -1166,14 +1178,14 @@ const Properties = () => {
                     <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
                       <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                          <p className="mb-2 text-sm text-gray-500">
+                          <ImageIcon className="w-10 h-10 mb-3 text-blue-200" />
+                          <p className="mb-2 text-sm text-blue-200">
                             <span className="font-semibold">
                               Click to upload
                             </span>{" "}
                             or drag and drop
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-blue-200">
                             PNG, JPG, WEBP (MAX. 3)
                           </p>
                         </div>
@@ -1242,15 +1254,18 @@ const Properties = () => {
           open={!!editingProperty}
           onOpenChange={() => setEditingProperty(null)}
         >
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Property</DialogTitle>
+          <DialogContent className="dark sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900/95 border border-white/20 text-white rounded-2xl backdrop-blur-xl shadow-2xl p-0">
+            <DialogHeader className="p-6 border-b border-white/20">
+              <DialogTitle className="text-white text-xl">
+                Edit Property
+              </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmitEdit} className="grid gap-4 py-4">
+            <form onSubmit={handleSubmitEdit} className="grid gap-4 p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Property Name*</Label>
                   <Input
+                    variant="dark"
                     id="name"
                     name="name"
                     value={editingProperty.name}
@@ -1282,6 +1297,7 @@ const Properties = () => {
               <div className="space-y-2">
                 <Label htmlFor="address">Address*</Label>
                 <Input
+                  variant="dark"
                   id="address"
                   name="address"
                   value={editingProperty.address}
@@ -1294,6 +1310,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="region">Region*</Label>
                   <Input
+                    variant="dark"
                     id="region"
                     name="region"
                     value={editingProperty.region}
@@ -1304,6 +1321,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="district">District*</Label>
                   <Input
+                    variant="dark"
                     id="district"
                     name="district"
                     value={editingProperty.district}
@@ -1314,6 +1332,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="zipcode">Zip Code*</Label>
                   <Input
+                    variant="dark"
                     id="zipcode"
                     name="zipcode"
                     value={editingProperty.zipcode}
@@ -1327,6 +1346,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="numberOfRooms">Number of Rooms*</Label>
                   <Input
+                    variant="dark"
                     id="numberOfRooms"
                     name="numberOfRooms"
                     type="number"
@@ -1391,6 +1411,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="price">Price*</Label>
                   <Input
+                    variant="dark"
                     id="price"
                     name="price"
                     type="number"
@@ -1449,7 +1470,7 @@ const Properties = () => {
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
-                            "/placeholder-property.jpg";
+                            "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTRhM2I4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+";
                         }}
                       />
                       <button
@@ -1466,14 +1487,14 @@ const Properties = () => {
                     <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
                       <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                          <p className="mb-2 text-sm text-gray-500">
+                          <ImageIcon className="w-10 h-10 mb-3 text-blue-200" />
+                          <p className="mb-2 text-sm text-blue-200">
                             <span className="font-semibold">
                               Click to upload
                             </span>{" "}
                             or drag and drop
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-blue-200">
                             PNG, JPG, WEBP (MAX. 3)
                           </p>
                         </div>
@@ -1488,7 +1509,7 @@ const Properties = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-blue-200 mt-2">
                   {propertyPhotos.length === 0
                     ? "Upload new photos only if you want to change the existing ones. Leave empty to keep current images."
                     : "New photos will replace existing ones."}

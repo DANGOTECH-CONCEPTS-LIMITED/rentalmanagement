@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileSpreadsheet, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button";
 
 interface DashboardExportToolbarProps {
   onExportPdf: () => Promise<void> | void;
@@ -13,11 +13,13 @@ const DashboardExportToolbar = ({
   onExportExcel,
   className,
 }: DashboardExportToolbarProps) => {
-  const [pendingAction, setPendingAction] = useState<"pdf" | "excel" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"pdf" | "excel" | null>(
+    null,
+  );
 
   const runAction = async (
     action: "pdf" | "excel",
-    callback: () => Promise<void> | void
+    callback: () => Promise<void> | void,
   ) => {
     setPendingAction(action);
 
@@ -38,8 +40,8 @@ const DashboardExportToolbar = ({
         variant="outline"
         onClick={() => runAction("excel", onExportExcel)}
         disabled={pendingAction !== null}
+        leftIcon={<FileSpreadsheet className="h-4 w-4" />}
       >
-        <FileSpreadsheet className="mr-2 h-4 w-4" />
         {pendingAction === "excel" ? "Exporting Excel..." : "Export Excel"}
       </Button>
       <Button
@@ -47,8 +49,8 @@ const DashboardExportToolbar = ({
         variant="outline"
         onClick={() => runAction("pdf", onExportPdf)}
         disabled={pendingAction !== null}
+        leftIcon={<FileText className="h-4 w-4" />}
       >
-        <FileText className="mr-2 h-4 w-4" />
         {pendingAction === "pdf" ? "Exporting PDF..." : "Export PDF"}
       </Button>
     </div>

@@ -201,7 +201,7 @@ const RegisterProperty = () => {
   // Filter districts based on search term
   const filteredDistricts: string[] = selectedRegion
     ? districtsByRegion[selectedRegion].filter((district) =>
-        district.toLowerCase().startsWith(searchTerm.toLowerCase())
+        district.toLowerCase().startsWith(searchTerm.toLowerCase()),
       )
     : [];
 
@@ -224,7 +224,7 @@ const RegisterProperty = () => {
 
   // Handle region change
   const handleRegionChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
+    e: React.ChangeEvent<HTMLSelectElement>,
   ): void => {
     setSelectedRegion(e.target.value as Region | "");
     setSelectedDistrict("");
@@ -292,7 +292,7 @@ const RegisterProperty = () => {
 
       const data: Landlord[] = await response.json();
       const filteredLandlords = data.filter(
-        (landlord) => landlord.verified === true
+        (landlord) => landlord.verified === true,
       );
 
       setLandlords(filteredLandlords);
@@ -309,7 +309,7 @@ const RegisterProperty = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -707,7 +707,7 @@ const RegisterProperty = () => {
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
-                        "/placeholder-property.jpg";
+                        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTRhM2I4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+";
                     }}
                   />
                   <button

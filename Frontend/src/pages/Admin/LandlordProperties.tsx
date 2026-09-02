@@ -98,7 +98,7 @@ const LandlordProperties = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(
-    null
+    null,
   );
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -152,7 +152,9 @@ const LandlordProperties = () => {
       setError(null); // Clear any previous errors
     } catch (err) {
       console.error("Error fetching properties:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch properties");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch properties",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +181,8 @@ const LandlordProperties = () => {
       console.error("Error fetching landlords:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch landlords",
+        description:
+          error instanceof Error ? error.message : "Failed to fetch landlords",
         variant: "destructive",
       });
     } finally {
@@ -191,7 +194,7 @@ const LandlordProperties = () => {
     (property) =>
       property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+      property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleDeleteProperty = async (id: number) => {
@@ -217,7 +220,8 @@ const LandlordProperties = () => {
       console.error("Error deleting property:", err);
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to delete property",
+        description:
+          err instanceof Error ? err.message : "Failed to delete property",
         variant: "destructive",
       });
     }
@@ -284,13 +288,13 @@ const LandlordProperties = () => {
       formDataToSend.append("Address", editingProperty.address);
       formDataToSend.append(
         "NumberOfRooms",
-        editingProperty.numberOfRooms.toString()
+        editingProperty.numberOfRooms.toString(),
       );
       formDataToSend.append("Type", editingProperty.type);
       formDataToSend.append("Description", editingProperty.description);
       formDataToSend.append(
         "Occupied",
-        editingProperty.occupied ? "true" : "false"
+        editingProperty.occupied ? "true" : "false",
       );
 
       propertyPhotos.forEach((photo, index) => {
@@ -312,8 +316,8 @@ const LandlordProperties = () => {
       // Update the properties list with the edited property
       setProperties((prev) =>
         prev.map((prop) =>
-          prop.id === editingProperty.id ? editingProperty : prop
-        )
+          prop.id === editingProperty.id ? editingProperty : prop,
+        ),
       );
 
       setEditingProperty(null);
@@ -339,7 +343,7 @@ const LandlordProperties = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     if (!editingProperty) return;
@@ -363,7 +367,7 @@ const LandlordProperties = () => {
 
       if (name === "OwnerId") {
         const selectedLandlord = landlords.find(
-          (landlord) => landlord.id.toString() === value
+          (landlord) => landlord.id.toString() === value,
         );
         if (selectedLandlord) {
           return {
@@ -388,36 +392,37 @@ const LandlordProperties = () => {
   };
   console.log(
     "url",
-    `${selectedProperty?.imageUrl.split(/[/\\]/).pop() || ""}`
+    `${selectedProperty?.imageUrl.split(/[/\\]/).pop() || ""}`,
   );
   return (
-    <div className="space-y-6">
-      <section className="page-hero">
+    <div className="dark text-white min-h-full space-y-6">
+      <section className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-[28px] p-6 md:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <span className="inline-flex w-fit items-center rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
               Property Registry
             </span>
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-            Landlord Properties
-          </h1>
-              <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-            View and manage all properties registered in the system
-          </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-white">
+                Landlord Properties
+              </h1>
+              <p className="mt-2 text-sm sm:text-base text-blue-200">
+                View and manage all properties registered in the system
+              </p>
             </div>
-        </div>
-        <Button onClick={handleNavigate} className="w-full sm:w-auto">
-          Add New Property
-        </Button>
+          </div>
+          <Button onClick={handleNavigate} className="w-full sm:w-auto">
+            Add New Property
+          </Button>
         </div>
       </section>
 
-      <Card className="data-surface border-none shadow-none">
+      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl">
         <CardContent className="pt-6">
           <div className="mb-6 flex items-center relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-blue-200" />
             <Input
+              variant="dark"
               placeholder="Search by property name, address, or landlord..."
               className="pl-10"
               value={searchTerm}
@@ -436,9 +441,9 @@ const LandlordProperties = () => {
             </div>
           ) : filteredProperties.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center">
-              <House className="h-12 w-12 text-muted-foreground mb-4" />
+              <House className="h-12 w-12 text-blue-200 mb-4" />
               <h3 className="text-lg font-medium">No properties found</h3>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-blue-200 mt-1">
                 {searchTerm
                   ? "Try adjusting your search query"
                   : "Start by adding a new property"}
@@ -480,6 +485,7 @@ const LandlordProperties = () => {
                           <Button
                             variant="outline"
                             size="icon"
+                            className="bg-transparent border-blue-400/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
                             onClick={() => setSelectedProperty(property)}
                           >
                             <Eye className="h-4 w-4" />
@@ -487,6 +493,7 @@ const LandlordProperties = () => {
                           <Button
                             variant="outline"
                             size="icon"
+                            className="bg-transparent border-green-400/30 text-green-400 hover:bg-green-500/10 hover:text-green-300"
                             onClick={() => handleEditProperty(property)}
                           >
                             <Edit className="h-4 w-4" />
@@ -494,7 +501,7 @@ const LandlordProperties = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="text-red-500"
+                            className="bg-transparent border-red-400/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                             onClick={() => handleDeleteProperty(property.id)}
                           >
                             <Trash className="h-4 w-4" />
@@ -512,11 +519,11 @@ const LandlordProperties = () => {
 
       {/* View Property Dialog */}
       {selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[28px] max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)]">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-24 z-50 p-4">
+          <div className="dark bg-slate-900/95 border border-white/20 text-white rounded-[28px] max-w-full sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-[0_30px_90px_-36px_rgba(15,23,42,0.42)] backdrop-blur-xl">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold">
+                <h2 className="text-lg sm:text-xl font-semibold text-white">
                   {selectedProperty.name}
                 </h2>
                 <Button
@@ -531,7 +538,7 @@ const LandlordProperties = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="mb-4">
-                    <h3 className="text-sm sm:text-base font-medium text-gray-500">
+                    <h3 className="text-sm sm:text-base font-medium text-blue-200">
                       Property Details
                     </h3>
                     <p className="mt-1">
@@ -561,7 +568,7 @@ const LandlordProperties = () => {
                   </div>
 
                   <div>
-                    <h3 className="text-sm sm:text-base font-medium text-gray-500">
+                    <h3 className="text-sm sm:text-base font-medium text-blue-200">
                       Landlord Information
                     </h3>
                     <p className="mt-1">
@@ -580,7 +587,7 @@ const LandlordProperties = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-sm sm:text-base font-medium text-gray-500 mb-2">
+                  <h3 className="text-sm sm:text-base font-medium text-blue-200 mb-2">
                     Property Image
                   </h3>
                   <img
@@ -607,7 +614,7 @@ const LandlordProperties = () => {
                     // setSelectedProperty(null);
                     sessionStorage.setItem(
                       "propertyId",
-                      selectedProperty.id.toString()
+                      selectedProperty.id.toString(),
                     );
                     navigate("/admin-dashboard/transactions");
                   }}
@@ -644,6 +651,7 @@ const LandlordProperties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="name">Property Name*</Label>
                   <Input
+                    variant="dark"
                     id="name"
                     name="name"
                     value={editingProperty.name}
@@ -675,6 +683,7 @@ const LandlordProperties = () => {
               <div className="space-y-2">
                 <Label htmlFor="address">Address*</Label>
                 <Input
+                  variant="dark"
                   id="address"
                   name="address"
                   value={editingProperty.address}
@@ -687,6 +696,7 @@ const LandlordProperties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="region">Region*</Label>
                   <Input
+                    variant="dark"
                     id="region"
                     name="region"
                     value={editingProperty.region}
@@ -697,6 +707,7 @@ const LandlordProperties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="district">District*</Label>
                   <Input
+                    variant="dark"
                     id="district"
                     name="district"
                     value={editingProperty.district}
@@ -707,6 +718,7 @@ const LandlordProperties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="zipcode">Zip Code*</Label>
                   <Input
+                    variant="dark"
                     id="zipcode"
                     name="zipcode"
                     value={editingProperty.zipcode}
@@ -720,6 +732,7 @@ const LandlordProperties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="numberOfRooms">Number of Rooms*</Label>
                   <Input
+                    variant="dark"
                     id="numberOfRooms"
                     name="numberOfRooms"
                     type="number"
@@ -766,6 +779,7 @@ const LandlordProperties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="price">Price*</Label>
                   <Input
+                    variant="dark"
                     id="price"
                     name="price"
                     type="number"
@@ -830,7 +844,7 @@ const LandlordProperties = () => {
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
-                            "/placeholder-property.jpg";
+                            "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzMzNDE1NSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTRhM2I4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+";
                         }}
                       />
                       <button
@@ -847,14 +861,14 @@ const LandlordProperties = () => {
                     <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md hover:border-primary transition-colors">
                       <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
-                          <p className="mb-2 text-sm text-gray-500">
+                          <ImageIcon className="w-10 h-10 mb-3 text-blue-200" />
+                          <p className="mb-2 text-sm text-blue-200">
                             <span className="font-semibold">
                               Click to upload
                             </span>{" "}
                             or drag and drop
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-blue-200">
                             PNG, JPG, WEBP (MAX. 3)
                           </p>
                         </div>
@@ -869,7 +883,7 @@ const LandlordProperties = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-blue-200 mt-2">
                   {propertyPhotos.length === 0
                     ? "Upload new photos only if you want to change the existing ones. Leave empty to keep current images."
                     : "New photos will replace existing ones."}
