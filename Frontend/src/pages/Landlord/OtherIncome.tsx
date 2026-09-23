@@ -84,6 +84,7 @@ const OtherIncomePage = () => {
   const [filterFrom, setFilterFrom] = useState(firstOfMonth);
   const [filterTo, setFilterTo] = useState(todayStr);
   const [filterProperty, setFilterProperty] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
 
   const fetchRecords = async () => {
     try {
@@ -106,15 +107,21 @@ const OtherIncomePage = () => {
     fetchAll();
   }, []);
 
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(records.map((r) => r.category))).sort((a, b) => a.localeCompare(b)),
+    [records]
+  );
+
   const filtered = useMemo(() => {
     return records.filter((r) => {
       const d = r.date.split("T")[0];
       const matchFrom = filterFrom ? d >= filterFrom : true;
       const matchTo = filterTo ? d <= filterTo : true;
       const matchProp = filterProperty ? String(r.propertyId) === filterProperty : true;
-      return matchFrom && matchTo && matchProp;
+      const matchCategory = filterCategory ? r.category === filterCategory : true;
+      return matchFrom && matchTo && matchProp && matchCategory;
     });
-  }, [records, filterFrom, filterTo, filterProperty]);
+  }, [records, filterFrom, filterTo, filterProperty, filterCategory]);
 
   const monthTotal = useMemo(() => filtered.reduce((s, r) => s + r.amount, 0), [filtered]);
 
@@ -331,6 +338,14 @@ const OtherIncomePage = () => {
             className="text-sm text-slate-700 focus:outline-none bg-transparent">
             <option value="">All Properties</option>
             {properties.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <Tag className="h-4 w-4 text-slate-400" />
+          <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
+            className="text-sm text-slate-700 focus:outline-none bg-transparent">
+            <option value="">All Categories</option>
+            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       </div>
