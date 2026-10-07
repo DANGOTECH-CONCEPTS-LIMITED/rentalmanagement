@@ -56,6 +56,13 @@ interface UtilityMeter {
   nwscAccount: string;
   locationOfNwscMeter: string;
   landLordId: number;
+  user?: { fullName?: string };
+}
+
+interface MeterFeeSummary {
+  monthlyFee: number;
+  outstandingBalance: number;
+  charges: { id: number; meterNumber: string; period: string; amount: number; amountPaid: number }[];
 }
 
 interface AddUtilityMeterProps {
@@ -71,6 +78,11 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
   const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
   const [isLoadingMeters, setIsLoadingMeters] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [feeOwnerId, setFeeOwnerId] = useState<string>('');
+  const [utilityUsers, setUtilityUsers] = useState<{ id: number; fullName: string }[]>([]);
+  const [feeInput, setFeeInput] = useState('');
+  const [feeSummary, setFeeSummary] = useState<MeterFeeSummary | null>(null);
+  const [isSavingFee, setIsSavingFee] = useState(false);
   const { toast } = useToast();
 
   let token = '';
@@ -93,6 +105,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
 
   const isAdmin = systemRoleId === 1;
   const isUtilityAccount = systemRoleId === 4;
+  const canManageMeters = isAdmin || isUtilityAccount;
 
   const finalToken = authToken || token;
   const Url = import.meta.env.VITE_API_BASE_URL;
@@ -124,17 +137,20 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
     }
   }, [isAdmin, Url, finalToken, toast]);
 
-  // Fetch utility meters for utility account
+  // Fetch utility meters for utility account (own meters) or admin (all meters)
   React.useEffect(() => {
-    if (isUtilityAccount) {
+    if (canManageMeters) {
       fetchUtilityMeters();
     }
-  }, [isUtilityAccount]);
+  }, [canManageMeters]);
 
   const fetchUtilityMeters = async () => {
     setIsLoadingMeters(true);
     try {
-      const response = await fetch(`${Url}/GetUtilityMetersByLandLordId/${landLordId}`, {
+      const metersUrl = isAdmin
+        ? `${Url}/GetAllUtilityMeters`
+        : `${Url}/GetUtilityMetersByLandLordId/${landLordId}`;
+      const response = await fetch(metersUrl, {
         headers: {
           Authorization: `Bearer ${finalToken}`,
           accept: "*/*",
@@ -156,6 +172,77 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
       });
     } finally {
       setIsLoadingMeters(false);
+    }
+  };
+
+  const feeHeaders = {
+    accept: '*/*',
+    Authorization: `Bearer ${finalToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const activeFeeOwnerId = isAdmin ? Number(feeOwnerId) : landLordId;
+
+  React.useEffect(() => {
+    if (!isAdmin) return;
+    axios
+      .get<{ id: number; fullName: string; systemRoleId: number }[]>(`${Url}/GetAllUsers`, { headers: feeHeaders })
+      .then((response) => setUtilityUsers(response.data.filter((u) => u.systemRoleId === 4)))
+      .catch(() => toast({ variant: 'destructive', title: 'Error', description: 'Failed to load utility users' }));
+  }, [isAdmin]);
+
+  const loadFeeSummary = async () => {
+    if (!activeFeeOwnerId) {
+      setFeeSummary(null);
+      setFeeInput('');
+      return;
+    }
+    try {
+      const response = await axios.get<MeterFeeSummary>(`${Url}/GetUtilityMonthlyFee/${activeFeeOwnerId}`, {
+        headers: feeHeaders,
+      });
+      setFeeSummary(response.data);
+      setFeeInput(String(response.data.monthlyFee));
+    } catch (error) {
+      console.error('Error fetching monthly fee:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    if (canManageMeters) {
+      loadFeeSummary();
+    }
+  }, [canManageMeters, activeFeeOwnerId]);
+
+  const saveMonthlyFee = async () => {
+    if (!activeFeeOwnerId) return;
+    const fee = Number(feeInput);
+    if (!Number.isFinite(fee) || fee < 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid fee',
+        description: 'Monthly fee must be zero or greater.',
+      });
+      return;
+    }
+
+    setIsSavingFee(true);
+    try {
+      await axios.put(
+        `${Url}/SetUtilityMonthlyFee/${activeFeeOwnerId}`,
+        { monthlyFee: fee },
+        { headers: feeHeaders }
+      );
+      toast({ title: 'Success', description: 'Monthly fee updated' });
+      loadFeeSummary();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update monthly fee',
+      });
+    } finally {
+      setIsSavingFee(false);
     }
   };
 
@@ -194,8 +281,8 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
       setSelectedLandlordId('');
       setIsModalOpen(false);
       
-      // Refresh meters list for utility accounts
-      if (isUtilityAccount) {
+      // Refresh meters list for utility accounts and admins
+      if (canManageMeters) {
         fetchUtilityMeters();
       }
       
@@ -366,15 +453,66 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
         </div>
       </section>
 
-      {/* View Utility Meters Section - Only for Utility Accounts */}
-      {isUtilityAccount && (
+      {/* Global monthly fee - Utility Accounts and Admins */}
+      {canManageMeters && (
         <Card className="data-surface border-none shadow-none">
           <CardHeader>
-            <CardTitle>My Utility Meters</CardTitle>
+            <CardTitle>Monthly Fee Per Meter</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Charged at the end of every month on each meter assigned to {isAdmin ? 'the selected utility user' : 'you'}.
+              Payments settle outstanding fees before any token is generated. Set 0 to stop charging.
+            </p>
+            {isAdmin && (
+              <Select value={feeOwnerId} onValueChange={setFeeOwnerId}>
+                <SelectTrigger className="md:max-w-sm">
+                  <SelectValue placeholder="Select a utility user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {utilityUsers.map((user) => (
+                    <SelectItem key={user.id} value={String(user.id)}>
+                      {user.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={feeInput}
+                onChange={(event) => setFeeInput(event.target.value)}
+                placeholder="Monthly fee"
+                className="md:max-w-xs"
+                disabled={!activeFeeOwnerId}
+              />
+              <Button onClick={saveMonthlyFee} disabled={isSavingFee || !activeFeeOwnerId}>
+                {isSavingFee ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+            {feeSummary && (
+              <p className="text-sm text-muted-foreground">
+                Outstanding fees: {feeSummary.outstandingBalance.toLocaleString()}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* View Utility Meters Section - Utility Accounts and Admins */}
+      {canManageMeters && (
+        <Card className="data-surface border-none shadow-none">
+          <CardHeader>
+            <CardTitle>{isAdmin ? 'All Utility Meters' : 'My Utility Meters'}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-6">
-              View all utility meters associated with your account
+              {isAdmin
+                ? 'View and manage all utility meters'
+                : 'View all utility meters associated with your account'}
             </p>
 
             {isLoadingMeters ? (
@@ -393,6 +531,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                       <TableHead>Meter Number</TableHead>
                       <TableHead>NWSC Account</TableHead>
                       <TableHead>Location</TableHead>
+                      {isAdmin && <TableHead>Owner</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -403,6 +542,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                         <TableCell>{meter.meterNumber}</TableCell>
                         <TableCell>{meter.nwscAccount}</TableCell>
                         <TableCell>{meter.locationOfNwscMeter}</TableCell>
+                        {isAdmin && <TableCell>{meter.user?.fullName || '-'}</TableCell>}
                       </TableRow>
                     ))}
                   </TableBody>

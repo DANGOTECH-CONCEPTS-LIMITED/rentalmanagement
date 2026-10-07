@@ -47,6 +47,7 @@ import Properties from "./pages/Landlord/LandloardProperties";
 import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import UtilityDashboard from "./pages/Utility/Dashboard";
 import UtilityMeter from "./pages/Utility/UtilityMeter";
+import MeterFeesReport from "./pages/Utility/MeterFeesReport";
 import MakeUtilityPayment from "./pages/MakeutilityPayment";
 import UtilityPaymentDashboard from "./pages/Utility/UtilityPaymentDashboard";
 import UtilityReport from "./pages/Landlord/UtilityReport";
@@ -121,6 +122,8 @@ const App = () => (
                 <Route path="http-logs" element={<HttpLogs />} />
                 <Route path="audit-trail" element={<AuditTrail />} />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />
+                <Route path="utility-meter-fees" element={<UtilityMeter />} />
+                <Route path="meter-fees-report" element={<MeterFeesReport />} />
                 <Route
                   path="utility-payments/:landlordId"
                   element={<UtilityPayments />}
@@ -168,6 +171,7 @@ const App = () => (
               <Route path="/utility-dashboard" element={<AppLayout role={4} />}>
                 <Route index element={<UtilityDashboard />} />
                 <Route path="utility-meter" element={<UtilityMeter />} />
+          <Route path="meter-fees-report" element={<MeterFeesReport />} />
                 <Route path="utility-payment-dashboard" element={<UtilityPaymentDashboard />} />
               </Route>
             </Route>

@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.PaymentService;
+﻿using Application.Interfaces.Meter;
+using Application.Interfaces.PaymentService;
 using Application.Interfaces.PaymentService.WalletSvc;
 using Application.Interfaces.PrepaidApi;
 using Application.Interfaces.UserServices;
@@ -69,6 +70,7 @@ namespace Infrastructure.Services.BackgroundServices
             var prepaidClient = scope.ServiceProvider.GetRequiredService<IPrepaidApiClient>();
             var user = scope.ServiceProvider.GetRequiredService<IUserService>();
             var walletService = scope.ServiceProvider.GetRequiredService<IWalletService>();
+            var meterFeeService = scope.ServiceProvider.GetRequiredService<IMeterFeeService>();
 
             var pending = await paymentService
                 .GetUtilityPymtsPendingTokenGeneration()
@@ -88,7 +90,7 @@ namespace Infrastructure.Services.BackgroundServices
                 await semaphore.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
-                    await ProcessSingleTransactionAsync(tx, paymentService, prepaidClient, user, walletService, ct)
+                    await ProcessSingleTransactionAsync(tx, paymentService, prepaidClient, user, walletService, meterFeeService, ct)
                         .ConfigureAwait(false);
                 }
                 finally
@@ -104,24 +106,43 @@ namespace Infrastructure.Services.BackgroundServices
             UtilityPayment transaction,
             IPaymentService paymentService,
             IPrepaidApiClient prepaidClient, IUserService userService, IWalletService walletService,
+            IMeterFeeService meterFeeService,
             CancellationToken ct)
         {
             try
             {
-                var preview = new PurchasePreviewDto
-                {
-                    MeterNumber = transaction.MeterNumber,
-                    Amount = (decimal)transaction.Amount
-                };
-
-                var response = await prepaidClient
-                    .PurchaseAsync(preview)
+                // Outstanding monthly fees are settled first; only the remainder buys a token.
+                var feesSettled = await meterFeeService
+                    .SettleFeesForPaymentAsync(transaction.Id)
                     .ConfigureAwait(false);
+                var tokenAmount = Math.Round(transaction.Amount - feesSettled, 2);
 
-                if (response.ResultCode == 0)
+                PurchaseApiResponse? response = null;
+                if (tokenAmount > 0)
                 {
-                    transaction.Token = response.Result.Token;
-                    transaction.Units = response.Result.TotalUnit.ToString();
+                    var preview = new PurchasePreviewDto
+                    {
+                        MeterNumber = transaction.MeterNumber,
+                        Amount = (decimal)tokenAmount
+                    };
+
+                    response = await prepaidClient
+                        .PurchaseAsync(preview)
+                        .ConfigureAwait(false);
+                }
+
+                if (response == null || response.ResultCode == 0)
+                {
+                    if (response != null)
+                    {
+                        transaction.Token = response.Result.Token;
+                        transaction.Units = response.Result.TotalUnit.ToString();
+                    }
+                    else
+                    {
+                        // Payment fully consumed by monthly fees; no token to issue.
+                        transaction.Units = "0";
+                    }
                     transaction.IsTokenGenerated = true;
                     await paymentService
                         .UpdateUtilityPayment(transaction)

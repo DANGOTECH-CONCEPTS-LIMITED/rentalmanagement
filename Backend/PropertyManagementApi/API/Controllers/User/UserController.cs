@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Application.Interfaces.UserServices;
+using Application.Interfaces.Meter;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Domain.Dtos.User;
 using Microsoft.AspNetCore.Authorization;
 using Domain.Entities.PropertyMgt;
@@ -18,11 +21,110 @@ namespace API.Controllers.UserControllers
         private readonly IUserService _userService;
         private readonly ILogger<UserController> _logger;
         private readonly AppDbContext _db;
-        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db)
+        private readonly IMeterFeeService _meterFeeService;
+        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db, IMeterFeeService meterFeeService)
         {
             _userService = userService;
             _logger = logger;
             _db = db;
+            _meterFeeService = meterFeeService;
+        }
+
+        private static bool IsUtilityRole(string? role) =>
+            string.Equals(role, "Utililty Payment", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(role, "Utility Payment", StringComparison.OrdinalIgnoreCase);
+
+        private string? GetRequesterEmail() =>
+            User.FindFirst(ClaimTypes.Email)?.Value ??
+            User.FindFirst("email")?.Value ??
+            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ??
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        [HttpPut("/SetUtilityMonthlyFee/{ownerId}")]
+        [Authorize]
+        public async Task<IActionResult> SetUtilityMonthlyFee(int ownerId, [FromBody] SetMonthlyFeeDto request)
+        {
+            var email = GetRequesterEmail();
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            var isAdmin = string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase);
+            if ((!isAdmin && !IsUtilityRole(role)) || string.IsNullOrEmpty(email))
+                return Forbid();
+
+            try
+            {
+                return Ok(await _meterFeeService.SetMonthlyFeeAsync(ownerId, request.MonthlyFee, email, isAdmin));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting monthly fee for user {OwnerId}", ownerId);
+                return BadRequest("An error occurred while setting the monthly fee.");
+            }
+        }
+
+        [HttpGet("/GetUtilityMeterFeesReport")]
+        [Authorize]
+        public async Task<IActionResult> GetUtilityMeterFeesReport([FromQuery] string? fromPeriod, [FromQuery] string? toPeriod)
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            var isAdmin = string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase);
+            var email = GetRequesterEmail();
+            if ((!isAdmin && !IsUtilityRole(role)) || string.IsNullOrEmpty(email))
+                return Forbid();
+
+            try
+            {
+                return Ok(await _meterFeeService.GetFeeReportAsync(email, isAdmin, fromPeriod, toPeriod));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating meter fees report");
+                return BadRequest("An error occurred while generating the report.");
+            }
+        }
+
+        [HttpGet("/GetUtilityMonthlyFee/{ownerId}")]
+        [Authorize]
+        public async Task<IActionResult> GetUtilityMonthlyFee(int ownerId)
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            var isAdmin = string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase);
+            var email = GetRequesterEmail();
+            if ((!isAdmin && !IsUtilityRole(role)) || string.IsNullOrEmpty(email))
+                return Forbid();
+
+            try
+            {
+                return Ok(await _meterFeeService.GetFeeSummaryAsync(ownerId, email, isAdmin));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving monthly fee for user {OwnerId}", ownerId);
+                return BadRequest("An error occurred while retrieving meter fees.");
+            }
         }
 
         [HttpPost("/RegisterUser")]

@@ -30,6 +30,9 @@ namespace Domain.Entities.PropertyMgt
         public double? UtilityChargePercentage { get; set; }
         public double? UtilityChargeFlatFee { get; set; }
         public string? UtilityChargeTiersJson { get; set; }
+        // Fee charged monthly on every meter assigned to this user.
+        public double MonthlyMeterFee { get; set; }
+        public DateTime? MonthlyMeterFeeEffectiveFrom { get; set; }
         [ForeignKey("SystemRole")]
         public int SystemRoleId { get; set; }
 

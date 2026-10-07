@@ -28,5 +28,8 @@ namespace Domain.Entities.PropertyMgt
         public DateTime VendorPaymentDate { get; set; } = DateTime.Now;
         public string? UtilityAccountNumber { get; set; }
         public bool IsSmsSent { get; set; } = false;
+        // Portion of Amount used to settle monthly meter fees before the token purchase.
+        public double FeesSettledAmount { get; set; }
+        public bool FeesProcessed { get; set; }
     }
 }

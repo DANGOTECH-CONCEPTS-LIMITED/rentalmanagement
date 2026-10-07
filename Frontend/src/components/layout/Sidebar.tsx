@@ -30,7 +30,68 @@ interface NavItem {
   icon: React.ReactNode;
   path: string;
   hasSubItems?: boolean;
+  children?: NavItem[];
 }
+
+interface NavEntryProps {
+  item: NavItem;
+  compact: boolean;
+  onNavigate?: () => void;
+}
+
+const NavEntry: React.FC<NavEntryProps> = ({ item, compact, onNavigate }) => {
+  const location = useLocation();
+  const children = item.children;
+  const hasActiveChild = !!children?.some((child) =>
+    location.pathname.startsWith(child.path)
+  );
+  const [open, setOpen] = useState(hasActiveChild);
+
+  if (!children) {
+    return (
+      <NavLink
+        to={item.path}
+        end
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          cn("sidebar-link", isActive ? "active" : "", compact ? "justify-center px-2" : "")
+        }
+      >
+        <span>{item.icon}</span>
+        {!compact && <span className="flex-1">{item.label}</span>}
+        {!compact && item.hasSubItems && <ChevronRight size={16} />}
+      </NavLink>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={cn("w-full sidebar-link", compact ? "justify-center px-2" : "")}
+      >
+        <span>{item.icon}</span>
+        {!compact && <span className="flex-1 text-left">{item.label}</span>}
+        {!compact && (
+          <ChevronRight
+            size={16}
+            className={cn("transition-transform", open ? "rotate-90" : "")}
+          />
+        )}
+      </button>
+      {open && (
+        <ul className={cn("mt-1 space-y-1", compact ? "" : "pl-4")}>
+          {children.map((child) => (
+            <li key={child.path}>
+              <NavEntry item={child} compact={compact} onNavigate={onNavigate} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   const { logout } = useAuth();
@@ -97,23 +158,16 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
             <ul className="space-y-1 px-3">
               {navItems.map((item, idx) => (
                 <motion.li
-                  key={item.path}
+                  key={item.label}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
                 >
-                  <NavLink
-                    to={item.path}
-                    end
-                    className={({ isActive }) =>
-                      cn("sidebar-link", isActive ? "active" : "")
-                    }
-                    onClick={() => setIsMobileOpen(false)}
-                  >
-                    <span>{item.icon}</span>
-                    <span className="flex-1">{item.label}</span>
-                    {item.hasSubItems && <ChevronRight size={16} />}
-                  </NavLink>
+                  <NavEntry
+                    item={item}
+                    compact={false}
+                    onNavigate={() => setIsMobileOpen(false)}
+                  />
                 </motion.li>
               ))}
             </ul>
@@ -174,30 +228,12 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
         <ul className="space-y-1.5 px-3">
           {navItems.map((item, idx) => (
             <motion.li
-              key={item.path}
+              key={item.label}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.05 }}
             >
-              <NavLink
-                to={item.path}
-                end
-                className={({ isActive }) =>
-                  cn(
-                    "sidebar-link",
-                    isActive ? "active" : "",
-                    isCollapsed && !isHovering ? "justify-center px-2" : ""
-                  )
-                }
-              >
-                <span>{item.icon}</span>
-                {(!isCollapsed || isHovering) && (
-                  <span className="flex-1">{item.label}</span>
-                )}
-                {(!isCollapsed || isHovering) && item.hasSubItems && (
-                  <ChevronRight size={16} />
-                )}
-              </NavLink>
+              <NavEntry item={item} compact={isCollapsed && !isHovering} />
             </motion.li>
           ))}
         </ul>
@@ -255,8 +291,24 @@ function getNavItems(role: number): NavItem[] {
       {
         label: "Reports",
         icon: <BarChart3 size={18} />,
-        path: "/admin-dashboard/reports",
-        hasSubItems: false,
+        path: "",
+        children: [
+          {
+            label: "General Reports",
+            icon: <FileText size={18} />,
+            path: "/admin-dashboard/reports",
+          },
+          {
+            label: "Utility Statistics",
+            icon: <BarChart3 size={18} />,
+            path: "/admin-dashboard/utility-payment-dashboard",
+          },
+          {
+            label: "Monthly Fees Report",
+            icon: <FileText size={18} />,
+            path: "/admin-dashboard/meter-fees-report",
+          },
+        ],
       },
       {
         label: "Settings",
@@ -273,11 +325,6 @@ function getNavItems(role: number): NavItem[] {
         label: "Manage Utility Meters",
         icon: <Settings size={18} />,
         path: "/admin-dashboard/manage-utility-meters",
-      },
-      {
-        label: "Utility Dashboard",
-        icon: <BarChart3 size={18} />,
-        path: "/admin-dashboard/utility-payment-dashboard",
       },
       {
         label: "Wallet Management",
@@ -308,6 +355,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Add Utility Meter",
         icon: <Plus size={18} />,
         path: "/admin-dashboard/add-utility-meter",
+      },
+      {
+        label: "Meter Monthly Fees",
+        icon: <Settings size={18} />,
+        path: "/admin-dashboard/utility-meter-fees",
       },
     ];
   }
@@ -357,9 +409,16 @@ function getNavItems(role: number): NavItem[] {
         path: "/landlord-dashboard/send-sms",
       },
       {
-        label: "Utility Report",
-        icon: <FileText size={18} />,
-        path: "/landlord-dashboard/utility-report",
+        label: "Reports",
+        icon: <BarChart3 size={18} />,
+        path: "",
+        children: [
+          {
+            label: "Utility Report",
+            icon: <FileText size={18} />,
+            path: "/landlord-dashboard/utility-report",
+          },
+        ],
       },
     ];
   }
@@ -418,10 +477,22 @@ function getNavItems(role: number): NavItem[] {
         path: "/utility-dashboard/utility-meter",
       },
       {
-        label: "Payment Dashboard",
-        icon: <FileText size={18} />,
-        path: "/utility-dashboard/utility-payment-dashboard",
-      }
+        label: "Reports",
+        icon: <BarChart3 size={18} />,
+        path: "",
+        children: [
+          {
+            label: "Payment Statistics",
+            icon: <FileText size={18} />,
+            path: "/utility-dashboard/utility-payment-dashboard",
+          },
+          {
+            label: "Monthly Fees Report",
+            icon: <FileText size={18} />,
+            path: "/utility-dashboard/meter-fees-report",
+          },
+        ],
+      },
     ];
   }
 

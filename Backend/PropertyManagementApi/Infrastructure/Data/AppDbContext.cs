@@ -27,6 +27,7 @@ namespace Infrastructure.Data
 
         public DbSet<UtilityPayment> UtilityPayments { get; set; } = null!;
         public DbSet<UtilityMeter> UtilityMeters { get; set; } = null!;
+        public DbSet<MeterFeeCharge> MeterFeeCharges { get; set; } = null!;
         public DbSet<HttpRequesRequestResponse> HttpRequesRequestResponses { get; set; } = null!;
         public DbSet<CollectoWalletWithdrawalHistory> CollectoWalletWithdrawalHistories { get; set; } = null!;
         public DbSet<ServiceLogs> ServiceLogs { get; set; } = null!;
@@ -230,6 +231,13 @@ namespace Infrastructure.Data
 
             modelBuilder.Entity<UtilityMeter>()
                 .HasIndex(m => m.LandLordId);
+
+            modelBuilder.Entity<MeterFeeCharge>()
+                .HasIndex(c => new { c.UtilityMeterId, c.Period })
+                .IsUnique();
+
+            modelBuilder.Entity<MeterFeeCharge>()
+                .HasIndex(c => c.MeterNumber);
         }
 
         // Declaration of the partial hook used by AppDbContext.Accounting.cs
