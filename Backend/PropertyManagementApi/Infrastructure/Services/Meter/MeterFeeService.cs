@@ -171,7 +171,7 @@ namespace Infrastructure.Services.Meter
             }
         }
 
-        public async Task<MeterFeeReportDto> GetFeeReportAsync(string requesterEmail, bool isAdmin, string? fromPeriod, string? toPeriod)
+        public async Task<MeterFeeReportDto> GetFeeReportAsync(string requesterEmail, bool isAdmin, string? fromPeriod, string? toPeriod, int? ownerId = null)
         {
             var query = from c in _context.MeterFeeCharges.AsNoTracking()
                         join m in _context.UtilityMeters.AsNoTracking() on c.UtilityMeterId equals m.Id
@@ -187,6 +187,10 @@ namespace Infrastructure.Services.Meter
                 if (requesterId == null)
                     throw new UnauthorizedAccessException("User not found.");
                 query = query.Where(x => x.LandLordId == requesterId);
+            }
+            else if (ownerId != null)
+            {
+                query = query.Where(x => x.LandLordId == ownerId);
             }
 
             // Periods are yyyy-MM so string comparison orders them chronologically.

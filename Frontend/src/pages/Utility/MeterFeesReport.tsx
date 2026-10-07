@@ -4,6 +4,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -30,10 +37,14 @@ interface MeterFeeReport {
   }[];
 }
 
+const ALL_OWNERS = 'all';
+
 const MeterFeesReport = () => {
   const [report, setReport] = useState<MeterFeeReport | null>(null);
   const [fromPeriod, setFromPeriod] = useState('');
   const [toPeriod, setToPeriod] = useState('');
+  const [ownerId, setOwnerId] = useState(ALL_OWNERS);
+  const [utilityUsers, setUtilityUsers] = useState<{ id: number; fullName: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -53,12 +64,32 @@ const MeterFeesReport = () => {
   const isAdmin = systemRoleId === 1;
 
   useEffect(() => {
+    if (!isAdmin) return;
+    axios
+      .get<{ id: number; fullName: string; systemRoleId: number }[]>(`${Url}/GetAllUsers`, {
+        headers: { accept: '*/*', Authorization: `Bearer ${token}` },
+      })
+      .then((response) =>
+        setUtilityUsers(
+          response.data
+            .filter((u) => u.systemRoleId === 4)
+            .sort((a, b) => a.fullName.localeCompare(b.fullName))
+        )
+      )
+      .catch(() => toast({ variant: 'destructive', title: 'Error', description: 'Failed to load utility users' }));
+  }, [isAdmin, Url, token]);
+
+  useEffect(() => {
     const fetchReport = async () => {
       setIsLoading(true);
       try {
         const response = await axios.get<MeterFeeReport>(`${Url}/GetUtilityMeterFeesReport`, {
           headers: { accept: '*/*', Authorization: `Bearer ${token}` },
-          params: { fromPeriod: fromPeriod || undefined, toPeriod: toPeriod || undefined },
+          params: {
+            fromPeriod: fromPeriod || undefined,
+            toPeriod: toPeriod || undefined,
+            ownerId: isAdmin && ownerId !== ALL_OWNERS ? ownerId : undefined,
+          },
         });
         setReport(response.data);
       } catch (error) {
@@ -69,7 +100,7 @@ const MeterFeesReport = () => {
     };
 
     fetchReport();
-  }, [Url, token, fromPeriod, toPeriod]);
+  }, [Url, token, fromPeriod, toPeriod, ownerId, isAdmin]);
 
   const exportCsv = () => {
     if (!report || report.rows.length === 0) return;
@@ -110,6 +141,24 @@ const MeterFeesReport = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
+            {isAdmin && (
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Utility user</label>
+                <Select value={ownerId} onValueChange={setOwnerId}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="All utility users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_OWNERS}>All utility users</SelectItem>
+                    {utilityUsers.map((user) => (
+                      <SelectItem key={user.id} value={String(user.id)}>
+                        {user.fullName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
               <label className="text-sm text-muted-foreground">From</label>
               <Input type="month" value={fromPeriod} onChange={(e) => setFromPeriod(e.target.value)} />

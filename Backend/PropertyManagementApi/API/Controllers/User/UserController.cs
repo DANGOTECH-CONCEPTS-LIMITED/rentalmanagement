@@ -75,7 +75,7 @@ namespace API.Controllers.UserControllers
 
         [HttpGet("/GetUtilityMeterFeesReport")]
         [Authorize]
-        public async Task<IActionResult> GetUtilityMeterFeesReport([FromQuery] string? fromPeriod, [FromQuery] string? toPeriod)
+        public async Task<IActionResult> GetUtilityMeterFeesReport([FromQuery] string? fromPeriod, [FromQuery] string? toPeriod, [FromQuery] int? ownerId = null)
         {
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
             var isAdmin = string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase);
@@ -85,7 +85,7 @@ namespace API.Controllers.UserControllers
 
             try
             {
-                return Ok(await _meterFeeService.GetFeeReportAsync(email, isAdmin, fromPeriod, toPeriod));
+                return Ok(await _meterFeeService.GetFeeReportAsync(email, isAdmin, fromPeriod, toPeriod, ownerId));
             }
             catch (UnauthorizedAccessException)
             {
