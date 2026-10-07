@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.PaymentService;
+﻿using Application.Interfaces.Meter;
+using Application.Interfaces.PaymentService;
 using Application.Interfaces.PrepaidApi;
 using Application.Interfaces.Ussd;
 using Domain.Dtos.PrepaidApi;
@@ -22,12 +23,14 @@ namespace Infrastructure.Services.Ussd
         private readonly AppDbContext _context;
         private readonly IPaymentService _pymsvc;
         private readonly IPrepaidApiClient _prepaidApiClient;
+        private readonly IMeterFeeService _meterFeeService;
 
-        public UssdService(AppDbContext context, IPaymentService pymsvc, IPrepaidApiClient prepaidApiClient)
+        public UssdService(AppDbContext context, IPaymentService pymsvc, IPrepaidApiClient prepaidApiClient, IMeterFeeService meterFeeService)
         {
             _context = context;
             _pymsvc = pymsvc;
             _prepaidApiClient = prepaidApiClient;
+            _meterFeeService = meterFeeService;
         }
 
         public async Task DeleteSessionAsync(UssdSession s)
@@ -163,6 +166,9 @@ namespace Infrastructure.Services.Ussd
                         var (ok, name) = await ValidateMeter(data.GetValueOrDefault("meter", ""));//FakeLookupCustomerByMeterAsync(data.GetValueOrDefault("meter", ""));
                         if (!ok) return Con("Meter not found. Enter Meter Number:");
                         data["customerName"] = name;
+                        var feeOutstanding = await _meterFeeService.GetOutstandingForMeterAsync(data.GetValueOrDefault("meter", ""));
+                        if (feeOutstanding != null)
+                            data["customerName"] = $"{name} (Monthly fee due: {currency} {feeOutstanding.Value:N0})";
                         sess.CurrentNodeId = node.NextNodeId ?? sess.CurrentNodeId;
                         await TouchAsync(sess, data);
                         node = nodes[sess.CurrentNodeId];
@@ -276,3 +282,4 @@ namespace Infrastructure.Services.Ussd
 
     }
 }
+

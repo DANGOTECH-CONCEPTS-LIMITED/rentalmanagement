@@ -84,6 +84,7 @@ const MakeUtilityPayment = () => {
   const [validationStep, setValidationStep] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
+  const [feeOutstanding, setFeeOutstanding] = useState<number | null>(null);
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [meterNumber, setMeterNumber] = useState('');
@@ -133,6 +134,13 @@ const MakeUtilityPayment = () => {
       if (responseData.result_code === 0 && Array.isArray(responseData.result) && responseData.result.length > 0) {
         const customer = responseData.result[0];
         setCustomerInfo(customer);
+
+        try {
+          const feeResponse = await axios.get(`${apiUrl}/GetMeterOutstandingFee/${encodeURIComponent(data.meterNumber)}`);
+          setFeeOutstanding(feeResponse.data.hasFee ? feeResponse.data.outstanding : null);
+        } catch {
+          setFeeOutstanding(null);
+        }
 
         // Pre-fill payment form with validated meter number
         paymentForm.setValue('meterNumber', data.meterNumber);
@@ -380,10 +388,17 @@ const MakeUtilityPayment = () => {
                           <span>{customerInfo.customer_number}</span>
                         </div>
 
-                        <div className="flex justify-between pb-1">
+                        <div className="flex justify-between border-b pb-1">
                           <span className="font-medium">Meter Number:</span>
                           <span>{customerInfo.meter_number}</span>
                         </div>
+
+                        {feeOutstanding !== null && (
+                          <div className="flex justify-between pb-1">
+                            <span className="font-medium">Monthly Fee Outstanding:</span>
+                            <span>{feeOutstanding.toLocaleString()}</span>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

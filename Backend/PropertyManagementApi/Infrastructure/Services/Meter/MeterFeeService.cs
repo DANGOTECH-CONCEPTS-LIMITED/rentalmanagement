@@ -108,6 +108,24 @@ namespace Infrastructure.Services.Meter
             }
         }
 
+        public async Task<double?> GetOutstandingForMeterAsync(string meterNumber)
+        {
+            var meter = await _context.UtilityMeters
+                .AsNoTracking()
+                .Where(m => m.MeterNumber == meterNumber)
+                .Select(m => new { Fee = m.User.MonthlyMeterFee })
+                .FirstOrDefaultAsync();
+            if (meter == null)
+                return null;
+
+            var outstanding = await _context.MeterFeeCharges
+                .AsNoTracking()
+                .Where(c => c.MeterNumber == meterNumber && c.AmountPaid < c.Amount)
+                .SumAsync(c => (double?)(c.Amount - c.AmountPaid)) ?? 0d;
+
+            return meter.Fee > 0 || outstanding > 0 ? Math.Round(outstanding, 2) : null;
+        }
+
         public async Task<double> SettleFeesForPaymentAsync(int paymentId)
         {
             await Gate.WaitAsync();

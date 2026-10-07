@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.PrepaidApi;
+﻿using Application.Interfaces.Meter;
+using Application.Interfaces.PrepaidApi;
 using Domain.Dtos.PrepaidApi;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,26 @@ namespace API.Controllers.PrepaidApi
     public class PrepaidPosController : ControllerBase
     {
         private readonly IPrepaidApiClient _prepaidApiClient;
-        public PrepaidPosController(IPrepaidApiClient prepaidApiClient) => _prepaidApiClient = prepaidApiClient;
+        private readonly IMeterFeeService _meterFeeService;
+        public PrepaidPosController(IPrepaidApiClient prepaidApiClient, IMeterFeeService meterFeeService)
+        {
+            _prepaidApiClient = prepaidApiClient;
+            _meterFeeService = meterFeeService;
+        }
+
+        [HttpGet("/GetMeterOutstandingFee/{meterNumber}")]
+        public async Task<IActionResult> GetMeterOutstandingFee(string meterNumber)
+        {
+            try
+            {
+                var outstanding = await _meterFeeService.GetOutstandingForMeterAsync(meterNumber);
+                return Ok(new { hasFee = outstanding != null, outstanding = outstanding ?? 0d });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "An error occurred while retrieving the meter fee.", error = ex.Message });
+            }
+        }
 
         [HttpPost("/ValidateMeter")]
         public async Task<IActionResult> ValidateMeter([FromBody] CustomerSearchDto searchDto)

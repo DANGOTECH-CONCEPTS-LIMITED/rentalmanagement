@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useCurrencyFormatter } from '@/hooks/use-currency-formatter';
 
 interface CustomerInfo {
   customer_name: string;
@@ -13,6 +14,8 @@ interface CustomerInfo {
 const MeterValidation = () => {
   const [meterNumber, setMeterNumber] = useState('');
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
+  const [feeOutstanding, setFeeOutstanding] = useState<number | null>(null);
+  const formatCurrency = useCurrencyFormatter();
   const { toast } = useToast();
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -20,6 +23,7 @@ const MeterValidation = () => {
   const handleValidate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCustomerInfo(null);
+    setFeeOutstanding(null);
 
     if (!meterNumber) {
       toast({
@@ -44,6 +48,14 @@ const MeterValidation = () => {
 
       if (data.result_code === 0 && Array.isArray(data.result) && data.result.length > 0) {
         setCustomerInfo(data.result[0]);
+
+        try {
+          const feeResponse = await fetch(`${apiUrl}/GetMeterOutstandingFee/${encodeURIComponent(meterNumber)}`);
+          const feeData = await feeResponse.json();
+          setFeeOutstanding(feeData.hasFee ? feeData.outstanding : null);
+        } catch {
+          setFeeOutstanding(null);
+        }
 
         toast({
           title: 'Validation Successful',
@@ -135,6 +147,12 @@ const MeterValidation = () => {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Meter Number</p>
               <p className="mt-2 text-base font-semibold text-slate-900">{customerInfo.meter_number}</p>
             </div>
+            {feeOutstanding !== null && (
+              <div className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-slate-200/70 md:col-span-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Monthly Fee Outstanding</p>
+                <p className="mt-2 text-base font-semibold text-slate-900">{formatCurrency(feeOutstanding)}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
