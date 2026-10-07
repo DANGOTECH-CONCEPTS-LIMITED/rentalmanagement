@@ -860,11 +860,12 @@ const RentalContracts = () => {
     // ════════════════════════════════════════════════════════════════════════
     // 5. TERMS & CONDITIONS
     // ════════════════════════════════════════════════════════════════════════
-    if (c.terms) {
+    const termsContent = c.terms?.trim() || TERMS_TEMPLATE;
+    if (termsContent) {
       checkNewPage(30);
       sectionBar('05  TERMS & CONDITIONS');
       y += 4;
-      c.terms.split(/\n/).forEach((rawLine: string) => {
+      termsContent.split(/\n/).forEach((rawLine: string) => {
         const isTitle = /^\s*\d+\.\s+/.test(rawLine);
         const termsLines = doc.splitTextToSize(rawLine, cW - 10);
         doc.setTextColor(isTitle ? 15 : 51, isTitle ? 23 : 65, isTitle ? 42 : 85);
