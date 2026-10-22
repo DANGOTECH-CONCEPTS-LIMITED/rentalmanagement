@@ -65,8 +65,11 @@ namespace Infrastructure.Services.PrepaidApi
         private readonly string _password_vend;
         public ISTSProcessing _stsProcessing;
 
-        public PrepaidApiService(HttpClient httpClient, IConfiguration config, ISTSProcessing sTSProcessing)
+        private readonly Application.Interfaces.Meter.IMeterLienService _meterLiens;
+
+        public PrepaidApiService(HttpClient httpClient, IConfiguration config, ISTSProcessing sTSProcessing, Application.Interfaces.Meter.IMeterLienService meterLiens)
         {
+            _meterLiens = meterLiens;
             _httpClient = httpClient;
             _httpClient.BaseAddress = new Uri(config["PosApi:BaseUrl"]);
             _username = config["PosApi:user_name"];
@@ -159,11 +162,15 @@ namespace Infrastructure.Services.PrepaidApi
             }
         }
 
-        public async Task<PurchaseApiResponse> PurchaseAsync(PurchasePreviewDto previewDto)
+        public Task<PurchaseApiResponse> PurchaseAsync(PurchasePreviewDto previewDto) =>
+            _meterLiens.WithVendAuthorizationAsync(previewDto.MeterNumber, previewDto.Amount, previewDto.AllocatedPaymentId,
+                () => PurchaseCoreAsync(previewDto));
+
+        private async Task<PurchaseApiResponse> PurchaseCoreAsync(PurchasePreviewDto previewDto)
         {
             if (previewDto.MeterNumber.StartsWith("015"))
             {
-                var resp = await _stsProcessing.GetVendingToken(previewDto.MeterNumber, int.Parse(previewDto.Amount.ToString()));
+                var resp = await _stsProcessing.GetVendingToken(previewDto.MeterNumber, previewDto.Amount);
                 StsVendResponse? sts;
                 try
                 {

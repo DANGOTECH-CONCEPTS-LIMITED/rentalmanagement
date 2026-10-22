@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.STSVending;
+using Application.Interfaces.STSVending;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -36,9 +36,9 @@ namespace Infrastructure.Services.STSVending
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> GetVendingToken(string meterno, int amount) 
+        public async Task<string> GetVendingToken(string meterno, decimal amount)
         {
-            string endpoint = $"{_baseurl}GetVendingToken?UserId={_userid}&Password={_password}&MeterType=2&MeterCode={meterno}&AmountOrQuantity={amount}&VendingType=0";
+            string endpoint = $"{_baseurl}GetVendingToken?UserId={_userid}&Password={_password}&MeterType=2&MeterCode={meterno}&AmountOrQuantity={amount.ToString(System.Globalization.CultureInfo.InvariantCulture)}&VendingType=0";
             var response = await _httpClient.GetAsync(endpoint);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();

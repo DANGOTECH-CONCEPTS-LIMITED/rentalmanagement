@@ -638,6 +638,7 @@ namespace Infrastructure.Services.PaymentServices
             //map dto to entity
             existingPayment.Token = utilityPayment.Token;
             existingPayment.Units = utilityPayment.Units;
+            existingPayment.IsTokenGenerated = utilityPayment.IsTokenGenerated;
 
             _context.UtilityPayments.Update(existingPayment);
             await _context.SaveChangesAsync();

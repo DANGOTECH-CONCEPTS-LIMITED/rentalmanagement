@@ -16,18 +16,20 @@ namespace API.Controllers.UserControllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase
+    public partial class UserController : ControllerBase
     {
         private readonly IUserService _userService;
         private readonly ILogger<UserController> _logger;
         private readonly AppDbContext _db;
         private readonly IMeterFeeService _meterFeeService;
-        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db, IMeterFeeService meterFeeService)
+        private readonly IMeterLienService _meterLienService;
+        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db, IMeterFeeService meterFeeService, IMeterLienService meterLienService)
         {
             _userService = userService;
             _logger = logger;
             _db = db;
             _meterFeeService = meterFeeService;
+            _meterLienService = meterLienService;
         }
 
         private static bool IsUtilityRole(string? role) =>

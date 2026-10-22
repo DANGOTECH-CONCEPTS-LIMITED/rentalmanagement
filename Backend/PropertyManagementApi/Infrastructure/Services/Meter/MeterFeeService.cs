@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Meter;
+using Application.Interfaces.Meter;
 using Domain.Dtos.Meters;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
@@ -128,47 +128,48 @@ namespace Infrastructure.Services.Meter
 
         public async Task<double> SettleFeesForPaymentAsync(int paymentId)
         {
-            await Gate.WaitAsync();
-            try
+            // Join lien allocation's transaction when called from the payment pipeline.
+            await using var tx = _context.Database.CurrentTransaction == null
+                ? await _context.Database.BeginTransactionAsync(_context.Database.IsMySql() ? System.Data.IsolationLevel.ReadCommitted : System.Data.IsolationLevel.Serializable)
+                : null;
+            var snapshot = await _context.UtilityPayments.AsNoTracking().SingleOrDefaultAsync(p => p.Id == paymentId)
+                ?? throw new KeyNotFoundException("Payment not found.");
+            if (_context.Database.IsMySql())
             {
-                var payment = await _context.UtilityPayments.FirstOrDefaultAsync(p => p.Id == paymentId);
-                if (payment == null)
-                    throw new Exception("Payment not found.");
-
-                if (payment.FeesProcessed)
-                    return payment.FeesSettledAmount;
-
-                var charges = await _context.MeterFeeCharges
-                    .Where(c => c.MeterNumber == payment.MeterNumber && c.AmountPaid < c.Amount)
-                    .OrderBy(c => c.Period)
-                    .ToListAsync();
-
-                var remaining = Math.Round(payment.Amount, 2);
-                var settled = 0d;
-                foreach (var charge in charges)
-                {
-                    if (remaining <= 0)
-                        break;
-
-                    var due = Math.Round(charge.Amount - charge.AmountPaid, 2);
-                    var applied = Math.Min(due, remaining);
-                    charge.AmountPaid = Math.Round(charge.AmountPaid + applied, 2);
-                    if (charge.AmountPaid >= charge.Amount)
-                        charge.SettledAt = DateTime.Now;
-
-                    remaining = Math.Round(remaining - applied, 2);
-                    settled = Math.Round(settled + applied, 2);
-                }
-
-                payment.FeesSettledAmount = settled;
-                payment.FeesProcessed = true;
-                await _context.SaveChangesAsync();
-                return settled;
+                await _context.UtilityMeters.FromSqlInterpolated($"SELECT * FROM UtilityMeters WHERE MeterNumber = {snapshot.MeterNumber} FOR UPDATE").AsNoTracking().ToListAsync();
+                await _context.UtilityPayments.FromSqlInterpolated($"SELECT * FROM UtilityPayments WHERE Id = {paymentId} FOR UPDATE").AsNoTracking().ToListAsync();
             }
-            finally
+            var payment = await _context.UtilityPayments.SingleAsync(p => p.Id == paymentId);
+            await _context.Entry(payment).ReloadAsync();
+            if (payment.Status != "SUCCESSFUL")
+                throw new InvalidOperationException("Only successful payments may settle fees.");
+            if (payment.FeesProcessed)
             {
-                Gate.Release();
+                if (tx != null) await tx.CommitAsync();
+                return payment.FeesSettledAmount;
             }
+            var charges = await _context.MeterFeeCharges
+                .Where(c => c.MeterNumber == payment.MeterNumber && c.AmountPaid < c.Amount)
+                .OrderBy(c => c.Period).ToListAsync();
+            var remaining = decimal.Round(checked((decimal)payment.Amount), 2, MidpointRounding.AwayFromZero);
+            if (remaining <= 0) throw new InvalidOperationException("Payment amount must be positive.");
+            var settled = 0m;
+            foreach (var charge in charges)
+            {
+                if (remaining <= 0) break;
+                await _context.Entry(charge).ReloadAsync();
+                var due = decimal.Round((decimal)charge.Amount - (decimal)charge.AmountPaid, 2, MidpointRounding.AwayFromZero);
+                var applied = Math.Min(Math.Max(due, 0), remaining);
+                charge.AmountPaid = (double)((decimal)charge.AmountPaid + applied);
+                if (charge.AmountPaid >= charge.Amount) charge.SettledAt = DateTime.Now;
+                remaining -= applied;
+                settled += applied;
+            }
+            payment.FeesSettledAmount = (double)settled;
+            payment.FeesProcessed = true;
+            await _context.SaveChangesAsync();
+            if (tx != null) await tx.CommitAsync();
+            return (double)settled;
         }
 
         public async Task<MeterFeeReportDto> GetFeeReportAsync(string requesterEmail, bool isAdmin, string? fromPeriod, string? toPeriod, int? ownerId = null)

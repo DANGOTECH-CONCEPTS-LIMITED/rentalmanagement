@@ -1,4 +1,16 @@
 RENTAL MANAGEMENT APP
+
+## Individual meter liens
+
+UtilityPayment accounts can manage liens on their own meters from **Utility Meters → Manage liens**. Administrators can manage liens on any meter. The panel shows amounts charged, repayments, outstanding balances, and payment allocation history.
+
+- **Pay lien first:** after monthly meter fees, payments repay the lien before buying a token. Payments entirely consumed by fees/liens issue no token. Any excess after clearing the lien buys a token.
+- **Percentage per payment:** a configurable percentage (greater than 0 and at most 100) of the amount remaining after monthly fees repays the lien. The remainder buys a token. Repayment is capped at the outstanding balance.
+- Liens are repaid oldest first. Policy changes affect payments not yet allocated; retries retain their original allocations.
+- Additions require a positive amount and a reason. The repayment history shows token allocation, not confirmation of vending success.
+
+Deploy the matching backend and apply its meter-lien Entity Framework migration before using this feature. Lien balances must be enforced by the backend, not by the browser.
+
 For demo purposes, use these emails
 admin@example.com (Admin)
 landlord@example.com (Landlord)

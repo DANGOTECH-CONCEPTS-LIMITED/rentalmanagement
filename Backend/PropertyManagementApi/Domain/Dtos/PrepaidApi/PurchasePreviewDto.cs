@@ -10,5 +10,8 @@ namespace Domain.Dtos.PrepaidApi
     {
         public string MeterNumber { get; init; }
         public decimal Amount { get; init; }
+        // Internal authorization only; clients cannot choose another payment's allocation.
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int? AllocatedPaymentId { get; init; }
     }
 }

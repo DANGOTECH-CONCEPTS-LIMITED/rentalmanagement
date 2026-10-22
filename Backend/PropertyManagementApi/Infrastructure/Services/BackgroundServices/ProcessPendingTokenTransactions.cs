@@ -67,10 +67,6 @@ namespace Infrastructure.Services.BackgroundServices
         {
             using var scope = _scopeFactory.CreateScope();
             var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
-            var prepaidClient = scope.ServiceProvider.GetRequiredService<IPrepaidApiClient>();
-            var user = scope.ServiceProvider.GetRequiredService<IUserService>();
-            var walletService = scope.ServiceProvider.GetRequiredService<IWalletService>();
-            var meterFeeService = scope.ServiceProvider.GetRequiredService<IMeterFeeService>();
 
             var pending = await paymentService
                 .GetUtilityPymtsPendingTokenGeneration()
@@ -90,8 +86,14 @@ namespace Infrastructure.Services.BackgroundServices
                 await semaphore.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
-                    await ProcessSingleTransactionAsync(tx, paymentService, prepaidClient, user, walletService, meterFeeService, ct)
-                        .ConfigureAwait(false);
+                    // Each task owns its scoped DbContext; never share EF services across tasks.
+                    using var taskScope = _scopeFactory.CreateScope();
+                    var services = taskScope.ServiceProvider;
+                    await ProcessSingleTransactionAsync(tx,
+                        services.GetRequiredService<IPrepaidApiClient>(),
+                        services.GetRequiredService<IUserService>(),
+                        services.GetRequiredService<IWalletService>(),
+                        services.GetRequiredService<IMeterLienService>(), ct).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -104,18 +106,16 @@ namespace Infrastructure.Services.BackgroundServices
 
         private async Task ProcessSingleTransactionAsync(
             UtilityPayment transaction,
-            IPaymentService paymentService,
             IPrepaidApiClient prepaidClient, IUserService userService, IWalletService walletService,
-            IMeterFeeService meterFeeService,
+            IMeterLienService meterLienService,
             CancellationToken ct)
         {
             try
             {
-                // Outstanding monthly fees are settled first; only the remainder buys a token.
-                var feesSettled = await meterFeeService
-                    .SettleFeesForPaymentAsync(transaction.Id)
-                    .ConfigureAwait(false);
-                var tokenAmount = Math.Round(transaction.Amount - feesSettled, 2);
+                // Monthly fees -> liens -> token, allocated once in one database transaction.
+                var allocation = await meterLienService.AllocatePaymentAsync(transaction.Id).ConfigureAwait(false);
+                if (!await meterLienService.TryClaimVendAsync(transaction.Id).ConfigureAwait(false)) return;
+                var tokenAmount = allocation.TokenAmount;
 
                 PurchaseApiResponse? response = null;
                 if (tokenAmount > 0)
@@ -123,7 +123,8 @@ namespace Infrastructure.Services.BackgroundServices
                     var preview = new PurchasePreviewDto
                     {
                         MeterNumber = transaction.MeterNumber,
-                        Amount = (decimal)tokenAmount
+                        Amount = tokenAmount,
+                        AllocatedPaymentId = transaction.Id
                     };
 
                     response = await prepaidClient
@@ -131,7 +132,7 @@ namespace Infrastructure.Services.BackgroundServices
                         .ConfigureAwait(false);
                 }
 
-                if (response == null || response.ResultCode == 0)
+                if (tokenAmount == 0 || (response?.ResultCode == 0 && response.Result != null && !string.IsNullOrWhiteSpace(response.Result.Token)))
                 {
                     if (response != null)
                     {
@@ -140,12 +141,11 @@ namespace Infrastructure.Services.BackgroundServices
                     }
                     else
                     {
-                        // Payment fully consumed by monthly fees; no token to issue.
+                        // Payment fully consumed by monthly fees and/or liens; no token to issue.
                         transaction.Units = "0";
                     }
                     transaction.IsTokenGenerated = true;
-                    await paymentService
-                        .UpdateUtilityPayment(transaction)
+                    await meterLienService.CompleteVendAsync(transaction.Id, transaction.Token, transaction.Units ?? "0")
                         .ConfigureAwait(false);
 
                     var user = await userService
@@ -184,17 +184,15 @@ namespace Infrastructure.Services.BackgroundServices
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "⚠ Transaction {TransactionId} returned code {ResultCode}.",
-                        transaction.Id, response.ResultCode);
+                    // Explicit provider rejection is retryable; malformed success/unknown outcomes require reconciliation.
+                    await meterLienService.RecordVendFailureAsync(transaction.Id, $"Provider result: {response?.ResultCode}", response != null && response.ResultCode != 0);
+                    _logger.LogWarning("Transaction {TransactionId} needs provider reconciliation.", transaction.Id);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error processing transaction {TransactionId}",
-                    transaction.Id);
+                await meterLienService.RecordVendFailureAsync(transaction.Id, "Vend outcome uncertain; reconcile provider before retry.", false);
+                _logger.LogError(ex, "Error processing transaction {TransactionId}", transaction.Id);
             }
         }
     }

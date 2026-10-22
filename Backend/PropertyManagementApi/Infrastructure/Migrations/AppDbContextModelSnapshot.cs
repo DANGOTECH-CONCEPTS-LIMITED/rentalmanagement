@@ -533,6 +533,154 @@ namespace Infrastructure.Migrations
                     b.ToTable("MeterFeeCharges");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLien", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int>("UtilityMeterId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UtilityMeterId", "CreatedAt");
+
+                    b.ToTable("MeterLiens");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLienAllocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("MeterLienId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MeterLienRepaymentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MeterLienId");
+
+                    b.HasIndex("MeterLienRepaymentId", "MeterLienId")
+                        .IsUnique();
+
+                    b.ToTable("MeterLienAllocations");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLienPolicy", b =>
+                {
+                    b.Property<int>("UtilityMeterId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RepaymentMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<decimal>("RepaymentPercentage")
+                        .HasPrecision(28, 18)
+                        .HasColumnType("decimal(28,18)");
+
+                    b.HasKey("UtilityMeterId");
+
+                    b.ToTable("MeterLienPolicies");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLienRepayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("FeeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LienAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PaymentAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RepaymentMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<decimal>("RepaymentPercentage")
+                        .HasPrecision(28, 18)
+                        .HasColumnType("decimal(28,18)");
+
+                    b.Property<decimal>("TokenAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("UtilityMeterId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VendError")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime?>("VendStartedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("VendState")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique();
+
+                    b.HasIndex("UtilityMeterId");
+
+                    b.ToTable("MeterLienRepayments");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterToken", b =>
                 {
                     b.Property<int>("Id")
@@ -1352,6 +1500,53 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLien", b =>
+                {
+                    b.HasOne("Domain.Entities.PropertyMgt.UtilityMeter", null)
+                        .WithMany()
+                        .HasForeignKey("UtilityMeterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLienAllocation", b =>
+                {
+                    b.HasOne("Domain.Entities.PropertyMgt.MeterLien", null)
+                        .WithMany()
+                        .HasForeignKey("MeterLienId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.PropertyMgt.MeterLienRepayment", null)
+                        .WithMany()
+                        .HasForeignKey("MeterLienRepaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLienPolicy", b =>
+                {
+                    b.HasOne("Domain.Entities.PropertyMgt.UtilityMeter", null)
+                        .WithOne()
+                        .HasForeignKey("Domain.Entities.PropertyMgt.MeterLienPolicy", "UtilityMeterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.MeterLienRepayment", b =>
+                {
+                    b.HasOne("Domain.Entities.PropertyMgt.UtilityPayment", null)
+                        .WithOne()
+                        .HasForeignKey("Domain.Entities.PropertyMgt.MeterLienRepayment", "PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.PropertyMgt.UtilityMeter", null)
+                        .WithMany()
+                        .HasForeignKey("UtilityMeterId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.PropertyTenant", b =>

@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import React from 'react';
+import MeterLienPanel from '@/components/MeterLienPanel';
 
 const meterSchema = z.object({
   meterType: z.string().min(1, { message: 'Meter type is required' }),
@@ -83,6 +84,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
   const [feeInput, setFeeInput] = useState('');
   const [feeSummary, setFeeSummary] = useState<MeterFeeSummary | null>(null);
   const [isSavingFee, setIsSavingFee] = useState(false);
+  const [lienMeter, setLienMeter] = useState<UtilityMeter | null>(null);
   const { toast } = useToast();
 
   let token = '';
@@ -532,6 +534,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                       <TableHead>NWSC Account</TableHead>
                       <TableHead>Location</TableHead>
                       {isAdmin && <TableHead>Owner</TableHead>}
+                      <TableHead>Liens</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -543,6 +546,11 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                         <TableCell>{meter.nwscAccount}</TableCell>
                         <TableCell>{meter.locationOfNwscMeter}</TableCell>
                         {isAdmin && <TableCell>{meter.user?.fullName || '-'}</TableCell>}
+                        <TableCell>
+                          <Button variant="outline" onClick={() => setLienMeter(meter)} aria-label={`Manage liens for meter ${meter.meterNumber}`}>
+                            Manage liens
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -558,6 +566,17 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
             )}
           </CardContent>
         </Card>
+      )}
+      {canManageMeters && (
+        <Dialog open={!!lienMeter} onOpenChange={(open) => { if (!open) setLienMeter(null); }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Meter {lienMeter?.meterNumber} — liens</DialogTitle>
+              <DialogDescription>Add a lien, configure repayment, and track this meter's balance and payment allocations.</DialogDescription>
+            </DialogHeader>
+            {lienMeter && <MeterLienPanel key={lienMeter.id} meterId={lienMeter.id} apiUrl={Url} authToken={finalToken} />}
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

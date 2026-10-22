@@ -79,6 +79,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IExternalPaymentService, ExternalPaymentService>();
 builder.Services.AddScoped<Application.Interfaces.Meter.IMeterTokenService, Infrastructure.Services.Meter.MeterTokenService>();
 builder.Services.AddScoped<Application.Interfaces.Meter.IMeterFeeService, Infrastructure.Services.Meter.MeterFeeService>();
+builder.Services.AddScoped<IMeterLienService, Infrastructure.Services.Meter.MeterLienService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUssdService, UssdService>();
