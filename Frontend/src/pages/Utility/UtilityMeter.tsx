@@ -42,6 +42,7 @@ import {
 import { Plus } from 'lucide-react';
 import React from 'react';
 import MeterLienPanel from '@/components/MeterLienPanel';
+import { filterMeters, paginateMeters } from '@/lib/meter-search';
 
 const meterSchema = z.object({
   meterType: z.string().min(1, { message: 'Meter type is required' }),
@@ -77,6 +78,9 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
   const [selectedLandlordId, setSelectedLandlordId] = useState<string>('');
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
   const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
+  const [meterSearch, setMeterSearch] = useState('');
+  const [meterPage, setMeterPage] = useState(1);
+  const [meterPageSize, setMeterPageSize] = useState(10);
   const [isLoadingMeters, setIsLoadingMeters] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [feeOwnerId, setFeeOwnerId] = useState<string>('');
@@ -108,6 +112,8 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
   const isAdmin = systemRoleId === 1;
   const isUtilityAccount = systemRoleId === 4;
   const canManageMeters = isAdmin || isUtilityAccount;
+  const filteredMeters = filterMeters(utilityMeters, meterSearch, isAdmin);
+  const meterPagination = paginateMeters(filteredMeters, meterPage, meterPageSize);
 
   const finalToken = authToken || token;
   const Url = import.meta.env.VITE_API_BASE_URL;
@@ -517,6 +523,23 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                 : 'View all utility meters associated with your account'}
             </p>
 
+            <div className="mb-4 space-y-2">
+              <label htmlFor="utility-meter-search" className="text-sm font-medium">Search meters</label>
+              <div className="flex gap-2">
+                <Input
+                  id="utility-meter-search"
+                  type="search"
+                  value={meterSearch}
+                  onChange={(event) => { setMeterSearch(event.target.value); setMeterPage(1); }}
+                  placeholder={`Search by ID, meter number, type, NWSC account, location${isAdmin ? ', or owner' : ''}`}
+                />
+                {meterSearch && <Button variant="outline" onClick={() => { setMeterSearch(''); setMeterPage(1); }}>Clear</Button>}
+              </div>
+              {!isLoadingMeters && <p role="status" className="text-sm text-muted-foreground">
+                Showing {meterPagination.start}–{meterPagination.end} of {filteredMeters.length} matching meters ({utilityMeters.length} total)
+              </p>}
+            </div>
+
             {isLoadingMeters ? (
               <div className="space-y-3">
                 <Skeleton className="h-4 w-full" />
@@ -538,7 +561,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {utilityMeters.map((meter) => (
+                    {meterPagination.meters.map((meter) => (
                       <TableRow key={meter.id}>
                         <TableCell>{meter.id}</TableCell>
                         <TableCell>{meter.meterType}</TableCell>
@@ -553,8 +576,35 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {filteredMeters.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={isAdmin ? 8 : 7} className="py-8 text-center text-muted-foreground">
+                          No meters match your search. Try another search or clear the filter.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
+                <nav aria-label="Meter pagination" className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="meter-page-size" className="text-sm">Rows per page</label>
+                    <select
+                      id="meter-page-size"
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={meterPageSize}
+                      onChange={(event) => { setMeterPageSize(Number(event.target.value)); setMeterPage(1); }}
+                    >
+                      {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" disabled={meterPagination.page === 1} onClick={() => setMeterPage(1)}>First</Button>
+                    <Button variant="outline" disabled={meterPagination.page === 1} onClick={() => setMeterPage(meterPagination.page - 1)}>Previous</Button>
+                    <span className="text-sm">Page {meterPagination.page} of {meterPagination.totalPages}</span>
+                    <Button variant="outline" disabled={meterPagination.page === meterPagination.totalPages} onClick={() => setMeterPage(meterPagination.page + 1)}>Next</Button>
+                    <Button variant="outline" disabled={meterPagination.page === meterPagination.totalPages} onClick={() => setMeterPage(meterPagination.totalPages)}>Last</Button>
+                  </div>
+                </nav>
               </div>
             ) : (
               <div className="text-center py-8">
