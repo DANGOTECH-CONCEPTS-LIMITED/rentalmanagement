@@ -490,7 +490,7 @@ const LandlordDashboard = () => {
                       View Transaction History
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="flex max-h-[90dvh] w-[calc(100%-2rem)] max-w-4xl flex-col overflow-hidden">
                     <DialogHeader>
                       <DialogTitle>Transaction History</DialogTitle>
                     </DialogHeader>
@@ -505,8 +505,8 @@ const LandlordDashboard = () => {
                         No transactions found
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        <div className="flex justify-end gap-2">
+                      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+                        <div className="flex shrink-0 flex-wrap justify-end gap-2">
                           <Button variant="outline" size="sm" onClick={exportStatement}>
                             <Download className="mr-2 h-4 w-4" />
                             Export CSV
@@ -516,16 +516,16 @@ const LandlordDashboard = () => {
                             Export PDF
                           </Button>
                         </div>
-                        <div className="overflow-x-auto max-h-[60vh]">
-                        <Table>
+                        <div className="min-h-0 min-w-0 overflow-auto">
+                        <Table className="min-w-[640px] table-fixed">
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Description</TableHead>
-                              <TableHead className="text-right">
+                              <TableHead className="w-[16%]">Date</TableHead>
+                              <TableHead className="w-[42%]">Description</TableHead>
+                              <TableHead className="w-[21%] text-right">
                                 Amount
                               </TableHead>
-                              <TableHead className="text-right">
+                              <TableHead className="w-[21%] text-right">
                                 Running balance
                               </TableHead>
                             </TableRow>
@@ -533,18 +533,20 @@ const LandlordDashboard = () => {
                           <TableBody>
                             {statementRows.map((tx, i) => (
                               <TableRow key={i}>
-                                <TableCell>
+                                <TableCell className="whitespace-nowrap">
                                   {new Date(
                                     tx.transactionDate
                                   ).toLocaleDateString()}
                                 </TableCell>
-                                <TableCell className="flex items-center gap-2">
-                                  {tx.amount > 0 ? (
-                                    <ArrowDownLeft className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <ArrowUpRight className="h-4 w-4 text-red-500" />
-                                  )}
-                                  {tx.description || "Transaction"}
+                                <TableCell>
+                                  <div className="flex items-start gap-2">
+                                    {tx.amount > 0 ? (
+                                      <ArrowDownLeft className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                    ) : (
+                                      <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                                    )}
+                                    <span className="min-w-0 break-words">{tx.description || "Transaction"}</span>
+                                  </div>
                                 </TableCell>
                                 <TableCell
                                   className={`text-right font-medium ${
