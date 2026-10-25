@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -154,7 +155,7 @@ const RentalContracts = () => {
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
-            <select 
+            <SearchableNativeSelect
               className="input-field h-12 py-3 text-sm"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -163,7 +164,7 @@ const RentalContracts = () => {
               <option value="active">Active</option>
               <option value="expired">Expired</option>
               <option value="pending">Pending</option>
-            </select>
+            </SearchableNativeSelect>
           </div>
         </div>
 

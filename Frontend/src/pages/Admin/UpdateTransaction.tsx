@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useEffect, useState, useMemo } from "react";
 import {
   Table,
@@ -164,12 +165,12 @@ const UpdateTransaction = () => {
             onChange={(e) => setSearchFilter(e.target.value)}
             className="w-64"
           />
-          <select className="rounded border px-2 py-1" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <SearchableNativeSelect className="rounded border px-2 py-1" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
-          </select>
+          </SearchableNativeSelect>
           <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           <Button variant="outline" onClick={() => { setSearchFilter(""); setStatusFilter(""); setStartDate(""); setEndDate(""); }}>Clear</Button>
@@ -232,11 +233,11 @@ const UpdateTransaction = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">New Status</label>
-              <select className="w-full rounded border px-3 py-2" value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
+              <SearchableNativeSelect className="w-full rounded border px-3 py-2" value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
-              </select>
+              </SearchableNativeSelect>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>

@@ -1,5 +1,11 @@
 RENTAL MANAGEMENT APP
 
+## Searchable dropdowns
+
+Option dropdowns throughout the application include a **Search options** field inside the open menu. Type part of an option label to filter the list; matching ignores case and surrounding spaces. Use the arrow keys and Enter to select, or Escape to close. Reopening clears the search without changing the selected value. Disabled options remain unavailable, and empty results are shown explicitly.
+
+In **Utility Account Management**, account dropdowns also match email, phone and account ID; meter dropdowns match meter ID, NWSC account and location as well as the visible meter label. Existing separate search fields remain available. Action menus (such as Edit/Delete) are unchanged.
+
 ## Meter search
 
 On **Utility Meters**, use **Search meters** to filter by ID, meter number, type, NWSC account, or location. Administrators can also search by owner name. Search ignores case and surrounding spaces; **Clear** restores the full list. The result count updates as you type. Results are paginated (10 rows by default, with 25 and 50 available). Use **First**, **Previous**, **Next**, or **Last** to navigate. Searching, clearing search, or changing page size returns to the first page.

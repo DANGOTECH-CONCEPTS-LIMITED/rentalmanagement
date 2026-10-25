@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
@@ -588,14 +589,14 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                 <nav aria-label="Meter pagination" className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <label htmlFor="meter-page-size" className="text-sm">Rows per page</label>
-                    <select
+                    <SearchableNativeSelect
                       id="meter-page-size"
                       className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                       value={meterPageSize}
                       onChange={(event) => { setMeterPageSize(Number(event.target.value)); setMeterPage(1); }}
                     >
                       {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
-                    </select>
+                    </SearchableNativeSelect>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" disabled={meterPagination.page === 1} onClick={() => setMeterPage(1)}>First</Button>

@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useState, useEffect } from "react";
 import {
   CircleDollarSign,
@@ -491,7 +492,7 @@ const TrackPayments = () => {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <select
+                <SearchableNativeSelect
                   className="input-field h-12 py-3 text-sm"
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
@@ -500,10 +501,10 @@ const TrackPayments = () => {
                   <option value="SUCCESSFUL">Successful</option>
                   <option value="PENDING">Pending</option>
                   <option value="FAILED">Failed</option>
-                </select>
+                </SearchableNativeSelect>
               </div>
               <div className="flex items-center gap-2">
-                <select
+                <SearchableNativeSelect
                   className="input-field h-12 py-3 text-sm"
                   value={filterMethod}
                   onChange={(e) => setFilterMethod(e.target.value)}
@@ -513,7 +514,7 @@ const TrackPayments = () => {
                   <option value="MOMO">Mobile Money</option>
                   <option value="BANK">Bank Transfer</option>
                   <option value="CARD">Credit Card</option>
-                </select>
+                </SearchableNativeSelect>
               </div>
             </div>
           </div>

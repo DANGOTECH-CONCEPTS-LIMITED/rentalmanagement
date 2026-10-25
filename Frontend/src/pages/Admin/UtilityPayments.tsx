@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -325,7 +326,7 @@ const UtilityPayments = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Status</label>
-              <select
+              <SearchableNativeSelect
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value)}
                 className="block w-full rounded-md border px-3 py-2"
@@ -337,7 +338,7 @@ const UtilityPayments = () => {
                 <option value="SUCCESSFUL AT TELECOM">SUCCESSFUL AT TELECOM</option>
                 <option value="FAILED">FAILED</option>
                 <option value="REVERSED">REVERSED</option>
-              </select>
+              </SearchableNativeSelect>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">

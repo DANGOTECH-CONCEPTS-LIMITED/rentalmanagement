@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -76,10 +77,10 @@ function AccountPicker({ apiUrl, authToken, renderWallet }: AdminUtilityAccountW
     <Label htmlFor="utility-account-search">Search utility-payment accounts</Label>
     <Input id="utility-account-search" value={search} onChange={(event) => setSearch(event.target.value)} />
     <Label htmlFor="utility-account">Utility-payment account</Label>
-    <select id="utility-account" className="h-10 w-full rounded-md border bg-background px-3" disabled={loading || !!error} value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+    <SearchableNativeSelect id="utility-account" className="h-10 w-full rounded-md border bg-background px-3" disabled={loading || !!error} value={accountId} onChange={(event) => setAccountId(event.target.value)}>
       <option value="">Select an account</option>
-      {accounts.filter((item) => matches(item) || String(item.id) === accountId).map((item) => <option key={item.id} value={item.id}>{item.fullName} — #{item.id}{item.email ? ` — ${item.email}` : ''}</option>)}
-    </select>
+      {accounts.filter((item) => matches(item) || String(item.id) === accountId).map((item) => <option key={item.id} value={item.id} data-search-keywords={`${item.fullName} ${item.email || ''} ${item.phoneNumber || ''} ${item.id}`}>{item.fullName} — #{item.id}{item.email ? ` — ${item.email}` : ''}</option>)}
+    </SearchableNativeSelect>
     {loading && <p role="status">Loading accounts...</p>}
     {error && <><p role="alert">{error}</p><Button disabled={loading} onClick={() => setReload((value) => value + 1)}>Retry accounts</Button></>}
     {!account && <p>Select a utility-payment account to manage its meters and fees.</p>}
@@ -200,10 +201,10 @@ function AccountWorkspace({ account, apiUrl, authToken, renderWallet }: Omit<Adm
       <Label htmlFor="utility-meter-search">Search meters</Label>
       <Input id="utility-meter-search" value={search} onChange={(event) => setSearch(event.target.value)} />
       <Label htmlFor="utility-meter">Account meter</Label>
-      <select id="utility-meter" className="h-10 w-full rounded-md border bg-background px-3" disabled={blocked} value={meterId} onChange={(event) => setMeterId(event.target.value)}>
+      <SearchableNativeSelect id="utility-meter" className="h-10 w-full rounded-md border bg-background px-3" disabled={blocked} value={meterId} onChange={(event) => setMeterId(event.target.value)}>
         <option value="">Select a meter</option>
-        {meters.filter((meter) => meter.id === selected?.id || `${meter.meterNumber} ${meter.meterType} ${meter.nwscAccount} ${meter.locationOfNwscMeter} ${account.fullName}`.toLowerCase().includes(search.toLowerCase().trim())).map((meter) => <option key={meter.id} value={meter.id}>{meter.meterNumber} — {meter.meterType} — {account.fullName} (#{account.id})</option>)}
-      </select>
+        {meters.filter((meter) => meter.id === selected?.id || `${meter.meterNumber} ${meter.meterType} ${meter.nwscAccount} ${meter.locationOfNwscMeter} ${account.fullName}`.toLowerCase().includes(search.toLowerCase().trim())).map((meter) => <option key={meter.id} value={meter.id} data-search-keywords={`${meter.id} ${meter.meterNumber} ${meter.meterType} ${meter.nwscAccount} ${meter.locationOfNwscMeter} ${account.fullName}`}>{meter.meterNumber} — {meter.meterType} — {account.fullName} (#{account.id})</option>)}
+      </SearchableNativeSelect>
       {!loading && !meterError && meters.length === 0 && <p>No meters registered for this account.</p>}
       <div className="flex flex-wrap gap-2">
         <Button disabled={blocked} onClick={() => setEditor({ id: null, fields: { ...emptyMeter } })}>Register meter</Button>

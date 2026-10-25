@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
@@ -128,10 +129,10 @@ export default function MeterLienPanel({ meterId, apiUrl, authToken }: MeterLien
           <fieldset disabled={saving} className="space-y-3 border rounded-lg p-4">
             <legend className="px-1 font-medium">Meter repayment policy</legend>
             <Label htmlFor="lien-mode">Repayment mode</Label>
-            <select id="lien-mode" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={mode} onChange={(event) => setMode(event.target.value as RepaymentMode)}>
+            <SearchableNativeSelect id="lien-mode" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={mode} onChange={(event) => setMode(event.target.value as RepaymentMode)}>
               <option value="FullFirst">Pay lien first</option>
               <option value="Percentage">Percentage per payment</option>
-            </select>
+            </SearchableNativeSelect>
             {mode === 'Percentage' && <div className="space-y-2">
               <Label htmlFor="lien-percentage">Payment towards lien (%)</Label>
               <Input id="lien-percentage" type="number" min="0.01" max="100" step="0.01" value={percentage} onChange={(event) => setPercentage(event.target.value)} />

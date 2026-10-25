@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import axios from 'axios';
 import AdminUtilityAccountWorkspace from './AdminUtilityAccountWorkspace';
@@ -32,20 +33,44 @@ function deferred<T>() {
 function renderWorkspace(wallet = false) {
   return render(<MemoryRouter><AdminUtilityAccountWorkspace {...props} renderWallet={wallet ? (account) => <div>Wallet {account.id}: {account.fullName}</div> : undefined} /></MemoryRouter>);
 }
+beforeAll(() => {
+  // Radix uses pointer and layout APIs that jsdom does not implement.
+  window.PointerEvent = MouseEvent as typeof PointerEvent;
+  HTMLElement.prototype.hasPointerCapture = () => false;
+  HTMLElement.prototype.setPointerCapture = () => undefined;
+  HTMLElement.prototype.releasePointerCapture = () => undefined;
+  HTMLElement.prototype.scrollIntoView = jest.fn();
+  global.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
+
+function nativeSelect(label: string) {
+  const native = screen.getByLabelText(label).previousElementSibling;
+  expect(native).toMatchObject({ tagName: 'SELECT' });
+  expect(native).toHaveAttribute('data-searchable-native-select');
+  expect(native).toHaveAttribute('aria-hidden', 'true');
+  return native as HTMLSelectElement;
+}
+async function waitForMeter(name: RegExp) {
+  await waitFor(() => expect(within(nativeSelect('Account meter')).getByRole('option', { name, hidden: true })).toBeInTheDocument());
+}
 async function chooseAccount(id = '11') {
-  const select = screen.getByLabelText('Utility-payment account');
+  const select = nativeSelect('Utility-payment account');
   await waitFor(() => expect(within(select).getByRole('option', { name: /Utility Alice/, hidden: true })).toBeInTheDocument());
   fireEvent.change(select, { target: { value: id } });
 }
 async function loadAlice() {
   renderWorkspace();
   await chooseAccount();
-  await screen.findByRole('option', { name: /ALICE-001/ });
+  await waitForMeter(/ALICE-001/);
   await screen.findByLabelText('Monthly fee per meter');
 }
 async function selectMeter(id = '101') {
   await waitFor(() => expect(screen.getByLabelText('Account meter')).toBeEnabled());
-  fireEvent.change(screen.getByLabelText('Account meter'), { target: { value: id } });
+  fireEvent.change(nativeSelect('Account meter'), { target: { value: id } });
   await screen.findByTestId('lien-panel');
 }
 function fillMeter(number = 'NEW-001') {
@@ -69,34 +94,62 @@ beforeEach(() => {
   http.delete.mockResolvedValue({ data: {} });
 });
 
-test('filters and searches utility accounts without auto-selecting or requesting meters', async () => {
+test('filters and searches utility accounts inside the dropdown without auto-selecting or requesting meters', async () => {
+  const user = userEvent.setup();
   renderWorkspace();
-  await screen.findByRole('option', { name: /Utility Alice/ });
-  expect(screen.queryByRole('option', { name: /Not utility|Administrator/ })).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Utility-payment account')).toHaveValue('');
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Utility-payment account' })).toBeEnabled());
+  expect(nativeSelect('Utility-payment account')).toHaveValue('');
   expect(http.get).toHaveBeenCalledTimes(1);
   expect(http.get).toHaveBeenCalledWith(`${props.apiUrl}/GetAllUsers`, authConfig);
   expect(screen.queryByLabelText('Account meter')).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText('Search utility-payment accounts'), { target: { value: 'alice@example' } });
+  await user.click(screen.getByRole('combobox', { name: 'Utility-payment account' }));
+  expect(await screen.findByRole('option', { name: /Utility Alice/ })).toBeVisible();
+  expect(screen.getByRole('option', { name: /Utility Bob/ })).toBeVisible();
+  expect(screen.queryByRole('option', { name: /Not utility|Administrator/ })).not.toBeInTheDocument();
+  await user.type(screen.getByRole('textbox', { name: 'Search options' }), 'alice@example');
   expect(screen.queryByRole('option', { name: /Utility Bob/ })).not.toBeInTheDocument();
-  expect(screen.getByRole('option', { name: /Utility Alice/ })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /Utility Alice/ })).toBeVisible();
+  expect(http.get).toHaveBeenCalledTimes(1);
+  await user.click(screen.getByRole('option', { name: /Utility Alice/ }));
+  await waitForMeter(/ALICE-001/);
+  expect(screen.getByRole('combobox', { name: 'Utility-payment account' })).toHaveTextContent('Utility Alice');
+  expect(nativeSelect('Utility-payment account')).toHaveValue('11');
 });
 
-test('requests only account-owned meters with admin auth and explicitly selects a specific meter', async () => {
+test('requests only account-owned meters with admin auth and searches inside the dropdown to select a specific meter', async () => {
+  const user = userEvent.setup();
   await loadAlice();
   expect(http.get).toHaveBeenCalledWith(`${props.apiUrl}/GetUtilityMetersByLandLordId/11`, authConfig);
   expect(http.get).toHaveBeenCalledWith(`${props.apiUrl}/GetUtilityMonthlyFee/11`, authConfig);
   expect(http.get.mock.calls.some(([url]) => /GetAllUtilityMeters|GetLandlords/.test(url))).toBe(false);
   expect(screen.queryByTestId('lien-panel')).not.toBeInTheDocument();
-  expect(screen.queryByRole('option', { name: /BOB-001/ })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Edit meter' })).toBeDisabled();
-  fireEvent.change(screen.getByLabelText('Search meters'), { target: { value: 'ALICE-002' } });
+  await user.click(screen.getByRole('combobox', { name: 'Account meter' }));
+  expect(await screen.findByRole('option', { name: /ALICE-001/ })).toBeVisible();
+  expect(screen.queryByRole('option', { name: /BOB-001/ })).not.toBeInTheDocument();
+  await user.type(screen.getByRole('textbox', { name: 'Search options' }), 'ALICE-002');
   expect(screen.queryByRole('option', { name: /ALICE-001/ })).not.toBeInTheDocument();
-  await selectMeter('102');
-  expect(screen.getByTestId('lien-panel')).toHaveTextContent(`Lien meter 102; ${props.apiUrl}; ${props.authToken}`);
+  await user.click(screen.getByRole('option', { name: /ALICE-002/ }));
+  expect(await screen.findByTestId('lien-panel')).toHaveTextContent(`Lien meter 102; ${props.apiUrl}; ${props.authToken}`);
   expect(screen.getByRole('link', { name: /payments, tokens and reports/ })).toHaveAttribute('href', '/admin-dashboard/utility-payment-dashboard?accountId=11&meterNumber=ALICE-002');
-  fireEvent.change(screen.getByLabelText('Search meters'), { target: { value: 'no match' } });
-  expect(screen.getByRole('option', { name: /ALICE-002.*Utility Alice/ })).toBeInTheDocument();
+  await user.click(screen.getByRole('combobox', { name: 'Account meter' }));
+  expect(screen.getByRole('textbox', { name: 'Search options' })).toHaveValue('');
+  await user.type(screen.getByRole('textbox', { name: 'Search options' }), 'no match');
+  expect(screen.queryAllByRole('option')).toHaveLength(0);
+  expect(screen.getByLabelText('Account meter')).toHaveTextContent('ALICE-002');
+  await user.keyboard('{Escape}');
+  expect(nativeSelect('Account meter')).toHaveValue('102');
+  expect(screen.getByTestId('lien-panel')).toHaveTextContent('Lien meter 102');
+});
+
+test.each(['Water', 'NW-1', 'Kampala', 'Utility Alice'])('searches meter metadata %s inside the dropdown', async (query) => {
+  const user = userEvent.setup();
+  await loadAlice();
+  await user.click(screen.getByRole('combobox', { name: 'Account meter' }));
+  await user.type(await screen.findByRole('textbox', { name: 'Search options' }), query);
+  expect(screen.getByRole('option', { name: /ALICE-001/ })).toBeVisible();
+  expect(screen.getByRole('option', { name: /ALICE-002/ })).toBeVisible();
+  expect(screen.queryByRole('option', { name: /BOB-001/ })).not.toBeInTheDocument();
 });
 
 test('registers a meter using the selected account without an editable owner field', async () => {
@@ -163,21 +216,27 @@ test('requires explicit delete confirmation and retains deletion errors for retr
 });
 
 test('resets meter search, dialog, lien draft, fees and wallet scope on account change', async () => {
+  const user = userEvent.setup();
   renderWorkspace(true);
   await chooseAccount();
-  await screen.findByRole('option', { name: /ALICE-001/ });
+  await waitForMeter(/ALICE-001/);
   await selectMeter();
   fireEvent.change(screen.getByLabelText('Lien draft'), { target: { value: 'old lien' } });
-  fireEvent.change(screen.getByLabelText('Search meters'), { target: { value: 'ALICE' } });
+  await user.click(screen.getByRole('combobox', { name: 'Account meter' }));
+  await user.type(await screen.findByRole('textbox', { name: 'Search options' }), 'ALICE');
+  await user.keyboard('{Escape}');
   fireEvent.change(screen.getByLabelText('Monthly fee per meter'), { target: { value: '999' } });
   fireEvent.click(screen.getByRole('button', { name: 'Edit meter' }));
   await chooseAccount('22');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.queryByTestId('lien-panel')).not.toBeInTheDocument();
   expect(screen.queryByText(/Wallet 11/)).not.toBeInTheDocument();
-  await screen.findByRole('option', { name: /BOB-001/ });
+  await waitForMeter(/BOB-001/);
+  await user.click(screen.getByRole('combobox', { name: 'Account meter' }));
+  expect(await screen.findByRole('textbox', { name: 'Search options' })).toHaveValue('');
+  expect(screen.getByRole('option', { name: /BOB-001/ })).toBeVisible();
   expect(screen.queryByRole('option', { name: /ALICE-/ })).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Search meters')).toHaveValue('');
+  await user.keyboard('{Escape}');
   expect(screen.getByLabelText('Monthly fee per meter')).toHaveValue('0');
   expect(screen.getByText('Wallet 22: Utility Bob')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /payments, tokens and reports/ })).toHaveAttribute('href', '/admin-dashboard/utility-payment-dashboard?accountId=22');
@@ -185,7 +244,7 @@ test('resets meter search, dialog, lien draft, fees and wallet scope on account 
   expect(screen.getByLabelText('Lien draft')).toHaveValue('');
   expect(screen.getByTestId('lien-panel')).toHaveTextContent('Lien meter 202');
   await chooseAccount();
-  await screen.findByRole('option', { name: /ALICE-001/ });
+  await waitForMeter(/ALICE-001/);
   expect(screen.queryByTestId('lien-panel')).not.toBeInTheDocument();
 });
 
@@ -202,12 +261,12 @@ test('aborts and ignores stale meter and fee responses after switching accounts'
   await chooseAccount();
   expect(screen.getByRole('button', { name: 'Register meter' })).toBeDisabled();
   await chooseAccount('22');
-  await screen.findByRole('option', { name: /BOB-001/ });
+  await waitForMeter(/BOB-001/);
   const oldCalls = http.get.mock.calls.filter(([url]) => url.endsWith('/11'));
   expect(oldCalls).toHaveLength(2);
   oldCalls.forEach(([, config]) => expect(config?.signal?.aborted).toBe(true));
   await act(async () => { pendingMeters.resolve({ data: [meter] }); pendingFees.resolve({ data: fees }); });
-  expect(screen.queryByRole('option', { name: /ALICE-/ })).not.toBeInTheDocument();
+  expect(within(nativeSelect('Account meter')).queryByRole('option', { name: /ALICE-/, hidden: true })).not.toBeInTheDocument();
   expect(screen.getByLabelText('Monthly fee per meter')).toHaveValue('0');
   expect(screen.queryByText('80.00')).not.toBeInTheDocument();
 });
@@ -221,7 +280,7 @@ test('disables meter mutations on failed loading and permits retry', async () =>
   expect(screen.queryByTestId('lien-panel')).not.toBeInTheDocument();
   http.get.mockImplementation(defaultGet);
   fireEvent.click(screen.getByRole('button', { name: 'Retry meters' }));
-  await screen.findByRole('option', { name: /ALICE-001/ });
+  await waitForMeter(/ALICE-001/);
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 async function loadAliceWithoutMeters() {
@@ -281,7 +340,7 @@ test('aborts account loading on unmount and provides retry on errors', async () 
   expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load utility-payment accounts.');
   expect(screen.getByLabelText('Utility-payment account')).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Retry accounts' }));
-  await screen.findByRole('option', { name: /Utility Alice/ });
+  await waitFor(() => expect(within(nativeSelect('Utility-payment account')).getByRole('option', { name: /Utility Alice/, hidden: true })).toBeInTheDocument());
   const config = http.get.mock.calls[1][1];
   view.unmount();
   expect(config?.signal?.aborted).toBe(true);

@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -989,7 +990,7 @@ const Properties = () => {
                 <div className="space-y-2">
                   <Label htmlFor="region">Select Region</Label>
 
-                  <select
+                  <SearchableNativeSelect
                     id="region"
                     value={selectedRegion}
                     onChange={handleRegionChange}
@@ -1001,7 +1002,7 @@ const Properties = () => {
                         {region} Region
                       </option>
                     ))}
-                  </select>
+                  </SearchableNativeSelect>
                 </div>
 
                 {/* District Selection with Search */}

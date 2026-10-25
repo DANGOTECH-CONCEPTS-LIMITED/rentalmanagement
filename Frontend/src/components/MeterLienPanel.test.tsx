@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import MeterLienPanel from './MeterLienPanel';
 
@@ -12,6 +13,28 @@ const summary = {
   repayments: [{ paymentId: 12, transactionId: 'TX12', paymentAmount: 3000, lienAmount: 2000, tokenAmount: 1000, createdAt: '2026-10-22T12:05:00' }],
 };
 const props = { meterId: 7, apiUrl: 'https://example.invalid/api/User', authToken: 'test-token' };
+
+beforeAll(() => {
+  // Radix uses pointer and layout APIs that jsdom does not implement.
+  window.PointerEvent = MouseEvent as typeof PointerEvent;
+  HTMLElement.prototype.hasPointerCapture = () => false;
+  HTMLElement.prototype.setPointerCapture = () => undefined;
+  HTMLElement.prototype.releasePointerCapture = () => undefined;
+  HTMLElement.prototype.scrollIntoView = jest.fn();
+  global.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
+
+function repaymentModeNativeSelect() {
+  const native = screen.getByLabelText('Repayment mode').previousElementSibling;
+  expect(native).toMatchObject({ tagName: 'SELECT' });
+  expect(native).toHaveAttribute('data-searchable-native-select');
+  expect(native).toHaveAttribute('aria-hidden', 'true');
+  return native as HTMLSelectElement;
+}
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -47,9 +70,15 @@ test('adds a pay-first lien only to the selected meter and clears the form', asy
   expect(screen.getByLabelText('Lien amount')).toHaveValue(null);
 });
 
-test('saves a configurable percentage policy without creating another lien', async () => {
+test('searches repayment modes and saves a configurable percentage policy without creating another lien', async () => {
+  const user = userEvent.setup();
   await load();
-  fireEvent.change(screen.getByLabelText('Repayment mode'), { target: { value: 'Percentage' } });
+  await user.click(screen.getByRole('combobox', { name: 'Repayment mode' }));
+  await user.type(await screen.findByRole('textbox', { name: 'Search options' }), 'percentage');
+  expect(screen.queryByRole('option', { name: 'Pay lien first' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('option', { name: 'Percentage per payment' }));
+  expect(screen.getByRole('combobox', { name: 'Repayment mode' })).toHaveTextContent('Percentage per payment');
+  expect(repaymentModeNativeSelect()).toHaveValue('Percentage');
   fireEvent.change(screen.getByLabelText('Payment towards lien (%)'), { target: { value: '25' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save repayment policy' }));
   await screen.findByText('Repayment policy saved.');
@@ -61,7 +90,7 @@ test('saves a configurable percentage policy without creating another lien', asy
 
 test.each(['0', '-1', '101', '', '0.001', '25.555'])('rejects invalid repayment percentage %s', async (value) => {
   await load();
-  fireEvent.change(screen.getByLabelText('Repayment mode'), { target: { value: 'Percentage' } });
+  fireEvent.change(repaymentModeNativeSelect(), { target: { value: 'Percentage' } });
   fireEvent.change(screen.getByLabelText('Payment towards lien (%)'), { target: { value } });
   fireEvent.click(screen.getByRole('button', { name: 'Save repayment policy' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Repayment percentage must be greater than 0');

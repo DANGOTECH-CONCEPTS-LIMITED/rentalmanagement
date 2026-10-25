@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,7 +38,7 @@ const PropertyFilters = ({
       </div>
       
       <div className="flex flex-col sm:flex-row gap-2">
-        <select
+        <SearchableNativeSelect
           name="propertyType"
           value={filters.propertyType}
           onChange={onFilterChange}
@@ -48,7 +49,7 @@ const PropertyFilters = ({
           <option value="House">House</option>
           <option value="Studio">Studio</option>
           <option value="Condominium">Condominium</option>
-        </select>
+        </SearchableNativeSelect>
         
         <Input
           name="minBedrooms"

@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1228,7 +1229,7 @@ const ManageUsers = () => {
               >
                 System Role
               </label>
-              <select
+              <SearchableNativeSelect
                 id="systemRoleId"
                 name="systemRoleId"
                 value={formData.systemRoleId}
@@ -1245,7 +1246,7 @@ const ManageUsers = () => {
                     {role.name}
                   </option>
                 ))}
-              </select>
+              </SearchableNativeSelect>
               {errors.systemRoleId && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.systemRoleId}

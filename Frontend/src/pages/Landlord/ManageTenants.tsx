@@ -1,3 +1,4 @@
+import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useState, useEffect } from "react";
 import {
   Card,
@@ -903,7 +904,7 @@ const ManageTenants = () => {
                           Property
                         </span>
                       </label>
-                      <select
+                      <SearchableNativeSelect
                         name="PropertyId"
                         className="input-field"
                         value={formData.PropertyId}
@@ -917,7 +918,7 @@ const ManageTenants = () => {
                             {prop.name} - {prop.address}
                           </option>
                         ))}
-                      </select>
+                      </SearchableNativeSelect>
                       {isLoadingProperties && (
                         <div className="flex items-center justify-center h-64">
                           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
