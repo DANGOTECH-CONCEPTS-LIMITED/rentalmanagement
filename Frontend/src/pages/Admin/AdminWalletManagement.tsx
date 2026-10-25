@@ -195,6 +195,7 @@ const AdminWalletManagement = () => {
   const [transferTargetOpen, setTransferTargetOpen] = useState(false);
   const [debitDialogOpen, setDebitDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferDialogContainer, setTransferDialogContainer] = useState<HTMLDivElement | null>(null);
   const [debitAmount, setDebitAmount] = useState("");
   const [debitReason, setDebitReason] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
@@ -1165,7 +1166,7 @@ const AdminWalletManagement = () => {
       </Dialog>
 
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
-        <DialogContent className="rounded-[28px] sm:max-w-xl">
+        <DialogContent ref={setTransferDialogContainer} className="rounded-[28px] sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Transfer between wallets</DialogTitle>
             <DialogDescription>
@@ -1204,7 +1205,11 @@ const AdminWalletManagement = () => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-3" align="start">
+                <PopoverContent
+                  container={transferDialogContainer}
+                  className="z-[60] w-[var(--radix-popover-trigger-width)] p-3"
+                  align="start"
+                >
                   <div className="space-y-3">
                     <Input
                       value={transferTargetSearchTerm}
