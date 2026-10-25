@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { useSearchParams } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -212,13 +213,16 @@ const rowsPerPage = 10;
 const detailRowsPerPage = 10;
 
 const AdminUtilityDashboard = () => {
+  const [searchParams] = useSearchParams();
+  const requestedAccountId = searchParams.get("accountId") || ALL_ACCOUNT_VALUE;
+  const requestedMeterNumber = searchParams.get("meterNumber") || "";
   const dashboardRef = useRef<HTMLDivElement>(null);
   const paymentTrendChartRef = useRef<HTMLDivElement>(null);
   const statusBreakdownChartRef = useRef<HTMLDivElement>(null);
   const paymentMethodsChartRef = useRef<HTMLDivElement>(null);
   const topMeterActivityChartRef = useRef<HTMLDivElement>(null);
   const [selectableUsers, setSelectableUsers] = useState<ApiUser[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState(ALL_ACCOUNT_VALUE);
+  const [selectedAccountId, setSelectedAccountId] = useState(requestedAccountId);
   const [accountPickerOpen, setAccountPickerOpen] = useState(false);
   const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
   const [utilityPayments, setUtilityPayments] = useState<UtilityPayment[]>([]);
@@ -228,7 +232,7 @@ const AdminUtilityDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [phoneFilter, setPhoneFilter] = useState("");
-  const [meterFilter, setMeterFilter] = useState("");
+  const [meterFilter, setMeterFilter] = useState(requestedMeterNumber);
   const [activeDetailView, setActiveDetailView] = useState<DetailViewKey>(null);
   const [detailSearchTerm, setDetailSearchTerm] = useState("");
   const [currentDetailPage, setCurrentDetailPage] = useState(1);
@@ -380,8 +384,10 @@ const AdminUtilityDashboard = () => {
     }
   };
 
-  const fetchDashboardData = async (token: string, accountId: string) => {
+  const fetchDashboardData = async (token: string, accountId: string, signal: AbortSignal) => {
     setIsLoading(true);
+    setUtilityMeters([]);
+    setUtilityPayments([]);
 
     const loadAllRecords = accountId === ALL_ACCOUNT_VALUE;
     const metersUrl = loadAllRecords
@@ -394,12 +400,14 @@ const AdminUtilityDashboard = () => {
     try {
       const [metersResponse, paymentsResponse] = await Promise.all([
         axios.get<UtilityMeter[]>(metersUrl, {
+          signal,
           headers: {
             Authorization: `Bearer ${token}`,
             accept: "*/*",
           },
         }),
         axios.get<UtilityPayment[]>(paymentsUrl, {
+          signal,
           headers: {
             Authorization: `Bearer ${token}`,
             accept: "*/*",
@@ -407,9 +415,11 @@ const AdminUtilityDashboard = () => {
         }),
       ]);
 
+      if (signal.aborted) return;
       setUtilityMeters(metersResponse.data ?? []);
       setUtilityPayments(paymentsResponse.data ?? []);
     } catch (error) {
+      if (signal.aborted) return;
       console.error("Failed to load admin utility dashboard data", error);
       toast({
         title: "Error",
@@ -419,9 +429,14 @@ const AdminUtilityDashboard = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    setSelectedAccountId(requestedAccountId);
+    setMeterFilter(requestedMeterNumber);
+  }, [requestedAccountId, requestedMeterNumber]);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -446,7 +461,9 @@ const AdminUtilityDashboard = () => {
       return;
     }
 
-    fetchDashboardData(user.token, selectedAccountId);
+    const controller = new AbortController();
+    void fetchDashboardData(user.token, selectedAccountId, controller.signal);
+    return () => controller.abort();
   }, [apiUrl, selectedAccountId, toast]);
 
   useEffect(() => {

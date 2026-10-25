@@ -11,5 +11,7 @@ namespace Domain.Dtos.Payments.WalletDto
         public int landlordid { get; set; }
         public decimal amount { get; set; } 
         public string description { get; set; }
+
+        public override string ToString() => $"landlordid={landlordid}; amount={amount}; description={description}";
     }
 }

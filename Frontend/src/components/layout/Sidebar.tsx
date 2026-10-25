@@ -322,6 +322,11 @@ function getNavItems(role: number): NavItem[] {
         path: "/admin-dashboard/send-sms",
       },
       {
+        label: "Utility Account Management",
+        icon: <Users size={18} />,
+        path: "/admin-dashboard/utility-accounts",
+      },
+      {
         label: "Manage Utility Meters",
         icon: <Settings size={18} />,
         path: "/admin-dashboard/manage-utility-meters",

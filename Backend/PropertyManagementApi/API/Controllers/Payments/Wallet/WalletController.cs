@@ -56,9 +56,36 @@ namespace API.Controllers.Payments.Wallet
         {
             try
             {
-                //var landlordId = int.Parse(User.FindFirst("UserId")?.Value);
-                await _svc.WithdrawAsync(withdrawDto);
+                await _svc.WithdrawForUserAsync(withdrawDto, GetRequesterEmail());
                 return Ok("Withdrawal successful.");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error processing withdrawal: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Queues one withdrawal from SourceUserId's utility wallet using that owner's saved payout details.
+        /// The administrator remains the authenticated audit actor; success is submission, not payout completion.
+        /// </summary>
+        [HttpPost("/AdminWithdrawUtilityWallet")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> AdminWithdrawUtilityWallet([FromBody] AdminUtilityWalletWithdrawalDto withdrawDto)
+        {
+            try
+            {
+                EnsureAdministrator();
+                await _svc.AdminWithdrawUtilityAsync(withdrawDto, GetRequesterEmail());
+                return Ok("Withdrawal successful.");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
             }
             catch (Exception ex)
             {
@@ -117,6 +144,9 @@ namespace API.Controllers.Payments.Wallet
                 return BadRequest($"Error retrieving wallet balance: {ex.Message}");
             }
         }
+
+        private string GetRequesterEmail() =>
+            User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name ?? string.Empty;
 
         private void EnsureAdministrator()
         {

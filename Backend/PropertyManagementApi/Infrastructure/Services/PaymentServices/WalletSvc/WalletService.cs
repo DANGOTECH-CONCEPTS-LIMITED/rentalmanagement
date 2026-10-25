@@ -180,7 +180,53 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             }
         }
 
-        public async Task WithdrawAsync(WithdrawDto withdrawDto)
+        public async Task WithdrawForUserAsync(WithdrawDto withdrawDto, string requesterEmail)
+        {
+            var actor = await GetWithdrawalActorAsync(requesterEmail);
+            if (actor.Id != withdrawDto.landlordid && actor.SystemRoleId != AdministratorRoleId)
+                throw new UnauthorizedAccessException("You cannot withdraw from another user's wallet.");
+
+            await WithdrawAsync(withdrawDto);
+        }
+
+        public async Task AdminWithdrawUtilityAsync(AdminUtilityWalletWithdrawalDto withdrawDto, string requesterEmail)
+        {
+            var actor = await GetWithdrawalActorAsync(requesterEmail);
+            if (actor.SystemRoleId != AdministratorRoleId)
+                throw new UnauthorizedAccessException("Only administrators can withdraw on behalf of a utility account.");
+
+            if (withdrawDto.Amount <= 0 || withdrawDto.Amount > 9999999999999999.99m || decimal.Round(withdrawDto.Amount, 2) != withdrawDto.Amount)
+                throw new ArgumentException("Withdrawal amount must be positive with at most two decimal places.");
+            if (string.IsNullOrWhiteSpace(withdrawDto.Description) || withdrawDto.Description.Length > 500)
+                throw new ArgumentException("A withdrawal reason of at most 500 characters is required.");
+
+            var owner = await _context.Users.AsNoTracking()
+                .SingleOrDefaultAsync(u => u.Id == withdrawDto.SourceUserId);
+            if (owner == null || owner.SystemRoleId != UtilityPaymentRoleId)
+                throw new ArgumentException("The selected account must be a utility payment user.");
+
+            await WithdrawCoreAsync(new WithdrawDto
+            {
+                landlordid = owner.Id,
+                amount = withdrawDto.Amount,
+                description = withdrawDto.Description.Trim(),
+            }, allowAutomaticRouting: false);
+            _logger.LogInformation("Administrator {ActorUserId} requested wallet withdrawal for utility owner {OwnerUserId} of {Amount}",
+                actor.Id, owner.Id, withdrawDto.Amount);
+        }
+
+        private async Task<User> GetWithdrawalActorAsync(string requesterEmail)
+        {
+            if (string.IsNullOrWhiteSpace(requesterEmail))
+                throw new UnauthorizedAccessException("An authenticated wallet actor is required.");
+
+            return await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == requesterEmail)
+                ?? throw new UnauthorizedAccessException("The authenticated wallet actor was not found.");
+        }
+
+        public Task WithdrawAsync(WithdrawDto withdrawDto) => WithdrawCoreAsync(withdrawDto, allowAutomaticRouting: true);
+
+        private async Task WithdrawCoreAsync(WithdrawDto withdrawDto, bool allowAutomaticRouting)
         {
             if (withdrawDto.amount <= 0)
                 throw new Exception("Withdrawal amount must be positive.");
@@ -228,7 +274,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
 
             var finalStatus = status;
 
-            if (!string.IsNullOrWhiteSpace(withdrawDto.description) &&
+            if (allowAutomaticRouting && !string.IsNullOrWhiteSpace(withdrawDto.description) &&
                 withdrawDto.description.Contains("Automatic", StringComparison.OrdinalIgnoreCase))
             {
                 finalStatus = "PENDING_BANK_PAYOUT";

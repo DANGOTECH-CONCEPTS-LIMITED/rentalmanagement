@@ -58,6 +58,7 @@ import HttpLogs from "./pages/Admin/HttpLogs";
 import AuditTrail from "./pages/Admin/AuditTrail";
 import AdminUtilityDashboard from "./pages/Admin/AdminUtilityDashboard";
 import AdminWalletManagement from "./pages/Admin/AdminWalletManagement";
+import UtilityAccountManagement from "./pages/Admin/UtilityAccountManagement";
 import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
 import UpdateTransaction from "./pages/Admin/UpdateTransaction";
 
@@ -106,6 +107,7 @@ const App = () => (
                   path="manage-utility-meters"
                   element={<ManageUtilityMeters />}
                 />
+                <Route path="utility-accounts" element={<UtilityAccountManagement />} />
                 <Route
                   path="utility-payment-dashboard"
                   element={<AdminUtilityDashboard />}
