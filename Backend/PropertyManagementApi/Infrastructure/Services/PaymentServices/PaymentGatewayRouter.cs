@@ -5,6 +5,7 @@ using Dtos.Collecto;
 using Infrastructure.Data;
 using Infrastructure.Services.Collecto;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -17,7 +18,8 @@ public sealed class PaymentGatewayRouter(
     CollectoService collecto,
     DangoPaymentClient dango,
     AppDbContext db,
-    PaymentProviderSettingsService settings) : ICollectoApiClient
+    PaymentProviderSettingsService settings,
+    ILogger<PaymentGatewayRouter>? logger = null) : ICollectoApiClient
 {
     public static string SubmissionId(string operation, string reference)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(operation + ":" + reference)));
@@ -33,7 +35,11 @@ public sealed class PaymentGatewayRouter(
         var submissions = db.Set<PaymentGatewaySubmission>();
         var existing = await submissions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
         if (existing != null)
+        {
+            logger?.LogInformation("Replaying {Operation} reference {Reference} from original provider {Provider}; no new submission",
+                operation, reference, existing.Provider);
             return Replay(existing, hash);
+        }
 
         // Collecto wallet operations are provider-specific, not interchangeable payouts.
         var provider = submitDango == null ? PaymentProviderSettingsService.Collecto : (await settings.GetAsync()).Provider;
@@ -63,6 +69,8 @@ public sealed class PaymentGatewayRouter(
             return Replay(existing, hash);
         }
 
+        logger?.LogInformation("Submitting {Operation} reference {Reference} using payment provider {Provider}",
+            operation, reference, provider);
         string response;
         try
         {
@@ -123,6 +131,8 @@ public sealed class PaymentGatewayRouter(
         // Rows predating this integration were submitted to Collecto, never to the current selection.
         provider ??= PaymentProviderSettingsService.Collecto;
         RequireProvider(provider);
+        logger?.LogInformation("Checking {Operation} reference {Reference} using original payment provider {Provider}",
+            operation, reference, provider);
         return provider;
     }
 

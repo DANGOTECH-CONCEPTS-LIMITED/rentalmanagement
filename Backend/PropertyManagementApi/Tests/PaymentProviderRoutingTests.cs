@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Tests;
 
@@ -22,6 +23,7 @@ public class PaymentProviderRoutingTests : IAsyncLifetime
     private IConfiguration _configuration = null!;
     private PaymentProviderSettingsService _settings = null!;
     private PaymentGatewayRouter _router = null!;
+    private readonly RecordingLogger _logger = new();
 
     public async Task InitializeAsync()
     {
@@ -50,7 +52,7 @@ public class PaymentProviderRoutingTests : IAsyncLifetime
             new("MTN", ["25676", "25677", "25678"], "mtn-test"),
             new("Airtel", ["25670", "25674", "25675"], "airtel-test")]);
         _router = new(new CollectoService(new HttpClient(_collecto), _configuration, null!),
-            new DangoPaymentClient(new HttpClient(_dango), _configuration), _db, _settings);
+            new DangoPaymentClient(new HttpClient(_dango), _configuration), _db, _settings, _logger);
     }
 
     public async Task DisposeAsync()
@@ -259,6 +261,30 @@ public class PaymentProviderRoutingTests : IAsyncLifetime
     {
         var authorization = typeof(API.Controllers.PaymentProviderSettingsController).GetCustomAttribute<AuthorizeAttribute>();
         Assert.Equal("Administrator", authorization?.Roles);
+    }
+
+    [Fact]
+    public async Task RoutingLogsIdentifyActualProviderRatherThanCompatibilityInterfaceName()
+    {
+        await _settings.SetAsync("DangoPayment");
+        await _router.RequestToPayAsync(Request());
+        await _router.GetRequestToPayStatusAsync(new() { TransactionId = "collection-1" });
+        await _settings.SetAsync("Collecto");
+        await _router.RequestToPayAsync(Request());
+        Assert.Contains(_logger.Messages, x => x == "Submitting Collection reference collection-1 using payment provider DangoPayment");
+        Assert.Contains(_logger.Messages, x => x == "Checking Collection reference collection-1 using original payment provider DangoPayment");
+        Assert.Contains(_logger.Messages, x => x.Contains("original provider DangoPayment; no new submission"));
+        Assert.DoesNotContain(_logger.Messages, x => x.Contains("provider Collecto"));
+        Assert.Empty(_collecto.Paths);
+    }
+
+    private sealed class RecordingLogger : ILogger<PaymentGatewayRouter>
+    {
+        public List<string> Messages { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception));
     }
 
     private sealed class RecordingHandler : HttpMessageHandler

@@ -169,7 +169,7 @@ namespace Infrastructure.Services.BackgroundServices
             {
                 try
                 {
-                    _logger.LogInformation("Checking status with Collecto");
+                    _logger.LogInformation("Checking status through the payment gateway router");
                     var responseJson = string.Empty;
 
                     if (tranType.Equals("WALLET", StringComparison.OrdinalIgnoreCase))
@@ -202,7 +202,7 @@ namespace Infrastructure.Services.BackgroundServices
 
                     if (string.IsNullOrWhiteSpace(responseJson))
                     {
-                        _logger.LogError("Empty response from Collecto");
+                        _logger.LogError("Empty response from payment provider");
                         return;
                     }
 
@@ -350,7 +350,7 @@ namespace Infrastructure.Services.BackgroundServices
 
                         if (dto == null || dto.data == null)
                         {
-                            _logger.LogError("Invalid response structure from Collecto for TransactionId: {TransactionId}", transactionId);
+                            _logger.LogError("Invalid response structure from payment provider for TransactionId: {TransactionId}", transactionId);
                             return;
                         }
 
@@ -389,7 +389,7 @@ namespace Infrastructure.Services.BackgroundServices
                                 return;
                             }
 
-                            _logger.LogError("Collecto returned requestToPayStatus=false with status '{Status}' for TransactionId: {TransactionId}", dto.data.status, transactionId);
+                            _logger.LogError("Payment provider returned requestToPayStatus=false with status '{Status}' for TransactionId: {TransactionId}", dto.data.status, transactionId);
                             await paymentSvc.UpdatePaymentStatus(
                                 FailedAtTelecom,
                                 transactionId,

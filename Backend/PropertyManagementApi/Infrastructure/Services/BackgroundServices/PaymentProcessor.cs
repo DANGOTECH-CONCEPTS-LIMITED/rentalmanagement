@@ -233,11 +233,11 @@ namespace Infrastructure.Services.BackgroundServices
             var raw = await collectoApi.RequestToPayAsync(request);
             if (string.IsNullOrWhiteSpace(raw))
             {
-                _logger.LogError("Empty response from Collecto");
+                _logger.LogError("Empty response from payment provider");
                 await paymentService.UpdatePaymentStatus(
                     PendingTelcom,
                     transactionId,
-                    "Empty response from Collecto",
+                    "Empty response from payment provider",
                     string.Empty,
                     tranType);
                 return;
@@ -252,7 +252,7 @@ namespace Infrastructure.Services.BackgroundServices
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to parse Collecto response");
+                _logger.LogError(ex, "Failed to parse payment provider response");
                 throw;
             }
 

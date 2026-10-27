@@ -19,6 +19,8 @@ Dango remains disabled until server configuration, status mapping, bank routing 
 
 Each financial reference is durably claimed before network submission. After a timeout or crash, reconcile the original reference rather than creating another payment. A timeout does not trigger a submission to the other provider. Bank/mobile route configuration is checked before creating a claim. Deployments must validate both collection and payout flows in their payment-provider test environment before enabling real transactions.
 
+To confirm routing in backend logs, look for `PaymentGatewayRouter` messages: `Submitting … using payment provider DangoPayment` or `Checking … using original payment provider DangoPayment`. Replays identify the original provider and do not submit again. The `ICollectoApiClient` compatibility interface name does not identify the provider actually called. Older processor messages saying “Checking status with Collecto” were hard-coded labels, not routing evidence.
+
 ## Searchable dropdowns
 
 Option dropdowns throughout the application include a **Search options** field inside the open menu. Type part of an option label to filter the list; matching ignores case and surrounding spaces. Use the arrow keys and Enter to select, or Escape to close. Reopening clears the search without changing the selected value. Disabled options remain unavailable, and empty results are shown explicitly.
