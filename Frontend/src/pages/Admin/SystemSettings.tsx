@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PaymentProviderSettings from "@/components/PaymentProviderSettings";
+import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
 
 const SystemSettings = () => {
+  const { user } = useAuth();
   const [generalSettings, setGeneralSettings] = useState({
     companyName: "Property Management Co.",
     supportEmail: "support@property-mgmt.com",
@@ -214,7 +217,7 @@ const SystemSettings = () => {
               <CardDescription>Connect with third-party services</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Integration settings coming soon.</p>
+              <PaymentProviderSettings apiUrl={import.meta.env.VITE_API_BASE_URL ?? ''} authToken={user?.token ?? ''} />
             </CardContent>
           </Card>
         </TabsContent>

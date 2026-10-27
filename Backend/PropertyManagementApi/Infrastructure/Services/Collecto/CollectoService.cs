@@ -40,7 +40,8 @@ namespace Infrastructure.Services.Collecto
             _http.DefaultRequestHeaders.Add("x-api-key", _apiKey);
             //add user agent 
             _http.DefaultRequestHeaders.Add("User-Agent", "DangoTech");
-            _http.BaseAddress = new Uri(_baseUrl);
+            if (_http.BaseAddress == null)
+                _http.BaseAddress = new Uri(_baseUrl);
         }
 
         public async Task<string> RequestToPayAsync(RequestToPayRequestDto request)

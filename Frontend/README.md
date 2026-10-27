@@ -1,5 +1,24 @@
 RENTAL MANAGEMENT APP
 
+## Payment provider fallback
+
+Administrators can open **System Settings → Integrations → Payment provider** and manually select **Collecto** or **Dango Payment API** for new collections and mobile/bank payouts. This is a manual fallback, not automatic retry. Already-submitted transactions are reconciled with their original provider, including after switching back. Collecto-specific wallet transfers, wallet withdrawals, bill services, balance checks and phone verification remain on Collecto.
+
+Deploy the matching backend and apply its `AddPaymentProviderRouting` EF migration before enabling the switch (the API also applies migrations on startup). Collecto is the initial selection. Configure these server-side environment variables:
+
+- `DangoPayment__BaseUrl`: `https://paymentapi.dangotechconcepts.com/`
+- `DangoPayment__MerchantCode`: the provisioned merchant code.
+- `DangoPayment__SourceSystem`: the provisioned source-system identifier.
+- `DangoPayment__ApiKey`: only if required by the deployed Dango API; keep credentials out of the browser and source control.
+- `DangoPayment__ClientId`, `BankNetwork`, `BankCurrency`, `BankDestination`: provisioned bank-transfer values under the same `DangoPayment__` prefix.
+- `DangoPayment__BankSortCodes__<SWIFT>`: each supported bank's actual sort code; a SWIFT identifier is not a sort code.
+
+While **Collecto** is selected, enter the provisioned **MTN** and **Airtel network codes** and review their comma-separated international prefixes in **Mobile network routing**, then save. Starter prefixes are MTN `25676,25677,25678` and Airtel `25670,25674,25675`; verify these with the deployment's operator allocation. Local `07…`, `7…` and international `+2567…` numbers are normalized before matching. Unknown prefixes and overlapping rules are rejected before submission. Prefix routing cannot discover number-portability exceptions; administrators must maintain the rules. Network codes are not API credentials.
+
+Dango remains disabled until server configuration, status mapping, bank routing and mobile-network codes are available. The requested bank must have its own sort-code mapping. Collections use `api/Stanbic/merchant-payment`; both collections and payouts use `api/Stanbic/get-transaction-status` for final settlement. Submission acceptance always remains pending. The provided status contract confirms `statusCode: "00"` as success; the returned `requestId` must match the submitted reference. Configure `DangoPayment__TransactionStatus__StateField`, `ReferenceField` and `SuccessValues__0` (defaults: `statusCode`, `requestId`, `00`). Add `FailureValues__0` and subsequent entries only for verified terminal failures. Unknown codes, mismatched references, timeouts and malformed responses remain pending, never successful or automatically failed.
+
+Each financial reference is durably claimed before network submission. After a timeout or crash, reconcile the original reference rather than creating another payment. A timeout does not trigger a submission to the other provider. Bank/mobile route configuration is checked before creating a claim. Deployments must validate both collection and payout flows in their payment-provider test environment before enabling real transactions.
+
 ## Searchable dropdowns
 
 Option dropdowns throughout the application include a **Search options** field inside the open menu. Type part of an option label to filter the list; matching ignores case and surrounding spaces. Use the arrow keys and Enter to select, or Escape to close. Reopening clears the search without changing the selected value. Disabled options remain unavailable, and empty results are shown explicitly.

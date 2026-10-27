@@ -98,7 +98,13 @@ builder.Services.AddScoped<WalletAccountingNotifier>();
 builder.Services.AddScoped<ISTSProcessing, STSProcessing>();
 
 
-builder.Services.AddHttpClient<ICollectoApiClient, CollectoService>(client =>
+builder.Services.AddScoped<PaymentProviderSettingsService>();
+builder.Services.AddScoped<ICollectoApiClient, PaymentGatewayRouter>();
+builder.Services.AddHttpClient<DangoPaymentClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHttpClient<CollectoService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
 })

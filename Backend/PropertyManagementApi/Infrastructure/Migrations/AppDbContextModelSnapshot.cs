@@ -718,6 +718,82 @@ namespace Infrastructure.Migrations
                     b.ToTable("MeterTokens");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.PaymentGatewaySubmission", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Response")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Operation", "ProviderTransactionId");
+
+                    b.HasIndex("Operation", "Reference")
+                        .IsUnique();
+
+                    b.ToTable("PaymentGatewaySubmission");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.PaymentProviderSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("MobileNetworksJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentProviderSetting");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            MobileNetworksJson = "[{\"name\":\"MTN\",\"prefixes\":[\"25676\",\"25677\",\"25678\"],\"networkCode\":\"\"},{\"name\":\"Airtel\",\"prefixes\":[\"25670\",\"25674\",\"25675\"],\"networkCode\":\"\"}]",
+                            Provider = "Collecto"
+                        });
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.PropertyTenant", b =>
                 {
                     b.Property<int>("Id")

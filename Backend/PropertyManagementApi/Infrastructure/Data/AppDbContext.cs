@@ -52,6 +52,10 @@ namespace Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
             ConfigureMeterLiens(modelBuilder);
+            modelBuilder.Entity<PaymentProviderSetting>().HasData(new PaymentProviderSetting { Id = 1, Provider = "Collecto" });
+            modelBuilder.Entity<PaymentGatewaySubmission>().Property(x => x.Response).HasColumnType("longtext");
+            modelBuilder.Entity<PaymentGatewaySubmission>().HasIndex(x => new { x.Operation, x.Reference }).IsUnique();
+            modelBuilder.Entity<PaymentGatewaySubmission>().HasIndex(x => new { x.Operation, x.ProviderTransactionId });
 
             #region USSD
             //USSD Setup
