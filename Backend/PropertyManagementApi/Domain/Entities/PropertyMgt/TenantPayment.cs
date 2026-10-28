@@ -17,7 +17,10 @@ namespace Domain.Entities.PropertyMgt
         public string PaymentType { get; set; } = string.Empty;
         public string PaymentStatus { get; set; } = string.Empty;
         public string TransactionId { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.MaxLength(128)]
+        public string? ClientReference { get; set; }
         public string VendorTransactionId { get; set; } = string.Empty;
+        public DateTime? WalletCreditedAtUtc { get; set; }
 
         public string ReasonAtTelecom { get; set; } = string.Empty;
         public string? Description { get; set; } = string.Empty;

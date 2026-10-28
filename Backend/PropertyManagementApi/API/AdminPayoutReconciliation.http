@@ -1,0 +1,32 @@
+@baseUrl = http://localhost:5030
+@token = REPLACE_WITH_ADMINISTRATOR_BEARER_TOKEN
+
+### List unresolved submitted Dango payouts (no provider request is sent by this GET)
+GET {{baseUrl}}/api/AdminPayoutReconciliation?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Find one exact reference
+GET {{baseUrl}}/api/AdminPayoutReconciliation?reference=DANGO_W_20261028_9
+Authorization: Bearer {{token}}
+
+### Financial action: run ONLY after independent unpaid verification; replace ID and reference
+POST {{baseUrl}}/api/AdminPayoutReconciliation/123/fail-and-reverse
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Provider and recipient statements independently verified unpaid",
+  "confirmUnpaid": true,
+  "confirmedTransactionId": "DANGO_W_20261028_9"
+}
+
+### Invalid confirmation must be rejected without refunding
+POST {{baseUrl}}/api/AdminPayoutReconciliation/123/fail-and-reverse
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Not independently verified",
+  "confirmUnpaid": false,
+  "confirmedTransactionId": "DANGO_W_20261028_9"
+}

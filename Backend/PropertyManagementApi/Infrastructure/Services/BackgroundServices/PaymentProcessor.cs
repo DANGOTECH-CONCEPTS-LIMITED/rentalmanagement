@@ -227,7 +227,8 @@ namespace Infrastructure.Services.BackgroundServices
                 PaymentOption = "mobilemoney",
                 Phone = phone,
                 Amount = amount,
-                Reference = transactionId
+                Reference = transactionId,
+                PaymentCategory = tranType == "UTILITY" ? "U" : "R"
             };
 
             var raw = await collectoApi.RequestToPayAsync(request);
@@ -263,14 +264,14 @@ namespace Infrastructure.Services.BackgroundServices
                     PendingTelcom,
                     transactionId,
                     resp.status_message ?? string.Empty,
-                    resp.data.transactionId ?? string.Empty,
+                    resp.data.vendorReference ?? resp.data.transactionId ?? string.Empty,
                     tranType);
             }
             else
             {
                 _logger.LogError("MOMO request failed");
                 await paymentService.UpdatePaymentStatus(
-                    PendingTelcom,
+                    resp?.data?.status == "FAILED" ? "FAILED AT TELECOM" : PendingTelcom,
                     transactionId,
                     resp?.data?.message ?? "Unknown error",
                     string.Empty,
@@ -298,6 +299,12 @@ namespace Infrastructure.Services.BackgroundServices
                 [JsonPropertyName("transactionId")]
                 [JsonConverter(typeof(NumberOrStringJsonConverter))]
                 public string transactionId { get; set; } = null!;
+
+                public string? status { get; set; }
+
+                [JsonPropertyName("vendorReference")]
+                [JsonConverter(typeof(NumberOrStringJsonConverter))]
+                public string? vendorReference { get; set; }
 
                 [JsonPropertyName("message")]
                 public string message { get; set; } = null!;

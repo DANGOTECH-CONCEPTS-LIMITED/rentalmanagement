@@ -26,6 +26,7 @@ namespace API.Controllers.Payments
             try
             {
                 await _paymentService.MakeTenantPaymentAsync(paymentDto);
+                Response.Headers["X-Transaction-Id"] = paymentDto.TransactionId;
                 return Ok("Payment created successfully.");
             }
             catch (Exception ex)

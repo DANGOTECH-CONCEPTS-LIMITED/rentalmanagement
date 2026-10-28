@@ -2,6 +2,7 @@ using Application.Interfaces.Collecto;
 using Application.Interfaces.PaymentService;
 using Domain.Dtos.Collecto;
 using Domain.Dtos.Payments;
+using Infrastructure.Data;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
@@ -16,12 +17,14 @@ namespace Infrastructure.Services.PaymentServices
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly ICollectoApiClient _collectoApiClient;
+        private readonly AppDbContext _context;
 
-        public ExternalPaymentService(HttpClient httpClient, IConfiguration configuration, ICollectoApiClient collectoApiClient)
+        public ExternalPaymentService(HttpClient httpClient, IConfiguration configuration, ICollectoApiClient collectoApiClient, AppDbContext context)
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _collectoApiClient = collectoApiClient;
+            _context = context;
         }
 
         public async Task<PayInResponseDto> InitiatePayInAsync(PayInRequestDto request)
@@ -34,7 +37,8 @@ namespace Infrastructure.Services.PaymentServices
                     PaymentOption = "mobilemoney",
                     Phone = request.Metadata.GetValueOrDefault("phone", ""),
                     Amount = (decimal)request.Amount,
-                    Reference = request.Reference
+                    Reference = string.IsNullOrWhiteSpace(request.Reference)
+                        ? await CollectionTransactionIds.CreateAsync(_context, "W") : request.Reference
                 };
 
                 var rawResponse = await _collectoApiClient.RequestToPayAsync(collectoRequest);
@@ -42,7 +46,7 @@ namespace Infrastructure.Services.PaymentServices
 
                 return new PayInResponseDto
                 {
-                    TransactionId = request.Reference,
+                    TransactionId = collectoRequest.Reference,
                     Status = responseData?.data?.requestToPay == true ? "pending" : "failed",
                     GatewayReference = responseData?.data?.transactionId ?? "",
                     CreatedAt = DateTime.UtcNow
@@ -57,7 +61,7 @@ namespace Infrastructure.Services.PaymentServices
                 // Simulate API call
                 return new PayInResponseDto
                 {
-                    TransactionId = Guid.NewGuid().ToString(),
+                    TransactionId = await CollectionTransactionIds.CreateAsync(_context, "W", request.Reference),
                     Status = "pending",
                     GatewayReference = "stripe_ref_" + Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow
@@ -67,6 +71,7 @@ namespace Infrastructure.Services.PaymentServices
 
         public async Task<PayInResponseDto> GetPayInStatusAsync(string transactionId)
         {
+            transactionId = await CollectionTransactionIds.FindAsync(_context, "W", transactionId) ?? transactionId;
             // For Collecto, use GetRequestToPayStatusAsync
             var statusRequest = new RequestToPayStatusRequestDto { TransactionId = transactionId };
             var rawResponse = await _collectoApiClient.GetRequestToPayStatusAsync(statusRequest);

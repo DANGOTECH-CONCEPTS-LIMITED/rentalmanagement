@@ -173,7 +173,7 @@ const [description, setDescription] = useState('');
   
       toast({
         title: "Payment Successful",
-        description: `MOMO Payment of ${formatCurrency(Number(paymentAmount))} submitted successfully.`,
+        description: `MOMO Payment of ${formatCurrency(Number(paymentAmount))} submitted successfully.${response.headers['x-transaction-id'] ? ` Transaction ID: ${response.headers['x-transaction-id']}` : ''}`,
       });
   
       resetFormFields();
@@ -440,7 +440,7 @@ const [description, setDescription] = useState('');
 
     <div className="space-y-2">
       <label className="text-sm font-medium" htmlFor="transactionId">
-        Transaction ID
+        Client reference (optional)
       </label>
       <Input
         id="transactionId"
@@ -448,7 +448,6 @@ const [description, setDescription] = useState('');
         placeholder="e.g. MOMO123456"
         value={transactionId}
         onChange={(e) => setTransactionId(e.target.value)}
-        required
       />
     </div>
 

@@ -1,5 +1,6 @@
 using Domain.Dtos.Collecto;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -12,11 +13,13 @@ public sealed class DangoPaymentClient
     private readonly HttpClient _http;
     private readonly IConfiguration _configuration;
     private readonly Uri _baseUri;
+    private readonly ILogger<DangoPaymentClient>? _logger;
 
-    public DangoPaymentClient(HttpClient http, IConfiguration configuration)
+    public DangoPaymentClient(HttpClient http, IConfiguration configuration, ILogger<DangoPaymentClient>? logger = null)
     {
         _http = http;
         _configuration = configuration;
+        _logger = logger;
         var baseUrl = RequiredSetting("BaseUrl");
         if (!Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri) ||
             (baseUri.Scheme != Uri.UriSchemeHttps && baseUri.Scheme != Uri.UriSchemeHttp))
@@ -36,16 +39,16 @@ public sealed class DangoPaymentClient
 
     public static bool IsConfigured(IConfiguration configuration) =>
         Uri.TryCreate(configuration["DangoPayment:BaseUrl"], UriKind.Absolute, out var uri) &&
-        uri.Scheme == Uri.UriSchemeHttps &&
-        new[] { "MerchantCode", "SourceSystem" }.All(name => HasSetting(configuration, name)) &&
+        (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp) &&
+        HasSetting(configuration, "MerchantCode") &&
         BankConfigured(configuration);
 
     private static bool BankConfigured(IConfiguration configuration) =>
         ReadStatusContract(configuration) != null &&
-        new[] { "ClientId", "BankNetwork", "BankCurrency", "BankDestination" }.All(name => HasSetting(configuration, name)) &&
+        new[] { "ClientId", "BankCurrency" }.All(name => HasSetting(configuration, name)) &&
         configuration.GetSection("DangoPayment:BankSortCodes").GetChildren().Any(x => !string.IsNullOrWhiteSpace(x.Value));
 
-    public void ValidateCollection(RequestToPayRequestDto request)
+    public void ValidateCollection(RequestToPayRequestDto request, string network)
     {
         ArgumentNullException.ThrowIfNull(request);
         RequireGateway(request.PaymentOption, "mobilemoney");
@@ -53,7 +56,8 @@ public sealed class DangoPaymentClient
         NormalizePhone(request.Phone);
         Amount(request.Amount);
         RequiredSetting("MerchantCode");
-        RequiredSetting("SourceSystem");
+        RequiredValue(network, nameof(network));
+        RequiredSetting("ClientId");
         RequireStatusContract();
     }
 
@@ -79,6 +83,7 @@ public sealed class DangoPaymentClient
         NormalizePhone(request.Phone);
         Amount(request.Amount);
         ResolveNetwork(network);
+        RequiredSetting("ClientId");
         RequireStatusContract();
     }
 
@@ -92,8 +97,8 @@ public sealed class DangoPaymentClient
         RequiredValue(request.accountName, nameof(request.accountName));
         RequiredValue(request.bankName, nameof(request.bankName));
         var swiftCode = RequiredValue(request.bankSwiftCode, nameof(request.bankSwiftCode));
-        Amount(request.amount);
-        foreach (var name in new[] { "ClientId", "BankNetwork", "BankCurrency", "BankDestination", $"BankSortCodes:{swiftCode}" })
+        BankAmount(request.amount);
+        foreach (var name in new[] { "ClientId", "BankCurrency", $"BankSortCodes:{swiftCode}" })
         {
             RequiredSetting(name);
         }
@@ -107,7 +112,7 @@ public sealed class DangoPaymentClient
         return JsonSerializer.Serialize(new
         {
             status = 202, status_message = message,
-            data = new { requestToPay = true, transactionId = reference, status = "PENDING", message }
+            data = new { requestToPay = true, transactionId = reference, vendorReference = string.Empty, status = "PENDING", message }
         });
     }
 
@@ -118,29 +123,32 @@ public sealed class DangoPaymentClient
         return JsonSerializer.Serialize(new
         {
             status = 202, status_message = message,
-            data = new { payout = true, otherReference = reference, status = "PENDING", message }
+            data = new { payout = true, otherReference = reference, vendorReference = string.Empty, status = "PENDING", message }
         });
     }
 
-    public async Task<string> RequestToPayAsync(RequestToPayRequestDto request)
+    public async Task<string> RequestToPayAsync(RequestToPayRequestDto request, string network, string referenceNumber)
     {
-        ValidateCollection(request);
+        ValidateCollection(request, network);
+        RequiredValue(referenceNumber, nameof(referenceNumber));
         var reference = RequiredValue(request.Reference, nameof(request.Reference));
         var response = await PostAsync("merchant-payment", new
         {
             requestId = reference,
+            clientId = RequiredSetting("ClientId"),
             msisdn = NormalizePhone(request.Phone),
             merchantCode = RequiredSetting("MerchantCode"),
-            referenceNumber = reference,
+            referenceNumber,
             amount = Amount(request.Amount),
-            sourceSystem = RequiredSetting("SourceSystem"),
+            sourceSystem = network,
             narrative = reference
         });
         return Envelope(response, new
         {
-            requestToPay = true,
+            requestToPay = !IsInvalidRequestIdRejection(response),
             transactionId = reference,
-            status = "PENDING",
+            vendorReference = Field(response, "flexipayReferenceNumber") ?? string.Empty,
+            status = IsInvalidRequestIdRejection(response) ? "FAILED" : "PENDING",
             message = Message(response),
             flexipayReferenceNumber = Field(response, "flexipayReferenceNumber")
         });
@@ -150,12 +158,13 @@ public sealed class DangoPaymentClient
     {
         ArgumentNullException.ThrowIfNull(request);
         var reference = RequiredValue(request.TransactionId, nameof(request.TransactionId));
-        var response = await PostAsync("get-transaction-status", new { requestId = reference });
+        var response = await PostAsync("get-transaction-status", new { requestId = reference, clientId = RequiredSetting("ClientId") });
         var state = StatusState(response, reference, ReadStatusContract(_configuration));
         return Envelope(response, new
         {
             requestToPayStatus = state != "PENDING",
             transactionId = reference,
+            vendorReference = Field(response, "flexipayReferenceNumber") ?? string.Empty,
             status = state,
             message = Message(response),
             flexipayReferenceNumber = Field(response, "flexipayReferenceNumber")
@@ -169,6 +178,7 @@ public sealed class DangoPaymentClient
         var response = await PostAsync("mobile-transfer-cash-out", new
         {
             requestId = reference,
+            clientId = RequiredSetting("ClientId"),
             narrative = request.Message ?? string.Empty,
             beneficiaryAccount = NormalizePhone(request.AccountNumber),
             beneficiaryName = RequiredValue(request.AccountName, nameof(request.AccountName)),
@@ -191,16 +201,16 @@ public sealed class DangoPaymentClient
             // Unlike merchant/mobile transfers, Dango does not inject clientId for bank transfers.
             clientId = RequiredSetting("ClientId"),
             mobileNumber = NormalizePhone(request.phone),
-            amount = Amount(request.amount),
+            amount = BankAmount(request.amount),
             narrative = request.message ?? string.Empty,
             beneficiaryAccount = RequiredValue(request.accountNumber, nameof(request.accountNumber)),
             beneficiaryName = RequiredValue(request.accountName, nameof(request.accountName)),
             // A SWIFT/BIC must not be silently treated as a domestic bank sort code.
             bankSortCode = RequiredSetting($"BankSortCodes:{swiftCode}"),
             bankName = RequiredValue(request.bankName, nameof(request.bankName)),
-            network = RequiredSetting("BankNetwork"),
+            network = "BANK",
             currency = RequiredSetting("BankCurrency"),
-            destination = RequiredSetting("BankDestination")
+            destination = "BANK"
         });
         return PayoutSubmission(response, reference);
     }
@@ -209,9 +219,8 @@ public sealed class DangoPaymentClient
     {
         ArgumentNullException.ThrowIfNull(request);
         var reference = RequiredValue(request.Reference, nameof(request.Reference));
-        // This requestId-based route is distinct from payment-status/{transactionId}.
-        // Dango supplies clientId and preserves our original, nonempty requestId.
-        var response = await PostAsync("get-transaction-status", new { requestId = reference });
+        // Supply clientId for Dango's model validation before its service applies configured credentials.
+        var response = await PostAsync("get-transaction-status", new { requestId = reference, clientId = RequiredSetting("ClientId") });
         var contract = ReadStatusContract(_configuration);
         var state = StatusState(response, reference, contract);
         var message = contract == null
@@ -228,26 +237,42 @@ public sealed class DangoPaymentClient
                 message,
                 data = new[]
                 {
-                    new { status = state, status_message = message, message, transaction_id = reference }
+                    new
+                    {
+                        status = state, status_message = message, message, transaction_id = reference,
+                        vendorReference = Field(response, "flexipayReferenceNumber") ?? string.Empty
+                    }
                 }
             }
         });
+    }
+
+    public async Task<bool> HasUnresolvedNotFoundPayoutAsync(string reference, CancellationToken ct = default)
+    {
+        RequiredValue(reference, nameof(reference));
+        var response = await PostAsync("get-transaction-status",
+            new { requestId = reference, clientId = RequiredSetting("ClientId") }, ct);
+        return response.HttpStatus is 200 or 404 && Field(response, "httpCode") == "404" &&
+            string.Equals(Field(response, "httpMessage"), "Not Found", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(Field(response, "moreInformation"), "No Transaction found for the requested message ID", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(Field(response, "requestId"), reference, StringComparison.Ordinal);
     }
 
     private static string PayoutSubmission(Response response, string reference)
     {
         return Envelope(response, new
         {
-            // Submission codes are not settlement codes. Only the final lookup can permit reversal.
-            payout = true,
+            // Only this provider-confirmed rejection is terminal at submission time.
+            payout = !IsInvalidRequestIdRejection(response),
             otherReference = reference,
-            status = "PENDING",
+            vendorReference = Field(response, "flexipayReferenceNumber") ?? string.Empty,
+            status = IsInvalidRequestIdRejection(response) ? "FAILED" : "PENDING",
             message = Message(response),
             flexipayReferenceNumber = Field(response, "flexipayReferenceNumber")
         });
     }
 
-    private async Task<Response> PostAsync(string endpoint, object payload)
+    private async Task<Response> PostAsync(string endpoint, object payload, CancellationToken ct = default)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, new Uri(_baseUri, "api/Stanbic/" + endpoint))
         {
@@ -260,8 +285,8 @@ public sealed class DangoPaymentClient
         }
         try
         {
-            using var response = await _http.SendAsync(message);
-            var json = await response.Content.ReadAsStringAsync();
+            using var response = await _http.SendAsync(message, ct);
+            var json = await response.Content.ReadAsStringAsync(ct);
             JsonElement? body = null;
             try
             {
@@ -275,21 +300,28 @@ public sealed class DangoPaymentClient
             {
                 // A response parsing failure is not evidence that a financial transaction failed.
             }
+            if (!response.IsSuccessStatusCode || body == null)
+                _logger?.LogWarning("Dango endpoint {Endpoint} returned HTTP {StatusCode}; JSON object response: {HasJsonBody}. Settlement remains unconfirmed",
+                    endpoint, (int)response.StatusCode, body != null);
             return new Response((int)response.StatusCode, response.IsSuccessStatusCode, body);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            _logger?.LogWarning("Dango endpoint {Endpoint} transport failure: {ErrorCategory}. Settlement remains unconfirmed",
+                endpoint, ex.HttpRequestError);
             return new Response(202, false, null);
         }
         catch (OperationCanceledException)
         {
             // A timed-out POST may already have been accepted. Never trigger a reversal or failover.
+            _logger?.LogWarning("Dango endpoint {Endpoint} timed out or was cancelled. Settlement remains unconfirmed", endpoint);
             return new Response(202, false, null);
         }
     }
 
     private static string StatusState(Response response, string reference, StatusContract? contract)
     {
+        if (IsInvalidRequestIdRejection(response)) return "FAILED";
         if (contract == null || !response.IsSuccess ||
             !string.Equals(Field(response, contract.ReferenceField), reference, StringComparison.Ordinal))
         {
@@ -303,8 +335,15 @@ public sealed class DangoPaymentClient
             : "PENDING";
     }
 
-    private static string Message(Response response) => Field(response, "statusDescription")
-        ?? "Dango settlement is unconfirmed; retain this reference and reconcile before retrying.";
+    private static bool IsInvalidRequestIdRejection(Response response)
+        => response.HttpStatus is 200 or 400 && Field(response, "httpCode") == "400" &&
+           string.Equals(Field(response, "httpMessage"), "Bad Request", StringComparison.OrdinalIgnoreCase) &&
+           string.Equals(Field(response, "moreInformation"), "Invalid requestId", StringComparison.OrdinalIgnoreCase);
+
+    private static string Message(Response response) => IsInvalidRequestIdRejection(response) ? "Invalid requestId"
+        : Field(response, "statusDescription")
+        ?? ((!response.IsSuccess && response.HttpStatus != 202 ? $"Dango returned HTTP {response.HttpStatus}. " : string.Empty)
+            + "Dango settlement is unconfirmed; retain this reference and reconcile before retrying.");
 
     private static string Envelope(Response response, object data) => JsonSerializer.Serialize(new
     {
@@ -378,6 +417,13 @@ public sealed class DangoPaymentClient
 
     private static string RequiredValue(string? value, string name) =>
         !string.IsNullOrWhiteSpace(value) ? value : throw new ArgumentException("A nonempty value is required.", name);
+
+    private static string BankAmount(decimal amount)
+    {
+        if (amount <= 0 || decimal.Truncate(amount) != amount)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Dango bank payout amount must be a positive whole number; fractional amounts are not rounded.");
+        return amount.ToString("0", CultureInfo.InvariantCulture);
+    }
 
     private static string Amount(decimal amount) => amount > 0
         ? amount.ToString(CultureInfo.InvariantCulture)

@@ -41,24 +41,36 @@ namespace Infrastructure.Services.BackgroundServices
             _scopeFactory = scopeFactory;
         }
 
+        protected virtual TimeSpan PollInterval => TimeSpan.FromMinutes(2);
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("CheckPaymentStatusProcessor started.");
-
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(2)); // was 10
+            using var timer = new PeriodicTimer(PollInterval);
             try
             {
-                while (await timer.WaitForNextTickAsync(stoppingToken))
-                    await ProcessAllPendingAsync(stoppingToken);
+                do
+                {
+                    try
+                    {
+                        await ProcessAllPendingAsync(stoppingToken);
+                    }
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Payment status polling cycle failed; retrying on the next scheduled poll");
+                    }
+                }
+                while (await timer.WaitForNextTickAsync(stoppingToken));
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("CheckPaymentStatusProcessor stopping.");
+                // Normal hosted-service shutdown.
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Fatal error in ExecuteAsync");
-            }
+            _logger.LogInformation("CheckPaymentStatusProcessor stopping.");
         }
 
         private async Task ProcessAllPendingAsync(CancellationToken ct)
@@ -76,6 +88,9 @@ namespace Infrastructure.Services.BackgroundServices
                 walletTransactions = (await paymentSvc.GetWalletTransactionByStatus(PendingAtTelcom)).ToList();
                 pendingatbank = (await paymentSvc.GetWalletTransactionByStatus(PENDING_AT_BANK)).ToList();
             }
+
+            _logger.LogInformation("Status poll selected {RentCount} rent, {UtilityCount} utility, {MobilePayoutCount} mobile payouts and {BankPayoutCount} bank payouts",
+                tenantPayments.Count, utilityPayments.Count, walletTransactions.Count, pendingatbank.Count);
 
             var tasks = new List<Task>();
             using var throttler = new SemaphoreSlim(10); // limit concurrency
@@ -258,7 +273,19 @@ namespace Infrastructure.Services.BackgroundServices
                         }
 
                         var item = payout.data.data.First();
+                        var returnedReference = item.vendorReference ?? item.transaction_id;
+                        var payoutVendorReference = string.IsNullOrWhiteSpace(returnedReference)
+                            ? existingWalletTx.VendorTranId : returnedReference;
                         var status = item.status?.Trim()?.ToUpperInvariant() ?? string.Empty;
+                        if (status == "PENDING")
+                        {
+                            if (!string.IsNullOrWhiteSpace(returnedReference))
+                            {
+                                existingWalletTx.VendorTranId = returnedReference;
+                                await paymentSvc.UpdateWalletTransaction(existingWalletTx);
+                            }
+                            return;
+                        }
 
                         if (status == "SUCCESSFUL")
                         {
@@ -270,7 +297,7 @@ namespace Infrastructure.Services.BackgroundServices
                                     Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
                                     Status = SuccessAtBank,
                                     TransactionDate = DateTime.UtcNow,
-                                    VendorTranId = item.transaction_id,
+                                    VendorTranId = payoutVendorReference,
                                     ReasonAtTelecom = item.status_message
                                 };
                                 await paymentSvc.UpdateWalletTransaction(walletTx);
@@ -285,7 +312,7 @@ namespace Infrastructure.Services.BackgroundServices
                                     Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
                                     Status = SuccessFul,
                                     TransactionDate = DateTime.UtcNow,
-                                    VendorTranId = item.transaction_id,
+                                    VendorTranId = payoutVendorReference,
                                     ReasonAtTelecom = item.status_message
                                 };
                                 await paymentSvc.UpdateWalletTransaction(walletTx);
@@ -304,7 +331,7 @@ namespace Infrastructure.Services.BackgroundServices
                                     Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
                                     Status = FailedAtBank,
                                     TransactionDate = DateTime.UtcNow,
-                                    VendorTranId = item.transaction_id,
+                                    VendorTranId = payoutVendorReference,
                                     ReasonAtTelecom = item.status_message
                                 };
                                 await paymentSvc.ReverseWalletTransaction(walletTx);
@@ -319,7 +346,7 @@ namespace Infrastructure.Services.BackgroundServices
                                     Description = string.IsNullOrWhiteSpace(item.status_message) ? item.message : item.status_message,
                                     Status = FailedAtTelecom,
                                     TransactionDate = DateTime.UtcNow,
-                                    VendorTranId = item.transaction_id,
+                                    VendorTranId = payoutVendorReference,
                                     ReasonAtTelecom = item.status_message
                                 };
                                 await paymentSvc.ReverseWalletTransaction(walletTx);
@@ -337,7 +364,7 @@ namespace Infrastructure.Services.BackgroundServices
                                 Description = "Unknown status from API",
                                 Status = UnknownStatus,
                                 TransactionDate = DateTime.UtcNow,
-                                VendorTranId = item.transaction_id,
+                                VendorTranId = payoutVendorReference,
                                 ReasonAtTelecom = item.status_message
                             };
                             await paymentSvc.UpdateWalletTransaction(walletTx);
@@ -351,6 +378,18 @@ namespace Infrastructure.Services.BackgroundServices
                         if (dto == null || dto.data == null)
                         {
                             _logger.LogError("Invalid response structure from payment provider for TransactionId: {TransactionId}", transactionId);
+                            return;
+                        }
+
+                        var returnedReference = dto.data.vendorReference ?? dto.data.transactionId;
+                        if (!string.IsNullOrWhiteSpace(returnedReference)) vendorTranId = returnedReference;
+                        if (dto.data.status?.Equals("PENDING", StringComparison.OrdinalIgnoreCase) == true ||
+                            dto.data.status?.Equals("Undetermined", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            if (!string.IsNullOrWhiteSpace(returnedReference))
+                                await paymentSvc.UpdatePaymentStatus(PendingAtTelcom, transactionId,
+                                    dto.data.message ?? string.Empty, returnedReference, tranType);
+                            _logger.LogInformation("Collection remains pending; provider reference refreshed when available");
                             return;
                         }
 
@@ -437,7 +476,10 @@ namespace Infrastructure.Services.BackgroundServices
                 public bool requestToPayStatus { get; set; }
                 public string status { get; set; } = null!;
                 public string message { get; set; } = null!;
+                [System.Text.Json.Serialization.JsonConverter(typeof(PaymentProcessor.NumberOrStringJsonConverter))]
                 public string transactionId { get; set; } = null!;
+                [System.Text.Json.Serialization.JsonConverter(typeof(PaymentProcessor.NumberOrStringJsonConverter))]
+                public string? vendorReference { get; set; }
             }
         }
 
@@ -468,6 +510,7 @@ namespace Infrastructure.Services.BackgroundServices
                 public string status { get; set; } = "";        // "SUCCESSFUL" | "FAILED" | "PENDING"...
                 public string status_message { get; set; } = ""; // e.g. "Mobilemoney sent successfully"
                 public string transaction_id { get; set; } = "";
+                public string? vendorReference { get; set; }
                 public string amount_charged { get; set; } = "";
             }
 

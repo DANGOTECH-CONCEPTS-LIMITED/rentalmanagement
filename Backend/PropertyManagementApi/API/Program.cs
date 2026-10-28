@@ -63,7 +63,10 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) =>
 // Configure MySQL connection
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        new MySqlConnector.MySqlConnectionStringBuilder(builder.Configuration.GetConnectionString("DefaultConnection"))
+        {
+            AllowUserVariables = true
+        }.ConnectionString,
         new MySqlServerVersion(new Version(8, 0, 28)))
 );
 
@@ -82,6 +85,7 @@ builder.Services.AddScoped<Application.Interfaces.Meter.IMeterFeeService, Infras
 builder.Services.AddScoped<IMeterLienService, Infrastructure.Services.Meter.MeterLienService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<CollectionWalletCreditService>();
 builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISmsProcessor, SmsProcessor>();
 builder.Services.AddScoped<IServiceLogsRepository, ServiceLogsRepository>();
@@ -98,6 +102,7 @@ builder.Services.AddScoped<WalletAccountingNotifier>();
 builder.Services.AddScoped<ISTSProcessing, STSProcessing>();
 
 
+builder.Services.AddScoped<IAdminPayoutReconciliation, AdminPayoutReconciliationService>();
 builder.Services.AddScoped<PaymentProviderSettingsService>();
 builder.Services.AddScoped<ICollectoApiClient, PaymentGatewayRouter>();
 builder.Services.AddHttpClient<DangoPaymentClient>(client =>
@@ -166,6 +171,7 @@ builder.Services.AddCors(options =>
          .SetIsOriginAllowed(_ => true) // ⚠️ allow ANY origin
                                         //.WithOrigins("https://dangopay.dangotechconcepts.com")
             .AllowAnyHeader()
+            .WithExposedHeaders("X-Transaction-Id")
             .AllowAnyMethod()
             .AllowCredentials(); // Optional, only if using cookies or auth headers
     });
@@ -300,8 +306,13 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var originalCommandTimeout = dbContext.Database.GetCommandTimeout();
+    var migrationCommandTimeout = builder.Configuration.GetValue<int?>("Database:MigrationsCommandTimeoutSeconds") ?? 600;
+    if (migrationCommandTimeout is < 30 or > 3600)
+        throw new InvalidOperationException("Database:MigrationsCommandTimeoutSeconds must be between 30 and 3600.");
     try
     {
+        dbContext.Database.SetCommandTimeout(migrationCommandTimeout);
         dbContext.Database.Migrate();
     }
     catch (Exception ex)
@@ -309,6 +320,10 @@ using (var scope = app.Services.CreateScope())
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred while migrating the database.");
         throw;
+    }
+    finally
+    {
+        dbContext.Database.SetCommandTimeout(originalCommandTimeout);
     }
 }
 

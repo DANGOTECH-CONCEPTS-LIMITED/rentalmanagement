@@ -26,5 +26,13 @@ public class PaymentGatewaySubmission
     public string? Response { get; set; }
     [MaxLength(128)]
     public string? ProviderTransactionId { get; set; }
+    [MaxLength(64)]
+    public string? ProviderReferenceNumber { get; set; }
     public DateTime SubmittedAtUtc { get; set; }
+}
+
+public class DangoPaymentReferenceAllocation
+{
+    public DateTime DateUtc { get; set; }
+    public long Sequence { get; set; }
 }

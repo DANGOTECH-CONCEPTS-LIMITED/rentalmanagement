@@ -25,7 +25,8 @@ public sealed class PaymentGatewayRouter(
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(operation + ":" + reference)));
 
     private async Task<string> SubmitAsync<T>(string operation, string reference, T request,
-        Func<Task<string>> submit, Func<Task<string>>? submitDango = null, Func<Task>? validateDango = null)
+        Func<Task<string>> submit, Func<PaymentGatewaySubmission, Task<string>>? submitDango = null,
+        Func<Task>? validateDango = null, string? collectionCategory = null)
     {
         if (string.IsNullOrWhiteSpace(reference) || reference.Length > 128)
             throw new ArgumentException("A stable payment reference of at most 128 characters is required.");
@@ -38,7 +39,7 @@ public sealed class PaymentGatewayRouter(
         {
             logger?.LogInformation("Replaying {Operation} reference {Reference} from original provider {Provider}; no new submission",
                 operation, reference, existing.Provider);
-            return Replay(existing, hash);
+            return Replay(existing, hash, collectionCategory);
         }
 
         // Collecto wallet operations are provider-specific, not interchangeable payouts.
@@ -55,6 +56,10 @@ public sealed class PaymentGatewayRouter(
             Id = id, Operation = operation, Reference = reference, Provider = provider,
             RequestHash = hash, SubmittedAtUtc = DateTime.UtcNow
         };
+        if (provider == PaymentProviderSettingsService.DangoPayment && collectionCategory != null)
+            claim.ProviderReferenceNumber = await CollectionTransactionIds.IsIssuedAsync(db, collectionCategory, reference)
+                ? reference
+                : await DangoReferenceNumberAllocator.AllocateAsync(db, collectionCategory, claim.SubmittedAtUtc);
         submissions.Add(claim);
         try
         {
@@ -66,7 +71,7 @@ public sealed class PaymentGatewayRouter(
             db.Entry(claim).State = EntityState.Detached;
             existing = await submissions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
             if (existing == null) throw;
-            return Replay(existing, hash);
+            return Replay(existing, hash, collectionCategory);
         }
 
         logger?.LogInformation("Submitting {Operation} reference {Reference} using payment provider {Provider}",
@@ -74,7 +79,7 @@ public sealed class PaymentGatewayRouter(
         string response;
         try
         {
-            response = provider == PaymentProviderSettingsService.DangoPayment ? await submitDango!() : await submit();
+            response = provider == PaymentProviderSettingsService.DangoPayment ? await submitDango!(claim) : await submit();
         }
         catch (HttpRequestException)
         {
@@ -90,9 +95,12 @@ public sealed class PaymentGatewayRouter(
         return response;
     }
 
-    private static string Replay(PaymentGatewaySubmission existing, string hash)
+    private static string Replay(PaymentGatewaySubmission existing, string hash, string? collectionCategory)
     {
         RequireProvider(existing.Provider);
+        if (existing.ProviderReferenceNumber != null && collectionCategory != null &&
+            !existing.ProviderReferenceNumber.StartsWith($"DANGO_{collectionCategory}_", StringComparison.Ordinal))
+            throw new InvalidOperationException("This payment reference is already bound to a different payment category.");
         if (!string.IsNullOrEmpty(existing.RequestHash) && existing.RequestHash != hash)
             throw new InvalidOperationException("This payment reference is already bound to a different request. Reconcile the original transaction; do not resubmit it.");
         return existing.Response ?? PendingResponse(existing);
@@ -136,16 +144,34 @@ public sealed class PaymentGatewayRouter(
         return provider;
     }
 
-    public Task<string> RequestToPayAsync(RequestToPayRequestDto request)
-        => SubmitAsync("Collection", request.Reference, request, () => collecto.RequestToPayAsync(request),
-            () => dango.RequestToPayAsync(request), () =>
+    public async Task<string> RequestToPayAsync(RequestToPayRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Reference) || request.Reference.Length > 128)
+            throw new ArgumentException("A stable payment reference of at most 128 characters is required.");
+        if (request.PaymentCategory == "W")
+        {
+            var originalId = SubmissionId("Collection", request.Reference);
+            if (!await db.Set<PaymentGatewaySubmission>().AsNoTracking().AnyAsync(x => x.Id == originalId))
+                request.Reference = await CollectionTransactionIds.CreateAsync(db, "W", request.Reference);
+        }
+        string network = null!;
+        return await SubmitAsync("Collection", request.Reference, request, () => collecto.RequestToPayAsync(request),
+            claim => dango.RequestToPayAsync(request, network, claim.ProviderReferenceNumber!), async () =>
             {
-                dango.ValidateCollection(request);
-                return Task.CompletedTask;
-            });
+                DangoReferenceNumberAllocator.ValidateCategory(request.PaymentCategory);
+                network = await settings.ResolveMobileNetworkAsync(request.Phone);
+                dango.ValidateCollection(request, network);
+            }, request.PaymentCategory);
+    }
 
     public async Task<string> GetRequestToPayStatusAsync(RequestToPayStatusRequestDto request)
     {
+        var originalId = SubmissionId("Collection", request.TransactionId);
+        if (!await db.Set<PaymentGatewaySubmission>().AsNoTracking().AnyAsync(x => x.Id == originalId))
+        {
+            var canonicalId = await CollectionTransactionIds.FindAsync(db, "W", request.TransactionId);
+            if (canonicalId != null) request = new RequestToPayStatusRequestDto { TransactionId = canonicalId };
+        }
         var provider = await ProviderForAsync("Collection", request.TransactionId);
         return provider == PaymentProviderSettingsService.DangoPayment
             ? await dango.GetRequestToPayStatusAsync(request)
@@ -156,7 +182,7 @@ public sealed class PaymentGatewayRouter(
     {
         string? network = null;
         return SubmitAsync("Payout", request.Reference, request, () => collecto.InitiatePayoutAsync(request),
-            () => dango.InitiatePayoutAsync(request, network), async () =>
+            _ => dango.InitiatePayoutAsync(request, network), async () =>
             {
                 network = await settings.ResolveMobileNetworkAsync(request.AccountNumber);
                 dango.ValidatePayout(request, network);
@@ -165,7 +191,7 @@ public sealed class PaymentGatewayRouter(
 
     public Task<string> InitiateBankPayoutAsync(InitiatePayoutBankRequestDto request)
         => SubmitAsync("Payout", request.reference, request, () => collecto.InitiateBankPayoutAsync(request),
-            () => dango.InitiateBankPayoutAsync(request), () =>
+            _ => dango.InitiateBankPayoutAsync(request), () =>
             {
                 dango.ValidateBankPayout(request);
                 return Task.CompletedTask;

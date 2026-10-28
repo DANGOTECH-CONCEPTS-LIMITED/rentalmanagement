@@ -42,34 +42,16 @@ namespace Infrastructure.Services.PaymentServices
             if (tenant == null)
                 throw new Exception("Tenant not found.");
 
-            // 2) Prevent duplicate transaction IDs
-            if (await _context.TenantPayments
-                    .AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
+            var clientReference = string.IsNullOrWhiteSpace(tenantPaymentDto.TransactionId) ? null : tenantPaymentDto.TransactionId;
+            if (clientReference != null && await _context.TenantPayments
+                    .AnyAsync(tp => tp.TransactionId == clientReference || tp.ClientReference == clientReference))
                 throw new Exception("Payment with this transaction ID already exists.");
 
-            // 3) Accrue missed months into Arrears
+            tenantPaymentDto.TransactionId = await CollectionTransactionIds.CreateAsync(_context, "R", clientReference);
+            if (await _context.TenantPayments.AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
+                throw new Exception("Payment with this transaction ID already exists.");
+
             AccrueArrearsIfNeeded(tenant);
-
-            //check if transaction ID is supplied
-            if (string.IsNullOrEmpty(tenantPaymentDto.TransactionId))
-            {
-                //generate a random transaction ID
-                tenantPaymentDto.TransactionId = Guid.NewGuid().ToString();
-
-                //check if transaction ID is unique
-                while (await _context.TenantPayments
-                        .AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
-                {
-                    tenantPaymentDto.TransactionId = Guid.NewGuid().ToString();
-                }
-            }
-            else
-            {
-                //check if transaction ID is unique
-                if (await _context.TenantPayments
-                        .AnyAsync(tp => tp.TransactionId == tenantPaymentDto.TransactionId))
-                    throw new Exception("Payment with this transaction ID already exists.");
-            }
 
             // 4) Record the payment
             var payment = new TenantPayment
@@ -81,6 +63,7 @@ namespace Infrastructure.Services.PaymentServices
                 PaymentType = tenantPaymentDto.PaymentType,
                 PaymentStatus = "PENDING",
                 TransactionId = tenantPaymentDto.TransactionId,
+                ClientReference = clientReference,
                 PropertyTenantId = tenantPaymentDto.PropertyTenantId,
                 PropertyTenant = tenant,
                 Description = tenantPaymentDto.Description
@@ -488,7 +471,7 @@ namespace Infrastructure.Services.PaymentServices
                     throw new Exception("Payment not found.");
                 payment.Status = status;
                 payment.ReasonAtTelecom = vendorreason;
-                payment.VendorTranId = vendortranref;
+                if (!string.IsNullOrWhiteSpace(vendortranref)) payment.VendorTranId = vendortranref;
                 _context.UtilityPayments.Update(payment);
                 await _context.SaveChangesAsync();
             }
@@ -500,7 +483,7 @@ namespace Infrastructure.Services.PaymentServices
                     throw new Exception("Payment not found.");
                 payment.PaymentStatus = status;
                 payment.ReasonAtTelecom = vendorreason;
-                payment.VendorTransactionId = vendortranref;
+                if (!string.IsNullOrWhiteSpace(vendortranref)) payment.VendorTransactionId = vendortranref;
                 _context.TenantPayments.Update(payment);
                 await _context.SaveChangesAsync();
             }
@@ -536,7 +519,7 @@ namespace Infrastructure.Services.PaymentServices
             {
                 UtilityType = "PREPAID WATER",
                 Description = "Water Payment",
-                TransactionID = Guid.NewGuid().ToString(),
+                TransactionID = await CollectionTransactionIds.CreateAsync(_context, "U"),
                 PaymentMethod = "MOMO",
                 Status = "PENDING",
                 Amount = dto.Amount,
@@ -720,85 +703,14 @@ namespace Infrastructure.Services.PaymentServices
                 .FirstOrDefaultAsync(wt => wt.TransactionId == walletTransaction.TransactionId);
             if (existingTransaction == null)
                 throw new Exception("Wallet transaction not found.");
-            //map dto to entity
-            existingTransaction.Status = walletTransaction.Status;
-            existingTransaction.VendorTranId = walletTransaction.VendorTranId;
-            _context.WalletTransactions.Update(existingTransaction);
-            await _context.SaveChangesAsync();
+            // A stale status poll must not reopen a refunded payout.
+            await _context.WalletTransactions.Where(x => x.Id == existingTransaction.Id && x.Status != "REVERSED")
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, walletTransaction.Status)
+                    .SetProperty(x => x.VendorTranId, walletTransaction.VendorTranId));
+            await _context.Entry(existingTransaction).ReloadAsync();
         }
 
-        public async Task ReverseWalletTransaction(WalletTransaction walletTransaction)
-        {
-            if (walletTransaction == null)
-                throw new ArgumentNullException(nameof(walletTransaction));
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
-            {
-                var existingTransaction = await _context.WalletTransactions
-                    .FirstOrDefaultAsync(wt => wt.TransactionId == walletTransaction.TransactionId);
-
-                if (existingTransaction == null)
-                    throw new Exception("Wallet transaction not found.");
-
-                // Prevent double reversal
-                if (existingTransaction.Status == "REVERSED")
-                    throw new InvalidOperationException("Transaction has already been reversed.");
-
-                var wallet = await _context.Wallets
-                    .FirstOrDefaultAsync(w => w.Id == existingTransaction.WalletId);
-
-                if (wallet == null)
-                    throw new Exception("Wallet not found.");
-
-                var balanceBeforeReversal = wallet.Balance;
-
-                // Create reversal transaction as a positive amount
-                var reversalTransaction = new WalletTransaction
-                {
-                    WalletId = wallet.Id,
-                    Amount = Math.Abs(existingTransaction.Amount), // Always positive
-                    Description = $"Reversal of transaction {existingTransaction.TransactionId} Amount {existingTransaction.Amount}",
-                    TransactionDate = DateTime.UtcNow,
-                    TransactionId = Guid.NewGuid().ToString(),
-                    Status = "REVERSAL",
-                    VendorTranId = walletTransaction.TransactionId,
-                    ReasonAtTelecom = walletTransaction.ReasonAtTelecom
-                };
-                await _context.WalletTransactions.AddAsync(reversalTransaction);
-
-                // Update wallet balance by adding the reversal transaction's amount
-                wallet.Balance += reversalTransaction.Amount;
-
-                // Update the original transaction status
-                existingTransaction.Status = "REVERSED";
-                existingTransaction.ReasonAtTelecom = walletTransaction.ReasonAtTelecom;
-
-                _context.Wallets.Update(wallet);
-                _context.WalletTransactions.Update(existingTransaction);
-
-                // Optionally, send an email notification to the landlord
-                // await _emailService.SendEmailAsync(
-                //     toEmail: wallet.Landlord.Email,
-                //     subject: "Wallet Transaction Reversal",
-                //     message: $"Dear {wallet.Landlord.FullName},\n\n" +
-                //              $"A transaction with ID {existingTransaction.TransactionId} " +
-                //              $"amounting to {existingTransaction.Amount} has been reversed.\n\n" +
-                //              $"Previous balance: {balanceBeforeReversal}\n" +
-                //              $"New balance: {wallet.Balance}\n\n" +
-                //              $"Best regards,\nProperty Management Team"
-                // );
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
+        public Task ReverseWalletTransaction(WalletTransaction walletTransaction) => Infrastructure.Services.PaymentServices.WalletSvc.WalletPayoutReversal.ReverseAsync(_context, walletTransaction, matchById: false);
 
         public async Task<WalletTransaction> GetWalletTransactionByIdAsync(string transactionId)
         {
@@ -921,7 +833,7 @@ namespace Infrastructure.Services.PaymentServices
             if (payment == null)
                 throw new ArgumentNullException(nameof(payment));
 
-            payment.TransactionID = Guid.NewGuid().ToString();
+            payment.TransactionID = await CollectionTransactionIds.CreateAsync(_context, "U");
             payment.Status = "SUCCESSFUL AT TELECOM";
             payment.PaymentMethod = "M-PESA";
             payment.IsSmsSent = true;

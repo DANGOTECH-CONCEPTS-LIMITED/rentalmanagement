@@ -138,7 +138,7 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
 
       toast({
         title: "Payment Successful",
-        description: "Your payment has been processed successfully.",
+        description: `Your payment has been processed successfully.${response.headers.get('X-Transaction-Id') ? ` Transaction ID: ${response.headers.get('X-Transaction-Id')}` : ''}`,
       });
 
       form.reset();

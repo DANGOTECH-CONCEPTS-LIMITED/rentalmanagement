@@ -143,6 +143,46 @@ public class WalletWithdrawalTests : IAsyncLifetime
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NewMobileAndBankWithdrawalsUseDatedWIdsWithoutChangingExistingPayouts(bool bank)
+    {
+        var owner = (await _db.Users.FindAsync(101))!;
+        if (bank)
+        {
+            owner.BankName = "Test Bank";
+            owner.BankAccountNumber = "123456";
+        }
+        _db.WalletTransactions.Add(new WalletTransaction
+        {
+            WalletId = 201, TransactionId = "existing-uuid-payout", Amount = -100,
+            Status = bank ? "PENDING AT THE BANK" : "PENDING AT TELCOM"
+        });
+        await _db.SaveChangesAsync();
+        await _service.AdminWithdrawUtilityAsync(Request(), "admin@test");
+        var first = await _db.WalletTransactions.SingleAsync(x => x.TransactionId != "existing-uuid-payout");
+        Assert.Matches("^DANGO_W_[0-9]{8}_1$", first.TransactionId);
+        Assert.Equal(bank ? "PENDING_BANK_PAYOUT" : "PENDING", first.Status);
+        Assert.Equal(-1000m, first.Amount);
+        Assert.Equal(4000m, (await _db.Wallets.FindAsync(201))!.Balance);
+        Assert.Empty(await _db.Set<CollectionTransactionIdentity>().ToListAsync());
+        await _service.AdminWithdrawUtilityAsync(Request(), "admin@test");
+        Assert.Contains(await _db.WalletTransactions.ToListAsync(), x => x.TransactionId.EndsWith("_2", StringComparison.Ordinal));
+        Assert.Equal(3000m, (await _db.Wallets.FindAsync(201))!.Balance);
+        Assert.Equal(bank ? "PENDING AT THE BANK" : "PENDING AT TELCOM",
+            (await _db.WalletTransactions.SingleAsync(x => x.TransactionId == "existing-uuid-payout")).Status);
+    }
+
+    [Fact]
+    public async Task MobileWithdrawalSequenceIsSharedWithUtilityCollections()
+    {
+        var utilityId = await Infrastructure.Services.PaymentServices.CollectionTransactionIds.CreateAsync(_db, "U");
+        await _service.AdminWithdrawUtilityAsync(Request(), "admin@test");
+        Assert.EndsWith("_1", utilityId);
+        Assert.Matches("^DANGO_W_[0-9]{8}_2$", (await _db.WalletTransactions.SingleAsync()).TransactionId);
+    }
+
+    [Theory]
     [InlineData("utility@test")]
     [InlineData("tenant@test")]
     [InlineData("missing@test")]

@@ -112,7 +112,7 @@ export default function PaymentProviderSettings({ apiUrl, authToken }: Props) {
           </div>
           {networks.length > 0 && <fieldset disabled={saving} className="space-y-3 rounded-md border p-3">
             <legend className="px-1 text-sm font-medium">Mobile network routing</legend>
-            <p className="text-sm text-muted-foreground">Set the Dango network code for each operator and comma-separated international prefixes (for example 25677). Local numbers are normalized before matching. Unknown or overlapping prefixes are rejected. Number-portability exceptions require updating these rules.</p>
+            <p className="text-sm text-muted-foreground">Use MTN and AIRTEL as the operator codes and enter comma-separated international prefixes (for example 25677). The matching code becomes sourceSystem for merchant collections and network for mobile payouts. Local numbers are normalized before matching. Unknown or overlapping prefixes are rejected. Number-portability exceptions require updating these rules.</p>
             {networks.map((network, index) => <div key={index} className="grid gap-2 md:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor={`network-code-${index}`}>{network.name} network code</Label>

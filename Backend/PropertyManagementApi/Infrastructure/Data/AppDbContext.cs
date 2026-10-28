@@ -53,9 +53,15 @@ namespace Infrastructure.Data
             base.OnModelCreating(modelBuilder);
             ConfigureMeterLiens(modelBuilder);
             modelBuilder.Entity<PaymentProviderSetting>().HasData(new PaymentProviderSetting { Id = 1, Provider = "Collecto" });
+            modelBuilder.Entity<CollectionTransactionIdentity>().HasKey(x => x.TransactionId);
+            modelBuilder.Entity<CollectionTransactionIdentity>().HasIndex(x => x.ClientReferenceHash).IsUnique();
+            modelBuilder.Entity<TenantPayment>().HasIndex(x => x.ClientReference).IsUnique();
+            modelBuilder.Entity<DangoPaymentReferenceAllocation>().HasKey(x => new { x.DateUtc, x.Sequence });
+            modelBuilder.Entity<DangoPaymentReferenceAllocation>().Property(x => x.Sequence).ValueGeneratedNever();
             modelBuilder.Entity<PaymentGatewaySubmission>().Property(x => x.Response).HasColumnType("longtext");
             modelBuilder.Entity<PaymentGatewaySubmission>().HasIndex(x => new { x.Operation, x.Reference }).IsUnique();
             modelBuilder.Entity<PaymentGatewaySubmission>().HasIndex(x => new { x.Operation, x.ProviderTransactionId });
+            modelBuilder.Entity<PaymentGatewaySubmission>().HasIndex(x => x.ProviderReferenceNumber).IsUnique();
 
             #region USSD
             //USSD Setup

@@ -40,6 +40,7 @@ namespace API.Controllers.CollectoApi
                     return Unauthorized();
                 }
                 var response = await _collectoApiClient.RequestToPayAsync(request);
+                Response.Headers["X-Transaction-Id"] = request.Reference;
                 return Ok(response);
             }
             catch (Exception ex)

@@ -274,6 +274,29 @@ namespace Infrastructure.Migrations
                     b.ToTable("VendorPayments");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.CollectionTransactionIdentity", b =>
+                {
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)");
+
+                    b.Property<string>("ClientReferenceHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("TransactionId");
+
+                    b.HasIndex("ClientReferenceHash")
+                        .IsUnique();
+
+                    b.ToTable("CollectionTransactionIdentity");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.CollectoWalletWithdrawalHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -400,6 +423,19 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PropertyId");
 
                     b.ToTable("TenantComplaints");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.DangoPaymentReferenceAllocation", b =>
+                {
+                    b.Property<DateTime>("DateUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("DateUtc", "Sequence");
+
+                    b.ToTable("DangoPaymentReferenceAllocation");
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.HttpRequesRequestResponse", b =>
@@ -734,6 +770,10 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
+                    b.Property<string>("ProviderReferenceNumber")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<string>("ProviderTransactionId")
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
@@ -755,6 +795,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProviderReferenceNumber")
+                        .IsUnique();
 
                     b.HasIndex("Operation", "ProviderTransactionId");
 
@@ -931,6 +974,10 @@ namespace Infrastructure.Migrations
                     b.Property<double>("Amount")
                         .HasColumnType("double");
 
+                    b.Property<string>("ClientReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
                     b.Property<string>("Description")
                         .HasColumnType("longtext");
 
@@ -968,7 +1015,13 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<DateTime?>("WalletCreditedAtUtc")
+                        .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientReference")
+                        .IsUnique();
 
                     b.HasIndex("PropertyTenantId");
 
@@ -1172,6 +1225,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("VendorTranId")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("WalletCreditedAtUtc")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 

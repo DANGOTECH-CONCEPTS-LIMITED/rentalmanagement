@@ -20,21 +20,22 @@ public class DangoPaymentClientTests
         var handler = new StubHandler(_ => Reply($$"""{"statusCode":"{{code}}","statusDescription":"Accepted","requestId":"collection-ref","flexipayReferenceNumber":"remote-ref"}"""));
         var client = Client(handler);
 
-        using var result = JsonDocument.Parse(await client.RequestToPayAsync(Collection()));
+        using var result = JsonDocument.Parse(await client.RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1"));
         var data = result.RootElement.GetProperty("data");
         Assert.True(data.GetProperty("requestToPay").GetBoolean());
         Assert.Equal("PENDING", data.GetProperty("status").GetString());
         Assert.Equal("collection-ref", data.GetProperty("transactionId").GetString());
         Assert.Equal("remote-ref", data.GetProperty("flexipayReferenceNumber").GetString());
+        Assert.Equal("remote-ref", data.GetProperty("vendorReference").GetString());
         Assert.Equal("https://payments.example/api/Stanbic/merchant-payment", handler.Url);
         Assert.Equal("test-api-key", handler.ApiKey);
         using var sent = JsonDocument.Parse(handler.Body!);
         Assert.Equal("collection-ref", sent.RootElement.GetProperty("requestId").GetString());
-        Assert.Equal("collection-ref", sent.RootElement.GetProperty("referenceNumber").GetString());
+        Assert.Equal("DANGO_U_20261028_1", sent.RootElement.GetProperty("referenceNumber").GetString());
         Assert.Equal("256770000001", sent.RootElement.GetProperty("msisdn").GetString());
         Assert.Equal("merchant-test", sent.RootElement.GetProperty("merchantCode").GetString());
-        Assert.Equal("rental-test", sent.RootElement.GetProperty("sourceSystem").GetString());
-        Assert.False(sent.RootElement.TryGetProperty("clientId", out _));
+        Assert.Equal("MTN", sent.RootElement.GetProperty("sourceSystem").GetString());
+        Assert.Equal("configured-client", sent.RootElement.GetProperty("clientId").GetString());
     }
 
     [Theory]
@@ -109,9 +110,9 @@ public class DangoPaymentClientTests
         Assert.Equal("configured-client", sent.RootElement.GetProperty("clientId").GetString());
         Assert.Equal("configured-sort-code", sent.RootElement.GetProperty("bankSortCode").GetString());
         Assert.Equal("Bank account", sent.RootElement.GetProperty("beneficiaryAccount").GetString());
-        Assert.Equal("verified-bank-network", sent.RootElement.GetProperty("network").GetString());
+        Assert.Equal("BANK", sent.RootElement.GetProperty("network").GetString());
         Assert.Equal("UGX", sent.RootElement.GetProperty("currency").GetString());
-        Assert.Equal("verified-bank-destination", sent.RootElement.GetProperty("destination").GetString());
+        Assert.Equal("BANK", sent.RootElement.GetProperty("destination").GetString());
     }
 
     [Theory]
@@ -146,7 +147,7 @@ public class DangoPaymentClientTests
     public async Task TimeoutAndNetworkErrorsKeepStablePendingReferences(bool timeout)
     {
         var client = Client(new StubHandler(_ => throw (timeout ? (Exception)new TaskCanceledException() : new HttpRequestException())));
-        using var collection = JsonDocument.Parse(await client.RequestToPayAsync(Collection()));
+        using var collection = JsonDocument.Parse(await client.RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1"));
         Assert.True(collection.RootElement.GetProperty("data").GetProperty("requestToPay").GetBoolean());
         Assert.Equal("collection-ref", collection.RootElement.GetProperty("data").GetProperty("transactionId").GetString());
         using var payout = JsonDocument.Parse(await client.InitiatePayoutAsync(Mobile()));
@@ -177,7 +178,8 @@ public class DangoPaymentClientTests
         Assert.Equal("https://payments.example/api/Stanbic/get-transaction-status", handler.Url);
         using var sent = JsonDocument.Parse(handler.Body!);
         Assert.Equal("payout-ref", sent.RootElement.GetProperty("requestId").GetString());
-        Assert.Single(sent.RootElement.EnumerateObject());
+        Assert.Equal("configured-client", sent.RootElement.GetProperty("clientId").GetString());
+        Assert.Equal(2, sent.RootElement.EnumerateObject().Count());
     }
 
     [Theory]
@@ -233,7 +235,7 @@ public class DangoPaymentClientTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
-            await Client(handler, "DangoPayment:ApiKey").RequestToPayAsync(Collection());
+            await Client(handler, "DangoPayment:ApiKey").RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1");
         }
         finally
         {
@@ -246,20 +248,18 @@ public class DangoPaymentClientTests
 
     [Theory]
     [InlineData("DangoPayment:MerchantCode")]
-    [InlineData("DangoPayment:SourceSystem")]
+    [InlineData("DangoPayment:ClientId")]
     public async Task CollectionRequiresRealConfigurationBeforeSending(string missing)
     {
         var handler = new StubHandler(_ => Reply("{}"));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Client(handler, missing).RequestToPayAsync(Collection()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Client(handler, missing).RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1"));
         Assert.Null(handler.Url);
     }
 
     [Theory]
     [InlineData("DangoPayment:ClientId")]
     [InlineData("DangoPayment:BankSortCodes:TESTBIC")]
-    [InlineData("DangoPayment:BankNetwork")]
     [InlineData("DangoPayment:BankCurrency")]
-    [InlineData("DangoPayment:BankDestination")]
     public async Task BankDoesNotInventUnverifiedRoutingSettings(string missing)
     {
         var handler = new StubHandler(_ => Reply("{}"));
@@ -289,8 +289,8 @@ public class DangoPaymentClientTests
         var client = Client(handler);
         var collection = Collection();
         collection.Phone = phone;
-        client.ValidateCollection(collection);
-        await client.RequestToPayAsync(collection);
+        client.ValidateCollection(collection, "MTN");
+        await client.RequestToPayAsync(collection, "MTN", "DANGO_U_20261028_1");
         using (var sent = JsonDocument.Parse(handler.Body!))
         {
             Assert.Equal("256770000001", sent.RootElement.GetProperty("msisdn").GetString());
@@ -333,8 +333,8 @@ public class DangoPaymentClientTests
         var client = Client(handler);
         var collection = Collection();
         collection.Phone = phone;
-        Assert.Throws<ArgumentException>(() => client.ValidateCollection(collection));
-        await Assert.ThrowsAsync<ArgumentException>(() => client.RequestToPayAsync(collection));
+        Assert.Throws<ArgumentException>(() => client.ValidateCollection(collection, "MTN"));
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RequestToPayAsync(collection, "MTN", "DANGO_U_20261028_1"));
         var mobile = Mobile();
         mobile.AccountNumber = phone;
         Assert.Throws<ArgumentException>(() => client.ValidatePayout(mobile));
@@ -353,12 +353,12 @@ public class DangoPaymentClientTests
         var client = Client(handler);
         var collection = Collection();
         collection.Amount = 0m;
-        Assert.Throws<ArgumentOutOfRangeException>(() => client.ValidateCollection(collection));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.RequestToPayAsync(collection));
+        Assert.Throws<ArgumentOutOfRangeException>(() => client.ValidateCollection(collection, "MTN"));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.RequestToPayAsync(collection, "MTN", "DANGO_U_20261028_1"));
         collection.Amount = 1m;
         collection.Reference = " ";
-        Assert.Throws<ArgumentException>(() => client.ValidateCollection(collection));
-        await Assert.ThrowsAsync<ArgumentException>(() => client.RequestToPayAsync(collection));
+        Assert.Throws<ArgumentException>(() => client.ValidateCollection(collection, "MTN"));
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RequestToPayAsync(collection, "MTN", "DANGO_U_20261028_1"));
         Assert.Null(handler.Url);
     }
 
@@ -439,12 +439,9 @@ public class DangoPaymentClientTests
     [Theory]
     [InlineData("DangoPayment:BaseUrl")]
     [InlineData("DangoPayment:MerchantCode")]
-    [InlineData("DangoPayment:SourceSystem")]
     [InlineData("DangoPayment:ClientId")]
     [InlineData("DangoPayment:BankSortCodes:TESTBIC")]
-    [InlineData("DangoPayment:BankNetwork")]
     [InlineData("DangoPayment:BankCurrency")]
-    [InlineData("DangoPayment:BankDestination")]
     [InlineData("DangoPayment:TransactionStatus:StateField")]
     [InlineData("DangoPayment:TransactionStatus:ReferenceField")]
     [InlineData("DangoPayment:TransactionStatus:SuccessValues:0")]
@@ -453,6 +450,223 @@ public class DangoPaymentClientTests
         Assert.True(DangoPaymentClient.IsConfigured(Configuration()));
         Assert.True(DangoPaymentClient.IsConfigured(Configuration("DangoPayment:ApiKey")));
         Assert.False(DangoPaymentClient.IsConfigured(Configuration(missing)));
+    }
+
+    [Theory]
+    [InlineData("http://payments.example/")]
+    [InlineData("https://payments.example/")]
+    public async Task HttpAndHttpsPassReadinessAndUseConfiguredScheme(string baseUrl)
+    {
+        var configuration = Configuration();
+        configuration["DangoPayment:BaseUrl"] = baseUrl;
+        Assert.True(DangoPaymentClient.IsConfigured(configuration));
+        var handler = new StubHandler(_ => Reply("{}"));
+        var client = new DangoPaymentClient(new HttpClient(handler), configuration);
+        await client.RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1");
+        Assert.Equal(baseUrl + "api/Stanbic/merchant-payment", handler.Url);
+    }
+
+    [Theory]
+    [InlineData("ftp://payments.example/")]
+    [InlineData("/relative")]
+    [InlineData("")]
+    public void UnsupportedUrlsFailReadinessAndConstruction(string baseUrl)
+    {
+        var configuration = Configuration();
+        configuration["DangoPayment:BaseUrl"] = baseUrl;
+        Assert.False(DangoPaymentClient.IsConfigured(configuration));
+        Assert.Throws<InvalidOperationException>(() => new DangoPaymentClient(new HttpClient(), configuration));
+    }
+
+    [Theory]
+    [InlineData("collection")]
+    [InlineData("collection-status")]
+    [InlineData("mobile-payout")]
+    [InlineData("payout-status")]
+    public async Task RequestsSupplyClientIdBeforeDangoControllerModelValidation(string operation)
+    {
+        var handler = new StubHandler(request =>
+        {
+            using var payload = JsonDocument.Parse(request.Content!.ReadAsStringAsync().GetAwaiter().GetResult());
+            if (!payload.RootElement.TryGetProperty("clientId", out var clientId) || string.IsNullOrWhiteSpace(clientId.GetString()))
+                return Reply("{\"errors\":{\"clientId\":[\"The clientId field is required.\"]}}", HttpStatusCode.BadRequest);
+            Assert.Equal("configured-client", clientId.GetString());
+            return Reply("{}");
+        });
+        var client = Client(handler);
+        var result = operation switch
+        {
+            "collection" => await client.RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1"),
+            "collection-status" => await client.GetRequestToPayStatusAsync(new() { TransactionId = "collection-ref" }),
+            "mobile-payout" => await client.InitiatePayoutAsync(Mobile()),
+            _ => await client.GetPayoutStatusAsync(new() { Reference = "payout-ref" })
+        };
+        using var response = JsonDocument.Parse(result);
+        Assert.Equal(200, response.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal("PENDING", response.RootElement.GetProperty("data").GetProperty("status").GetString());
+    }
+
+    [Theory]
+    [InlineData("MTN")]
+    [InlineData("AIRTEL")]
+    public async Task CollectionSourceSystemUsesResolvedNetworkNotGlobalSetting(string network)
+    {
+        var handler = new StubHandler(_ => Reply("{}"));
+        var configuration = Configuration("DangoPayment:SourceSystem");
+        Assert.True(DangoPaymentClient.IsConfigured(configuration));
+        var client = new DangoPaymentClient(new HttpClient(handler), configuration);
+        await client.RequestToPayAsync(Collection(), network, "DANGO_U_20261028_1");
+        using var sent = JsonDocument.Parse(handler.Body!);
+        Assert.Equal(network, sent.RootElement.GetProperty("sourceSystem").GetString());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public async Task CollectionRequiresResolvedNetworkBeforeSending(string? network)
+    {
+        var handler = new StubHandler(_ => Reply("{}"));
+        var client = Client(handler);
+        Assert.Throws<ArgumentException>(() => client.ValidateCollection(Collection(), network!));
+        await Assert.ThrowsAsync<ArgumentException>(() => client.RequestToPayAsync(Collection(), network!, "DANGO_U_20261028_1"));
+        Assert.Null(handler.Url);
+    }
+
+    [Theory]
+    [InlineData("collection-status")]
+    [InlineData("payout")]
+    [InlineData("payout-status")]
+    public async Task ProviderReferenceIsSeparateFromInternalCorrelationIdentifiers(string operation)
+    {
+        var handler = new StubHandler(_ => Reply("""{"statusCode":"00","requestId":"payout-ref","flexipayReferenceNumber":"930917130007"}"""));
+        var client = Client(handler);
+        var raw = operation switch
+        {
+            "collection-status" => await client.GetRequestToPayStatusAsync(new() { TransactionId = "payout-ref" }),
+            "payout" => await client.InitiatePayoutAsync(Mobile()),
+            _ => await client.GetPayoutStatusAsync(new() { Reference = "payout-ref" })
+        };
+        using var result = JsonDocument.Parse(raw);
+        var data = result.RootElement.GetProperty("data");
+        if (operation == "payout-status") data = data.GetProperty("data")[0];
+        Assert.Equal("930917130007", data.GetProperty("vendorReference").GetString());
+        Assert.Equal("payout-ref", data.GetProperty(operation == "collection-status" ? "transactionId" : operation == "payout" ? "otherReference" : "transaction_id").GetString());
+    }
+
+    [Theory]
+    [InlineData("DANGO_U_20261028_5", "FAILED")]
+    [InlineData("another-transaction", "PENDING")]
+    public async Task ConfirmedCode57FailsOnlyTheMatchingCollection(string returnedRequestId, string expected)
+    {
+        var configuration = Configuration();
+        configuration["DangoPayment:TransactionStatus:FailureValues:0"] = "57";
+        var handler = new StubHandler(_ => Reply(JsonSerializer.Serialize(new
+        {
+            statusCode = "57", statusDescription = "FAILED", requestId = returnedRequestId,
+            flexipayReferenceNumber = "932096650006"
+        })));
+        var client = new DangoPaymentClient(new HttpClient(handler), configuration);
+        using var result = JsonDocument.Parse(await client.GetRequestToPayStatusAsync(new() { TransactionId = "DANGO_U_20261028_5" }));
+        var data = result.RootElement.GetProperty("data");
+        Assert.Equal(expected, data.GetProperty("status").GetString());
+        Assert.Equal(expected == "FAILED", data.GetProperty("requestToPayStatus").GetBoolean());
+        Assert.Equal("932096650006", data.GetProperty("vendorReference").GetString());
+    }
+
+    [Fact]
+    public async Task ModelValidationFailureReportsHttpStatusWithoutExposingResponseDetails()
+    {
+        var client = Client(new StubHandler(_ => Reply("{\"errors\":{\"clientId\":[\"private-validation-data\"]}}", HttpStatusCode.BadRequest)));
+        var result = await client.RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1");
+        Assert.Contains("HTTP 400", result);
+        Assert.Contains("PENDING", result);
+        Assert.DoesNotContain("private-validation-data", result);
+    }
+
+    [Theory]
+    [InlineData(200)]
+    [InlineData(400)]
+    public async Task ExactInvalidRequestIdRejectionFailsSubmissionAndStatus(int httpStatus)
+    {
+        var client = Client(new StubHandler(_ => Reply("""{"httpCode":400,"httpMessage":"Bad Request","moreInformation":"Invalid requestId"}""", (HttpStatusCode)httpStatus)));
+        using var mobile = JsonDocument.Parse(await client.InitiatePayoutAsync(Mobile()));
+        using var bank = JsonDocument.Parse(await client.InitiateBankPayoutAsync(Bank()));
+        foreach (var result in new[] { mobile, bank })
+        {
+            Assert.False(result.RootElement.GetProperty("data").GetProperty("payout").GetBoolean());
+            Assert.Equal("FAILED", result.RootElement.GetProperty("data").GetProperty("status").GetString());
+            Assert.Equal("Invalid requestId", result.RootElement.GetProperty("data").GetProperty("message").GetString());
+        }
+        using var status = JsonDocument.Parse(await client.GetPayoutStatusAsync(new() { Reference = "payout-ref" }));
+        Assert.Equal("FAILED", status.RootElement.GetProperty("data").GetProperty("data")[0].GetProperty("status").GetString());
+        using var collection = JsonDocument.Parse(await client.GetRequestToPayStatusAsync(new() { TransactionId = "collection-ref" }));
+        Assert.Equal("FAILED", collection.RootElement.GetProperty("data").GetProperty("status").GetString());
+    }
+
+    [Theory]
+    [InlineData("{\"httpCode\":400,\"httpMessage\":\"Bad Request\",\"moreInformation\":\"Invalid account\"}", 400)]
+    [InlineData("{\"httpCode\":500,\"httpMessage\":\"Bad Request\",\"moreInformation\":\"Invalid requestId\"}", 400)]
+    [InlineData("{\"httpCode\":400,\"httpMessage\":\"Bad Request\",\"moreInformation\":\"Invalid requestId\"}", 500)]
+    [InlineData("{}", 400)]
+    public async Task OtherErrorsRemainPendingAndNeverAuthorizeReversal(string body, int httpStatus)
+    {
+        var client = Client(new StubHandler(_ => Reply(body, (HttpStatusCode)httpStatus)));
+        using var submission = JsonDocument.Parse(await client.InitiatePayoutAsync(Mobile()));
+        Assert.True(submission.RootElement.GetProperty("data").GetProperty("payout").GetBoolean());
+        Assert.Equal("PENDING", submission.RootElement.GetProperty("data").GetProperty("status").GetString());
+        using var status = JsonDocument.Parse(await client.GetPayoutStatusAsync(new() { Reference = "payout-ref" }));
+        Assert.Equal("PENDING", status.RootElement.GetProperty("data").GetProperty("data")[0].GetProperty("status").GetString());
+    }
+
+    [Theory]
+    [InlineData("6000.0000000000000000000000000", "6000")]
+    [InlineData("6000.00", "6000")]
+    [InlineData("6000", "6000")]
+    public async Task BankAmountIsSentAsWholeNumberWithoutDecimalScale(string input, string expected)
+    {
+        var handler = new StubHandler(_ => Reply("{}"));
+        var request = Bank();
+        request.amount = decimal.Parse(input, CultureInfo.InvariantCulture);
+        var original = request.amount;
+        await Client(handler).InitiateBankPayoutAsync(request);
+        using var sent = JsonDocument.Parse(handler.Body!);
+        Assert.Equal(expected, sent.RootElement.GetProperty("amount").GetString());
+        Assert.Equal(original, request.amount);
+    }
+
+    [Theory]
+    [InlineData("6000.5")]
+    [InlineData("6000.01")]
+    [InlineData("0")]
+    [InlineData("-6000")]
+    public async Task BankAmountRejectsFractionsBeforeSendingInsteadOfRounding(string input)
+    {
+        var handler = new StubHandler(_ => Reply("{}"));
+        var request = Bank();
+        request.amount = decimal.Parse(input, CultureInfo.InvariantCulture);
+        var client = Client(handler);
+        Assert.Throws<ArgumentOutOfRangeException>(() => client.ValidateBankPayout(request));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.InitiateBankPayoutAsync(request));
+        Assert.Null(handler.Url);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task BankNetworkAndDestinationAreAlwaysBankRegardlessOfConfiguration(bool removeLegacySettings)
+    {
+        var configuration = Configuration();
+        configuration["DangoPayment:BankNetwork"] = removeLegacySettings ? null : "WRONG_NETWORK";
+        configuration["DangoPayment:BankDestination"] = removeLegacySettings ? null : "WRONG_DESTINATION";
+        Assert.True(DangoPaymentClient.IsConfigured(configuration));
+        var handler = new StubHandler(_ => Reply("{}"));
+        var client = new DangoPaymentClient(new HttpClient(handler), configuration);
+        client.ValidateBankPayout(Bank());
+        await client.InitiateBankPayoutAsync(Bank());
+        using var sent = JsonDocument.Parse(handler.Body!);
+        Assert.Equal("BANK", sent.RootElement.GetProperty("network").GetString());
+        Assert.Equal("BANK", sent.RootElement.GetProperty("destination").GetString());
     }
 
     private static DangoPaymentClient Client(StubHandler handler, string? missing = null) =>

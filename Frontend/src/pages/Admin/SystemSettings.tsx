@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PaymentProviderSettings from "@/components/PaymentProviderSettings";
+import AdminPayoutReconciliation from "@/components/AdminPayoutReconciliation";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -218,6 +219,7 @@ const SystemSettings = () => {
             </CardHeader>
             <CardContent>
               <PaymentProviderSettings apiUrl={import.meta.env.VITE_API_BASE_URL ?? ''} authToken={user?.token ?? ''} />
+              <AdminPayoutReconciliation apiUrl={import.meta.env.VITE_API_BASE_URL ?? ''} authToken={user?.token ?? ''} />
             </CardContent>
           </Card>
         </TabsContent>

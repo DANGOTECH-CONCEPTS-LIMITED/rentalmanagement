@@ -144,7 +144,8 @@ namespace Infrastructure.Services.BackgroundServices
                     if (payoutResponse.data.payout)
                     {
                         walletTransaction.Status = PendingAtTelcom;
-                        walletTransaction.VendorTranId = payoutResponse.data.otherReference;
+                        var vendorReference = payoutResponse.data.vendorReference ?? payoutResponse.data.otherReference;
+                        if (!string.IsNullOrWhiteSpace(vendorReference)) walletTransaction.VendorTranId = vendorReference;
                         await wallet.UpdateWalletTransaction(walletTransaction);
                     }
                     else if (!payoutResponse.data.payout)
@@ -226,7 +227,8 @@ namespace Infrastructure.Services.BackgroundServices
                         if (payoutResponse.data.payout)
                         {
                             walletTransaction.Status = "PENDING AT THE BANK";
-                            walletTransaction.VendorTranId = payoutResponse.data.otherReference;
+                            var vendorReference = payoutResponse.data.vendorReference ?? payoutResponse.data.otherReference;
+                            if (!string.IsNullOrWhiteSpace(vendorReference)) walletTransaction.VendorTranId = vendorReference;
                             await wallet.UpdateWalletTransaction(walletTransaction);
                         }
                         else if (!payoutResponse.data.payout)
@@ -343,6 +345,7 @@ namespace Infrastructure.Services.BackgroundServices
             public string message { get; set; }
             public string reference { get; set; }
             public string otherReference { get; set; }
+            public string? vendorReference { get; set; }
         }
     }
 }
