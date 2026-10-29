@@ -50,6 +50,7 @@ namespace API.Controllers.Settings
                     errorMessage = log.ErrorMessage,
                     requestType = log.RequestType,
                     requestUrl = MaskSensitiveText(log.RequestUrl),
+                    source = log.Source,
                     createdAt = log.CreatedAt
                 });
 

@@ -41,7 +41,8 @@ namespace Infrastructure.Services.Collecto
                 Response = resLog,
                 Status = response.StatusCode.ToString(),
                 RequestType = request.Method.Method,
-                RequestUrl = request.RequestUri?.ToString()
+                RequestUrl = request.RequestUri?.ToString(),
+                Source = ResolveSource(request.RequestUri?.ToString())
             };
 
             using var scope = _scopeFactory.CreateScope();
@@ -116,6 +117,46 @@ namespace Infrastructure.Services.Collecto
             {
                 sb.AppendLine($"{header.Key}: {string.Join(", ", header.Value)}");
             }
+        }
+
+        private static string ResolveSource(string? requestUrl)
+        {
+            if (string.IsNullOrWhiteSpace(requestUrl))
+            {
+                return "Unknown";
+            }
+
+            if (requestUrl.Contains("/api/Stanbic/", StringComparison.OrdinalIgnoreCase) ||
+                requestUrl.Contains("dangotech", StringComparison.OrdinalIgnoreCase))
+            {
+                return "DangoPay";
+            }
+            if (requestUrl.Contains("collecto", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Collecto";
+            }
+            if (requestUrl.Contains("egosms", StringComparison.OrdinalIgnoreCase))
+            {
+                return "EgoSMS";
+            }
+            if (requestUrl.Contains("africastalking", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Africa's Talking";
+            }
+            if (requestUrl.Contains("airtel", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Airtel";
+            }
+            if (requestUrl.Contains("momodeveloper", StringComparison.OrdinalIgnoreCase))
+            {
+                return "MTN MoMo";
+            }
+            if (requestUrl.Contains("stanbic", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Stanbic";
+            }
+
+            return "Other";
         }
     }
 }

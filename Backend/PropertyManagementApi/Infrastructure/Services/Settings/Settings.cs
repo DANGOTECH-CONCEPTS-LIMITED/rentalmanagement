@@ -49,7 +49,8 @@ namespace Infrastructure.Services.Settings
                 Status = dto.Status,
                 ErrorMessage = dto.ErrorMessage,
                 RequestType = dto.RequestType,
-                RequestUrl = dto.RequestUrl
+                RequestUrl = dto.RequestUrl,
+                Source = dto.Source
             };
 
             //save to database

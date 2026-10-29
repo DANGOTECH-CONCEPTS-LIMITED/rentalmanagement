@@ -15,6 +15,7 @@ namespace Domain.Entities.PropertyMgt
         public string? ErrorMessage { get; set; }
         public string? RequestType { get; set; }
         public string? RequestUrl { get; set; }
+        public string? Source { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     }

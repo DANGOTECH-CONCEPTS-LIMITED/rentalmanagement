@@ -37,6 +37,7 @@ interface HttpLogEntry {
   errorMessage?: string | null;
   requestType?: string | null;
   requestUrl?: string | null;
+  source?: string | null;
   createdAt?: string;
 }
 
@@ -89,6 +90,7 @@ const HttpLogs = () => {
   const [selectedLog, setSelectedLog] = useState<HttpLogEntry | null>(null);
   const [methodFilter, setMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [serilogFiles, setSerilogFiles] = useState<SerilogFileEntry[]>([]);
   const [selectedSerilogFile, setSelectedSerilogFile] =
     useState<SerilogFileContent | null>(null);
@@ -250,6 +252,11 @@ const HttpLogs = () => {
     [logs]
   );
 
+  const availableSources = useMemo(
+    () => Array.from(new Set(logs.map((log) => log.source).filter(Boolean))).sort(),
+    [logs]
+  );
+
   const filteredLogs = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return logs.filter((log) => {
@@ -257,6 +264,8 @@ const HttpLogs = () => {
         methodFilter === "all" || log.requestType === methodFilter;
       const matchesStatus =
         statusFilter === "all" || log.status === statusFilter;
+      const matchesSource =
+        sourceFilter === "all" || log.source === sourceFilter;
       const matchesQuery =
         !query ||
         [
@@ -266,14 +275,15 @@ const HttpLogs = () => {
           log.errorMessage,
           log.request,
           log.response,
+          log.source,
           formatDate(log.createdAt),
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(query));
 
-      return matchesMethod && matchesStatus && matchesQuery;
+      return matchesMethod && matchesStatus && matchesSource && matchesQuery;
     });
-  }, [logs, methodFilter, searchTerm, statusFilter]);
+  }, [logs, methodFilter, searchTerm, statusFilter, sourceFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / rowsPerPage));
 
@@ -284,7 +294,7 @@ const HttpLogs = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [methodFilter, searchTerm, statusFilter]);
+  }, [methodFilter, searchTerm, statusFilter, sourceFilter]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -408,6 +418,22 @@ const HttpLogs = () => {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Source</Label>
+                <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All sources" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sources</SelectItem>
+                    {availableSources.map((source) => (
+                      <SelectItem key={source} value={source!}>
+                        {source}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="log-search">Search logs</Label>
                 <Input
                   id="log-search"
@@ -456,6 +482,7 @@ const HttpLogs = () => {
                       <TableRow>
                         <TableHead>Date</TableHead>
                         <TableHead>Method</TableHead>
+                        <TableHead>Source</TableHead>
                         <TableHead>Request URL</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Error</TableHead>
@@ -467,6 +494,7 @@ const HttpLogs = () => {
                         <TableRow key={log.id}>
                           <TableCell>{formatDate(log.createdAt)}</TableCell>
                           <TableCell>{log.requestType || "-"}</TableCell>
+                          <TableCell>{log.source || "-"}</TableCell>
                           <TableCell className="max-w-[360px] truncate">
                             {log.requestUrl || "-"}
                           </TableCell>
@@ -592,6 +620,7 @@ const HttpLogs = () => {
                     <p><span className="font-medium">Date:</span> {formatDate(selectedLog.createdAt)}</p>
                     <p><span className="font-medium">Method:</span> {selectedLog.requestType || "-"}</p>
                     <p><span className="font-medium">Status:</span> {selectedLog.status || "-"}</p>
+                    <p><span className="font-medium">Source:</span> {selectedLog.source || "-"}</p>
                     <p><span className="font-medium">URL:</span> {selectedLog.requestUrl || "-"}</p>
                     <p><span className="font-medium">Error:</span> {selectedLog.errorMessage || "-"}</p>
                   </div>

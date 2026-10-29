@@ -598,6 +598,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Response")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Source")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Status")
                         .HasColumnType("longtext");
 

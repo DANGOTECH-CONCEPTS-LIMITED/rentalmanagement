@@ -14,5 +14,6 @@ namespace Domain.Dtos.HtpRequestsResponse
         public string? ErrorMessage { get; set; }
         public string? RequestType { get; set; }
         public string? RequestUrl { get; set; }
+        public string? Source { get; set; }
     }
 }
