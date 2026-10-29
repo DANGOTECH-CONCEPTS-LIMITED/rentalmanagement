@@ -158,6 +158,43 @@ public sealed class DangoPaymentClient
         return new(customerName, statusDescription);
     }
 
+    // Fetches the merchant wallet balance from Dango/FlexiPay.
+    public async Task<DangotechWalletBalanceResult> GetWalletBalanceAsync(string reference, CancellationToken ct = default)
+    {
+        var referenceId = RequiredValue(reference, "reference");
+        var response = await PostAsync("get-wallet-balance", new
+        {
+            clientId = RequiredSetting("ClientId"),
+            requestReference = referenceId
+        }, ct);
+
+        var rawBody = response.Body is { } body ? body.GetRawText() : string.Empty;
+        var statusDescription = Field(response, "statusDescription")?.Trim()
+            ?? Field(response, "status_description")?.Trim()
+            ?? Field(response, "message")?.Trim()
+            ?? string.Empty;
+        var balance = Field(response, "availableBal")?.Trim()
+            ?? Field(response, "actualBal")?.Trim()
+            ?? Field(response, "balance")?.Trim()
+            ?? Field(response, "walletBalance")?.Trim()
+            ?? Field(response, "wallet_balance")?.Trim()
+            ?? Field(response, "availableBalance")?.Trim()
+            ?? Field(response, "data.balance")?.Trim()
+            ?? Field(response, "amount")?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(balance))
+        {
+            return new(balance, statusDescription);
+        }
+
+        var detail = string.IsNullOrWhiteSpace(statusDescription)
+            ? (string.IsNullOrWhiteSpace(rawBody)
+                ? $"Dango returned HTTP {response.HttpStatus} with an empty response."
+                : $"Dango returned HTTP {response.HttpStatus}: {rawBody}")
+            : statusDescription;
+        throw new InvalidOperationException($"Unable to retrieve the Dangotech wallet balance. {detail}");
+    }
+
     public async Task<string> SubmitBillPaymentAsync(string reference, string nwscAccount, string? customerName,
         string? customerMobile, string? location, decimal amount, DangoBillerSetting biller, CancellationToken ct = default)
     {
@@ -567,3 +604,5 @@ public sealed class DangoPaymentClient
 }
 
 public sealed record BillerCustomerValidationResult(string CustomerName, string StatusDescription);
+
+public sealed record DangotechWalletBalanceResult(string Balance, string StatusDescription);
