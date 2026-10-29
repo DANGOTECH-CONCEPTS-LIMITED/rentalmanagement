@@ -81,6 +81,7 @@ interface UtilityMeter {
   nwscRegisteredName: string;
   locationOfNwscMeter: string;
   utilityMeterLocation: string;
+  customerMobile: string;
   landLordId: number;
   user: {
     fullName: string;
@@ -100,6 +101,9 @@ const meterSchema = z.object({
   utilityMeterLocation: z
     .string()
     .min(1, { message: "Utility meter location is required" }),
+  customerMobile: z
+    .string()
+    .min(1, { message: "Customer mobile is required" }),
   landLordId: z.number().min(1, { message: "Landlord is required" }),
 });
 
@@ -110,6 +114,7 @@ const ManageUtilityMeters = () => {
   const [editingMeter, setEditingMeter] = useState<UtilityMeter | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [meterToDelete, setMeterToDelete] = useState<UtilityMeter | null>(null);
   const { toast } = useToast();
@@ -131,9 +136,66 @@ const ManageUtilityMeters = () => {
       nwscRegisteredName: "",
       locationOfNwscMeter: "",
       utilityMeterLocation: "",
+      customerMobile: "",
       landLordId: 0,
     },
   });
+
+  const meterType = form.watch('meterType');
+  const isNwscMeter =
+    (meterType?.trim().toLowerCase().includes('water') ||
+      meterType?.trim().toLowerCase().includes('nwsc')) ??
+    false;
+
+  const validateMeter = async () => {
+    const meterNumber = form.getValues('meterNumber')?.trim();
+    const nwscAccount = form.getValues('nwscAccount')?.trim();
+    const customerId = (nwscAccount || meterNumber)?.trim();
+    if (!customerId) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation',
+        description: 'Enter the meter number or NWSC account first.',
+      });
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      const response = await axios.post(`${apiUrl}/ValidateUtilityMeter`, {
+        customerId,
+        location: form.getValues('utilityMeterLocation')?.trim() ?? '',
+        customerMobile: form.getValues('customerMobile')?.trim() ?? '',
+      });
+
+      const customerName = response.data?.customerName;
+      if (customerName) {
+        form.setValue('nwscRegisteredName', customerName, { shouldValidate: true });
+        toast({
+          title: 'Meter validated',
+          description: `Registered name set to ${customerName}`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Validation failed',
+          description: 'No customer name was returned for this meter.',
+        });
+      }
+    } catch (error) {
+      let errorMessage = 'Failed to validate meter';
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || errorMessage;
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Validation failed',
+        description: errorMessage,
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   const fetchMeters = async () => {
     setLoading(true);
@@ -221,6 +283,7 @@ const ManageUtilityMeters = () => {
       nwscRegisteredName: meter.nwscRegisteredName,
       locationOfNwscMeter: meter.locationOfNwscMeter,
       utilityMeterLocation: meter.utilityMeterLocation,
+      customerMobile: meter.customerMobile,
       landLordId: meter.landLordId,
     });
     setIsEditDialogOpen(true);
@@ -509,12 +572,24 @@ const ManageUtilityMeters = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Registered Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Name the NWSC account is registered under"
-                        {...field}
-                      />
-                    </FormControl>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input
+                          placeholder="Name the NWSC account is registered under"
+                          {...field}
+                        />
+                      </FormControl>
+                      {isNwscMeter && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={isValidating}
+                          onClick={() => void validateMeter()}
+                        >
+                          {isValidating ? 'Validating...' : 'Validate'}
+                        </Button>
+                      )}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -546,6 +621,23 @@ const ManageUtilityMeters = () => {
                     <FormControl>
                       <Input
                         placeholder="Enter the physical location of the utility meter"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="customerMobile"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer Mobile</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter customer phone number"
                         {...field}
                       />
                     </FormControl>

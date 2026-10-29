@@ -396,6 +396,7 @@ namespace Infrastructure.Services.UserServices
                 NwscRegisteredName = utilityMeter.NwscRegisteredName,
                 LocationOfNwscMeter = utilityMeter.LocationOfNwscMeter,
                 UtilityMeterLocation = utilityMeter.UtilityMeterLocation,
+                CustomerMobile = utilityMeter.CustomerMobile,
             };
             _context.UtilityMeters.Add(meter);
             _context.SaveChanges();
@@ -444,6 +445,7 @@ namespace Infrastructure.Services.UserServices
             existingMeter.NwscRegisteredName = utilityMeter.NwscRegisteredName;
             existingMeter.LocationOfNwscMeter = utilityMeter.LocationOfNwscMeter;
             existingMeter.UtilityMeterLocation = utilityMeter.UtilityMeterLocation;
+            existingMeter.CustomerMobile = utilityMeter.CustomerMobile;
             existingMeter.LandLordId = utilityMeter.LandLordId;
             // Save changes
             _context.UtilityMeters.Update(existingMeter);

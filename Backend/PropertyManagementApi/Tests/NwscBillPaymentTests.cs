@@ -42,7 +42,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
         {
             Id = 301, LandLordId = 101, MeterNumber = "meter-1", NWSCAccount = " 12345678 ",
             NwscRegisteredName = "Registered NWSC Name", LocationOfNwscMeter = "Old NWSC meter location",
-            UtilityMeterLocation = "Plot 12, Kampala"
+            UtilityMeterLocation = "Plot 12, Kampala", CustomerMobile = "0700000001"
         });
         _db.UtilityPayments.Add(new UtilityPayment
         {
@@ -140,6 +140,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
             Assert.Equal("NWSC", sent.RootElement.GetProperty("serviceId").GetString());
             Assert.Equal(instruction.RequestReference, sent.RootElement.GetProperty("requestReference").GetString());
             Assert.Equal("Registered NWSC Name", sent.RootElement.GetProperty("customerName").GetString());
+            Assert.Equal("256700000001", sent.RootElement.GetProperty("customerMobile").GetString());
             Assert.Equal("Plot 12, Kampala", sent.RootElement.GetProperty("location").GetString());
         }
 
@@ -158,6 +159,28 @@ public class NwscBillPaymentTests : IAsyncLifetime
         Assert.Equal(0, await Processor(_db).ProcessAsync(CancellationToken.None));
         Assert.Equal(0m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
         Assert.Single(_handler.BillRequests);
+    }
+
+    [Fact]
+    public async Task BillerCustomerValidationReturnsRegisteredCustomerName()
+    {
+        await ConfigureBillerAsync();
+        var biller = await _db.Set<DangoBillerSetting>().AsNoTracking().SingleAsync();
+        var client = new DangoPaymentClient(new HttpClient(_handler), _configuration);
+
+        var result = await client.ValidateBillerCustomerAsync("DANGO_V_20261029_1", "12345678", biller);
+
+        Assert.Equal("DDAMBA WILSON", result.CustomerName);
+        using (var sent = JsonDocument.Parse(_handler.CustomerValidationRequests.Single()))
+        {
+            Assert.Equal("presentment", sent.RootElement.GetProperty("transtype").GetString());
+            Assert.Equal("12345678", sent.RootElement.GetProperty("customerId").GetString());
+            Assert.Equal("NWSC", sent.RootElement.GetProperty("serviceId").GetString());
+            Assert.Equal("Kampala", sent.RootElement.GetProperty("location").GetString());
+            Assert.Equal("", sent.RootElement.GetProperty("customerMobile").GetString());
+            Assert.Equal("DANGO_V_20261029_1", sent.RootElement.GetProperty("requestReference").GetString());
+            Assert.Equal("DANGO_V_20261029_1", sent.RootElement.GetProperty("requestId").GetString());
+        }
     }
 
     [Theory]
@@ -272,7 +295,9 @@ public class NwscBillPaymentTests : IAsyncLifetime
     {
         public string BillBody { get; set; } = """{"statusCode":"00","statusDescription":"Accepted","requestReference":"{ref}"}""";
         public string StatusBody { get; set; } = """{"statusCode":"00","statusDescription":"Successful","requestReference":"{ref}"}""";
+        public string CustomerValidationBody { get; set; } = """{"statusCode":"00","statusDescription":"Biller Details Fetched Successfully","requestReference":"{ref}","customerName":"DDAMBA WILSON","paymentMode":"any","amount":"-8872"}""";
         public List<string> BillRequests { get; } = [];
+        public List<string> CustomerValidationRequests { get; } = [];
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var body = await request.Content!.ReadAsStringAsync(ct);
@@ -288,6 +313,11 @@ public class NwscBillPaymentTests : IAsyncLifetime
             else if (path.EndsWith("bill-payment-status"))
             {
                 payload = StatusBody.Replace("{ref}", reference);
+            }
+            else if (path.EndsWith("biller-customer-validation"))
+            {
+                CustomerValidationRequests.Add(body);
+                payload = CustomerValidationBody.Replace("{ref}", reference);
             }
             else throw new InvalidOperationException("Unexpected endpoint " + path);
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(payload, Encoding.UTF8, "application/json") };

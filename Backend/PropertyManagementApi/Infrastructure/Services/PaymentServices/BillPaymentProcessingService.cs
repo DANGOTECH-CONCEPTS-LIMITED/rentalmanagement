@@ -36,9 +36,15 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         // Biller customer name comes from the meter's NWSC registration; location is the utility meter's physical location.
         var meter = await db.UtilityMeters.AsNoTracking()
             .Where(x => x.MeterNumber == item.MeterNumber)
-            .Select(x => new { x.NwscRegisteredName, x.UtilityMeterLocation }).FirstOrDefaultAsync(ct);
+            .Select(x => new { x.NwscRegisteredName, x.UtilityMeterLocation, x.CustomerMobile }).FirstOrDefaultAsync(ct);
         var customerName = string.IsNullOrWhiteSpace(meter?.NwscRegisteredName) ? null : meter!.NwscRegisteredName!.Trim();
         var location = string.IsNullOrWhiteSpace(meter?.UtilityMeterLocation) ? null : meter!.UtilityMeterLocation!.Trim();
+        string? customerMobile = null;
+        if (!string.IsNullOrWhiteSpace(meter?.CustomerMobile))
+        {
+            try { customerMobile = DangoPaymentClient.NormalizePhone(meter!.CustomerMobile); }
+            catch (ArgumentException) { customerMobile = null; }
+        }
         try { dango.ValidateBillPayment(biller, item.NwscAccount, location, item.Amount); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
@@ -60,7 +66,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         try
         {
             raw = await dango.SubmitBillPaymentAsync(item.RequestReference, item.NwscAccount,
-                customerName ?? owner?.FullName, phone ?? owner?.PhoneNumber, location, item.Amount, biller, ct);
+                customerName ?? owner?.FullName, customerMobile ?? phone ?? owner?.PhoneNumber, location, item.Amount, biller, ct);
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         {

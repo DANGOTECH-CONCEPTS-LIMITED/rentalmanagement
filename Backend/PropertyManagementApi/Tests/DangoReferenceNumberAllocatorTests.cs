@@ -41,6 +41,13 @@ public class DangoReferenceNumberAllocatorTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SupportsValidationCategory()
+    {
+        await using var db = Context();
+        Assert.Equal("DANGO_V_20261028_1", await DangoReferenceNumberAllocator.AllocateAsync(db, "V", Day));
+    }
+
+    [Fact]
     public async Task CompetingAllocationCannotReuseTheSameDailySequence()
     {
         var interceptor = new CompetingAllocator(async () =>

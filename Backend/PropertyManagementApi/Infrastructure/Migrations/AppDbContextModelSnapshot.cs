@@ -1259,6 +1259,9 @@ namespace Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CustomerMobile")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime(6)");
 

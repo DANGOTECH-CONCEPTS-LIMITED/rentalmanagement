@@ -10,6 +10,7 @@ using Domain.Entities.PropertyMgt;
 using Domain.Dtos.Meters;
 using Microsoft.Extensions.Logging;
 using Infrastructure.Data;
+using Infrastructure.Services.PaymentServices;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers.UserControllers
@@ -23,13 +24,15 @@ namespace API.Controllers.UserControllers
         private readonly AppDbContext _db;
         private readonly IMeterFeeService _meterFeeService;
         private readonly IMeterLienService _meterLienService;
-        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db, IMeterFeeService meterFeeService, IMeterLienService meterLienService)
+        private readonly DangoPaymentClient _dango;
+        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db, IMeterFeeService meterFeeService, IMeterLienService meterLienService, DangoPaymentClient dango)
         {
             _userService = userService;
             _logger = logger;
             _db = db;
             _meterFeeService = meterFeeService;
             _meterLienService = meterLienService;
+            _dango = dango;
         }
 
         private static bool IsUtilityRole(string? role) =>
@@ -341,6 +344,41 @@ namespace API.Controllers.UserControllers
             {
                 _logger.LogError(ex, "Error adding utility meter");
                 return BadRequest($"Error adding utility meter: {ex.Message}");
+            }
+        }
+
+        public sealed record ValidateUtilityMeterRequest(string? CustomerId, string? Location, string? CustomerMobile);
+
+        [HttpPost("/ValidateUtilityMeter")]
+        [Authorize]
+        public async Task<IActionResult> ValidateUtilityMeter([FromBody] ValidateUtilityMeterRequest request)
+        {
+            try
+            {
+                var biller = await _db.Set<DangoBillerSetting>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1);
+                if (biller == null || string.IsNullOrWhiteSpace(biller.ServiceId))
+                    return BadRequest(new { message = "The NWSC biller is not configured." });
+
+                var customerId = request.CustomerId?.Trim();
+                if (string.IsNullOrWhiteSpace(customerId))
+                    return BadRequest(new { message = "Customer ID is required." });
+
+                var reference = await DangoReferenceNumberAllocator.AllocateAsync(_db, "V", DateTime.UtcNow);
+                var result = await _dango.ValidateBillerCustomerAsync(reference, customerId, biller, request.Location, request.CustomerMobile);
+                return Ok(new { customerName = result.CustomerName });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating utility meter");
+                return BadRequest(new { message = $"Error validating utility meter: {ex.Message}" });
             }
         }
 

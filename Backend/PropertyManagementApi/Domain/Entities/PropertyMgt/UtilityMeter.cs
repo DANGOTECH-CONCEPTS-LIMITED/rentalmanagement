@@ -16,6 +16,7 @@ namespace Domain.Entities.PropertyMgt
         public string? NwscRegisteredName { get; set; } // Name the NWSC account is registered under
         public string? LocationOfNwscMeter { get; set; } // Location of the NWSC meter, if applicable
         public string? UtilityMeterLocation { get; set; } // Physical location of the utility meter
+        public string? CustomerMobile { get; set; } // Customer phone number registered with the biller
         [ForeignKey("User")]
         public int LandLordId { get; set; } // Foreign key to the LandLord
         public User User { get; set; } // Navigation property to the LandLord

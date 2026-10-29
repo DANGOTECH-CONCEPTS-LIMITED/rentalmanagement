@@ -24,16 +24,16 @@ export interface AdminUtilityAccountWorkspaceProps {
   renderWallet?: (account: UtilityPaymentAccount) => ReactNode;
 }
 
-type MeterFields = { meterType: string; meterNumber: string; nwscAccount: string; nwscRegisteredName: string; locationOfNwscMeter: string; utilityMeterLocation: string };
+type MeterFields = { meterType: string; meterNumber: string; nwscAccount: string; nwscRegisteredName: string; locationOfNwscMeter: string; utilityMeterLocation: string; customerMobile: string };
 type Meter = MeterFields & { id: number; landLordId: number };
 type FeeSummary = {
   monthlyFee: number;
   outstandingBalance: number;
   charges: { id: number; meterNumber: string; period: string; amount: number; amountPaid: number }[];
 };
-const emptyMeter: MeterFields = { meterType: '', meterNumber: '', nwscAccount: '', nwscRegisteredName: '', locationOfNwscMeter: '', utilityMeterLocation: '' };
+const emptyMeter: MeterFields = { meterType: '', meterNumber: '', nwscAccount: '', nwscRegisteredName: '', locationOfNwscMeter: '', utilityMeterLocation: '', customerMobile: '' };
 const fieldLabels: Record<keyof MeterFields, string> = {
-  meterType: 'Meter type', meterNumber: 'Meter number', nwscAccount: 'NWSC account', nwscRegisteredName: 'Registered name', locationOfNwscMeter: 'Location of NWSC meter', utilityMeterLocation: 'Utility meter location',
+  meterType: 'Meter type', meterNumber: 'Meter number', nwscAccount: 'NWSC account', nwscRegisteredName: 'Registered name', locationOfNwscMeter: 'Location of NWSC meter', utilityMeterLocation: 'Utility meter location', customerMobile: 'Customer mobile',
 };
 const money = (value: number) => value.toLocaleString('en-UG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const message = (error: unknown, fallback: string) => {
@@ -208,7 +208,7 @@ function AccountWorkspace({ account, apiUrl, authToken, renderWallet }: Omit<Adm
       {!loading && !meterError && meters.length === 0 && <p>No meters registered for this account.</p>}
       <div className="flex flex-wrap gap-2">
         <Button disabled={blocked} onClick={() => setEditor({ id: null, fields: { ...emptyMeter } })}>Register meter</Button>
-        <Button variant="outline" disabled={blocked || !selected} onClick={() => selected && setEditor({ id: selected.id, fields: { meterType: selected.meterType, meterNumber: selected.meterNumber, nwscAccount: selected.nwscAccount, nwscRegisteredName: selected.nwscRegisteredName, locationOfNwscMeter: selected.locationOfNwscMeter, utilityMeterLocation: selected.utilityMeterLocation } })}>Edit meter</Button>
+        <Button variant="outline" disabled={blocked || !selected} onClick={() => selected && setEditor({ id: selected.id, fields: { meterType: selected.meterType, meterNumber: selected.meterNumber, nwscAccount: selected.nwscAccount, nwscRegisteredName: selected.nwscRegisteredName, locationOfNwscMeter: selected.locationOfNwscMeter, utilityMeterLocation: selected.utilityMeterLocation, customerMobile: selected.customerMobile } })}>Edit meter</Button>
         <Button variant="destructive" disabled={blocked || !selected} onClick={() => selected && setDeleting(selected)}>Delete meter</Button>
       </div>
       {selected && !loading && !meterError && !saving && <section aria-label={`Liens for ${selected.meterNumber}`} className="space-y-3">

@@ -9,9 +9,9 @@ public static class DangoReferenceNumberAllocator
 {
     public static void ValidateCategory(string category)
     {
-        // B is reserved for outbound NWSC bill payments; collections only use U, R and W.
-        if (category is not ("U" or "R" or "W" or "B"))
-            throw new ArgumentException("Dango payment category must be U (utility), R (rent), W (wallet) or B (bill).", nameof(category));
+        // B is reserved for outbound NWSC bill payments; V is reserved for biller customer validation lookups.
+        if (category is not ("U" or "R" or "W" or "B" or "V"))
+            throw new ArgumentException("Dango payment category must be U (utility), R (rent), W (wallet), B (bill) or V (validation).", nameof(category));
     }
 
     public static async Task<string> AllocateAsync(AppDbContext db, string category, DateTime utcNow)

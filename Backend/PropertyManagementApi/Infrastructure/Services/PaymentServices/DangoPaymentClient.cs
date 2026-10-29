@@ -122,6 +122,42 @@ public sealed class DangoPaymentClient
         RequireStatusContract();
     }
 
+    // Validates an NWSC meter/account against the biller and returns the customer name it is registered under.
+    public async Task<BillerCustomerValidationResult> ValidateBillerCustomerAsync(
+        string reference, string customerId, DangoBillerSetting biller, string? location = null, string? customerMobile = null, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(biller);
+        var requestReference = RequiredValue(reference, "reference");
+        var account = RequiredValue(customerId, "customerId");
+        RequiredValue(biller.ServiceId, "ServiceId");
+        var response = await PostAsync("biller-customer-validation", new
+        {
+            requestId = requestReference,
+            clientId = RequiredSetting("ClientId"),
+            serviceId = biller.ServiceId,
+            transtype = "presentment",
+            requestReference,
+            customerId = account,
+            location = string.IsNullOrWhiteSpace(location) ? biller.Location ?? string.Empty : location.Trim(),
+            customerMobile = string.IsNullOrWhiteSpace(customerMobile) ? string.Empty : customerMobile.Trim()
+        }, ct);
+
+        var statusCode = Field(response, "statusCode")?.Trim() ?? string.Empty;
+        var statusDescription = Field(response, "statusDescription")?.Trim() ?? string.Empty;
+        if (!string.Equals(statusCode, "00", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(statusDescription)
+                ? "Biller customer validation failed."
+                : statusDescription);
+        }
+        var customerName = Field(response, "customerName")?.Trim();
+        if (string.IsNullOrWhiteSpace(customerName))
+        {
+            throw new InvalidOperationException("The biller did not return a customer name.");
+        }
+        return new(customerName, statusDescription);
+    }
+
     public async Task<string> SubmitBillPaymentAsync(string reference, string nwscAccount, string? customerName,
         string? customerMobile, string? location, decimal amount, DangoBillerSetting biller, CancellationToken ct = default)
     {
@@ -529,3 +565,5 @@ public sealed class DangoPaymentClient
 
     private sealed record Response(int HttpStatus, bool IsSuccess, JsonElement? Body);
 }
+
+public sealed record BillerCustomerValidationResult(string CustomerName, string StatusDescription);
