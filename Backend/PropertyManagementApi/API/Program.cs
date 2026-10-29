@@ -86,6 +86,7 @@ builder.Services.AddScoped<IMeterLienService, Infrastructure.Services.Meter.Mete
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<CollectionWalletCreditService>();
+builder.Services.AddScoped<BillPaymentProcessingService>();
 builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISmsProcessor, SmsProcessor>();
 builder.Services.AddScoped<IServiceLogsRepository, ServiceLogsRepository>();
@@ -108,7 +109,9 @@ builder.Services.AddScoped<ICollectoApiClient, PaymentGatewayRouter>();
 builder.Services.AddHttpClient<DangoPaymentClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+})
+    // Dango calls use the same request/response logging (log file and HttpRequestResponse table) as Collecto.
+    .AddHttpMessageHandler<LoggingHandler>();
 builder.Services.AddHttpClient<CollectoService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -147,6 +150,7 @@ builder.Services.AddSingleton<EmailService>();
 builder.Services.AddHostedService<PaymentProcessor>();
 builder.Services.AddHostedService<CheckPaymentStatusProcessor>();
 builder.Services.AddHostedService<CreditWalletService>();
+builder.Services.AddHostedService<BillPaymentProcessor>();
 builder.Services.AddHostedService<PendingWalletWithdrawsProcessor>();
 builder.Services.AddHostedService<ProcessPendingTokenTransactions>();
 builder.Services.AddHostedService<MonthlyMeterFeeProcessor>();

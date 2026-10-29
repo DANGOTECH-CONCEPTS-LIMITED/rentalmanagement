@@ -21,6 +21,17 @@ public sealed class AdminPayoutReconciliationController(IAdminPayoutReconciliati
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
+    /// <summary>Lists automatic NWSC bill payments, filtered by reference/account/meter or status.</summary>
+    [HttpGet("/api/AdminBillPayments")]
+    [ProducesResponseType(typeof(BillPaymentAdminPage), StatusCodes.Status200OK)]
+    public async Task<ActionResult<BillPaymentAdminPage>> GetBillPayments(CancellationToken ct,
+        [FromQuery] string? reference = null, [FromQuery] string? status = null,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        try { return Ok(await service.GetBillPaymentsAsync(reference, status, page, pageSize, ct)); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     /// <summary>Manually fails and refunds an independently verified unpaid, transaction-not-found Dango payout exactly once.</summary>
     [HttpPost("{id:int}/fail-and-reverse")]
     [ProducesResponseType(typeof(FailAndReversePayoutResponse), StatusCodes.Status200OK)]

@@ -49,7 +49,9 @@ const meterSchema = z.object({
   meterType: z.string().min(1, { message: 'Meter type is required' }),
   meterNumber: z.string().min(1, { message: 'Meter number is required' }),
   nwscAccount: z.string().min(1, { message: 'NWSC account is required' }),
+  nwscRegisteredName: z.string().min(1, { message: 'Registered name is required' }),
   locationOfNwscMeter: z.string().min(1, { message: 'Location of NWSC meter is required' }),
+  utilityMeterLocation: z.string().min(1, { message: 'Utility meter location is required' }),
 });
 
 interface UtilityMeter {
@@ -57,7 +59,9 @@ interface UtilityMeter {
   meterType: string;
   meterNumber: string;
   nwscAccount: string;
+  nwscRegisteredName: string;
   locationOfNwscMeter: string;
+  utilityMeterLocation: string;
   landLordId: number;
   user?: { fullName?: string };
 }
@@ -261,7 +265,9 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
       meterType: '',
       meterNumber: '',
       nwscAccount: '',
+      nwscRegisteredName: '',
       locationOfNwscMeter: '',
+      utilityMeterLocation: '',
     },
   });
 
@@ -427,12 +433,40 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
 
                 <FormField
                   control={form.control}
+                  name="nwscRegisteredName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registered Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Name the NWSC account is registered under" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="locationOfNwscMeter"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Location of NWSC Meter</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter location of NWSC meter" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="utilityMeterLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Utility Meter Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter the physical location of the utility meter" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

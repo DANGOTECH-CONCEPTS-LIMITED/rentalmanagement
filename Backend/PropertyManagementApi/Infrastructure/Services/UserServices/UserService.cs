@@ -393,7 +393,9 @@ namespace Infrastructure.Services.UserServices
                 MeterType = utilityMeter.MeterType,
                 LandLordId = utilityMeter.LandLordId,
                 NWSCAccount = utilityMeter.NwscAccount,
+                NwscRegisteredName = utilityMeter.NwscRegisteredName,
                 LocationOfNwscMeter = utilityMeter.LocationOfNwscMeter,
+                UtilityMeterLocation = utilityMeter.UtilityMeterLocation,
             };
             _context.UtilityMeters.Add(meter);
             _context.SaveChanges();
@@ -439,7 +441,9 @@ namespace Infrastructure.Services.UserServices
             existingMeter.MeterNumber = utilityMeter.MeterNumber;
             existingMeter.MeterType = utilityMeter.MeterType;
             existingMeter.NWSCAccount = utilityMeter.NwscAccount;
+            existingMeter.NwscRegisteredName = utilityMeter.NwscRegisteredName;
             existingMeter.LocationOfNwscMeter = utilityMeter.LocationOfNwscMeter;
+            existingMeter.UtilityMeterLocation = utilityMeter.UtilityMeterLocation;
             existingMeter.LandLordId = utilityMeter.LandLordId;
             // Save changes
             _context.UtilityMeters.Update(existingMeter);

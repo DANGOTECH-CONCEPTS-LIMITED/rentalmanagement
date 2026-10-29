@@ -25,6 +25,24 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
         return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
     }
 
+    public async Task<BillPaymentAdminPage> GetBillPaymentsAsync(string? reference, string? status, int page, int pageSize, CancellationToken ct)
+    {
+        if (page < 1 || page > 100000 || pageSize < 1 || pageSize > 100 || reference?.Length > 128 || status?.Length > 32)
+            throw new ArgumentException("Invalid search, status or pagination.");
+        var query = db.Set<BillPaymentInstruction>().AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(reference))
+        {
+            var value = reference.Trim();
+            query = query.Where(x => x.RequestReference == value || x.NwscAccount == value || x.MeterNumber == value);
+        }
+        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.Trim().ToUpperInvariant());
+        var rows = await query.OrderByDescending(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize + 1)
+            .Select(x => new BillPaymentAdminItem(x.Id, x.RequestReference, x.NwscAccount, x.MeterNumber,
+                x.Amount, x.Status, x.ProviderReference, x.Reason, x.CreatedAtUtc,
+                x.SubmittedAtUtc, x.ConfirmedAtUtc, x.WalletDebitedAtUtc)).ToListAsync(ct);
+        return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
+    }
+
     public async Task<FailAndReversePayoutResponse> FailAndReverseAsync(int id, FailAndReversePayoutRequest request, string actor, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(actor)) throw new UnauthorizedAccessException("An authenticated administrator is required.");

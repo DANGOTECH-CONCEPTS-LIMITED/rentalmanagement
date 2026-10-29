@@ -274,6 +274,81 @@ namespace Infrastructure.Migrations
                     b.ToTable("VendorPayments");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.BillPaymentInstruction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<DateTime?>("ConfirmedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LastCheckedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("MeterNumber")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("NwscAccount")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("ProviderReference")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("RequestReference")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Response")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int>("SubmissionAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("UtilityOwnerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UtilityPaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("WalletDebitedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UtilityPaymentId")
+                        .IsUnique();
+
+                    b.ToTable("BillPaymentInstruction");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.CollectionTransactionIdentity", b =>
                 {
                     b.Property<string>("TransactionId")
@@ -423,6 +498,65 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PropertyId");
 
                     b.ToTable("TenantComplaints");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.DangoBillerSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AutoBillPaymentsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Narrative")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("ProcessId")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("ProductCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("ServiceId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Tin")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Transtype")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Uedlid")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DangoBillerSetting");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AutoBillPaymentsEnabled = false,
+                            ServiceId = "",
+                            Transtype = ""
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.DangoPaymentReferenceAllocation", b =>
@@ -1142,6 +1276,12 @@ namespace Infrastructure.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("NWSCAccount")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NwscRegisteredName")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UtilityMeterLocation")
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");

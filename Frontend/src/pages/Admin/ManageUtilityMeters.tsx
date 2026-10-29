@@ -78,7 +78,9 @@ interface UtilityMeter {
   meterType: string;
   meterNumber: string;
   nwscAccount: string;
+  nwscRegisteredName: string;
   locationOfNwscMeter: string;
+  utilityMeterLocation: string;
   landLordId: number;
   user: {
     fullName: string;
@@ -89,9 +91,15 @@ const meterSchema = z.object({
   meterType: z.string().min(1, { message: "Meter type is required" }),
   meterNumber: z.string().min(1, { message: "Meter number is required" }),
   nwscAccount: z.string().min(1, { message: "NWSC account is required" }),
+  nwscRegisteredName: z
+    .string()
+    .min(1, { message: "Registered name is required" }),
   locationOfNwscMeter: z
     .string()
     .min(1, { message: "Location of NWSC meter is required" }),
+  utilityMeterLocation: z
+    .string()
+    .min(1, { message: "Utility meter location is required" }),
   landLordId: z.number().min(1, { message: "Landlord is required" }),
 });
 
@@ -120,7 +128,9 @@ const ManageUtilityMeters = () => {
       meterType: "",
       meterNumber: "",
       nwscAccount: "",
+      nwscRegisteredName: "",
       locationOfNwscMeter: "",
+      utilityMeterLocation: "",
       landLordId: 0,
     },
   });
@@ -208,7 +218,9 @@ const ManageUtilityMeters = () => {
       meterType: meter.meterType,
       meterNumber: meter.meterNumber,
       nwscAccount: meter.nwscAccount,
+      nwscRegisteredName: meter.nwscRegisteredName,
       locationOfNwscMeter: meter.locationOfNwscMeter,
+      utilityMeterLocation: meter.utilityMeterLocation,
       landLordId: meter.landLordId,
     });
     setIsEditDialogOpen(true);
@@ -312,7 +324,9 @@ const ManageUtilityMeters = () => {
               <TableHead>Meter Type</TableHead>
               <TableHead>Meter Number</TableHead>
               <TableHead>NWSC Account</TableHead>
+              <TableHead>Registered Name</TableHead>
               <TableHead>Location</TableHead>
+              <TableHead>Utility Meter Location</TableHead>
               <TableHead>Landlord Name</TableHead>
               <TableHead>Utility Payments</TableHead>
               <TableHead>Actions</TableHead>
@@ -325,7 +339,9 @@ const ManageUtilityMeters = () => {
                 <TableCell>{meter.meterType}</TableCell>
                 <TableCell>{meter.meterNumber}</TableCell>
                 <TableCell>{meter.nwscAccount}</TableCell>
+                <TableCell>{meter.nwscRegisteredName ?? "-"}</TableCell>
                 <TableCell>{meter.locationOfNwscMeter}</TableCell>
+                <TableCell>{meter.utilityMeterLocation ?? "-"}</TableCell>
                 <TableCell>{meter.user?.fullName ?? "-"}</TableCell>
                 <TableCell>
                   <Button
@@ -489,6 +505,23 @@ const ManageUtilityMeters = () => {
 
               <FormField
                 control={form.control}
+                name="nwscRegisteredName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Registered Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Name the NWSC account is registered under"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="locationOfNwscMeter"
                 render={({ field }) => (
                   <FormItem>
@@ -496,6 +529,23 @@ const ManageUtilityMeters = () => {
                     <FormControl>
                       <Input
                         placeholder="Enter location of NWSC meter"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="utilityMeterLocation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Utility Meter Location</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter the physical location of the utility meter"
                         {...field}
                       />
                     </FormControl>

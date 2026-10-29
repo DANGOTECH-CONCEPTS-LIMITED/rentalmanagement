@@ -17,3 +17,9 @@ public sealed record FailAndReversePayoutRequest
 }
 /// <summary>Result of one atomic, manually authorized payout refund.</summary>
 public sealed record FailAndReversePayoutResponse(string TransactionId, string Status, decimal Amount);
+/// <summary>One automatic NWSC bill payment and its provider/debit outcome.</summary>
+public sealed record BillPaymentAdminItem(int Id, string RequestReference, string NwscAccount, string? MeterNumber,
+    decimal Amount, string Status, string? ProviderReference, string? Reason, DateTime CreatedAtUtc,
+    DateTime? SubmittedAtUtc, DateTime? ConfirmedAtUtc, DateTime? WalletDebitedAtUtc);
+/// <summary>A bounded page of automatic NWSC bill payments.</summary>
+public sealed record BillPaymentAdminPage(IReadOnlyList<BillPaymentAdminItem> Items, int Page, int PageSize, bool HasMore);

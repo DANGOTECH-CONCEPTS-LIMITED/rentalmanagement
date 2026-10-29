@@ -56,6 +56,10 @@ namespace Infrastructure.Data
             modelBuilder.Entity<CollectionTransactionIdentity>().HasKey(x => x.TransactionId);
             modelBuilder.Entity<CollectionTransactionIdentity>().HasIndex(x => x.ClientReferenceHash).IsUnique();
             modelBuilder.Entity<TenantPayment>().HasIndex(x => x.ClientReference).IsUnique();
+            modelBuilder.Entity<DangoBillerSetting>().HasData(new DangoBillerSetting { Id = 1 });
+            modelBuilder.Entity<BillPaymentInstruction>().HasIndex(x => x.UtilityPaymentId).IsUnique();
+            modelBuilder.Entity<BillPaymentInstruction>().HasIndex(x => x.Status);
+            modelBuilder.Entity<BillPaymentInstruction>().Property(x => x.Response).HasColumnType("longtext");
             modelBuilder.Entity<DangoPaymentReferenceAllocation>().HasKey(x => new { x.DateUtc, x.Sequence });
             modelBuilder.Entity<DangoPaymentReferenceAllocation>().Property(x => x.Sequence).ValueGeneratedNever();
             modelBuilder.Entity<PaymentGatewaySubmission>().Property(x => x.Response).HasColumnType("longtext");

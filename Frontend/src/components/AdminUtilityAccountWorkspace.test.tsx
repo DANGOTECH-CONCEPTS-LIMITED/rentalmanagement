@@ -18,7 +18,7 @@ const accounts = [
   { id: 33, fullName: 'Not utility', systemRoleId: 2 },
   { id: 44, fullName: 'Administrator', systemRoleId: 1 },
 ];
-const meter = { id: 101, landLordId: 11, meterType: 'Water', meterNumber: 'ALICE-001', nwscAccount: 'NW-1', locationOfNwscMeter: 'Kampala' };
+const meter = { id: 101, landLordId: 11, meterType: 'Water', meterNumber: 'ALICE-001', nwscAccount: 'NW-1', nwscRegisteredName: 'Alice Nwsc', locationOfNwscMeter: 'Kampala', utilityMeterLocation: 'Meter at Kampala' };
 const secondMeter = { ...meter, id: 102, meterNumber: 'ALICE-002' };
 const bobMeter = { ...meter, id: 202, landLordId: 22, meterNumber: 'BOB-001' };
 const fees = { monthlyFee: 100, outstandingBalance: 80, charges: [{ id: 1, meterNumber: 'ALICE-001', period: '2026-10', amount: 100, amountPaid: 20 }] };
@@ -77,7 +77,9 @@ function fillMeter(number = 'NEW-001') {
   fireEvent.change(screen.getByLabelText('Meter type'), { target: { value: 'Electricity' } });
   fireEvent.change(screen.getByLabelText('Meter number'), { target: { value: number } });
   fireEvent.change(screen.getByLabelText('NWSC account'), { target: { value: 'NW-NEW' } });
+  fireEvent.change(screen.getByLabelText('Registered name'), { target: { value: 'Alice Nwsc' } });
   fireEvent.change(screen.getByLabelText('Location of NWSC meter'), { target: { value: ' Entebbe ' } });
+  fireEvent.change(screen.getByLabelText('Utility meter location'), { target: { value: ' Meter at Entebbe ' } });
 }
 beforeEach(() => {
   jest.resetAllMocks();
@@ -162,7 +164,7 @@ test('registers a meter using the selected account without an editable owner fie
   fireEvent.click(screen.getByRole('button', { name: 'Save meter' }));
   await screen.findByText('Meter registered.');
   expect(http.post).toHaveBeenCalledWith(`${props.apiUrl}/AddUtilityMeter`, {
-    meterType: 'Electricity', meterNumber: 'NEW-001', nwscAccount: 'NW-NEW', locationOfNwscMeter: 'Entebbe', landLordId: 11,
+    meterType: 'Electricity', meterNumber: 'NEW-001', nwscAccount: 'NW-NEW', nwscRegisteredName: 'Alice Nwsc', locationOfNwscMeter: 'Entebbe', utilityMeterLocation: 'Meter at Entebbe', landLordId: 11,
   }, authConfig);
 });
 

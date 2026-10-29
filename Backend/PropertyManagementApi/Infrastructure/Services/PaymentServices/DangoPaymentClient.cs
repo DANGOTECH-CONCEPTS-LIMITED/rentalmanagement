@@ -1,4 +1,5 @@
 using Domain.Dtos.Collecto;
+using Domain.Entities.PropertyMgt;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
@@ -104,6 +105,95 @@ public sealed class DangoPaymentClient
         }
         RequireStatusContract();
     }
+
+    public void ValidateBillPayment(DangoBillerSetting biller, string? nwscAccount, string? location, decimal amount)
+    {
+        ArgumentNullException.ThrowIfNull(biller);
+        RequiredSetting("ClientId");
+        RequiredValue(biller.ServiceId, "ServiceId");
+        RequiredValue(biller.Transtype, "Transtype");
+        var account = RequiredValue(nwscAccount, "NWSC account");
+        if (account.Length > 64) throw new ArgumentException("The NWSC account must not exceed 64 characters.", nameof(nwscAccount));
+        var resolvedLocation = string.IsNullOrWhiteSpace(location) ? biller.Location : location.Trim();
+        if (string.IsNullOrWhiteSpace(resolvedLocation))
+            throw new ArgumentException("A biller location (meter location or configured biller location) is required.");
+        if (resolvedLocation.Length > 128) throw new ArgumentException("The biller location must not exceed 128 characters.", nameof(location));
+        BankAmount(amount); // Dango biller amounts use the same positive whole-number format.
+        RequireStatusContract();
+    }
+
+    public async Task<string> SubmitBillPaymentAsync(string reference, string nwscAccount, string? customerName,
+        string? customerMobile, string? location, decimal amount, DangoBillerSetting biller, CancellationToken ct = default)
+    {
+        RequiredValue(reference, nameof(reference));
+        ValidateBillPayment(biller, nwscAccount, location, amount);
+        var response = await PostAsync("bill-payment", new
+        {
+            requestId = reference,
+            clientId = RequiredSetting("ClientId"),
+            serviceId = biller.ServiceId,
+            transtype = biller.Transtype,
+            requestReference = reference,
+            narrative = string.IsNullOrWhiteSpace(biller.Narrative) ? $"NWSC bill payment {nwscAccount}" : biller.Narrative,
+            customerId = nwscAccount,
+            customerName = customerName ?? string.Empty,
+            tin = biller.Tin ?? string.Empty,
+            uedlid = biller.Uedlid ?? string.Empty,
+            processid = biller.ProcessId ?? string.Empty,
+            productCode = biller.ProductCode ?? string.Empty,
+            location = string.IsNullOrWhiteSpace(location) ? biller.Location ?? string.Empty : location.Trim(),
+            customerMobile = string.IsNullOrWhiteSpace(customerMobile) ? string.Empty : NormalizePhone(customerMobile),
+            amount = BankAmount(amount),
+            schoolCode = string.Empty
+        }, ct);
+        return BillPaymentEnvelope(response, reference);
+    }
+
+    public async Task<string> GetBillPaymentStatusAsync(string reference, CancellationToken ct = default)
+    {
+        RequiredValue(reference, nameof(reference));
+        var response = await PostAsync("bill-payment-status",
+            new { requestReference = reference, clientId = RequiredSetting("ClientId") }, ct);
+        return BillPaymentEnvelope(response, reference);
+    }
+
+    private string BillPaymentEnvelope(Response response, string reference)
+    {
+        var state = BillPaymentState(response, reference, ReadStatusContract(_configuration));
+        var message = Message(response);
+        return JsonSerializer.Serialize(new
+        {
+            status = response.HttpStatus,
+            status_message = message,
+            data = new
+            {
+                billPayment = state != "FAILED",
+                state,
+                requestReference = reference,
+                // A biller receipt is the most specific reference; fall back to FlexiPay identifiers.
+                vendorReference = Field(response, "receiptNumber") ?? Field(response, "flexipayReferenceNumber")
+                    ?? Field(response, "flexipayRefNum") ?? string.Empty,
+                message
+            }
+        });
+    }
+
+    private static string BillPaymentState(Response response, string reference, StatusContract? contract)
+    {
+        if (IsTerminalPreProcessingRejection(response)) return "FAILED";
+        if (contract == null || !response.IsSuccess) return "PENDING";
+        if (!string.Equals(Field(response, "requestReference"), reference, StringComparison.OrdinalIgnoreCase))
+            return "PENDING"; // Uncorrelated responses are not evidence about this bill.
+        var remoteState = Field(response, contract.StateField)?.Trim() ?? string.Empty;
+        return contract.SuccessValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase) ? "SUCCESSFUL"
+            : contract.FailureValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase) ? "FAILED"
+            : "PENDING";
+    }
+
+    private static bool IsTerminalPreProcessingRejection(Response response)
+        => IsInvalidRequestIdRejection(response) ||
+           (response.HttpStatus is 200 or 400 && Field(response, "httpCode") == "400" &&
+            (Field(response, "moreInformation")?.Trim().StartsWith("Invalid amount", StringComparison.OrdinalIgnoreCase) ?? false));
 
     public static string CreatePendingCollectionResponse(string reference, string? message = null)
     {

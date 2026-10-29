@@ -1,10 +1,11 @@
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
+using Infrastructure.Services.PaymentServices;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services.PaymentServices.WalletSvc;
 
-public sealed class CollectionWalletCreditService(AppDbContext db)
+public sealed class CollectionWalletCreditService(AppDbContext db, PaymentProviderSettingsService? settings = null)
 {
     public async Task CreditUtilityAsync(int paymentId, CancellationToken ct = default)
     {
@@ -15,15 +16,20 @@ public sealed class CollectionWalletCreditService(AppDbContext db)
         var payment = await db.UtilityPayments.AsNoTracking().SingleAsync(x => x.Id == paymentId, ct);
         if (payment.WalletCreditedAtUtc == null)
         {
-            var owner = await db.UtilityMeters.AsNoTracking().Where(x => x.MeterNumber == payment.MeterNumber)
-                .Select(x => (int?)x.LandLordId).FirstOrDefaultAsync(ct)
+            var meter = await db.UtilityMeters.AsNoTracking().FirstOrDefaultAsync(x => x.MeterNumber == payment.MeterNumber, ct)
                 ?? throw new InvalidOperationException("Utility meter was not found.");
-            var wallet = await db.Wallets.AsNoTracking().FirstOrDefaultAsync(x => x.LandlordId == owner, ct)
+            var wallet = await db.Wallets.AsNoTracking().FirstOrDefaultAsync(x => x.LandlordId == meter.LandLordId, ct)
                 ?? throw new InvalidOperationException("Utility owner's wallet was not found.");
             await CreditAsync(wallet, (decimal)payment.Amount, payment.TransactionID,
                 $"{payment.Description}. Meter {payment.MeterNumber}", ct);
             await db.UtilityPayments.Where(x => x.Id == paymentId)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.WalletCreditedAtUtc, DateTime.UtcNow), ct);
+            if (settings != null)
+            {
+                await new BillPaymentSchedulingService(db)
+                    .TryCreateAsync(payment, meter, (decimal)payment.Amount, settings, ct);
+                await db.SaveChangesAsync(ct);
+            }
         }
         await transaction.CommitAsync(ct);
     }
