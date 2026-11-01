@@ -38,9 +38,106 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.Trim().ToUpperInvariant());
         var rows = await query.OrderByDescending(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize + 1)
             .Select(x => new BillPaymentAdminItem(x.Id, x.RequestReference, x.NwscAccount, x.MeterNumber,
-                x.Amount, x.Status, x.ProviderReference, x.Reason, x.CreatedAtUtc,
+                db.UtilityMeters.AsNoTracking().Where(m => m.MeterNumber == x.MeterNumber).Select(m => m.NwscRegisteredName).FirstOrDefault(),
+                x.Amount, x.Status, x.ProviderReference, x.Reason, x.ExternalRefNoBillerId, x.CreatedAtUtc,
                 x.SubmittedAtUtc, x.ConfirmedAtUtc, x.WalletDebitedAtUtc)).ToListAsync(ct);
         return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
+    }
+
+    private static readonly string[] BillPaymentStatuses =
+    [
+        BillPaymentInstructionStatus.PendingSubmission,
+        BillPaymentInstructionStatus.PendingConfirmation,
+        BillPaymentInstructionStatus.Successful,
+        BillPaymentInstructionStatus.PaidUndebited,
+        BillPaymentInstructionStatus.Failed
+    ];
+
+    public async Task UpdateBillPaymentStatusAsync(int id, string status, CancellationToken ct)
+    {
+        var normalized = (status ?? string.Empty).Trim().ToUpperInvariant();
+        if (!BillPaymentStatuses.Contains(normalized))
+            throw new ArgumentException($"Status must be one of: {string.Join(", ", BillPaymentStatuses)}.");
+        var updated = await db.Set<BillPaymentInstruction>().Where(x => x.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, normalized), ct);
+        if (updated == 0)
+            throw new KeyNotFoundException("Bill payment not found.");
+    }
+
+    public async Task<int> UpdateBillPaymentStatusesAsync(IReadOnlyCollection<int> ids, string status, CancellationToken ct)
+    {
+        var normalized = (status ?? string.Empty).Trim().ToUpperInvariant();
+        if (!BillPaymentStatuses.Contains(normalized))
+            throw new ArgumentException($"Status must be one of: {string.Join(", ", BillPaymentStatuses)}.");
+        if (ids == null || ids.Count == 0)
+            throw new ArgumentException("Select at least one bill payment to update.");
+        if (ids.Count > 500)
+            throw new ArgumentException("A maximum of 500 bill payments can be updated at once.");
+        var distinct = ids.Where(x => x > 0).Distinct().ToArray();
+        if (distinct.Length == 0)
+            throw new ArgumentException("Select at least one valid bill payment to update.");
+        return await db.Set<BillPaymentInstruction>().Where(x => distinct.Contains(x.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, normalized), ct);
+    }
+
+    public async Task<int> BackfillBillPaymentsAsync(CancellationToken ct)
+    {
+        await EnsureBillPaymentsConfiguredAsync(ct);
+        var payments = await db.UtilityPayments.AsNoTracking()
+            .Where(x => x.Status == "SUCCESSFUL" && x.Amount > 0)
+            .OrderBy(x => x.Id)
+            .ToListAsync(ct);
+
+        var created = 0;
+        foreach (var payment in payments)
+            if (await TryCreateInstructionAsync(payment, ct)) created++;
+        if (created > 0) await db.SaveChangesAsync(ct);
+        return created;
+    }
+
+    public async Task<bool> TriggerBillPaymentAsync(string transactionId, CancellationToken ct)
+    {
+        await EnsureBillPaymentsConfiguredAsync(ct);
+        var value = (transactionId ?? string.Empty).Trim();
+        if (value.Length == 0) throw new ArgumentException("A statement transaction ID is required.");
+        var payment = await db.UtilityPayments.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TransactionID == value && x.Status == "SUCCESSFUL" && x.Amount > 0, ct)
+            ?? throw new KeyNotFoundException("No credited utility collection matches this statement transaction.");
+        if (!await TryCreateInstructionAsync(payment, ct)) return false;
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    private async Task EnsureBillPaymentsConfiguredAsync(CancellationToken ct)
+    {
+        var biller = await db.Set<DangoBillerSetting>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1, ct);
+        if (!BillPaymentSchedulingService.BillerConfigured(biller))
+            throw new InvalidOperationException("The NWSC biller is not configured or automatic bill payments are disabled.");
+        var provider = await db.Set<PaymentProviderSetting>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1, ct);
+        if (provider?.Provider != PaymentProviderSettingsService.DangoPayment)
+            throw new InvalidOperationException("Dango Payment API is not the active provider.");
+    }
+
+    private async Task<bool> TryCreateInstructionAsync(UtilityPayment payment, CancellationToken ct)
+    {
+        if (await db.Set<BillPaymentInstruction>().AsNoTracking().AnyAsync(x => x.UtilityPaymentId == payment.Id, ct))
+            return false;
+        var meter = await db.UtilityMeters.AsNoTracking().FirstOrDefaultAsync(x => x.MeterNumber == payment.MeterNumber, ct);
+        if (meter == null || !BillPaymentSchedulingService.RequiresBillPayment(meter.NWSCAccount)) return false;
+
+        var reference = await DangoReferenceNumberAllocator.AllocateAsync(db, "B", DateTime.UtcNow);
+        db.Add(new BillPaymentInstruction
+        {
+            UtilityPaymentId = payment.Id,
+            MeterNumber = payment.MeterNumber,
+            NwscAccount = meter.NWSCAccount!.Trim(),
+            UtilityOwnerId = meter.LandLordId,
+            Amount = (decimal)payment.Amount,
+            RequestReference = reference,
+            Status = BillPaymentInstructionStatus.PendingSubmission,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        return true;
     }
 
     public async Task<FailAndReversePayoutResponse> FailAndReverseAsync(int id, FailAndReversePayoutRequest request, string actor, CancellationToken ct)

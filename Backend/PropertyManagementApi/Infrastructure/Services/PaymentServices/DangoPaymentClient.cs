@@ -246,6 +246,7 @@ public sealed class DangoPaymentClient
                 // A biller receipt is the most specific reference; fall back to FlexiPay identifiers.
                 vendorReference = Field(response, "receiptNumber") ?? Field(response, "flexipayReferenceNumber")
                     ?? Field(response, "flexipayRefNum") ?? string.Empty,
+                externalRefNoBillerId = Field(response, "externalRefNoBillerId"),
                 message
             }
         });
@@ -255,13 +256,22 @@ public sealed class DangoPaymentClient
     {
         if (IsTerminalPreProcessingRejection(response)) return "FAILED";
         if (contract == null || !response.IsSuccess) return "PENDING";
+        // A provider-reported ambiguous transaction is about the bill just queried even when Dango
+        // does not echo requestReference on this endpoint, so detect it before the correlation check.
+        if (IsAmbiguousTransaction(response, contract)) return "AMBIGUOUS";
         if (!string.Equals(Field(response, "requestReference"), reference, StringComparison.OrdinalIgnoreCase))
             return "PENDING"; // Uncorrelated responses are not evidence about this bill.
         var remoteState = Field(response, contract.StateField)?.Trim() ?? string.Empty;
-        return contract.SuccessValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase) ? "SUCCESSFUL"
-            : contract.FailureValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase) ? "FAILED"
-            : "PENDING";
+        if (contract.SuccessValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase)) return "SUCCESSFUL";
+        if (contract.FailureValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase)) return "FAILED";
+        return "PENDING";
     }
+
+    // Dango reports "100 Transaction Ambiguous" for a processed payment whose final state it cannot
+    // definitively confirm. It is treated as settled but flagged for human reconciliation.
+    private static bool IsAmbiguousTransaction(Response response, StatusContract contract)
+        => string.Equals(Field(response, contract.StateField)?.Trim(), "100", StringComparison.Ordinal) &&
+           (Field(response, "statusDescription") ?? string.Empty).Contains("ambiguous", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsTerminalPreProcessingRejection(Response response)
         => IsInvalidRequestIdRejection(response) ||

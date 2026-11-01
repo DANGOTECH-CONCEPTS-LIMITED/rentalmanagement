@@ -1,8 +1,10 @@
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
+using Infrastructure.Services.Email;
 using Infrastructure.Services.PaymentServices;
 using Infrastructure.Services.PaymentServices.WalletSvc;
 using Microsoft.Data.Sqlite;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,6 +21,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
     private IConfigurationRoot _configuration = null!;
     private PaymentProviderSettingsService _settings = null!;
     private readonly BillHandler _handler = new();
+    private readonly FakeEmailService _email = new();
 
     private AppDbContext Context() => new(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
 
@@ -58,7 +61,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
     public async Task DisposeAsync() { await _db.DisposeAsync(); await _connection.DisposeAsync(); }
 
     private BillPaymentProcessingService Processor(AppDbContext db) =>
-        new(db, new DangoPaymentClient(new HttpClient(_handler), _configuration), NullLogger<BillPaymentProcessingService>.Instance);
+        new(db, new DangoPaymentClient(new HttpClient(_handler), _configuration), NullLogger<BillPaymentProcessingService>.Instance, _email);
 
     private async Task ConfigureBillerAsync(bool enabled = true, string serviceId = "NWSC")
     {
@@ -159,6 +162,45 @@ public class NwscBillPaymentTests : IAsyncLifetime
         Assert.Equal(0, await Processor(_db).ProcessAsync(CancellationToken.None));
         Assert.Equal(0m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
         Assert.Single(_handler.BillRequests);
+    }
+
+    [Fact]
+    public async Task RealSuccessfulSubmissionResponseIsRecognizedAndCapturesProviderReference()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        _handler.BillBody = """{"statusCode":"00","statusDescription":"Transaction(Ref# 935235270006) is processed successfully","requestReference":"{ref}","flexipayReferenceNumber":"935235270006","externalRefNoBillerId":"67149420"}""";
+
+        Assert.Equal(1, await Processor(_db).ProcessAsync(CancellationToken.None));
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("PENDING_CONFIRMATION", instruction.Status);
+        Assert.Equal("935235270006", instruction.ProviderReference);
+        Assert.Equal("67149420", instruction.ExternalRefNoBillerId);
+        Assert.Equal(6000m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+    }
+
+    [Fact]
+    public async Task AmbiguousStatusConfirmsPaymentDebitsWalletAndSendsReconciliationEmail()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        // Dango does not echo requestReference on this endpoint for an ambiguous transaction.
+        _handler.StatusBody = """{"statusCode":"100","statusDescription":"Transaction Ambiguous"}""";
+
+        Assert.Equal(1, await Processor(_db).ProcessAsync(CancellationToken.None));
+        Assert.Equal(1, await Processor(_db).ProcessAsync(CancellationToken.None));
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("SUCCESSFUL", instruction.Status);
+        Assert.NotNull(instruction.WalletDebitedAtUtc);
+        Assert.Contains("reconciliation", instruction.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+
+        var sent = Assert.Single(_email.Sent);
+        Assert.Equal("ngobidaniel04@gmail.com", sent.To);
+        Assert.Contains(instruction.RequestReference, sent.Subject);
+        Assert.Contains("Transaction Ambiguous", sent.Message);
     }
 
     [Fact]
@@ -280,6 +322,8 @@ public class NwscBillPaymentTests : IAsyncLifetime
         Assert.Equal("12345678", item.NwscAccount);
         Assert.Equal(6000m, item.Amount);
         Assert.Equal("meter-1", item.MeterNumber);
+        Assert.Equal("Registered NWSC Name", item.MeterName);
+        Assert.Null(item.ExternalRefNoBillerId);
         Assert.Null(item.WalletDebitedAtUtc);
         Assert.Single((await service.GetBillPaymentsAsync(item.RequestReference, null, 1, 20, CancellationToken.None)).Items);
         Assert.Single((await service.GetBillPaymentsAsync("12345678", null, 1, 20, CancellationToken.None)).Items);
@@ -291,11 +335,173 @@ public class NwscBillPaymentTests : IAsyncLifetime
             .Cast<Microsoft.AspNetCore.Mvc.HttpGetAttribute>().Single().Template);
     }
 
+    [Fact]
+    public async Task ServerErrorDuringConfirmationLeavesPaymentPendingForReprocess()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        _handler.StatusHttpStatus = HttpStatusCode.InternalServerError;
+
+        Assert.Equal(1, await Processor(_db).ProcessAsync(CancellationToken.None));
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("PENDING_CONFIRMATION", instruction.Status);
+
+        Assert.Equal(1, await Processor(_db).ProcessAsync(CancellationToken.None));
+        instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("PENDING_CONFIRMATION", instruction.Status);
+        Assert.Equal(6000m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+    }
+
+    [Fact]
+    public async Task BackfillCreatesInstructionsForCreditedPaymentsWithoutThem()
+    {
+        await ConfigureBillerAsync();
+        await _db.UtilityPayments.Where(x => x.Id == 401).ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "SUCCESSFUL"));
+
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        var created = await service.BackfillBillPaymentsAsync(CancellationToken.None);
+        Assert.Equal(1, created);
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal(401, instruction.UtilityPaymentId);
+        Assert.Equal("12345678", instruction.NwscAccount);
+        Assert.Equal(6000m, instruction.Amount);
+        Assert.Equal("PENDING_SUBMISSION", instruction.Status);
+    }
+
+    [Fact]
+    public async Task TriggerBillPaymentCreatesSingleInstructionFromStatementTransactionId()
+    {
+        await ConfigureBillerAsync();
+        await _db.UtilityPayments.Where(x => x.Id == 401).ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "SUCCESSFUL"));
+
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        Assert.True(await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", CancellationToken.None));
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal(401, instruction.UtilityPaymentId);
+        Assert.Equal("12345678", instruction.NwscAccount);
+        Assert.Equal(6000m, instruction.Amount);
+        Assert.Equal("PENDING_SUBMISSION", instruction.Status);
+
+        // Idempotent: a second trigger returns false and does not duplicate.
+        Assert.False(await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", CancellationToken.None));
+        Assert.Equal(1, await _db.Set<BillPaymentInstruction>().CountAsync());
+    }
+
+    [Fact]
+    public async Task TriggerBillPaymentRequiresMatchingCreditedUtilityCollection()
+    {
+        await ConfigureBillerAsync();
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.TriggerBillPaymentAsync("NON_EXISTENT", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateBillPaymentStatusPersistsTheNewStatus()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+
+        await service.UpdateBillPaymentStatusAsync(instruction.Id, " failed ", CancellationToken.None);
+
+        var updated = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("FAILED", updated.Status);
+    }
+
+    [Fact]
+    public async Task UpdateBillPaymentStatusRejectsUnknownStatuses()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateBillPaymentStatusAsync(instruction.Id, "NOT_A_STATUS", CancellationToken.None));
+        Assert.Equal("PENDING_SUBMISSION", (await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task UpdateBillPaymentStatusThrowsForMissingInstruction()
+    {
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateBillPaymentStatusAsync(99999, "FAILED", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateBillPaymentStatusesUpdatesManyAtOnce()
+    {
+        _db.Add(new BillPaymentInstruction { UtilityPaymentId = 501, NwscAccount = "123", RequestReference = "R1", Amount = 1000 });
+        _db.Add(new BillPaymentInstruction { UtilityPaymentId = 502, NwscAccount = "456", RequestReference = "R2", Amount = 2000 });
+        await _db.SaveChangesAsync();
+        var ids = await _db.Set<BillPaymentInstruction>().AsNoTracking().Select(x => x.Id).OrderBy(x => x).ToListAsync();
+
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        var updated = await service.UpdateBillPaymentStatusesAsync(ids, "FAILED", CancellationToken.None);
+        Assert.Equal(2, updated);
+        var statuses = await _db.Set<BillPaymentInstruction>().AsNoTracking().Select(x => x.Status).ToListAsync();
+        Assert.All(statuses, status => Assert.Equal("FAILED", status));
+    }
+
+    [Fact]
+    public async Task UpdateBillPaymentStatusesRejectsUnknownStatusOrEmptySelection()
+    {
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateBillPaymentStatusesAsync([1], "NOT_A_STATUS", CancellationToken.None));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateBillPaymentStatusesAsync([], "FAILED", CancellationToken.None));
+    }
+
+    [Fact]
+    public void BulkStatusRequestBindsCaseInsensitively()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var request = JsonSerializer.Deserialize<API.Controllers.AdminPayoutReconciliationController.UpdateBillPaymentStatusesRequest>(
+            """{"ids":[1,2,3],"status":"FAILED"}""", options);
+        Assert.NotNull(request);
+        Assert.Equal([1, 2, 3], request!.Ids);
+        Assert.Equal("FAILED", request.Status);
+    }
+
+    [Fact]
+    public async Task BulkStatusControllerActionUpdatesAndReturnsCount()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        _db.Add(new BillPaymentInstruction { UtilityPaymentId = 502, NwscAccount = "456", RequestReference = "R2", Amount = 2000 });
+        await _db.SaveChangesAsync();
+        var ids = await _db.Set<BillPaymentInstruction>().AsNoTracking().Select(x => x.Id).OrderBy(x => x).ToListAsync();
+
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        var controller = new API.Controllers.AdminPayoutReconciliationController(service, Processor(_db));
+        var result = await controller.UpdateBillPaymentStatuses(
+            new API.Controllers.AdminPayoutReconciliationController.UpdateBillPaymentStatusesRequest { Ids = ids, Status = "FAILED" },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var updated = (int)ok.Value!.GetType().GetProperty("updated")!.GetValue(ok.Value)!;
+        Assert.Equal(2, updated);
+        var statuses = await _db.Set<BillPaymentInstruction>().AsNoTracking().Select(x => x.Status).ToListAsync();
+        Assert.All(statuses, status => Assert.Equal("FAILED", status));
+    }
+
+    public sealed class FakeEmailService : IEmailService
+    {
+        public List<(string To, string Subject, string Message)> Sent { get; } = [];
+        public Task SendEmailAsync(string toEmail, string subject, string message)
+        {
+            Sent.Add((toEmail, subject, message));
+            return Task.CompletedTask;
+        }
+    }
+
     public sealed class BillHandler : HttpMessageHandler
     {
         public string BillBody { get; set; } = """{"statusCode":"00","statusDescription":"Accepted","requestReference":"{ref}"}""";
         public string StatusBody { get; set; } = """{"statusCode":"00","statusDescription":"Successful","requestReference":"{ref}"}""";
         public string CustomerValidationBody { get; set; } = """{"statusCode":"00","statusDescription":"Biller Details Fetched Successfully","requestReference":"{ref}","customerName":"DDAMBA WILSON","paymentMode":"any","amount":"-8872"}""";
+        public HttpStatusCode StatusHttpStatus { get; set; } = HttpStatusCode.OK;
         public List<string> BillRequests { get; } = [];
         public List<string> CustomerValidationRequests { get; } = [];
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -305,6 +511,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
             var reference = document.RootElement.TryGetProperty("requestReference", out var r) ? r.GetString()! : "";
             var path = request.RequestUri!.AbsolutePath;
             string payload;
+            var responseStatus = HttpStatusCode.OK;
             if (path.EndsWith("bill-payment"))
             {
                 BillRequests.Add(body);
@@ -313,6 +520,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
             else if (path.EndsWith("bill-payment-status"))
             {
                 payload = StatusBody.Replace("{ref}", reference);
+                responseStatus = StatusHttpStatus;
             }
             else if (path.EndsWith("biller-customer-validation"))
             {
@@ -320,7 +528,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
                 payload = CustomerValidationBody.Replace("{ref}", reference);
             }
             else throw new InvalidOperationException("Unexpected endpoint " + path);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(payload, Encoding.UTF8, "application/json") };
+            return new HttpResponseMessage(responseStatus) { Content = new StringContent(payload, Encoding.UTF8, "application/json") };
         }
     }
 }

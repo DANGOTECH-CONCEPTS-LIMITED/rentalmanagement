@@ -1,5 +1,6 @@
 using Application.Interfaces.PaymentService;
 using Domain.Dtos.Payments;
+using Infrastructure.Services.PaymentServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -9,7 +10,7 @@ namespace API.Controllers;
 [ApiController]
 [Authorize(Roles = "Administrator")]
 [Route("api/AdminPayoutReconciliation")]
-public sealed class AdminPayoutReconciliationController(IAdminPayoutReconciliation service) : ControllerBase
+public sealed class AdminPayoutReconciliationController(IAdminPayoutReconciliation service, BillPaymentProcessingService billPayments) : ControllerBase
 {
     /// <summary>Lists submitted pending Dango withdrawals for manual reconciliation.</summary>
     [HttpGet]
@@ -30,6 +31,113 @@ public sealed class AdminPayoutReconciliationController(IAdminPayoutReconciliati
     {
         try { return Ok(await service.GetBillPaymentsAsync(reference, status, page, pageSize, ct)); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Manually runs one bill payment cycle (submits pending bills and confirms submitted ones).</summary>
+    [HttpPost("/api/AdminBillPayments/process")]
+    public async Task<IActionResult> ProcessBillPayments(CancellationToken ct)
+    {
+        try
+        {
+            var processed = await billPayments.ProcessAsync(ct);
+            return Ok(new { processed });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    public sealed class UpdateBillPaymentStatusRequest
+    {
+        public string Status { get; set; } = string.Empty;
+    }
+
+    /// <summary>Manually updates a bill payment instruction's status.</summary>
+    [HttpPut("/api/AdminBillPayments/{id:int}/status")]
+    public async Task<IActionResult> UpdateBillPaymentStatus(int id, [FromBody] UpdateBillPaymentStatusRequest request, CancellationToken ct)
+    {
+        try
+        {
+            await service.UpdateBillPaymentStatusAsync(id, request.Status, ct);
+            return Ok(new { id, status = (request.Status ?? string.Empty).Trim().ToUpperInvariant() });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    public sealed class UpdateBillPaymentStatusesRequest
+    {
+        public List<int> Ids { get; set; } = [];
+        public string Status { get; set; } = string.Empty;
+    }
+
+    /// <summary>Updates the status of many bill payment instructions at once.</summary>
+    [HttpPut("/api/AdminBillPayments/status")]
+    public async Task<IActionResult> UpdateBillPaymentStatuses([FromBody] UpdateBillPaymentStatusesRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var updated = await service.UpdateBillPaymentStatusesAsync(request.Ids ?? [], request.Status, ct);
+            return Ok(new { updated });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Creates bill payment instructions for credited utility payments that predate the feature.</summary>
+    [HttpPost("/api/AdminBillPayments/backfill")]
+    public async Task<IActionResult> BackfillBillPayments(CancellationToken ct)
+    {
+        try
+        {
+            var created = await service.BackfillBillPaymentsAsync(ct);
+            return Ok(new { created });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    public sealed class TriggerBillPaymentRequest
+    {
+        public string TransactionId { get; set; } = string.Empty;
+    }
+
+    /// <summary>Creates one bill payment instruction for a single credited utility collection, matched by its statement transaction ID.</summary>
+    [HttpPost("/api/AdminBillPayments/trigger")]
+    public async Task<IActionResult> TriggerBillPayment([FromBody] TriggerBillPaymentRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var created = await service.TriggerBillPaymentAsync(request.TransactionId, ct);
+            return Ok(new { created });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     /// <summary>Manually fails and refunds an independently verified unpaid, transaction-not-found Dango payout exactly once.</summary>

@@ -352,6 +352,11 @@ function getNavItems(role: number): NavItem[] {
         path: "/admin-dashboard/collecto-withdraw-logs",
       },
       {
+        label: "Bill Payments",
+        icon: <FileText size={18} />,
+        path: "/admin-dashboard/bill-payments",
+      },
+      {
         label: "HTTP Logs",
         icon: <FileSearch size={18} />,
         path: "/admin-dashboard/http-logs",

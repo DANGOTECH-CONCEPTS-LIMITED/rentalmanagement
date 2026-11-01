@@ -35,6 +35,11 @@ public class AdminPayoutReconciliationTests : IAsyncLifetime
         {
             ["DangoPayment:BaseUrl"] = "https://test.invalid/", ["DangoPayment:ClientId"] = "test-client"
         }).Build()));
+    private BillPaymentProcessingService BillProcessor(AppDbContext db) => new(db,
+        new DangoPaymentClient(new HttpClient(_handler), new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["DangoPayment:BaseUrl"] = "https://test.invalid/", ["DangoPayment:ClientId"] = "test-client"
+        }).Build()), null!, null!);
     public async Task InitializeAsync()
     {
         await _connection.OpenAsync();
@@ -155,7 +160,7 @@ public class AdminPayoutReconciliationTests : IAsyncLifetime
     public async Task ControllerRequiresAdministratorAndActorIdentity()
     {
         Assert.Equal("Administrator", typeof(AdminPayoutReconciliationController).GetCustomAttribute<AuthorizeAttribute>()!.Roles);
-        var controller = new AdminPayoutReconciliationController(_service)
+        var controller = new AdminPayoutReconciliationController(_service, BillProcessor(_db))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

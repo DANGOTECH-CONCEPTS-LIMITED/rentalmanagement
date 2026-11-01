@@ -145,6 +145,7 @@ builder.Services.AddHttpClient<IStanbicApiClient, StanbicService>(client =>
 // Singleton services
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<EmailService>();
+builder.Services.AddSingleton<IEmailService>(sp => sp.GetRequiredService<EmailService>());
 
 // Add hosted services
 builder.Services.AddHostedService<PaymentProcessor>();

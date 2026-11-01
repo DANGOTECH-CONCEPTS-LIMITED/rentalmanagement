@@ -60,6 +60,7 @@ import AdminUtilityDashboard from "./pages/Admin/AdminUtilityDashboard";
 import AdminWalletManagement from "./pages/Admin/AdminWalletManagement";
 import UtilityAccountManagement from "./pages/Admin/UtilityAccountManagement";
 import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
+import BillPayments from "./pages/Admin/BillPayments";
 import UpdateTransaction from "./pages/Admin/UpdateTransaction";
 
 const queryClient = new QueryClient();
@@ -120,6 +121,7 @@ const App = () => (
                   path="collecto-withdraw-logs"
                   element={<CollectoWithdrawLogs />}
                 />
+                <Route path="bill-payments" element={<BillPayments />} />
                 <Route path="update-transaction" element={<UpdateTransaction />} />
                 <Route path="http-logs" element={<HttpLogs />} />
                 <Route path="audit-trail" element={<AuditTrail />} />

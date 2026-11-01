@@ -291,6 +291,10 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("ExternalRefNoBillerId")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<DateTime?>("LastCheckedAtUtc")
                         .HasColumnType("datetime(6)");
 

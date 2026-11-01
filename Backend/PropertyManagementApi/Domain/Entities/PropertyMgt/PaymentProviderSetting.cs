@@ -73,6 +73,7 @@ public class BillPaymentInstruction
     [MaxLength(32)] public string Status { get; set; } = BillPaymentInstructionStatus.PendingSubmission;
     [MaxLength(64)] public string RequestReference { get; set; } = string.Empty;
     [MaxLength(64)] public string? ProviderReference { get; set; }
+    [MaxLength(64)] public string? ExternalRefNoBillerId { get; set; }
     public string? Response { get; set; }
     [MaxLength(256)] public string? Reason { get; set; }
     public DateTime CreatedAtUtc { get; set; }

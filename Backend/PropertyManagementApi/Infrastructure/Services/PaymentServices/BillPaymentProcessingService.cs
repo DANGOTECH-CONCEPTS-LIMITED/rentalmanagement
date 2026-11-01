@@ -1,13 +1,14 @@
 using System.Text.Json;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
+using Infrastructure.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services.PaymentServices;
 
 // Submits queued NWSC bill payments and debits the utility wallet only after Dango confirms success.
-public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentClient dango, ILogger<BillPaymentProcessingService> logger)
+public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentClient dango, ILogger<BillPaymentProcessingService> logger, IEmailService email)
 {
     private static readonly TimeSpan RecheckInterval = TimeSpan.FromMinutes(1);
 
@@ -74,7 +75,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             return; // Remains PENDING_SUBMISSION; the provider was not proven to have accepted it.
         }
 
-        var (state, vendorReference, message) = Parse(raw);
+        var (state, vendorReference, message, externalRefNoBillerId) = Parse(raw);
         if (state == "FAILED")
         {
             await FailAsync(item.Id, message, ct, raw);
@@ -83,6 +84,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id).ExecuteUpdateAsync(s => s
             .SetProperty(x => x.Response, raw)
             .SetProperty(x => x.ProviderReference, string.IsNullOrWhiteSpace(vendorReference) ? null : vendorReference)
+            .SetProperty(x => x.ExternalRefNoBillerId, string.IsNullOrWhiteSpace(externalRefNoBillerId) ? null : externalRefNoBillerId)
             .SetProperty(x => x.Status, BillPaymentInstructionStatus.PendingConfirmation), ct);
         logger.LogInformation("NWSC bill {Reference} accepted by Dango and awaiting confirmation", item.RequestReference);
     }
@@ -98,7 +100,16 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             logger.LogWarning("NWSC bill status unknown for {Reference}: {Error}", item.RequestReference, ex.GetType().Name);
             return;
         }
-        var (state, vendorReference, message) = Parse(raw);
+        var (state, vendorReference, message, _) = Parse(raw);
+        var httpStatus = ReadHttpStatus(raw);
+        if (httpStatus >= 500)
+        {
+            // Transient server error while confirming: keep PENDING_CONFIRMATION and reprocess on the next cycle.
+            logger.LogWarning("NWSC bill {Reference} status check returned HTTP {HttpStatus}; reprocessing the confirmation.", item.RequestReference, httpStatus);
+            await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Response, raw), ct);
+            return;
+        }
         if (state == "PENDING")
         {
             await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id).ExecuteUpdateAsync(s => s
@@ -111,10 +122,34 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             await FailAsync(item.Id, message, ct, raw);
             return;
         }
+        if (state == "AMBIGUOUS")
+        {
+            await SendReconciliationEmailAsync(item, raw, ct);
+            await CompleteAsync(item, raw, vendorReference, ct, "Transaction Ambiguous — reconciliation required");
+            return;
+        }
         await CompleteAsync(item, raw, vendorReference, ct);
     }
 
-    private async Task CompleteAsync(BillPaymentInstruction item, string raw, string vendorReference, CancellationToken ct)
+    private async Task SendReconciliationEmailAsync(BillPaymentInstruction item, string raw, CancellationToken ct)
+    {
+        try
+        {
+            var subject = $"NWSC bill payment reconciliation required: {item.RequestReference}";
+            var body = $"<p>Dango returned an ambiguous status (<b>100 Transaction Ambiguous</b>) for NWSC bill payment <b>{item.RequestReference}</b>.</p>" +
+                $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
+                $"<p>The payment was treated as settled and the utility wallet debited, but please reconcile with Dango.</p>" +
+                $"<pre>{System.Net.WebUtility.HtmlEncode(raw)}</pre>";
+            await email.SendEmailAsync("ngobidaniel04@gmail.com", subject, body);
+            logger.LogInformation("Reconciliation email sent for ambiguous NWSC bill {Reference}", item.RequestReference);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to send reconciliation email for ambiguous NWSC bill {Reference}", item.RequestReference);
+        }
+    }
+
+    private async Task CompleteAsync(BillPaymentInstruction item, string raw, string vendorReference, CancellationToken ct, string? reason = null)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var claimed = await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id &&
@@ -122,7 +157,8 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, BillPaymentInstructionStatus.Successful)
                 .SetProperty(x => x.ConfirmedAtUtc, DateTime.UtcNow)
                 .SetProperty(x => x.Response, raw)
-                .SetProperty(x => x.ProviderReference, string.IsNullOrWhiteSpace(vendorReference) ? item.ProviderReference : vendorReference), ct);
+                .SetProperty(x => x.ProviderReference, string.IsNullOrWhiteSpace(vendorReference) ? item.ProviderReference : vendorReference)
+                .SetProperty(x => x.Reason, reason), ct);
         if (claimed == 0) { await transaction.RollbackAsync(ct); return; }
 
         var walletId = await db.Wallets.AsNoTracking().Where(x => x.LandlordId == item.UtilityOwnerId)
@@ -178,12 +214,28 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
                 .SetProperty(x => x.Response, raw), ct);
     }
 
-    private static (string State, string VendorReference, string Message) Parse(string raw)
+    private static (string State, string VendorReference, string Message, string ExternalRefNoBillerId) Parse(string raw)
     {
         using var document = JsonDocument.Parse(raw);
         var data = document.RootElement.GetProperty("data");
         return (data.GetProperty("state").GetString() ?? "PENDING",
             data.TryGetProperty("vendorReference", out var reference) ? reference.GetString() ?? string.Empty : string.Empty,
-            data.TryGetProperty("message", out var message) ? message.GetString() ?? string.Empty : string.Empty);
+            data.TryGetProperty("message", out var message) ? message.GetString() ?? string.Empty : string.Empty,
+            data.TryGetProperty("externalRefNoBillerId", out var billerRef) ? billerRef.GetString() ?? string.Empty : string.Empty);
+    }
+
+    private static int ReadHttpStatus(string raw)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+            return document.RootElement.TryGetProperty("status", out var status) && status.TryGetInt32(out var value)
+                ? value
+                : 0;
+        }
+        catch (JsonException)
+        {
+            return 0;
+        }
     }
 }

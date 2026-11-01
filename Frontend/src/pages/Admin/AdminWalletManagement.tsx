@@ -92,6 +92,8 @@ interface WalletStatementEntry {
   description: string;
   transactionDate: string;
   type?: string;
+  id?: number;
+  transactionId?: string;
 }
 
 interface WalletBalanceRecord {
@@ -204,6 +206,7 @@ const AdminWalletManagement = () => {
   const [transferTargetSearchTerm, setTransferTargetSearchTerm] = useState("");
   const [isSubmittingDebit, setIsSubmittingDebit] = useState(false);
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
+  const [triggeringTransactionId, setTriggeringTransactionId] = useState<string | null>(null);
 
   const storedUser = useMemo(() => {
     try {
@@ -334,6 +337,36 @@ const AdminWalletManagement = () => {
       title: "Export Successful",
       description: `Statement for ${selectedUser.fullName} exported to PDF.`,
     });
+  };
+
+  const triggerBillPayment = async (entry: WalletStatementEntry) => {
+    const transactionId = entry.transactionId?.trim();
+    if (!transactionId) return;
+    setTriggeringTransactionId(transactionId);
+    try {
+      const { data } = await axios.post<{ created: boolean }>(
+        `${apiUrl}/AdminBillPayments/trigger`,
+        { transactionId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast({
+        title: data.created ? "Bill payment triggered" : "Already exists",
+        description: data.created
+          ? "A bill payment instruction was created for this transaction. Use Bill Payments to submit it."
+          : "This transaction already has a bill payment instruction.",
+      });
+    } catch (error) {
+      toast({
+        title: "Trigger failed",
+        description:
+          axios.isAxiosError(error) && error.response?.data?.message
+            ? error.response.data.message
+            : "Unable to trigger bill payment.",
+        variant: "destructive",
+      });
+    } finally {
+      setTriggeringTransactionId(null);
+    }
   };
 
   const fetchSelectableUsers = async () => {
@@ -1068,6 +1101,7 @@ const AdminWalletManagement = () => {
                     <TableHead>Flow</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead className="text-right">Running balance</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1105,6 +1139,26 @@ const AdminWalletManagement = () => {
                           {entry.runningBalance !== null
                             ? formatCurrency(entry.runningBalance)
                             : "--"}
+                        </TableCell>
+                        <TableCell>
+                          {flow === "credit" &&
+                            entry.transactionId &&
+                            /\. meter /i.test(entry.description || "") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={triggeringTransactionId !== null}
+                                onClick={() => void triggerBillPayment(entry)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                {triggeringTransactionId === entry.transactionId ? (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                ) : (
+                                  <FileText className="mr-1 h-3 w-3" />
+                                )}
+                                Trigger bill
+                              </Button>
+                            )}
                         </TableCell>
                       </TableRow>
                     );

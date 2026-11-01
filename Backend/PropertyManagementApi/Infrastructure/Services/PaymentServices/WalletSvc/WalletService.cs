@@ -102,9 +102,12 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 .OrderByDescending(t => t.TransactionDate)
                 .Select(t => new WalletTransactionDto
                 {
+                    Id = t.Id,
                     Amount = t.Amount,
                     Description = t.Description,
-                    TransactionDate = t.TransactionDate
+                    TransactionDate = t.TransactionDate,
+                    TransactionId = t.TransactionId,
+                    Status = t.Status
                 })
                 .ToListAsync();
         }

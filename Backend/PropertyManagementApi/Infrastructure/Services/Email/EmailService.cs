@@ -9,7 +9,12 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.Services.Email
 {
-    public class EmailService
+    public interface IEmailService
+    {
+        Task SendEmailAsync(string toEmail, string subject, string message);
+    }
+
+    public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
 
