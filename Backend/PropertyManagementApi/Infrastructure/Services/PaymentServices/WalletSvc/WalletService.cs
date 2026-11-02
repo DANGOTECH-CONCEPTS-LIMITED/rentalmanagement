@@ -112,6 +112,28 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 .ToListAsync();
         }
 
+        public async Task<WalletTransactionsPage> GetWalletTransactionsAsync(string? search, int page, int pageSize, CancellationToken ct)
+        {
+            if (page < 1 || page > 100000 || pageSize < 1 || pageSize > 100 || search?.Length > 128)
+                throw new ArgumentException("Invalid search or pagination.");
+
+            var query = _context.WalletTransactions.AsNoTracking().AsQueryable();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var value = search.Trim();
+                query = query.Where(t => t.Description.Contains(value) ||
+                                         t.TransactionId.Contains(value) ||
+                                         t.Status.Contains(value) ||
+                                         t.Wallet.Landlord.FullName.Contains(value));
+            }
+
+            var rows = await query.OrderByDescending(t => t.TransactionDate).Skip((page - 1) * pageSize).Take(pageSize + 1)
+                .Select(t => new WalletTransactionAdminItem(t.Id, t.WalletId, t.Wallet.Landlord.FullName, t.Amount,
+                    t.Description, t.TransactionId, t.Status, t.VendorTranId, t.TransactionDate))
+                .ToListAsync(ct);
+            return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
+        }
+
         public async Task<Wallet> GetWalletByLandlordId(int landlordId)
         {
             var wallet = await _context.Wallets

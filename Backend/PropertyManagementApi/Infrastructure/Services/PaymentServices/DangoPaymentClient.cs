@@ -396,9 +396,15 @@ public sealed class DangoPaymentClient
         var response = await PostAsync("get-transaction-status", new { requestId = reference, clientId = RequiredSetting("ClientId") });
         var contract = ReadStatusContract(_configuration);
         var state = StatusState(response, reference, contract);
+        // A provider-confirmed "No Transaction found" for this exact reference means the payout never
+        // reached the provider; resolve it as failed so the wallet can be refunded.
+        if (state == "PENDING" && IsTransactionNotFound(response, reference))
+            state = "FAILED";
         var message = contract == null
             ? "Dango TransactionStatus response contract is not configured; reconciliation is required. Payment remains pending."
-            : Message(response);
+            : IsTransactionNotFound(response, reference)
+                ? "No Transaction found for the requested message ID"
+                : Message(response);
         return JsonSerializer.Serialize(new
         {
             status = response.HttpStatus,
@@ -425,11 +431,14 @@ public sealed class DangoPaymentClient
         RequiredValue(reference, nameof(reference));
         var response = await PostAsync("get-transaction-status",
             new { requestId = reference, clientId = RequiredSetting("ClientId") }, ct);
-        return response.HttpStatus is 200 or 404 && Field(response, "httpCode") == "404" &&
+        return IsTransactionNotFound(response, reference);
+    }
+
+    private static bool IsTransactionNotFound(Response response, string reference)
+        => response.HttpStatus is 200 or 404 && Field(response, "httpCode") == "404" &&
             string.Equals(Field(response, "httpMessage"), "Not Found", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(Field(response, "moreInformation"), "No Transaction found for the requested message ID", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(Field(response, "requestId"), reference, StringComparison.Ordinal);
-    }
 
     private static string PayoutSubmission(Response response, string reference)
     {

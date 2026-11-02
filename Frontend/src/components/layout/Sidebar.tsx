@@ -15,6 +15,7 @@ import {
   House,
   MessageSquare,
   CreditCard,
+  ListOrdered,
   Plus,
   X,
   FileSearch,
@@ -335,6 +336,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Wallet Management",
         icon: <CreditCard size={18} />,
         path: "/admin-dashboard/wallet-management",
+      },
+      {
+        label: "Wallet Transactions",
+        icon: <ListOrdered size={18} />,
+        path: "/admin-dashboard/wallet-transactions",
       },
       {
         label: "Update Transaction",

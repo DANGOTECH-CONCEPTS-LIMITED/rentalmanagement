@@ -619,6 +619,28 @@ public class DangoPaymentClientTests
         Assert.Equal("PENDING", status.RootElement.GetProperty("data").GetProperty("data")[0].GetProperty("status").GetString());
     }
 
+    [Fact]
+    public async Task ProviderTransactionNotFoundResolvesPayoutAsFailed()
+    {
+        var client = Client(new StubHandler(_ => Reply(
+            """{"httpCode":404,"httpMessage":"Not Found","moreInformation":"No Transaction found for the requested message ID","requestId":"payout-ref"}""",
+            HttpStatusCode.NotFound)));
+        using var status = JsonDocument.Parse(await client.GetPayoutStatusAsync(new() { Reference = "payout-ref", Gateway = "mobilemoney" }));
+        var item = status.RootElement.GetProperty("data").GetProperty("data")[0];
+        Assert.Equal("FAILED", item.GetProperty("status").GetString());
+        Assert.Contains("No Transaction found", item.GetProperty("status_message").GetString());
+    }
+
+    [Theory]
+    [InlineData("""{"httpCode":404,"httpMessage":"Not Found","moreInformation":"No Transaction found for the requested message ID","requestId":"different-ref"}""")]
+    [InlineData("""{"httpCode":404,"httpMessage":"Not Found","moreInformation":"Some other reason"}""")]
+    public async Task UncorrelatedOrUnrecognizedNotFoundRemainsPending(string body)
+    {
+        var client = Client(new StubHandler(_ => Reply(body, HttpStatusCode.NotFound)));
+        using var status = JsonDocument.Parse(await client.GetPayoutStatusAsync(new() { Reference = "payout-ref", Gateway = "mobilemoney" }));
+        Assert.Equal("PENDING", status.RootElement.GetProperty("data").GetProperty("data")[0].GetProperty("status").GetString());
+    }
+
     [Theory]
     [InlineData("6000.0000000000000000000000000", "6000")]
     [InlineData("6000.00", "6000")]

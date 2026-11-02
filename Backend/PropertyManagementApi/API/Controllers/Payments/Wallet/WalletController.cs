@@ -51,6 +51,21 @@ namespace API.Controllers.Payments.Wallet
             }
         }
 
+        [HttpGet("/api/AdminWalletTransactions")]
+        [Authorize(Roles = "Administrator")]
+        public async Task<IActionResult> GetWalletTransactions(CancellationToken ct,
+            [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                return Ok(await _svc.GetWalletTransactionsAsync(search, page, pageSize, ct));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("/Withdraw")]
         public async Task<IActionResult> Withdraw([FromForm] WithdrawDto withdrawDto )
         {

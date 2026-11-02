@@ -58,6 +58,7 @@ import HttpLogs from "./pages/Admin/HttpLogs";
 import AuditTrail from "./pages/Admin/AuditTrail";
 import AdminUtilityDashboard from "./pages/Admin/AdminUtilityDashboard";
 import AdminWalletManagement from "./pages/Admin/AdminWalletManagement";
+import WalletTransactions from "./pages/Admin/WalletTransactions";
 import UtilityAccountManagement from "./pages/Admin/UtilityAccountManagement";
 import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
 import BillPayments from "./pages/Admin/BillPayments";
@@ -117,6 +118,7 @@ const App = () => (
                   path="wallet-management"
                   element={<AdminWalletManagement />}
                 />
+                <Route path="wallet-transactions" element={<WalletTransactions />} />
                 <Route
                   path="collecto-withdraw-logs"
                   element={<CollectoWithdrawLogs />}
