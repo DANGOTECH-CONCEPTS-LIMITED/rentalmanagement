@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
@@ -95,6 +95,84 @@ const NavEntry: React.FC<NavEntryProps> = ({ item, compact, onNavigate }) => {
   );
 };
 
+interface NavGroup {
+  title?: string;
+  items: NavItem[];
+}
+
+const groupNavItems = (items: NavItem[]): NavGroup[] => {
+  const groups: NavGroup[] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (item.group && last?.title === item.group) {
+      last.items.push(item);
+    } else {
+      groups.push({ title: item.group, items: [item] });
+    }
+  }
+  return groups;
+};
+
+interface NavGroupSectionProps {
+  group: NavGroup;
+  compact: boolean;
+  onNavigate?: () => void;
+}
+
+const NavGroupSection: React.FC<NavGroupSectionProps> = ({ group, compact, onNavigate }) => {
+  const location = useLocation();
+  const { title, items } = group;
+
+  const isItemActive = (item: NavItem): boolean => {
+    if (item.children) {
+      return item.children.some((child) => location.pathname.startsWith(child.path));
+    }
+    if (!item.path) return false;
+    return (
+      location.pathname === item.path ||
+      (!item.path.endsWith("-dashboard") && location.pathname.startsWith(item.path))
+    );
+  };
+
+  const hasActive = items.some(isItemActive);
+  const [open, setOpen] = useState(hasActive);
+
+  const renderItem = (item: NavItem, idx: number) => (
+    <motion.li
+      key={item.label}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: idx * 0.05 }}
+    >
+      <NavEntry item={item} compact={compact} onNavigate={onNavigate} />
+    </motion.li>
+  );
+
+  // Ungrouped items (roles without sections) render as a flat list.
+  // In the collapsed sidebar there is no room for section labels, so show
+  // every item as an icon instead of hiding groups behind a header.
+  if (!title || compact) {
+    return <>{items.map(renderItem)}</>;
+  }
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-sidebar-accent transition-colors"
+      >
+        <span className="flex-1 text-left">{title}</span>
+        <ChevronRight
+          size={14}
+          className={cn("transition-transform", open ? "rotate-90" : "")}
+        />
+      </button>
+      {open && <ul className="mt-1 space-y-1">{items.map(renderItem)}</ul>}
+    </li>
+  );
+};
+
 const Sidebar: React.FC<SidebarProps> = ({ role }) => {
   const { logout } = useAuth();
   const location = useLocation();
@@ -158,29 +236,14 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
 
           <nav className="flex-1 pt-5 pb-4 overflow-y-auto">
             <ul className="space-y-1 px-3">
-              {navItems.map((item, idx) => {
-                const showGroup = item.group && (idx === 0 || navItems[idx - 1].group !== item.group);
-                return (
-                  <Fragment key={item.label}>
-                    {showGroup && (
-                      <li className="pt-3 pb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {item.group}
-                      </li>
-                    )}
-                    <motion.li
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                    >
-                      <NavEntry
-                        item={item}
-                        compact={false}
-                        onNavigate={() => setIsMobileOpen(false)}
-                      />
-                    </motion.li>
-                  </Fragment>
-                );
-              })}
+              {groupNavItems(navItems).map((group) => (
+                <NavGroupSection
+                  key={group.title ?? "ungrouped"}
+                  group={group}
+                  compact={false}
+                  onNavigate={() => setIsMobileOpen(false)}
+                />
+              ))}
             </ul>
           </nav>
 
@@ -237,25 +300,13 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
 
       <nav className="flex-1 pt-5 pb-4 overflow-y-auto">
         <ul className="space-y-1.5 px-3">
-          {navItems.map((item, idx) => {
-            const showGroup = item.group && (idx === 0 || navItems[idx - 1].group !== item.group);
-            return (
-              <Fragment key={item.label}>
-                {showGroup && (!isCollapsed || isHovering) && (
-                  <li className="pt-3 pb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {item.group}
-                  </li>
-                )}
-                <motion.li
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                >
-                  <NavEntry item={item} compact={isCollapsed && !isHovering} />
-                </motion.li>
-              </Fragment>
-            );
-          })}
+          {groupNavItems(navItems).map((group) => (
+            <NavGroupSection
+              key={group.title ?? "ungrouped"}
+              group={group}
+              compact={isCollapsed && !isHovering}
+            />
+          ))}
         </ul>
       </nav>
 
