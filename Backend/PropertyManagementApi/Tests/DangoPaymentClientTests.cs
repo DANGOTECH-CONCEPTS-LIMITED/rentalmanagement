@@ -150,9 +150,21 @@ public class DangoPaymentClientTests
         using var collection = JsonDocument.Parse(await client.RequestToPayAsync(Collection(), "MTN", "DANGO_U_20261028_1"));
         Assert.True(collection.RootElement.GetProperty("data").GetProperty("requestToPay").GetBoolean());
         Assert.Equal("collection-ref", collection.RootElement.GetProperty("data").GetProperty("transactionId").GetString());
-        using var payout = JsonDocument.Parse(await client.InitiatePayoutAsync(Mobile()));
-        Assert.True(payout.RootElement.GetProperty("data").GetProperty("payout").GetBoolean());
-        Assert.Equal("payout-ref", payout.RootElement.GetProperty("data").GetProperty("otherReference").GetString());
+
+        var payout = await client.InitiatePayoutAsync(Mobile());
+        if (timeout)
+        {
+            // A timeout may already have been accepted: reported as pending, never retried.
+            using var parsed = JsonDocument.Parse(payout);
+            Assert.True(parsed.RootElement.GetProperty("data").GetProperty("payout").GetBoolean());
+            Assert.Equal("payout-ref", parsed.RootElement.GetProperty("data").GetProperty("otherReference").GetString());
+        }
+        else
+        {
+            // A connection failure means the request never reached the provider: no response,
+            // so the caller retries on the next cycle.
+            Assert.Empty(payout);
+        }
     }
 
     [Theory]

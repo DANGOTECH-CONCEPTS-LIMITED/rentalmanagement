@@ -87,6 +87,7 @@ builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<CollectionWalletCreditService>();
 builder.Services.AddScoped<BillPaymentProcessingService>();
+builder.Services.AddScoped<IBackgroundJobLease, BackgroundJobLease>();
 builder.Services.AddScoped<IUssdService, UssdService>();
 builder.Services.AddScoped<ISmsProcessor, SmsProcessor>();
 builder.Services.AddScoped<IServiceLogsRepository, ServiceLogsRepository>();

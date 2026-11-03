@@ -11,6 +11,7 @@ using Application.Interfaces.PaymentService.WalletSvc;
 using Application.Interfaces.ServiceLogs;
 using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -32,13 +33,16 @@ namespace Infrastructure.Services.BackgroundServices
         private readonly ILogger<CheckPaymentStatusProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+        private readonly double _stuckHours;
 
         public CheckPaymentStatusProcessor(
             ILogger<CheckPaymentStatusProcessor> logger,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            IConfiguration configuration)
         {
             _logger = logger;
             _scopeFactory = scopeFactory;
+            _stuckHours = double.TryParse(configuration["Payout:StuckAlertHours"], out var hours) && hours > 0 ? hours : 6;
         }
 
         protected virtual TimeSpan PollInterval => TimeSpan.FromMinutes(2);
@@ -53,6 +57,10 @@ namespace Infrastructure.Services.BackgroundServices
                 {
                     try
                     {
+                        using var scope = _scopeFactory.CreateScope();
+                        var lease = scope.ServiceProvider.GetRequiredService<IBackgroundJobLease>();
+                        await using var acquired = await lease.TryAcquireAsync("CheckPaymentStatusProcessor", TimeSpan.FromSeconds(60), stoppingToken);
+                        if (acquired == null) continue;
                         await ProcessAllPendingAsync(stoppingToken);
                     }
                     catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -238,6 +246,10 @@ namespace Infrastructure.Services.BackgroundServices
                             _logger.LogError("Wallet transaction not found for {TransactionId}", transactionId);
                             return;
                         }
+
+                        if (existingWalletTx.CreatedAt < DateTime.UtcNow.AddHours(-_stuckHours))
+                            _logger.LogWarning("Wallet payout {TransactionId} has been pending at the provider for over {Hours} hours; reconciliation required",
+                                transactionId, _stuckHours);
 
                         // Special handling for bank payouts not found, only for transactions created before 23rd Jan 2025
                         if (type.Equals("BANK", StringComparison.OrdinalIgnoreCase) && payout.data != null && payout.data.payout == false && payout.data.message == "Payouts not found" && existingWalletTx.CreatedAt < new DateTime(2025, 1, 23))

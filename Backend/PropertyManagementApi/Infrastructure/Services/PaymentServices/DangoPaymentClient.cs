@@ -442,6 +442,9 @@ public sealed class DangoPaymentClient
 
     private static string PayoutSubmission(Response response, string reference)
     {
+        // A definite connection failure means the payout never reached the provider; return an empty
+        // response so the durable submission gate can safely retry on the next cycle.
+        if (response.TransportFailed) return string.Empty;
         return Envelope(response, new
         {
             // Only this provider-confirmed rejection is terminal at submission time.
@@ -489,9 +492,10 @@ public sealed class DangoPaymentClient
         }
         catch (HttpRequestException ex)
         {
-            _logger?.LogWarning("Dango endpoint {Endpoint} transport failure: {ErrorCategory}. Settlement remains unconfirmed",
+            // A connection-level failure means the request never reached the provider, so it is safe to retry.
+            _logger?.LogWarning("Dango endpoint {Endpoint} connection failure: {ErrorCategory}. The request was not sent",
                 endpoint, ex.HttpRequestError);
-            return new Response(202, false, null);
+            return new Response(202, false, null, TransportFailed: true);
         }
         catch (OperationCanceledException)
         {
@@ -619,7 +623,7 @@ public sealed class DangoPaymentClient
         }
     }
 
-    private sealed record Response(int HttpStatus, bool IsSuccess, JsonElement? Body);
+    private sealed record Response(int HttpStatus, bool IsSuccess, JsonElement? Body, bool TransportFailed = false);
 }
 
 public sealed record BillerCustomerValidationResult(string CustomerName, string StatusDescription);

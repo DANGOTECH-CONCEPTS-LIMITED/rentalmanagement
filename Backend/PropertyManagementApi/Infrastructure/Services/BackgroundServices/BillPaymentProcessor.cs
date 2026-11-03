@@ -20,6 +20,9 @@ public class BillPaymentProcessor(ILogger<BillPaymentProcessor> logger, IService
                 try
                 {
                     using var scope = scopeFactory.CreateScope();
+                    var lease = scope.ServiceProvider.GetRequiredService<IBackgroundJobLease>();
+                    await using var acquired = await lease.TryAcquireAsync("BillPaymentProcessor", TimeSpan.FromSeconds(30), stoppingToken);
+                    if (acquired == null) continue;
                     await scope.ServiceProvider.GetRequiredService<BillPaymentProcessingService>().ProcessAsync(stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }

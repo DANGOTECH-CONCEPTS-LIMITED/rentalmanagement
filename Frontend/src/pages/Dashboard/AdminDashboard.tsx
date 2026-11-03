@@ -50,6 +50,13 @@ interface SimpleBalance {
   message: string;
 }
 
+interface WalletReconciliation {
+  dangoBalance?: string | null;
+  internalBalance?: number | null;
+  difference?: number | null;
+  statusDescription?: string | null;
+}
+
 const AdminDashboard = () => {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<Stats>({
@@ -66,6 +73,9 @@ const AdminDashboard = () => {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [balanceType, setBalanceType] = useState<BalanceType | "">("");
+  const [reconciliation, setReconciliation] = useState<WalletReconciliation | null>(null);
+  const [reconciliationLoading, setReconciliationLoading] = useState(false);
+  const [reconciliationError, setReconciliationError] = useState<string | null>(null);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [withdrawDestination, setWithdrawDestination] = useState<WithdrawDestination | null>(null);
   const [withdrawReference, setWithdrawReference] = useState("");
@@ -169,6 +179,33 @@ const AdminDashboard = () => {
       setBalance(null);
     } finally {
       setBalanceLoading(false);
+    }
+  };
+
+  const fetchWalletReconciliation = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    try {
+      setReconciliationLoading(true);
+      setReconciliationError(null);
+      const response = await fetch(`${apiUrl}/api/DangoPayment/reconciliation`, {
+        method: "GET",
+        headers: {
+          accept: "*/*",
+          Authorization: "Bearer " + token,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || `HTTP error! status: ${response.status}`);
+      }
+      setReconciliation(data);
+    } catch (err) {
+      setReconciliationError(
+        err instanceof Error ? err.message : "Unknown error occurred"
+      );
+      setReconciliation(null);
+    } finally {
+      setReconciliationLoading(false);
     }
   };
 
@@ -544,6 +581,18 @@ const AdminDashboard = () => {
             "Dangotech Wallet Balance"
           )}
         </Button>
+
+        <Button
+          onClick={(e) => {
+            e.preventDefault();
+            fetchWalletReconciliation();
+          }}
+          disabled={reconciliationLoading}
+          variant="outline"
+          className="min-w-32"
+        >
+          {reconciliationLoading ? "Checking..." : "Wallet Reconciliation"}
+        </Button>
       </div>
 
       <div className="glass-card p-4 rounded-lg space-y-4">
@@ -580,6 +629,43 @@ const AdminDashboard = () => {
         </div>
       ) : balanceError ? (
         <div className="text-red-500 p-4 bg-red-50 rounded-lg">Error: {balanceError}</div>
+      ) : null}
+
+      {/* Wallet Reconciliation */}
+      {reconciliation && !reconciliationError ? (
+        <div className="glass-card p-4 rounded-lg space-y-2">
+          <h3 className="font-medium">Wallet Reconciliation</h3>
+          <div className="flex flex-col gap-1 text-sm">
+            <span>
+              Dango balance:{" "}
+              <strong>
+                {reconciliation.dangoBalance
+                  ? `UGX ${Number(reconciliation.dangoBalance).toLocaleString()}`
+                  : "—"}
+              </strong>
+            </span>
+            <span>
+              Internal wallet balance:{" "}
+              <strong>
+                {typeof reconciliation.internalBalance === "number"
+                  ? `UGX ${reconciliation.internalBalance.toLocaleString()}`
+                  : "—"}
+              </strong>
+            </span>
+            <span>
+              Difference:{" "}
+              <strong className={reconciliation.difference ? "text-red-600" : "text-green-600"}>
+                {typeof reconciliation.difference === "number"
+                  ? `UGX ${reconciliation.difference.toLocaleString()}`
+                  : "—"}
+              </strong>
+            </span>
+          </div>
+        </div>
+      ) : reconciliationError ? (
+        <div className="text-red-500 p-4 bg-red-50 rounded-lg">
+          Reconciliation error: {reconciliationError}
+        </div>
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -89,6 +89,16 @@ public sealed class PaymentGatewayRouter(
         {
             return PendingResponse(claim);
         }
+        if (provider == PaymentProviderSettingsService.DangoPayment && string.IsNullOrWhiteSpace(response))
+        {
+            // Dango reported a definite connection failure; the request never reached the provider.
+            // Remove the durable claim so the next cycle can safely submit again.
+            logger?.LogWarning("Removing durable submission claim for {Operation} reference {Reference} after a connection failure; the request was not sent",
+                operation, reference);
+            submissions.Remove(claim);
+            await db.SaveChangesAsync();
+            return string.Empty;
+        }
         claim.Response = response;
         claim.ProviderTransactionId = ReadTransactionId(response);
         await db.SaveChangesAsync();

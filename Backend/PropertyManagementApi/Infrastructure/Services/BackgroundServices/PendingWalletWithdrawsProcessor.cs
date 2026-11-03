@@ -4,6 +4,7 @@ using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
 using Dtos.Collecto;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -30,12 +31,25 @@ namespace Infrastructure.Services.BackgroundServices
         private const string PendingWalletPayout = "PENDING_WALLET_PAYOUT";
         private readonly ILogger<PendingWalletWithdrawsProcessor> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly double _maxRetryHours;
 
         public PendingWalletWithdrawsProcessor(ILogger<PendingWalletWithdrawsProcessor> logger,
-                                  IServiceScopeFactory scopeFactory)
+                                  IServiceScopeFactory scopeFactory, IConfiguration configuration)
         {
             _logger = logger;
             _scopeFactory = scopeFactory;
+            _maxRetryHours = double.TryParse(configuration["Payout:MaxRetryHours"], out var hours) && hours > 0 ? hours : 24;
+        }
+
+        private async Task<bool> ExpireIfNeededAsync(WalletTransaction transaction, IWalletService wallet, string failedStatus)
+        {
+            if (transaction.CreatedAt >= DateTime.UtcNow.AddHours(-_maxRetryHours)) return false;
+            _logger.LogError("Payout {TransactionId} exceeded the {Hours}h retry window; marking {Status} and reversing",
+                transaction.TransactionId, _maxRetryHours, failedStatus);
+            transaction.Status = failedStatus;
+            transaction.ReasonAtTelecom = $"Payout retry limit ({_maxRetryHours}h) exceeded";
+            await wallet.ReverseWalletTransaction(transaction);
+            return true;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -45,6 +59,14 @@ namespace Infrastructure.Services.BackgroundServices
                 try
                 {
                     using var scope = _scopeFactory.CreateScope();
+                    var lease = scope.ServiceProvider.GetRequiredService<IBackgroundJobLease>();
+                    await using var acquired = await lease.TryAcquireAsync("PendingWalletWithdrawsProcessor", TimeSpan.FromSeconds(30), stoppingToken);
+                    if (acquired == null)
+                    {
+                        _logger.LogDebug("Skipping payout cycle; another instance holds the lock");
+                    }
+                    else
+                    {
 
                     var wallet = scope.ServiceProvider.GetRequiredService<IWalletService>();
                     var collecto = scope.ServiceProvider.GetRequiredService<ICollectoApiClient>();
@@ -93,6 +115,7 @@ namespace Infrastructure.Services.BackgroundServices
                             wallet,
                             stoppingToken);
                     }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -112,6 +135,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             try
             {
+                if (await ExpireIfNeededAsync(walletTransaction, wallet, FailedStatus)) return;
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
                 // Check if landlord data is available
@@ -172,6 +196,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             try
             {
+                if (await ExpireIfNeededAsync(walletTransaction, wallet, FailedAtBank)) return;
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
                 bool disablebanknetwork = false; //get this value from config or database to allow dynamic enabling/disabling of bank payouts without code changes
@@ -263,6 +288,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             try
             {
+                if (await ExpireIfNeededAsync(walletTransaction, wallet, FailedAtWalletTransfer)) return;
                 //make amount positive
                 walletTransaction.Amount = Math.Abs(walletTransaction.Amount);
                 if (walletTransaction.Wallet?.Landlord == null)

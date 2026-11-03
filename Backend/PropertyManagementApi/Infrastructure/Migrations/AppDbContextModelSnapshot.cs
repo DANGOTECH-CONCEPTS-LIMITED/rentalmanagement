@@ -274,6 +274,25 @@ namespace Infrastructure.Migrations
                     b.ToTable("VendorPayments");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.BackgroundJobLock", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("LeaseUntilUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("BackgroundJobLock");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.BillPaymentInstruction", b =>
                 {
                     b.Property<int>("Id")

@@ -22,16 +22,33 @@ import { Pencil } from "lucide-react";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { formatDateTimeDmy } from "@/lib/date-time";
 
+interface UtilityPaymentRecord {
+  id: number | string;
+  meterNumber?: string | null;
+  phoneNumber?: string | null;
+  status?: string | null;
+  amount?: number | null;
+  charges?: number | null;
+  createdAt?: string | null;
+  units?: string | null;
+  vendor?: string | null;
+  vendorref?: string | null;
+  vendorTranId?: string | null;
+  vendorPaymentDate?: string | null;
+  transactionID?: string | null;
+  transactionId?: string | null;
+}
+
 const UtilityPayments = () => {
   const { landlordId } = useParams<{ landlordId: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<UtilityPaymentRecord[]>([]);
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editPayment, setEditPayment] = useState<any>(null);
+  const [editPayment, setEditPayment] = useState<UtilityPaymentRecord | null>(null);
   const [editVendor, setEditVendor] = useState("");
   const [editVendorRef, setEditVendorRef] = useState("");
   const [editLoading, setEditLoading] = useState(false);
@@ -73,12 +90,12 @@ const UtilityPayments = () => {
         if (!res.ok) throw new Error("Failed to fetch payments");
         return res.json();
       })
-      .then((data) => setPayments(data))
-      .catch((err) => setError(err.message))
+      .then((data: UtilityPaymentRecord[]) => setPayments(data))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to fetch payments"))
       .finally(() => setLoading(false));
   }, [landlordId]);
 
-  const handleEditClick = (payment: any) => {
+  const handleEditClick = (payment: UtilityPaymentRecord) => {
     setEditPayment(payment);
     setEditVendor(payment.vendor || "");
     setEditVendorRef(payment.vendorref || "");
@@ -168,8 +185,8 @@ const UtilityPayments = () => {
         }
       );
       setPayments(await refreshed.json());
-    } catch (err: any) {
-      setEditError(err.message);
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : "Failed to update payment");
     } finally {
       setEditLoading(false);
       setLoading(false);

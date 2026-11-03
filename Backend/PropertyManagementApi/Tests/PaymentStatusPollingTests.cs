@@ -4,6 +4,7 @@ using Application.Interfaces.ServiceLogs;
 using Domain.Dtos.Collecto;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Services.BackgroundServices;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Reflection;
@@ -23,7 +24,8 @@ public class PaymentStatusPollingTests
         var gateway = DispatchProxy.Create<ICollectoApiClient, StatusGateway>();
         var status = (StatusGateway)(object)gateway;
         using var services = new ServiceCollection().AddSingleton(payments).AddSingleton(gateway)
-            .AddSingleton(DispatchProxy.Create<IServiceLogsRepository, UnexpectedLog>()).BuildServiceProvider();
+            .AddSingleton(DispatchProxy.Create<IServiceLogsRepository, UnexpectedLog>())
+            .AddSingleton<IBackgroundJobLease>(new NoOpLease()).BuildServiceProvider();
         using var worker = new FastStatusWorker(services.GetRequiredService<IServiceScopeFactory>());
         await worker.StartAsync(CancellationToken.None);
         try
@@ -44,9 +46,19 @@ public class PaymentStatusPollingTests
     }
 
     private sealed class FastStatusWorker(IServiceScopeFactory scopes)
-        : CheckPaymentStatusProcessor(NullLogger<CheckPaymentStatusProcessor>.Instance, scopes)
+        : CheckPaymentStatusProcessor(NullLogger<CheckPaymentStatusProcessor>.Instance, scopes, new ConfigurationBuilder().Build())
     {
         protected override TimeSpan PollInterval => TimeSpan.FromMilliseconds(20);
+    }
+
+    private sealed class NoOpLease : IBackgroundJobLease
+    {
+        public Task<IAsyncDisposable?> TryAcquireAsync(string name, TimeSpan lease, CancellationToken ct)
+            => Task.FromResult<IAsyncDisposable?>(new Holder());
+        private sealed class Holder : IAsyncDisposable
+        {
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
     }
 
     public class PaymentQueries : DispatchProxy

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,8 +41,7 @@ const money = (value: number) =>
   });
 
 const WalletTransactions = () => {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const endpoint = `${apiUrl.replace(/\/+$/, "")}/api/AdminWalletTransactions`;
+  const endpoint = "/api/AdminWalletTransactions";
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -50,19 +49,13 @@ const WalletTransactions = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const getToken = () => {
-    const storedUser = localStorage.getItem("user");
-    return storedUser ? JSON.parse(storedUser).token : null;
-  };
-
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError("");
 
-    axios
+    api
       .get<WalletTransactionsPage>(endpoint, {
-        headers: { Authorization: `Bearer ${getToken()}` },
         params: {
           ...(search.trim() ? { search: search.trim() } : {}),
           page,

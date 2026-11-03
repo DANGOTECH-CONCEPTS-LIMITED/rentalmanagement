@@ -62,6 +62,7 @@ namespace Infrastructure.Data
             modelBuilder.Entity<BillPaymentInstruction>().Property(x => x.Response).HasColumnType("longtext");
             modelBuilder.Entity<DangoPaymentReferenceAllocation>().HasKey(x => new { x.DateUtc, x.Sequence });
             modelBuilder.Entity<DangoPaymentReferenceAllocation>().Property(x => x.Sequence).ValueGeneratedNever();
+            modelBuilder.Entity<BackgroundJobLock>().HasKey(x => x.Name);
             modelBuilder.Entity<PaymentGatewaySubmission>().Property(x => x.Response).HasColumnType("longtext");
             modelBuilder.Entity<PaymentGatewaySubmission>().HasIndex(x => new { x.Operation, x.Reference }).IsUnique();
             modelBuilder.Entity<PaymentGatewaySubmission>().HasIndex(x => new { x.Operation, x.ProviderTransactionId });

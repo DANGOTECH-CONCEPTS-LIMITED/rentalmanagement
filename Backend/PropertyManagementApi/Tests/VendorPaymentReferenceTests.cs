@@ -53,7 +53,7 @@ public class VendorPaymentReferenceTests : IAsyncLifetime
     private async Task CheckStatus(string previousReference = "", string transactionType = "UTILITY")
     {
         var processor = new CheckPaymentStatusProcessor(NullLogger<CheckPaymentStatusProcessor>.Instance,
-            _services.GetRequiredService<IServiceScopeFactory>());
+            _services.GetRequiredService<IServiceScopeFactory>(), new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
         await (Task)typeof(CheckPaymentStatusProcessor).GetMethod("ProcessStatusAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(processor, [TransactionId, previousReference, transactionType, "MOMO", CancellationToken.None])!;
         Assert.Empty(await _db.ServiceLogs.ToListAsync());
@@ -196,7 +196,7 @@ public class VendorPaymentReferenceTests : IAsyncLifetime
             } } }
         }));
         var processor = new CheckPaymentStatusProcessor(NullLogger<CheckPaymentStatusProcessor>.Instance,
-            _services.GetRequiredService<IServiceScopeFactory>());
+            _services.GetRequiredService<IServiceScopeFactory>(), new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
         await (Task)typeof(CheckPaymentStatusProcessor).GetMethod("ProcessStatusAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(processor, [TransactionId, "", "WALLET", gateway, CancellationToken.None])!;
         var original = await _db.WalletTransactions.AsNoTracking().SingleAsync(x => x.TransactionId == TransactionId);
@@ -227,7 +227,7 @@ public class VendorPaymentReferenceTests : IAsyncLifetime
         var client = new DangoPaymentClient(new HttpClient(new SuccessfulBankHandler()), configuration);
         Response(await client.GetPayoutStatusAsync(new() { Reference = TransactionId, Gateway = "bank" }));
         var processor = new CheckPaymentStatusProcessor(NullLogger<CheckPaymentStatusProcessor>.Instance,
-            _services.GetRequiredService<IServiceScopeFactory>());
+            _services.GetRequiredService<IServiceScopeFactory>(), new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
         await (Task)typeof(CheckPaymentStatusProcessor).GetMethod("ProcessStatusAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(processor, [TransactionId, "", "WALLET", "BANK", CancellationToken.None])!;
         var row = await _db.WalletTransactions.AsNoTracking().SingleAsync();
