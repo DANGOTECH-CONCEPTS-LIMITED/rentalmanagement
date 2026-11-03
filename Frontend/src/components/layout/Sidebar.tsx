@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { motion } from "framer-motion";
@@ -32,6 +32,7 @@ interface NavItem {
   path: string;
   hasSubItems?: boolean;
   children?: NavItem[];
+  group?: string;
 }
 
 interface NavEntryProps {
@@ -157,20 +158,29 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
 
           <nav className="flex-1 pt-5 pb-4 overflow-y-auto">
             <ul className="space-y-1 px-3">
-              {navItems.map((item, idx) => (
-                <motion.li
-                  key={item.label}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                >
-                  <NavEntry
-                    item={item}
-                    compact={false}
-                    onNavigate={() => setIsMobileOpen(false)}
-                  />
-                </motion.li>
-              ))}
+              {navItems.map((item, idx) => {
+                const showGroup = item.group && (idx === 0 || navItems[idx - 1].group !== item.group);
+                return (
+                  <Fragment key={item.label}>
+                    {showGroup && (
+                      <li className="pt-3 pb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {item.group}
+                      </li>
+                    )}
+                    <motion.li
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <NavEntry
+                        item={item}
+                        compact={false}
+                        onNavigate={() => setIsMobileOpen(false)}
+                      />
+                    </motion.li>
+                  </Fragment>
+                );
+              })}
             </ul>
           </nav>
 
@@ -227,16 +237,25 @@ const Sidebar: React.FC<SidebarProps> = ({ role }) => {
 
       <nav className="flex-1 pt-5 pb-4 overflow-y-auto">
         <ul className="space-y-1.5 px-3">
-          {navItems.map((item, idx) => (
-            <motion.li
-              key={item.label}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.05 }}
-            >
-              <NavEntry item={item} compact={isCollapsed && !isHovering} />
-            </motion.li>
-          ))}
+          {navItems.map((item, idx) => {
+            const showGroup = item.group && (idx === 0 || navItems[idx - 1].group !== item.group);
+            return (
+              <Fragment key={item.label}>
+                {showGroup && (!isCollapsed || isHovering) && (
+                  <li className="pt-3 pb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {item.group}
+                  </li>
+                )}
+                <motion.li
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                >
+                  <NavEntry item={item} compact={isCollapsed && !isHovering} />
+                </motion.li>
+              </Fragment>
+            );
+          })}
         </ul>
       </nav>
 
@@ -264,35 +283,27 @@ function getNavItems(role: number): NavItem[] {
         label: "Dashboard",
         icon: <Home size={18} />,
         path: "/admin-dashboard",
+        group: "Overview",
       },
-      // {
-      //   label: "Landlords",
-      //   icon: <Users size={18} />,
-      //   path: "/admin-dashboard/register-landlord",
-      //   hasSubItems: false,
-      // },
-      // {
-      //   label: "Properties",
-      //   icon: <House size={18} />,
-      //   path: "/admin-dashboard/register-property",
-      //   hasSubItems: false,
-      // },
       {
         label: "Manage Users",
         icon: <Users size={18} />,
         path: "/admin-dashboard/manage-users",
         hasSubItems: false,
+        group: "Properties & Users",
       },
       {
         label: "Properties",
         icon: <House size={18} />,
         path: "/admin-dashboard/landlord-properties",
         hasSubItems: false,
+        group: "Properties & Users",
       },
       {
         label: "Reports",
         icon: <BarChart3 size={18} />,
         path: "",
+        group: "Reports",
         children: [
           {
             label: "General Reports",
@@ -312,70 +323,83 @@ function getNavItems(role: number): NavItem[] {
         ],
       },
       {
-        label: "Settings",
-        icon: <Settings size={18} />,
-        path: "/admin-dashboard/system-settings",
-        hasSubItems: false,
-      },
-      {
-        label: "Send SMS",
-        icon: <MessageSquare size={18} />,
-        path: "/admin-dashboard/send-sms",
-      },
-      {
         label: "Utility Account Management",
         icon: <Users size={18} />,
         path: "/admin-dashboard/utility-accounts",
+        group: "Utilities",
       },
       {
         label: "Manage Utility Meters",
         icon: <Settings size={18} />,
         path: "/admin-dashboard/manage-utility-meters",
-      },
-      {
-        label: "Wallet Management",
-        icon: <CreditCard size={18} />,
-        path: "/admin-dashboard/wallet-management",
-      },
-      {
-        label: "Wallet Transactions",
-        icon: <ListOrdered size={18} />,
-        path: "/admin-dashboard/wallet-transactions",
-      },
-      {
-        label: "Update Transaction",
-        icon: <FileText size={18} />,
-        path: "/admin-dashboard/update-transaction",
-      },
-      {
-        label: "Audit Trail",
-        icon: <FileText size={18} />,
-        path: "/admin-dashboard/audit-trail",
-      },
-      {
-        label: "Collecto Withdraw Logs",
-        icon: <FileSearch size={18} />,
-        path: "/admin-dashboard/collecto-withdraw-logs",
-      },
-      {
-        label: "Bill Payments",
-        icon: <FileText size={18} />,
-        path: "/admin-dashboard/bill-payments",
-      },
-      {
-        label: "HTTP Logs",
-        icon: <FileSearch size={18} />,
-        path: "/admin-dashboard/http-logs",
+        group: "Utilities",
       },
       {
         label: "Add Utility Meter",
         icon: <Plus size={18} />,
         path: "/admin-dashboard/add-utility-meter",
+        group: "Utilities",
       },
       {
         label: "Meter Monthly Fees",
         icon: <Settings size={18} />,
         path: "/admin-dashboard/utility-meter-fees",
+        group: "Utilities",
+      },
+      {
+        label: "Wallet Management",
+        icon: <CreditCard size={18} />,
+        path: "/admin-dashboard/wallet-management",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Wallet Transactions",
+        icon: <ListOrdered size={18} />,
+        path: "/admin-dashboard/wallet-transactions",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Bill Payments",
+        icon: <FileText size={18} />,
+        path: "/admin-dashboard/bill-payments",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Update Transaction",
+        icon: <FileText size={18} />,
+        path: "/admin-dashboard/update-transaction",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Collecto Withdraw Logs",
+        icon: <FileSearch size={18} />,
+        path: "/admin-dashboard/collecto-withdraw-logs",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Settings",
+        icon: <Settings size={18} />,
+        path: "/admin-dashboard/system-settings",
+        hasSubItems: false,
+        group: "System",
+      },
+      {
+        label: "Send SMS",
+        icon: <MessageSquare size={18} />,
+        path: "/admin-dashboard/send-sms",
+        group: "System",
+      },
+      {
+        label: "Audit Trail",
+        icon: <FileText size={18} />,
+        path: "/admin-dashboard/audit-trail",
+        group: "System",
+      },
+      {
+        label: "HTTP Logs",
+        icon: <FileSearch size={18} />,
+        path: "/admin-dashboard/http-logs",
+        group: "System",
       },
     ];
   }

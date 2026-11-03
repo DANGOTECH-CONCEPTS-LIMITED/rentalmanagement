@@ -112,7 +112,7 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 .ToListAsync();
         }
 
-        public async Task<WalletTransactionsPage> GetWalletTransactionsAsync(string? search, int page, int pageSize, CancellationToken ct)
+        public async Task<WalletTransactionsPage> GetWalletTransactionsAsync(string? search, int page, int pageSize, DateTime? from = null, DateTime? to = null, CancellationToken ct = default)
         {
             if (page < 1 || page > 100000 || pageSize < 1 || pageSize > 100 || search?.Length > 128)
                 throw new ArgumentException("Invalid search or pagination.");
@@ -126,6 +126,8 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                                          t.Status.Contains(value) ||
                                          t.Wallet.Landlord.FullName.Contains(value));
             }
+            if (from.HasValue) query = query.Where(t => t.TransactionDate >= from.Value);
+            if (to.HasValue) query = query.Where(t => t.TransactionDate < to.Value.Date.AddDays(1));
 
             var rows = await query.OrderByDescending(t => t.TransactionDate).Skip((page - 1) * pageSize).Take(pageSize + 1)
                 .Select(t => new WalletTransactionAdminItem(t.Id, t.WalletId, t.Wallet.Landlord.FullName, t.Amount,

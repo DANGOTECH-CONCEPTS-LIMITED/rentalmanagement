@@ -12,7 +12,7 @@ namespace Application.Interfaces.PaymentService.WalletSvc
     {
         Task<WalletBalanceDto> GetBalanceAsync(int landlordId);
         Task<IEnumerable<WalletTransactionDto>> GetStatementAsync(int landlordId);
-        Task<WalletTransactionsPage> GetWalletTransactionsAsync(string? search, int page, int pageSize, CancellationToken ct);
+        Task<WalletTransactionsPage> GetWalletTransactionsAsync(string? search, int page, int pageSize, DateTime? from = null, DateTime? to = null, CancellationToken ct = default);
         Task WithdrawAsync(WithdrawDto withdrawDto);
         Task WithdrawForUserAsync(WithdrawDto withdrawDto, string requesterEmail);
         Task AdminWithdrawUtilityAsync(AdminUtilityWalletWithdrawalDto withdrawDto, string requesterEmail);

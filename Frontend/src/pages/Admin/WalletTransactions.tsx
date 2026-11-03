@@ -44,6 +44,8 @@ const WalletTransactions = () => {
   const endpoint = "/api/AdminWalletTransactions";
 
   const [search, setSearch] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<WalletTransactionsPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +60,8 @@ const WalletTransactions = () => {
       .get<WalletTransactionsPage>(endpoint, {
         params: {
           ...(search.trim() ? { search: search.trim() } : {}),
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
           page,
           pageSize: 20,
         },
@@ -74,7 +78,7 @@ const WalletTransactions = () => {
       });
 
     return () => controller.abort();
-  }, [endpoint, search, page]);
+  }, [endpoint, search, from, to, page]);
 
   return (
     <div className="space-y-6">
@@ -99,6 +103,32 @@ const WalletTransactions = () => {
             }}
             placeholder="e.g. Water Payment or landlord name"
             className="w-80"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="wallet-transaction-from">From</Label>
+          <Input
+            id="wallet-transaction-from"
+            type="date"
+            value={from}
+            onChange={(event) => {
+              setFrom(event.target.value);
+              setPage(1);
+            }}
+            className="w-40"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="wallet-transaction-to">To</Label>
+          <Input
+            id="wallet-transaction-to"
+            type="date"
+            value={to}
+            onChange={(event) => {
+              setTo(event.target.value);
+              setPage(1);
+            }}
+            className="w-40"
           />
         </div>
       </div>

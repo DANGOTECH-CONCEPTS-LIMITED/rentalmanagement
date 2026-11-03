@@ -25,7 +25,7 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
         return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
     }
 
-    public async Task<BillPaymentAdminPage> GetBillPaymentsAsync(string? reference, string? status, int page, int pageSize, CancellationToken ct)
+    public async Task<BillPaymentAdminPage> GetBillPaymentsAsync(string? reference, string? status, int page, int pageSize, DateTime? from = null, DateTime? to = null, CancellationToken ct = default)
     {
         if (page < 1 || page > 100000 || pageSize < 1 || pageSize > 100 || reference?.Length > 128 || status?.Length > 32)
             throw new ArgumentException("Invalid search, status or pagination.");
@@ -36,6 +36,8 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
             query = query.Where(x => x.RequestReference == value || x.NwscAccount == value || x.MeterNumber == value);
         }
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.Trim().ToUpperInvariant());
+        if (from.HasValue) query = query.Where(x => x.CreatedAtUtc >= from.Value);
+        if (to.HasValue) query = query.Where(x => x.CreatedAtUtc < to.Value.Date.AddDays(1));
         var rows = await query.OrderByDescending(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize + 1)
             .Select(x => new BillPaymentAdminItem(x.Id, x.RequestReference, x.NwscAccount, x.MeterNumber,
                 db.UtilityMeters.AsNoTracking().Where(m => m.MeterNumber == x.MeterNumber).Select(m => m.NwscRegisteredName).FirstOrDefault(),

@@ -27,9 +27,10 @@ public sealed class AdminPayoutReconciliationController(IAdminPayoutReconciliati
     [ProducesResponseType(typeof(BillPaymentAdminPage), StatusCodes.Status200OK)]
     public async Task<ActionResult<BillPaymentAdminPage>> GetBillPayments(CancellationToken ct,
         [FromQuery] string? reference = null, [FromQuery] string? status = null,
+        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        try { return Ok(await service.GetBillPaymentsAsync(reference, status, page, pageSize, ct)); }
+        try { return Ok(await service.GetBillPaymentsAsync(reference, status, page, pageSize, from, to, ct)); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 

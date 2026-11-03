@@ -74,6 +74,8 @@ const BillPayments = () => {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<BillPaymentPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -227,6 +229,8 @@ const BillPayments = () => {
         params: {
           ...(search.trim() ? { reference: search.trim() } : {}),
           ...(status !== "all" ? { status } : {}),
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
           page,
           pageSize: 20,
         },
@@ -245,7 +249,7 @@ const BillPayments = () => {
       });
 
     return () => controller.abort();
-  }, [endpoint, search, status, page, reload]);
+  }, [endpoint, search, status, from, to, page, reload]);
 
   return (
     <div className="space-y-6">
@@ -295,6 +299,34 @@ const BillPayments = () => {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="bill-payment-from">From</Label>
+          <Input
+            id="bill-payment-from"
+            type="date"
+            value={from}
+            onChange={(event) => {
+              setFrom(event.target.value);
+              setPage(1);
+              setSelectedIds(new Set());
+            }}
+            className="w-40"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="bill-payment-to">To</Label>
+          <Input
+            id="bill-payment-to"
+            type="date"
+            value={to}
+            onChange={(event) => {
+              setTo(event.target.value);
+              setPage(1);
+              setSelectedIds(new Set());
+            }}
+            className="w-40"
+          />
         </div>
         <Button
           variant="outline"

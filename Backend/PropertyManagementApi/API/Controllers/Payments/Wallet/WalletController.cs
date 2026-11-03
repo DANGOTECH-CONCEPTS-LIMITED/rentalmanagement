@@ -54,11 +54,12 @@ namespace API.Controllers.Payments.Wallet
         [HttpGet("/api/AdminWalletTransactions")]
         [Authorize(Roles = "Administrator")]
         public async Task<IActionResult> GetWalletTransactions(CancellationToken ct,
-            [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+            [FromQuery] string? search = null, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null,
+            [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             try
             {
-                return Ok(await _svc.GetWalletTransactionsAsync(search, page, pageSize, ct));
+                return Ok(await _svc.GetWalletTransactionsAsync(search, page, pageSize, from, to, ct));
             }
             catch (ArgumentException ex)
             {

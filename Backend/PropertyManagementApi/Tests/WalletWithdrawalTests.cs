@@ -88,18 +88,18 @@ public class WalletWithdrawalTests : IAsyncLifetime
             new WalletTransaction { WalletId = 202, Amount = -500m, Description = "Withdrawal", TransactionId = "W-2", Status = "SUCCESSFUL", TransactionDate = new DateTime(2026, 11, 1, 11, 0, 0) });
         await _db.SaveChangesAsync();
 
-        var page = await _service.GetWalletTransactionsAsync(null, 1, 20, CancellationToken.None);
+        var page = await _service.GetWalletTransactionsAsync(null, 1, 20, ct: CancellationToken.None);
         Assert.Equal(2, page.Items.Count);
         Assert.False(page.HasMore);
         Assert.Equal("Other Owner", page.Items[0].Owner);
         Assert.Equal(-500m, page.Items[0].Amount);
         Assert.Equal("Utility Owner", page.Items[1].Owner);
 
-        var searched = await _service.GetWalletTransactionsAsync("Water", 1, 20, CancellationToken.None);
+        var searched = await _service.GetWalletTransactionsAsync("Water", 1, 20, ct: CancellationToken.None);
         Assert.Single(searched.Items);
         Assert.Equal("Water Payment", searched.Items[0].Description);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GetWalletTransactionsAsync(null, 0, 20, CancellationToken.None));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.GetWalletTransactionsAsync(null, 0, 20, ct: CancellationToken.None));
     }
 
     [Fact]

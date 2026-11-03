@@ -317,7 +317,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
         await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
         var service = new AdminPayoutReconciliationService(_db,
             new DangoPaymentClient(new HttpClient(_handler), _configuration));
-        var page = await service.GetBillPaymentsAsync(null, "PENDING_SUBMISSION", 1, 20, CancellationToken.None);
+        var page = await service.GetBillPaymentsAsync(null, "PENDING_SUBMISSION", 1, 20, ct: CancellationToken.None);
         var item = Assert.Single(page.Items);
         Assert.Equal("12345678", item.NwscAccount);
         Assert.Equal(6000m, item.Amount);
@@ -325,11 +325,11 @@ public class NwscBillPaymentTests : IAsyncLifetime
         Assert.Equal("Registered NWSC Name", item.MeterName);
         Assert.Null(item.ExternalRefNoBillerId);
         Assert.Null(item.WalletDebitedAtUtc);
-        Assert.Single((await service.GetBillPaymentsAsync(item.RequestReference, null, 1, 20, CancellationToken.None)).Items);
-        Assert.Single((await service.GetBillPaymentsAsync("12345678", null, 1, 20, CancellationToken.None)).Items);
-        Assert.Single((await service.GetBillPaymentsAsync("meter-1", null, 1, 20, CancellationToken.None)).Items);
-        Assert.Empty((await service.GetBillPaymentsAsync(null, "SUCCESSFUL", 1, 20, CancellationToken.None)).Items);
-        await Assert.ThrowsAsync<ArgumentException>(() => service.GetBillPaymentsAsync(null, null, 0, 20, CancellationToken.None));
+        Assert.Single((await service.GetBillPaymentsAsync(item.RequestReference, null, 1, 20, ct: CancellationToken.None)).Items);
+        Assert.Single((await service.GetBillPaymentsAsync("12345678", null, 1, 20, ct: CancellationToken.None)).Items);
+        Assert.Single((await service.GetBillPaymentsAsync("meter-1", null, 1, 20, ct: CancellationToken.None)).Items);
+        Assert.Empty((await service.GetBillPaymentsAsync(null, "SUCCESSFUL", 1, 20, ct: CancellationToken.None)).Items);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.GetBillPaymentsAsync(null, null, 0, 20, ct: CancellationToken.None));
         var method = typeof(API.Controllers.AdminPayoutReconciliationController).GetMethod("GetBillPayments")!;
         Assert.Equal("/api/AdminBillPayments", method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.HttpGetAttribute), false)
             .Cast<Microsoft.AspNetCore.Mvc.HttpGetAttribute>().Single().Template);
