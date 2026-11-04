@@ -130,7 +130,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
     {
         await ConfigureBillerAsync();
         await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
-        _handler.BillBody = """{"statusCode":"00","statusDescription":"Successful","requestReference":"{ref}","flexipayRefNum":"FP-1"}""";
+        _handler.BillBody = """{"statusCode":"01","statusDescription":"Pending"}""";
         _handler.StatusBody = """{"statusCode":"00","statusDescription":"Successful","requestReference":"{ref}","receiptNumber":"RCPT-1","flexipayRefNum":"FP-1"}""";
         Assert.Equal(1, await Processor(_db).ProcessAsync(CancellationToken.None));
         var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
@@ -165,7 +165,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RealSuccessfulSubmissionResponseIsRecognizedAndCapturesProviderReference()
+    public async Task SubmissionReportingTerminalSuccessIsSettledImmediatelyWithoutStatusPoll()
     {
         await ConfigureBillerAsync();
         await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
@@ -174,10 +174,20 @@ public class NwscBillPaymentTests : IAsyncLifetime
         Assert.Equal(1, await Processor(_db).ProcessAsync(CancellationToken.None));
 
         var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
-        Assert.Equal("PENDING_CONFIRMATION", instruction.Status);
+        Assert.Equal("SUCCESSFUL", instruction.Status);
         Assert.Equal("935235270006", instruction.ProviderReference);
         Assert.Equal("67149420", instruction.ExternalRefNoBillerId);
-        Assert.Equal(6000m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+        Assert.Equal("Transaction(Ref# 935235270006) is processed successfully", instruction.Reason);
+        Assert.NotNull(instruction.WalletDebitedAtUtc);
+        Assert.Equal(0m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+
+        // The terminal submission response is settled immediately; no status poll was made.
+        Assert.Empty(_handler.StatusRequests);
+
+        // Neither a repeated cycle nor a status check may debit twice.
+        Assert.Equal(0, await Processor(_db).ProcessAsync(CancellationToken.None));
+        Assert.Equal(0m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+        Assert.Single(_handler.BillRequests);
     }
 
     [Fact]
@@ -498,11 +508,12 @@ public class NwscBillPaymentTests : IAsyncLifetime
 
     public sealed class BillHandler : HttpMessageHandler
     {
-        public string BillBody { get; set; } = """{"statusCode":"00","statusDescription":"Accepted","requestReference":"{ref}"}""";
+        public string BillBody { get; set; } = """{"statusCode":"01","statusDescription":"Pending"}""";
         public string StatusBody { get; set; } = """{"statusCode":"00","statusDescription":"Successful","requestReference":"{ref}"}""";
         public string CustomerValidationBody { get; set; } = """{"statusCode":"00","statusDescription":"Biller Details Fetched Successfully","requestReference":"{ref}","customerName":"DDAMBA WILSON","paymentMode":"any","amount":"-8872"}""";
         public HttpStatusCode StatusHttpStatus { get; set; } = HttpStatusCode.OK;
         public List<string> BillRequests { get; } = [];
+        public List<string> StatusRequests { get; } = [];
         public List<string> CustomerValidationRequests { get; } = [];
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
@@ -519,6 +530,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
             }
             else if (path.EndsWith("bill-payment-status"))
             {
+                StatusRequests.Add(body);
                 payload = StatusBody.Replace("{ref}", reference);
                 responseStatus = StatusHttpStatus;
             }

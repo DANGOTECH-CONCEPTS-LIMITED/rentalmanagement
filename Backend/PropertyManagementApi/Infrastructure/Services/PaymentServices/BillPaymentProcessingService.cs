@@ -81,6 +81,15 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             await FailAsync(item.Id, message, ct, raw);
             return;
         }
+        if (state == "SUCCESSFUL")
+        {
+            // The submission itself reported a definitive settlement (statusCode 00): settle now
+            // and skip the status poll. The provider's statusDescription becomes the reason.
+            await CompleteAsync(item, raw, vendorReference, ct,
+                reason: string.IsNullOrWhiteSpace(message) ? null : message,
+                externalRefNoBillerId: externalRefNoBillerId);
+            return;
+        }
         await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id).ExecuteUpdateAsync(s => s
             .SetProperty(x => x.Response, raw)
             .SetProperty(x => x.ProviderReference, string.IsNullOrWhiteSpace(vendorReference) ? null : vendorReference)
@@ -100,7 +109,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             logger.LogWarning("NWSC bill status unknown for {Reference}: {Error}", item.RequestReference, ex.GetType().Name);
             return;
         }
-        var (state, vendorReference, message, _) = Parse(raw);
+        var (state, vendorReference, message, externalRefNoBillerId) = Parse(raw);
         var httpStatus = ReadHttpStatus(raw);
         if (httpStatus >= 500)
         {
@@ -125,10 +134,10 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         if (state == "AMBIGUOUS")
         {
             await SendReconciliationEmailAsync(item, raw, ct);
-            await CompleteAsync(item, raw, vendorReference, ct, "Transaction Ambiguous — reconciliation required");
+            await CompleteAsync(item, raw, vendorReference, ct, "Transaction Ambiguous — reconciliation required", externalRefNoBillerId);
             return;
         }
-        await CompleteAsync(item, raw, vendorReference, ct);
+        await CompleteAsync(item, raw, vendorReference, ct, externalRefNoBillerId: externalRefNoBillerId);
     }
 
     private async Task SendReconciliationEmailAsync(BillPaymentInstruction item, string raw, CancellationToken ct)
@@ -149,15 +158,18 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         }
     }
 
-    private async Task CompleteAsync(BillPaymentInstruction item, string raw, string vendorReference, CancellationToken ct, string? reason = null)
+    private async Task CompleteAsync(BillPaymentInstruction item, string raw, string vendorReference, CancellationToken ct,
+        string? reason = null, string? externalRefNoBillerId = null)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var claimed = await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id &&
-                x.Status == BillPaymentInstructionStatus.PendingConfirmation && x.WalletDebitedAtUtc == null)
+                (x.Status == BillPaymentInstructionStatus.PendingConfirmation || x.Status == BillPaymentInstructionStatus.PendingSubmission) &&
+                x.WalletDebitedAtUtc == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, BillPaymentInstructionStatus.Successful)
                 .SetProperty(x => x.ConfirmedAtUtc, DateTime.UtcNow)
                 .SetProperty(x => x.Response, raw)
                 .SetProperty(x => x.ProviderReference, string.IsNullOrWhiteSpace(vendorReference) ? item.ProviderReference : vendorReference)
+                .SetProperty(x => x.ExternalRefNoBillerId, x => string.IsNullOrWhiteSpace(externalRefNoBillerId) ? x.ExternalRefNoBillerId : externalRefNoBillerId)
                 .SetProperty(x => x.Reason, reason), ct);
         if (claimed == 0) { await transaction.RollbackAsync(ct); return; }
 
