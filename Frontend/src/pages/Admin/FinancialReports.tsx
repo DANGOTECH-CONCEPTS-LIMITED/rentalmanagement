@@ -281,6 +281,14 @@ const FinancialReports = () => {
             <CardContent>
               <div className="flex flex-wrap items-end gap-3 mb-4">
                 <div className="space-y-1">
+                  <Label>From</Label>
+                  <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+                </div>
+                <div className="space-y-1">
+                  <Label>To</Label>
+                  <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+                </div>
+                <div className="space-y-1">
                   <Label>Outcome</Label>
                   <select
                     value={filterOutcome}
@@ -294,6 +302,7 @@ const FinancialReports = () => {
                     <option value="UNKNOWN">Unknown</option>
                   </select>
                 </div>
+                <Button variant="outline" onClick={() => loadUssd(1)}>Apply filter</Button>
               </div>
               <Table>
                 <TableHeader>
