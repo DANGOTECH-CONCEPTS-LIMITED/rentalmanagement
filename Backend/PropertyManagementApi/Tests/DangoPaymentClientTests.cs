@@ -643,6 +643,29 @@ public class DangoPaymentClientTests
         Assert.Contains("No Transaction found", item.GetProperty("status_message").GetString());
     }
 
+    [Fact]
+    public async Task ProviderTransactionNotFoundResolvesCollectionAsFailed()
+    {
+        var client = Client(new StubHandler(_ => Reply(
+            """{"httpCode":404,"httpMessage":"Not Found","moreInformation":"No Transaction found for the requested message ID","requestId":"DANGO_U_20261103_62"}""",
+            HttpStatusCode.NotFound)));
+        using var status = JsonDocument.Parse(await client.GetRequestToPayStatusAsync(new() { TransactionId = "DANGO_U_20261103_62" }));
+        var data = status.RootElement.GetProperty("data");
+        Assert.Equal("FAILED", data.GetProperty("status").GetString());
+        Assert.True(data.GetProperty("requestToPayStatus").GetBoolean());
+        Assert.Contains("No Transaction found", data.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task UncorrelatedNotFoundCollectionRemainsPending()
+    {
+        var client = Client(new StubHandler(_ => Reply(
+            """{"httpCode":404,"httpMessage":"Not Found","moreInformation":"No Transaction found for the requested message ID","requestId":"different-ref"}""",
+            HttpStatusCode.NotFound)));
+        using var status = JsonDocument.Parse(await client.GetRequestToPayStatusAsync(new() { TransactionId = "DANGO_U_20261103_62" }));
+        Assert.Equal("PENDING", status.RootElement.GetProperty("data").GetProperty("status").GetString());
+    }
+
     [Theory]
     [InlineData("""{"httpCode":404,"httpMessage":"Not Found","moreInformation":"No Transaction found for the requested message ID","requestId":"different-ref"}""")]
     [InlineData("""{"httpCode":404,"httpMessage":"Not Found","moreInformation":"Some other reason"}""")]

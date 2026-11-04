@@ -333,13 +333,19 @@ public sealed class DangoPaymentClient
         var reference = RequiredValue(request.TransactionId, nameof(request.TransactionId));
         var response = await PostAsync("get-transaction-status", new { requestId = reference, clientId = RequiredSetting("ClientId") });
         var state = StatusState(response, reference, ReadStatusContract(_configuration));
+        // A provider-confirmed "No Transaction found" for this exact reference means the collection
+        // never reached the provider; resolve it as failed instead of leaving it pending forever.
+        if (state == "PENDING" && IsTransactionNotFound(response, reference))
+            state = "FAILED";
         return Envelope(response, new
         {
             requestToPayStatus = state != "PENDING",
             transactionId = reference,
             vendorReference = Field(response, "flexipayReferenceNumber") ?? string.Empty,
             status = state,
-            message = Message(response),
+            message = IsTransactionNotFound(response, reference)
+                ? "No Transaction found for the requested message ID"
+                : Message(response),
             flexipayReferenceNumber = Field(response, "flexipayReferenceNumber")
         });
     }
