@@ -20,6 +20,7 @@ import {
   X,
   FileSearch,
   Wrench,
+  PhoneCall,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -406,6 +407,12 @@ function getNavItems(role: number): NavItem[] {
         label: "Meter Monthly Fees",
         icon: <Settings size={18} />,
         path: "/admin-dashboard/utility-meter-fees",
+        group: "Utilities",
+      },
+      {
+        label: "USSD Menu",
+        icon: <PhoneCall size={18} />,
+        path: "/admin-dashboard/ussd-menu",
         group: "Utilities",
       },
       {

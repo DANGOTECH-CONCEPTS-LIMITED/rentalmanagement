@@ -171,6 +171,53 @@ namespace Infrastructure.Services.Accounting
             return null;
         }
 
+        public async Task<UssdSessionStatsDto> GetSessionStatsAsync(DateTime? from, DateTime? to, CancellationToken ct = default)
+        {
+            var query = _db.UssdSessions.AsNoTracking().Where(s => s.EndedAt != null);
+            if (from.HasValue) query = query.Where(s => s.CreatedAt >= from.Value.Date);
+            if (to.HasValue) query = query.Where(s => s.CreatedAt < to.Value.Date.AddDays(1));
+
+            var sessions = await query
+                .Select(s => new { s.Outcome, s.DataJson, s.DurationSeconds, s.CreatedAt })
+                .ToListAsync(ct);
+
+            var total = sessions.Count;
+            int Count(string? outcome) => sessions.Count(s => s.Outcome == outcome);
+            bool HasKey(string? json, string key) => json != null && json.Contains($"\"{key}\"", StringComparison.Ordinal);
+
+            var daily = sessions
+                .GroupBy(s => s.CreatedAt.Date)
+                .Select(g => new UssdSessionDailyDto
+                {
+                    Date = g.Key,
+                    Total = g.Count(),
+                    Success = g.Count(x => x.Outcome == "SUCCESS")
+                })
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            return new UssdSessionStatsDto
+            {
+                Total = total,
+                Success = Count("SUCCESS"),
+                Failed = Count("FAILED"),
+                Incomplete = Count("INCOMPLETE"),
+                Cancelled = Count("CANCELLED"),
+                AvgDurationSeconds = sessions.Where(s => s.DurationSeconds.HasValue)
+                    .Select(s => s.DurationSeconds)
+                    .DefaultIfEmpty(0)
+                    .Average(),
+                Funnel = new UssdFunnelDto
+                {
+                    Started = total,
+                    ReachedMeter = sessions.Count(s => HasKey(s.DataJson, "meter")),
+                    ReachedAmount = sessions.Count(s => HasKey(s.DataJson, "amount")),
+                    Completed = Count("SUCCESS")
+                },
+                Daily = daily
+            };
+        }
+
         private async Task<(int Imported, int Skipped, int Total)> ImportContentAsync(string content, DateTime? billingDate, CancellationToken ct)
         {
             var rows = ParseCsv(content);

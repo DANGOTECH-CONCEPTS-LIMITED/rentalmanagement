@@ -114,7 +114,7 @@ namespace Infrastructure.Services.Ussd
                     var nin = lastInput.Trim();
                     if (!Regex.IsMatch(nin, @"^[A-Za-z0-9\-]{4,20}$"))
                     {
-                        await DeleteSessionAsync(sess);
+                        await FinishSessionAsync(sess, "FAILED");
                         return End("Invalid NIN format.");
                     }
 
@@ -132,22 +132,23 @@ namespace Infrastructure.Services.Ussd
                         cmd.Parameters.Add(p);
 
                         var result = await cmd.ExecuteScalarAsync();
-                        await DeleteSessionAsync(sess);
 
                         if (result != null && result != DBNull.Value)
                         {
                             var full = Convert.ToString(result);
+                            await FinishSessionAsync(sess, "SUCCESS");
                             return End($"Student found: {full}");
                         }
                         else
                         {
+                            await FinishSessionAsync(sess, "FAILED");
                             return End("Student not registered.");
                         }
                     }
                     catch (Exception ex)
                     {
                         // on error, end session and report
-                        await DeleteSessionAsync(sess);
+                        await FinishSessionAsync(sess, "FAILED");
                         return End("Student registry currently unavailable. Try later.");
                     }
                 }
@@ -178,17 +179,20 @@ namespace Infrastructure.Services.Ussd
                         var meter = data.GetValueOrDefault("meter", "");
                         var amountText = data.GetValueOrDefault("amount", "0");
                         if (!decimal.TryParse(amountText, out var amount) || amount <= 0)
+                        {
+                            await FinishSessionAsync(sess, "FAILED");
                             return End("Invalid amount.");
+                        }
 
                         string checkoutError = await TryAsync(() => _pymsvc.MakeUtilityPayment(new() { PhoneNumber = sess.PhoneNumber, MeterNumber = meter, Amount = (double)amount }));
                         var checkoutOk = string.IsNullOrEmpty(checkoutError);
-                        await DeleteSessionAsync(sess);
+                        await FinishSessionAsync(sess, checkoutOk ? "SUCCESS" : "FAILED");
                         return checkoutOk
                             ? End("Payment Prompt Initiated. Please approve on your phone. Thank you.")
                             : End($"We couldn’t start the payment right now. Please try again later. : {checkoutError}");
 
                     case "Cancel":
-                        await DeleteSessionAsync(sess);
+                        await FinishSessionAsync(sess, "CANCELLED");
                         return End("Payment canceled. Goodbye.");
 
                     default:
@@ -202,7 +206,7 @@ namespace Infrastructure.Services.Ussd
 
             if (node.Type == NodeType.Exit)
             {
-                await DeleteSessionAsync(sess);
+                await FinishSessionAsync(sess, "CANCELLED");
                 return End(RenderPrompt(node.Prompt, data, currency));
             }
 
@@ -230,6 +234,14 @@ namespace Infrastructure.Services.Ussd
             s.DataJson = JsonSerializer.Serialize(data);
             s.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(); ;
+        }
+
+        public async Task FinishSessionAsync(UssdSession s, string outcome)
+        {
+            s.EndedAt = DateTime.UtcNow;
+            s.Outcome = outcome;
+            s.DurationSeconds = (int)(DateTime.UtcNow - s.CreatedAt).TotalSeconds;
+            await _context.SaveChangesAsync();
         }
 
         private async Task<(bool found,string name)> ValidateMeter(string meter)

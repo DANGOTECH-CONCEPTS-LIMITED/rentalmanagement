@@ -12,5 +12,6 @@ namespace Application.Interfaces.Accounting
         Task<UssdImportBatch> QueueAsync(IFormFile file, DateTime? billingDate, CancellationToken ct = default);
         Task<(int Imported, int Skipped, int Total)> ProcessBatchAsync(int batchId, CancellationToken ct = default);
         Task IngestNotificationAsync(UssdSessionNotificationDto notification, CancellationToken ct = default);
+        Task<UssdSessionStatsDto> GetSessionStatsAsync(DateTime? from, DateTime? to, CancellationToken ct = default);
     }
 }

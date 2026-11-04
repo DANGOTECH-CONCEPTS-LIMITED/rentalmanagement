@@ -13,5 +13,6 @@ namespace Application.Interfaces.Ussd
         public Task<string> HandleAsync(string sessionId, string serviceCode, string phone, string text, string menuCode = "waterpay", string currency = "UGX");
         public Task TouchAsync(UssdSession s, Dictionary<string, string> data);
         public Task DeleteSessionAsync(UssdSession s);
+        public Task FinishSessionAsync(UssdSession s, string outcome);
     }
 }

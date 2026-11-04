@@ -61,6 +61,20 @@ namespace API.Controllers.Accounts
             }
         }
 
+        [HttpGet("/GetUssdSessionStats")]
+        public async Task<IActionResult> GetStats(CancellationToken ct,
+            [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        {
+            try
+            {
+                return Ok(await _service.GetSessionStatsAsync(from, to, ct));
+            }
+            catch (Exception ex)
+            {
+                return HandleError(ex);
+            }
+        }
+
         private IActionResult HandleError(Exception ex) => ex switch
         {
             ArgumentException or ArgumentNullException => BadRequest(new { message = ex.Message }),

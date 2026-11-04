@@ -69,6 +69,7 @@ import UtilityAccountManagement from "./pages/Admin/UtilityAccountManagement";
 import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
 import BillPayments from "./pages/Admin/BillPayments";
 import UpdateTransaction from "./pages/Admin/UpdateTransaction";
+import UssdMenu from "./pages/Admin/UssdMenu";
 
 const queryClient = new QueryClient();
 
@@ -138,6 +139,7 @@ const App = () => (
                 <Route path="meter-fees-report" element={<MeterFeesReport />} />
                 <Route path="accounting" element={<Accounting />} />
                 <Route path="financial-reports" element={<FinancialReports />} />
+                <Route path="ussd-menu" element={<UssdMenu />} />
                 <Route
                   path="utility-payments/:landlordId"
                   element={<UtilityPayments />}
