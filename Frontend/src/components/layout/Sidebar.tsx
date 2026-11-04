@@ -377,6 +377,11 @@ function getNavItems(role: number): NavItem[] {
             icon: <BarChart3 size={18} />,
             path: "/admin-dashboard/accounting",
           },
+          {
+            label: "Financial Reports",
+            icon: <BarChart3 size={18} />,
+            path: "/admin-dashboard/financial-reports",
+          },
         ],
       },
       {
@@ -494,6 +499,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Maintenance",
         icon: <Wrench size={18} />,
         path: "/landlord-dashboard/maintenance",
+      },
+      {
+        label: "Expenses",
+        icon: <CreditCard size={18} />,
+        path: "/landlord-dashboard/expenses",
       },
       {
         label: "Manage Tenants",

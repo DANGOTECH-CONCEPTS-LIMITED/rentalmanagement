@@ -215,5 +215,90 @@ namespace Infrastructure.Services.Accounting
                 lines
             );
         }
+
+        // Manual operating expense recorded by a landlord or administrator.
+        public static JournalPostDto ManualExpense(
+            string correlationId,
+            string transactionId,
+            decimal amount,
+            int landlordId,
+            string memo)
+        {
+            return new JournalPostDto(
+                correlationId,
+                "MANUAL_EXPENSE",
+                transactionId,
+                $"Expense {transactionId}",
+                new[]
+                {
+                    new JournalPostLineDto("5400", amount, 0, LandlordId: landlordId, Memo: memo), // Dr Operating Expenses
+                    new JournalPostLineDto("1000", 0, amount, LandlordId: landlordId, Memo: memo), // Cr Cash
+                });
+        }
+
+        // Utility collection settlement: split amount (payable to utility) from the admin
+        // charge (commission), and record the bank fee on the gross collected amount.
+        public static JournalPostDto UtilityCollection(
+            string correlationId,
+            string transactionId,
+            decimal utilityAmount,
+            decimal charge,
+            decimal bankFee,
+            int walletId,
+            string memo)
+        {
+            var netCash = utilityAmount + charge - bankFee;
+            return new JournalPostDto(
+                correlationId,
+                "UTILITY_COLLECTION",
+                transactionId,
+                $"Utility collection {transactionId}",
+                new[]
+                {
+                    new JournalPostLineDto("1000", netCash, 0, WalletId: walletId, Memo: memo),     // Dr Cash (net of bank fee)
+                    new JournalPostLineDto("5100", bankFee, 0, WalletId: walletId, Memo: "Bank fee"), // Dr Bank fee
+                    new JournalPostLineDto("2500", 0, utilityAmount, WalletId: walletId, Memo: "Utility amount"), // Cr Utility payable
+                    new JournalPostLineDto("4101", 0, charge, WalletId: walletId, Memo: "Admin charge"),          // Cr Commission income
+                });
+        }
+
+        // Token SMS fee (flat per token).
+        public static JournalPostDto SmsFee(
+            string correlationId,
+            string transactionId,
+            decimal amount,
+            int walletId,
+            string memo)
+        {
+            return new JournalPostDto(
+                correlationId,
+                "TOKEN_SMS_FEE",
+                transactionId,
+                $"Token SMS fee {transactionId}",
+                new[]
+                {
+                    new JournalPostLineDto("5200", amount, 0, WalletId: walletId, Memo: memo), // Dr SMS fee
+                    new JournalPostLineDto("1000", 0, amount, WalletId: walletId, Memo: memo), // Cr Cash
+                });
+        }
+
+        // USSD session fee (charged by the operator regardless of transaction outcome).
+        public static JournalPostDto UssdSessionFee(
+            string correlationId,
+            string transactionId,
+            decimal amount,
+            string memo)
+        {
+            return new JournalPostDto(
+                correlationId,
+                "USSD_SESSION_FEE",
+                transactionId,
+                $"USSD session fee {transactionId}",
+                new[]
+                {
+                    new JournalPostLineDto("5300", amount, 0, Memo: memo), // Dr USSD session fee
+                    new JournalPostLineDto("1000", 0, amount, Memo: memo), // Cr Cash
+                });
+        }
     }
 }

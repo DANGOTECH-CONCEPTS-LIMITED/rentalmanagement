@@ -40,12 +40,14 @@ import RentalContracts from "./pages/Landlord/RentalContracts";
 import HandleComplaints from "./pages/Landlord/HandleComplaints";
 import Maintenance from "./pages/Landlord/Maintenance";
 import ProfitLoss from "./pages/Landlord/ProfitLoss";
+import Expenses from "./pages/Landlord/Expenses";
 import TrackPayments from "./pages/Landlord/TrackPayments";
 import Index from "./pages/Index";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
 import Transactions from "./pages/Admin/Transactions";
 import Accounting from "./pages/Admin/Accounting";
+import FinancialReports from "./pages/Admin/FinancialReports";
 import SendSMSForm from "./pages/SendSMSForm";
 import Properties from "./pages/Landlord/LandloardProperties";
 import AdminDashboard from "./pages/Dashboard/AdminDashboard";
@@ -135,6 +137,7 @@ const App = () => (
                 <Route path="utility-meter-fees" element={<UtilityMeter />} />
                 <Route path="meter-fees-report" element={<MeterFeesReport />} />
                 <Route path="accounting" element={<Accounting />} />
+                <Route path="financial-reports" element={<FinancialReports />} />
                 <Route
                   path="utility-payments/:landlordId"
                   element={<UtilityPayments />}
@@ -154,6 +157,7 @@ const App = () => (
                 <Route path="rental-contracts" element={<RentalContracts />} />
                 <Route path="complaints" element={<HandleComplaints />} />
                 <Route path="maintenance" element={<Maintenance />} />
+                <Route path="expenses" element={<Expenses />} />
                 <Route path="profit-loss" element={<ProfitLoss />} />
                 <Route path="payments" element={<TrackPayments />} />
                 <Route path="properties" element={<Properties />} />

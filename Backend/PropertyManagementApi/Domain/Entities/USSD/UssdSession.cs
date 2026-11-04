@@ -16,5 +16,10 @@ namespace Domain.Entities.USSD
         public string DataJson { get; set; } = "{}";      // collected inputs { "meter": "...", "amount": "..." }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? EndedAt { get; set; }
+        public int? DurationSeconds { get; set; }
+
+        /// <summary>SUCCESSFUL, FAILED or UNKNOWN.</summary>
+        public string? Outcome { get; set; }
     }
 }

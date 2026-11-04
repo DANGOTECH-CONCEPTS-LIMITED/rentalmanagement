@@ -95,7 +95,7 @@ Each tenant and landlord is both a domain record and a login account (`User`). T
 
 **Complaints** — tenants submit complaints and landlords handle them.
 
-**Reports, accounting & exports** — general reports, utility statistics, monthly fees report, dashboard exports (CSV / Excel / PDF), profit & loss / trial balance from the accounting ledger, and landlord income vs expense.
+**Reports, accounting & exports** — general reports, utility statistics, monthly fees report, dashboard exports (CSV / Excel / PDF), profit & loss / trial balance from the accounting ledger, landlord income vs expense, manual **expense recording**, and a **utility profitability report** (commission vs bank/SMS/USSD fees) fed by USSD session-charge uploads.
 
 **Administration** — audit trail, HTTP request/response logs, service logs, payout and bill-payment reconciliation, payment provider settings, NWSC biller settings, and mobile-network routing rules.
 
@@ -184,6 +184,8 @@ Demo accounts: `admin@example.com` (Admin), `landlord@example.com` (Landlord), `
 | Wallets | `GET /GetBalance/{landlordId}`, `GET /GetStatement/{landlordId}`, `GET /api/AdminWalletTransactions`, `POST /Withdraw`, `POST /AdminWithdrawUtilityWallet` |
 | Bill payments | `GET /api/AdminBillPayments`, `POST /api/AdminBillPayments/process`, `PUT .../status`, `POST .../backfill`, `POST .../trigger` |
 | Accounting | `GET /api/accounting/profit`, `GET /api/accounting/trial-balance`, `GET /api/accounting/balance-sheet`, `GET /api/accounting/statement` |
+| Expenses | `GET /GetExpensesByLandlordId/{id}`, `POST /AddExpense`, `DELETE /DeleteExpense/{id}` |
+| Utility fees | `GET /GetUtilityProfitabilityReport?from=&to=`, `POST /ImportUssdSessionCharges` (CSV), `GET /GetUssdSessionCharges` |
 | Webhooks | `POST /api/webhooks/payment-settlement` (HMAC-signed) |
 | Reconciliation | `GET /api/AdminPayoutReconciliation`, `GET .../reconciliation` |
 | Meters | meter CRUD, search, liens, fees, and STS token endpoints under `api/Meter` |
@@ -201,6 +203,8 @@ Demo accounts: `admin@example.com` (Admin), `landlord@example.com` (Landlord), `
 - `UtilityMeter` / `UtilityPayment` / `MeterToken` / `MeterFeeCharge` / `MeterLien` — utility metering, payments, tokens, fees and liens.
 - `BillPaymentInstruction`, `PaymentGatewaySubmission`, `PaymentProviderSetting`, `BackgroundJobLock` — bill payments, durable submission claims, provider routing and worker leases.
 - `JournalEntry` / `JournalLine` — the accounting ledger behind the profit/trial-balance reports.
+- `Expense` — manually recorded operating expenses (also posted to the ledger's 5400 account).
+- `UssdSession` / `UssdSessionCharge` — USSD session state and operator-billed session fees (imported from statements).
 - `Complaint`, `AuditTrailEntry`, `HttpRequestResponse`, `ServiceLogs` — complaints, audit, and observability.
 
 ---

@@ -102,6 +102,9 @@ builder.Services.AddScoped<ICollectoWalletWithdrawalHistoryService, CollectoWall
 // Accounting services
 builder.Services.AddScoped<IAccountingQueryService, AccountingQueryService>();
 builder.Services.AddScoped<IAccountingService, AccountingService>();
+builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<IUssdSessionChargeService, UssdSessionChargeService>();
+builder.Services.AddScoped<IUtilityProfitabilityService, UtilityProfitabilityService>();
 builder.Services.AddScoped<IWalletChargePolicy, ConfigWalletChargePolicy>();
 builder.Services.AddScoped<WalletAccountingNotifier>();
 builder.Services.AddScoped<ISTSProcessing, STSProcessing>();

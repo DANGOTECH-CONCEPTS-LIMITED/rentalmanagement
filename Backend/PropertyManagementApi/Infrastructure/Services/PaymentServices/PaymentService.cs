@@ -275,7 +275,11 @@ namespace Infrastructure.Services.PaymentServices
                 .CountAsync(m => m.Status == "RESOLVED" && m.UpdatedAt >= fromDate && m.UpdatedAt < toEnd &&
                                  m.Property.OwnerId == landlordId, ct);
 
-            var expenses = maintenance + payouts;
+            var manualExpenses = await _context.Expenses.AsNoTracking()
+                .Where(e => e.LandlordId == landlordId && e.ExpenseDate >= fromDate && e.ExpenseDate < toEnd)
+                .SumAsync(e => e.Amount, ct);
+
+            var expenses = maintenance + payouts + manualExpenses;
             return new LandlordProfitLossDto
             {
                 From = fromDate,
