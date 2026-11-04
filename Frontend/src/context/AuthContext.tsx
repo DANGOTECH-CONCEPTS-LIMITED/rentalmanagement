@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const forgotPassword = async (email: string) => {
     try {
       setLoading(true);
-      console.log("email", email);
+      
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/ForgotPassword`,
         JSON.stringify(email), // wraps the email in quotes, becomes a JSON string

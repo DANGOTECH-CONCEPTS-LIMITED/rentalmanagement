@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { api, apiUrl, getUser } from "@/lib/api";
 import { Home, MapPin, Phone, Mail, User, Calendar } from "lucide-react";
 import {
   Card,
@@ -21,46 +22,29 @@ const PropertyDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
   useEffect(() => {
-    const fetchTenantData = async () => {
-      setLoading(true);
-      try {
-        const user = localStorage.getItem("user");
-        if (!user) {
-          throw new Error("No user found in localStorage");
+    const controller = new AbortController();
+    const id = getUser()?.id;
+    if (!id) {
+      setError("No user found in localStorage");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    api
+      .get(`/GetTenantById/${id}`, { signal: controller.signal })
+      .then(({ data }) => {
+        if (!controller.signal.aborted) setTenant(data);
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setError(err?.message ?? "Failed to load property details");
         }
-
-        const userData = JSON.parse(user);
-        const { id, token } = userData;
-        console.log("User:", userData);
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-
-        const response = await fetch(`${apiUrl}/GetTenantById/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "*/*",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
-        }
-
-        const data = await response.json();
-        setTenant(data);
-      } catch (err) {
-        console.error("Failed to fetch tenant data:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTenantData();
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, []);
 
   if (loading)

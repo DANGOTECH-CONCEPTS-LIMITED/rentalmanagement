@@ -1,6 +1,7 @@
 export interface StatementEntryBase {
   amount: number;
   transactionDate: string;
+  description?: string;
 }
 
 export type StatementRow<TEntry extends StatementEntryBase> = TEntry & {

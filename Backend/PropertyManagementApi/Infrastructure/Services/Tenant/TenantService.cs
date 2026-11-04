@@ -31,15 +31,14 @@ namespace Infrastructure.Services.Tenant
         public async Task CreateTenantAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, TenantDto tenantDto)
         {
             if (passportphoto == null)
-                throw new Exception("Passport photo is required.");
+                throw new ArgumentException("Passport photo is required.");
 
             if (idfront == null)
-                throw new Exception("ID front is required.");
+                throw new ArgumentException("ID front is required.");
             if (idback == null)
-                throw new Exception("ID back is required.");
+                throw new ArgumentException("ID back is required.");
 
-            if (tenantDto == null)
-                throw new Exception("Tenant data is required.");
+            ArgumentNullException.ThrowIfNull(tenantDto);
 
             //save files
             var passportPhotoPath = await _settings.SaveFileAndReturnPathAsync(passportphoto);
@@ -49,7 +48,8 @@ namespace Infrastructure.Services.Tenant
             //check if property exists
             var property = await _context.LandLordProperties
                 .Include(p => p.Owner)
-                .FirstOrDefaultAsync(p => p.Id == tenantDto.PropertyId);
+                .FirstOrDefaultAsync(p => p.Id == tenantDto.PropertyId)
+                ?? throw new ArgumentException("Property not found.");
             //map dto to entity
             var tenant = new PropertyTenant
             {
@@ -102,26 +102,21 @@ namespace Infrastructure.Services.Tenant
 
         public async Task<PropertyTenant> GetTenantByIdAsync(int id)
         {
-            var tenant = await _context.Tenants
+            return await _context.Tenants
                 .Include(t => t.Property)
                   .ThenInclude(p => p.Owner)
-                .FirstOrDefaultAsync(t => t.Id == id);
-            if (tenant == null)
-                throw new Exception("Tenant not found.");
-            return tenant;
+                .FirstOrDefaultAsync(t => t.Id == id)
+                ?? throw new KeyNotFoundException("Tenant not found.");
         }
 
         public async Task UpdateTenantAsync(IFormFile passportphoto, IFormFile idfront, IFormFile idback, TenantDto tenant,int tenantid)
         {
-            if (tenant == null)
-                throw new Exception("Tenant data is required.");
+            ArgumentNullException.ThrowIfNull(tenant);
 
             //check if tenant exists
             var existingTenant = await _context.Tenants
-                .FirstOrDefaultAsync(t => t.Id == tenantid);
-
-            if (existingTenant == null)
-                throw new Exception("Tenant not found.");
+                .FirstOrDefaultAsync(t => t.Id == tenantid)
+                ?? throw new KeyNotFoundException("Tenant not found.");
 
             if (passportphoto != null)
             {
@@ -157,10 +152,18 @@ namespace Infrastructure.Services.Tenant
         public async Task DeleteTenantAsync(int id)
         {
             var tenant = await _context.Tenants
-                .FirstOrDefaultAsync(t => t.Id == id);
-            if (tenant == null)
-                throw new Exception("Tenant not found.");
+                .FirstOrDefaultAsync(t => t.Id == id)
+                ?? throw new KeyNotFoundException("Tenant not found.");
             _context.Tenants.Remove(tenant);
+
+            // Remove the login account that was created alongside this tenant.
+            if (tenant.UserId.HasValue)
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == tenant.UserId.Value);
+                if (user != null)
+                    _context.Users.Remove(user);
+            }
+
             await _context.SaveChangesAsync();
         }
 

@@ -50,6 +50,24 @@ namespace API.Controllers.Payments
             }
         }
 
+        /// <summary>Lists tenant payments with server-side pagination, filtering and search.</summary>
+        [HttpGet("/GetPayments")]
+        [Authorize]
+        public async Task<IActionResult> GetPayments(CancellationToken ct,
+            [FromQuery] int? landlordId = null, [FromQuery] string? search = null,
+            [FromQuery] string? status = null, [FromQuery] string? method = null,
+            [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                return Ok(await _paymentService.GetPaymentsAsync(landlordId, search, status, method, page, pageSize, ct));
+            }
+            catch (Exception ex)
+            {
+                return HandleError(ex);
+            }
+        }
+
         [HttpGet("/GetPaymentById/{id}")]
         [Authorize]
         public async Task<IActionResult> GetPaymentById(int id)
@@ -407,5 +425,13 @@ namespace API.Controllers.Payments
                 return BadRequest(new { error = $"Error updating payment status: {ex.Message}" });
             }
         }
+
+        private IActionResult HandleError(Exception ex) => ex switch
+        {
+            ArgumentException or ArgumentNullException => BadRequest(new { message = ex.Message }),
+            KeyNotFoundException => NotFound(new { message = ex.Message }),
+            InvalidOperationException => BadRequest(new { message = ex.Message }),
+            _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = "An unexpected error occurred." })
+        };
     }
 }

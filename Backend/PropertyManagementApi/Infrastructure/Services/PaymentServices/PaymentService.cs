@@ -71,8 +71,8 @@ namespace Infrastructure.Services.PaymentServices
             await _context.TenantPayments.AddAsync(payment);
 
             // 5) Apply funds: first to Arrears, then to this period
-            double rent = tenant.Property!.Price;
-            double remaining = tenantPaymentDto.Amount;
+            decimal rent = tenant.Property!.Price;
+            decimal remaining = tenantPaymentDto.Amount;
 
             // 5a) Arrears
             if (tenant.Arrears > 0 && remaining > 0)
@@ -80,12 +80,12 @@ namespace Infrastructure.Services.PaymentServices
                 if (remaining >= tenant.Arrears)
                 {
                     remaining -= tenant.Arrears;
-                    tenant.Arrears = 0;
+                    tenant.Arrears = 0m;
                 }
                 else
                 {
                     tenant.Arrears -= remaining;
-                    remaining = 0;
+                    remaining = 0m;
                 }
             }
 
@@ -97,7 +97,7 @@ namespace Infrastructure.Services.PaymentServices
             }
 
             // 5c) Current period balance
-            double owedThisPeriod = tenant.BalanceDue > 0
+            decimal owedThisPeriod = tenant.BalanceDue > 0
                                    ? tenant.BalanceDue
                                    : rent;
 
@@ -109,14 +109,14 @@ namespace Infrastructure.Services.PaymentServices
             else
             {
                 // Full coverage + maybe extras
-                double extra = remaining - owedThisPeriod;
+                decimal extra = remaining - owedThisPeriod;
                 int fullMonths = 1 + (int)(extra / rent);
 
                 // Advance the due date
                 tenant.NextPaymentDate = tenant.NextPaymentDate.AddMonths(fullMonths);
 
                 // Leftover for next period
-                double leftover = extra % rent;
+                decimal leftover = extra % rent;
                 tenant.BalanceDue = rent - leftover;
             }
 
@@ -165,7 +165,7 @@ namespace Infrastructure.Services.PaymentServices
             if (monthsMissed <= 0)
                 return;
 
-            double rent = tenant.Property!.Price;
+            decimal rent = tenant.Property!.Price;
 
             tenant.Arrears += monthsMissed * rent;
             tenant.NextPaymentDate = tenant.NextPaymentDate.AddMonths(monthsMissed);
@@ -188,6 +188,50 @@ namespace Infrastructure.Services.PaymentServices
                     .ThenInclude(pt => pt.Property)
                         .ThenInclude(p => p.Owner)
                 .ToListAsync();
+        }
+
+        public async Task<TenantPaymentPage> GetPaymentsAsync(int? landlordId, string? search, string? status, string? method, int page, int pageSize, CancellationToken ct)
+        {
+            if (page < 1 || page > 100000 || pageSize < 1 || pageSize > 100 ||
+                search?.Length > 128 || status?.Length > 32 || method?.Length > 32)
+                throw new ArgumentException("Invalid search, filter or pagination.");
+
+            var query = _context.TenantPayments.AsNoTracking()
+                .Include(tp => tp.PropertyTenant)
+                    .ThenInclude(pt => pt.Property)
+                        .ThenInclude(p => p.Owner)
+                .AsQueryable();
+
+            if (landlordId.HasValue)
+                query = query.Where(tp => tp.PropertyTenant.Property.OwnerId == landlordId.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var value = search.Trim();
+                query = query.Where(tp => tp.TransactionId.Contains(value) ||
+                                          (tp.Description != null && tp.Description.Contains(value)) ||
+                                          tp.PropertyTenant.FullName.Contains(value) ||
+                                          tp.PropertyTenant.Property.Name.Contains(value));
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(tp => tp.PaymentStatus == status.Trim().ToUpperInvariant());
+
+            if (!string.IsNullOrWhiteSpace(method))
+                query = query.Where(tp => tp.PaymentMethod == method.Trim());
+
+            var rows = await query.OrderByDescending(tp => tp.PaymentDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize + 1)
+                .ToListAsync(ct);
+
+            return new TenantPaymentPage
+            {
+                Items = rows.Take(pageSize).ToList(),
+                Page = page,
+                PageSize = pageSize,
+                HasMore = rows.Count > pageSize
+            };
         }
 
         public async Task<TenantPayment> GetPaymentByIdAsync(int id)

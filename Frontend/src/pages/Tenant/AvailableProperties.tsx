@@ -10,6 +10,7 @@ import {
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
 import { Property } from '@/types/property';
+import { api } from '@/lib/api';
 import PropertyCard from '@/components/property/PropertyCard';
 import PropertyDetailModal from '@/components/property/PropertyDetailModal';
 import PropertyFilters from '@/components/property/PropertyFilters';
@@ -31,87 +32,26 @@ const AvailableProperties = () => {
   const formatCurrency = useCurrencyFormatter();
 
   useEffect(() => {
-    // Simulate API call to fetch properties
-    setTimeout(() => {
-      const mockProperties: Property[] = [
-        {
-          id: 'prop1',
-          name: 'Luxury Apartment in Kololo',
-          address: '15 Acacia Avenue, Kololo, Kampala',
-          type: 'Apartment',
-          bedrooms: 2,
-          bathrooms: 2,
-          area: 120,
-          rentAmount: 1200000,
-          images: [
-            'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGhvdXNlfGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8aG91c2UlMjBpbnRlcmlvcnxlbnwwfHwwfHx8MA%3D%3D',
-            'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8MHx8fDA%3D'
-          ],
-          amenities: ['Gym', 'Swimming Pool', 'Security', 'Parking', 'Balcony'],
-          status: 'available',
-          landlord: 'John Doe'
-        },
-        {
-          id: 'prop2',
-          name: 'Garden View Villa in Muyenga',
-          address: '78 Tank Hill Road, Muyenga, Kampala',
-          type: 'House',
-          bedrooms: 4,
-          bathrooms: 3,
-          area: 250,
-          rentAmount: 2500000,
-          images: [
-            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8aG91c2V8ZW58MHx8MHx8fDA%3D',
-            'https://images.unsplash.com/photo-1589834390005-5d4fb9bf3d32?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8MHx8fDA%3D',
-            'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGhvdXNlJTIwaW50ZXJpb3J8ZW58MHx8MHx8fDA%3D'
-          ],
-          amenities: ['Garden', 'Security', 'Parking', 'Servants Quarter', 'Water Tank'],
-          status: 'available',
-          landlord: 'Sarah Smith'
-        },
-        {
-          id: 'prop3',
-          name: 'Modern Apartment in Bugolobi',
-          address: '45 Luthuli Avenue, Bugolobi, Kampala',
-          type: 'Apartment',
-          bedrooms: 3,
-          bathrooms: 2,
-          area: 160,
-          rentAmount: 1800000,
-          images: [
-            'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YXBhcnRtZW50fGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1588854337116-d1feb5189d54?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8YXBhcnRtZW50fGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fGFwYXJ0bWVudHxlbnwwfHwwfHx8MA%3D%3D'
-          ],
-          amenities: ['Security', 'Parking', 'Internet', 'Water Tank', 'Generator'],
-          status: 'available',
-          landlord: 'Michael Johnson'
-        },
-        {
-          id: 'prop4',
-          name: 'Cozy Studio in Ntinda',
-          address: '12 Ntinda Road, Ntinda, Kampala',
-          type: 'Studio',
-          bedrooms: 1,
-          bathrooms: 1,
-          area: 75,
-          rentAmount: 800000,
-          images: [
-            'https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGFwYXJ0bWVudHxlbnwwfHwwfHx8MA%3D%3D',
-            'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YXBhcnRtZW50fGVufDB8fDB8fHww',
-            'https://images.unsplash.com/photo-1489171078254-c3365d6e359f?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGFwYXJ0bWVudHxlbnwwfHwwfHx8MA%3D%3D'
-          ],
-          amenities: ['Security', 'Parking', 'Furnished', 'Internet'],
-          status: 'available',
-          landlord: 'Emma Davis'
-        },
-      ];
-      
-      setProperties(mockProperties);
-      setFilteredProperties(mockProperties);
-      setIsLoading(false);
-    }, 1000);
+    const controller = new AbortController();
+    setIsLoading(true);
+    api
+      .get<Property[]>('/GetAllProperties', { signal: controller.signal })
+      .then(({ data }) => {
+        if (!controller.signal.aborted) {
+          setProperties(data);
+          setFilteredProperties(data);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setProperties([]);
+          setFilteredProperties([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -120,10 +60,11 @@ const AvailableProperties = () => {
     
     // Apply search
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       result = result.filter(property => 
-        property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        property.type.toLowerCase().includes(searchTerm.toLowerCase())
+        (property.name?.toLowerCase().includes(term) ?? false) ||
+        (property.address?.toLowerCase().includes(term) ?? false) ||
+        (property.type?.toLowerCase().includes(term) ?? false)
       );
     }
     
@@ -132,14 +73,14 @@ const AvailableProperties = () => {
       result = result.filter(property => property.type === filters.propertyType);
     }
     
-    // Apply minimum bedrooms filter
+    // Apply minimum rooms filter
     if (filters.minBedrooms) {
-      result = result.filter(property => property.bedrooms >= parseInt(filters.minBedrooms));
+      result = result.filter(property => property.numberOfRooms >= parseInt(filters.minBedrooms));
     }
     
     // Apply maximum price filter
     if (filters.maxPrice) {
-      result = result.filter(property => property.rentAmount <= parseInt(filters.maxPrice));
+      result = result.filter(property => property.price <= parseInt(filters.maxPrice));
     }
     
     setFilteredProperties(result);
@@ -188,7 +129,7 @@ const AvailableProperties = () => {
       <Card className="data-surface border-none shadow-none">
         <CardHeader>
           <CardTitle>Property catalogue</CardTitle>
-          <CardDescription>Filter by type, bedroom count, or rent budget to narrow the search.</CardDescription>
+          <CardDescription>Filter by type, room count, or rent budget to narrow the search.</CardDescription>
         </CardHeader>
         <CardContent>
           <PropertyFilters 

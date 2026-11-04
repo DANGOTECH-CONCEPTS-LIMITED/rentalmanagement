@@ -18,7 +18,7 @@ namespace Domain.Dtos.Property
         public int NumberOfRooms { get; set; } = 0;
         public string? Description { get; set; } = string.Empty;
         public bool Occupied { get; set; } = false;
-        public double Price { get; set; }
+        public decimal Price { get; set; }
         public int OwnerId { get; set; }
         public string Currency { get; set; } = string.Empty;
     }

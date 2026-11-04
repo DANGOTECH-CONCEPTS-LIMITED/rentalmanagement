@@ -541,7 +541,7 @@ const ManageUsers = () => {
       )
       .then((response) => {
         const userData = response.data;
-        console.log("user", userData);
+        
         setEditFormData({
           id: userData.id,
           fullName: userData.fullName,
@@ -840,8 +840,8 @@ const ManageUsers = () => {
         );
 
         const files = [];
-        console.log("editFormData", editFormData);
-        console.log("previewUrls", previewUrls);
+        
+        
         if (editFormData.PassportPhoto) {
           files.push({
             file: editFormData.PassportPhoto,

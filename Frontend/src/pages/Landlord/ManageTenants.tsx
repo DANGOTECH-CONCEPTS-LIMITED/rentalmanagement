@@ -548,7 +548,7 @@ const ManageTenants = () => {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              console.log("edit tenant", tenant);
+                              
                               setFormData({
                                 id: tenant.id,
                                 FullName: tenant.fullName,

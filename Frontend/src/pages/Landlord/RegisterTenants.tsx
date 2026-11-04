@@ -261,11 +261,11 @@ const RegisterTenants = () => {
       if (contentType && contentType.includes("application/json")) {
         // If it's JSON, parse it as JSON
         responseData = await response.json();
-        console.log("Success response (JSON):", responseData);
+        
       } else {
         // If it's not JSON, get it as text
         responseData = await response.text();
-        console.log("Success response (text):", responseData);
+        
       }
 
       setIsSubmitting(false);

@@ -280,13 +280,13 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
+                    b.Property<DateTime>("LeaseUntilUtc")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("OwnerId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
-
-                    b.Property<DateTime>("LeaseUntilUtc")
-                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Name");
 
@@ -669,8 +669,8 @@ namespace Infrastructure.Migrations
                     b.Property<int>("OwnerId")
                         .HasColumnType("int");
 
-                    b.Property<double>("Price")
-                        .HasColumnType("double");
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("Region")
                         .HasColumnType("longtext");
@@ -1008,11 +1008,11 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<double>("Arrears")
-                        .HasColumnType("double");
+                    b.Property<decimal>("Arrears")
+                        .HasColumnType("decimal(65,30)");
 
-                    b.Property<double>("BalanceDue")
-                        .HasColumnType("double");
+                    b.Property<decimal>("BalanceDue")
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<DateTime?>("DateMovedIn")
                         .HasColumnType("datetime(6)");
@@ -1131,8 +1131,8 @@ namespace Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<double>("Amount")
-                        .HasColumnType("double");
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("ClientReference")
                         .HasMaxLength(128)

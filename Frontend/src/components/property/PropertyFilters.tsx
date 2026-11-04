@@ -54,7 +54,7 @@ const PropertyFilters = ({
         <Input
           name="minBedrooms"
           type="number"
-          placeholder="Min Bedrooms"
+          placeholder="Min Rooms"
           value={filters.minBedrooms}
           onChange={onFilterChange}
           className="w-32"

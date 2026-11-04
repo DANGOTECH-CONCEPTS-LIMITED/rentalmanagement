@@ -63,7 +63,7 @@ const [transactionId, setTransactionId] = useState('');
 const [description, setDescription] = useState('');
 
 
-  console.log("tenantData", tenantData);
+  
 
 
 
@@ -94,7 +94,7 @@ const [description, setDescription] = useState('');
   if (!user) throw new Error('No user found in localStorage');
 
   const userData = JSON.parse(user);
-  console.log('userData', userData);
+  
   const token = userData.token;
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 

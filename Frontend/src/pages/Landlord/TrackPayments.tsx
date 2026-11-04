@@ -1,5 +1,6 @@
 import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useState, useEffect } from "react";
+import { api, getUser } from "@/lib/api";
 import {
   CircleDollarSign,
   Calendar,
@@ -75,61 +76,33 @@ const TrackPayments = () => {
   const [sortField, setSortField] = useState("paymentDate");
   const [sortDirection, setSortDirection] = useState("desc");
 
-  console.log("Payments:", payments);
-
-  const user = localStorage.getItem("user");
-  const userData = JSON.parse(user);
-  const getAuthToken = () => {
-    try {
-      if (!user) {
-        console.error("No user found in localStorage");
-        return null;
-      }
-
-      return userData.token;
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      return null;
-    }
-  };
-
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const userData = getUser();
+  const landlordId = userData?.id ?? null;
 
   useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/GetAllPayments`, {
-          headers: {
-            Authorization: `Bearer ${getAuthToken()}`,
-            accept: "*/*",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch payments");
-        }
-
-        const data = await response.json();
-        const filteredData = data.filter(
-          (payment: any) =>
-            payment.propertyTenant.property.ownerId === userData.id
-        );
-        setPayments(filteredData);
-      } catch (error) {
-        console.error("Error fetching payments:", error);
+    const controller = new AbortController();
+    setLoading(true);
+    api
+      .get<{ items: Payment[] }>("/GetPayments", {
+        params: { landlordId, page: 1, pageSize: 100 },
+        signal: controller.signal,
+      })
+      .then(({ data }) => {
+        if (!controller.signal.aborted) setPayments(data.items ?? []);
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
         toast({
           title: "Error",
-          description:
-            error.status === 401 ? error.statusText : error.response.data,
+          description: error?.message ?? "Failed to load payments",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPayments();
-  }, [apiUrl, toast]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [landlordId, toast]);
 
   const generateReceipt = (payment: Payment) => {
     const receiptHTML = `

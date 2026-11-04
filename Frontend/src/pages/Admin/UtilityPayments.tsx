@@ -75,7 +75,7 @@ const UtilityPayments = () => {
     return filteredPayments.slice(start, start + rowsPerPage);
   }, [filteredPayments, currentPage]);
 
-  console.log("Payments", payments);
+  
 
   useEffect(() => {
     if (!landlordId) return;
@@ -133,7 +133,7 @@ const UtilityPayments = () => {
         utilitypaymentdate: editVendorPaymentDate || "",
       });
       const url = `${apiUrl}/UpdateUtilityPaymentWithVendorId?${params.toString()}`;
-      console.log("Sending update (query params):", url);
+      
       const res = await fetch(url, {
         method: "PUT",
         headers: {

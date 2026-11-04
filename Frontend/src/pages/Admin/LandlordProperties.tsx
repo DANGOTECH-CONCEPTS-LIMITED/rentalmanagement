@@ -147,7 +147,7 @@ const LandlordProperties = () => {
       }
 
       const data = await response.json();
-      console.log("Properties data:", data);
+      
       setProperties(data);
       setError(null); // Clear any previous errors
     } catch (err) {
@@ -304,7 +304,7 @@ const LandlordProperties = () => {
         },
         body: formDataToSend,
       });
-      console.log("response", response);
+      
       if (!response.ok) {
         throw new Error("Failed to update property");
       }
@@ -386,10 +386,7 @@ const LandlordProperties = () => {
       return { ...prev, [name]: value };
     });
   };
-  console.log(
-    "url",
-    `${selectedProperty?.imageUrl.split(/[/\\]/).pop() || ""}`
-  );
+
   return (
     <div className="space-y-6">
       <section className="page-hero">

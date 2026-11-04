@@ -29,7 +29,7 @@ namespace API.Controllers.Property
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error retrieving properties: {ex.Message}");
+                return HandleError(ex);
             }
         }
 
@@ -44,7 +44,7 @@ namespace API.Controllers.Property
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error retrieving property: {ex.Message}");
+                return HandleError(ex);
             }
         }
 
@@ -59,7 +59,7 @@ namespace API.Controllers.Property
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error retrieving properties: {ex.Message}");
+                return HandleError(ex);
             }
         }
 
@@ -67,6 +67,10 @@ namespace API.Controllers.Property
         [Authorize]
         public async Task<IActionResult> AddProperty([FromForm]List<IFormFile> files, [FromForm] PropertyDto property)
         {
+            if (property == null)
+                return BadRequest(new { message = "Property data is required." });
+            if (files == null || files.Count == 0)
+                return BadRequest(new { message = "A property image is required." });
             try
             {
                 await _landlordPropertyService.AddPropertyAsync(files[0], property);
@@ -74,7 +78,7 @@ namespace API.Controllers.Property
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error adding property: {ex.Message}");
+                return HandleError(ex);
             }
         }
 
@@ -82,14 +86,17 @@ namespace API.Controllers.Property
         [Authorize]
         public async Task<IActionResult> UpdateProperty([FromForm] List<IFormFile> files, [FromForm] LandLordProperty property)
         {
+            if (property == null)
+                return BadRequest(new { message = "Property data is required." });
             try
             {
-                await _landlordPropertyService.UpdatePropertyAsync(files[0], property);
+                var image = files is { Count: > 0 } ? files[0] : null;
+                await _landlordPropertyService.UpdatePropertyAsync(image, property);
                 return Ok("Property updated successfully.");
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error updating property: {ex.Message}");
+                return HandleError(ex);
             }
         }
 
@@ -104,7 +111,7 @@ namespace API.Controllers.Property
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error deleting property: {ex.Message}");
+                return HandleError(ex);
             }
         }
 
@@ -119,9 +126,17 @@ namespace API.Controllers.Property
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error retrieving properties: {ex.Message}");
+                return HandleError(ex);
             }
         }
+
+        private IActionResult HandleError(Exception ex) => ex switch
+        {
+            ArgumentException or ArgumentNullException => BadRequest(new { message = ex.Message }),
+            KeyNotFoundException => NotFound(new { message = ex.Message }),
+            InvalidOperationException => BadRequest(new { message = ex.Message }),
+            _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = "An unexpected error occurred." })
+        };
     }
 
 }

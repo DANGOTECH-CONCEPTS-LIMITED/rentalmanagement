@@ -1,4 +1,196 @@
-RENTAL MANAGEMENT APP
+# Rental Management System (Nyumba Yo / DangoPay)
+
+A full-stack property and rent management platform for landlords, tenants, and utility operators, with integrated mobile-money and bank payments, wallet payouts, NWSC water-bill payments, SMS notifications, and administrator tooling.
+
+- **Frontend:** React + Vite + TypeScript + shadcn/ui (see `Frontend/`)
+- **Backend:** ASP.NET Core Web API on .NET 9 (see `Backend/PropertyManagementApi/`)
+- **Database:** MySQL via EF Core + Pomelo (migrations auto-apply on startup)
+- **Payments:** Collecto (FlexiPay) and Dango Payment API (Stanbic), with a provider router and background status workers
+
+---
+
+## 1. Architecture
+
+```mermaid
+flowchart TB
+  subgraph Browser["Browser (React SPA)"]
+    FE["Vite + React + TypeScript + shadcn/ui"]
+  end
+
+  subgraph API["ASP.NET Core Web API (.NET 9)"]
+    CTRL["Controllers (auth, property, tenant, payments, wallets, meters, admin)"]
+    SVC["Services (Application + Infrastructure layers)"]
+  end
+
+  subgraph BG["Background workers"]
+    W1["CheckPaymentStatusProcessor"]
+    W2["BillPaymentProcessor"]
+    W3["PendingWalletWithdrawsProcessor"]
+  end
+
+  DB[("MySQL<br/>EF Core + Pomelo")]
+  COLLECTO["Collecto / FlexiPay"]
+  DANGO["Dango Payment API (Stanbic)"]
+  SMS["AfricasTalking SMS"]
+
+  FE -->|"HTTPS JSON + JWT"| CTRL
+  CTRL --> SVC
+  SVC --> DB
+  SVC <--> COLLECTO
+  SVC <--> DANGO
+  BG --> DB
+  BG <--> COLLECTO
+  BG <--> DANGO
+  SVC --> SMS
+```
+
+- The frontend is a single-page app that talks to the API with a JWT bearer token (attached automatically by the shared `axios` client in `src/lib/api.ts`).
+- The API follows a layered structure: `API` (controllers) → `Application` (interfaces) → `Infrastructure` (services, EF Core, payment adapters) → `Domain` (entities + DTOs).
+- Financial operations are idempotent: references are durably claimed before any network call, and background workers reconcile settlement by polling the provider rather than trusting submission responses.
+
+## 2. Roles
+
+| Role | Purpose |
+| --- | --- |
+| **Administrator** (1) | Register landlords, manage users and properties, global payments/wallets, utility & bill-payment administration, audit/logs |
+| **Landlord** (2) | Own properties, register/manage tenants, track rent, utility reports, complaints, wallet & payouts |
+| **Tenant** (3) | Browse properties, view their property, pay rent, payment history, submit complaints |
+| **Utility Payment** (4) | Operate a utility wallet: register meters, collect payments, generate tokens, liens and monthly fees |
+
+Each tenant and landlord is both a domain record and a login account (`User`). Tenant registration creates the `User` account automatically.
+
+## 3. Core workflows
+
+1. **Onboarding** — an administrator registers a landlord (a `User` with the Landlord role). Properties (`LandLordProperty`) are created with name, type, address, number of rooms, price, currency and an image.
+2. **Tenant onboarding** — the landlord registers tenants (`PropertyTenant`) with KYC documents (passport photo + national ID front/back). A matching Tenant login account is created automatically.
+3. **Rent payments** — tenants pay via card, mobile money, bank or cash. Each payment is a `TenantPayment`; arrears and balance-due are tracked, and the landlord's wallet is credited once per payment.
+4. **Payouts** — landlords withdraw wallet balances; mobile and bank payouts go through Collecto/Dango, are polled to settlement, and are reversed automatically on terminal failure.
+5. **Utilities** — utility operators collect meter/water payments (`UtilityPayment`), generate STS tokens, and apply monthly meter fees and liens before token vending.
+6. **NWSC bill payments** — meter collections with a real NWSC account queue automatic bill payments (Dango biller) that debit the utility wallet only on confirmed success.
+7. **Reconciliation** — administrators reconcile exceptions (bill payments, not-found payouts, wallet reconciliation) and monitor HTTP/audit/service logs.
+
+## 4. Feature catalogue
+
+**Authentication & users** — login, password reset, verified/change-password flow, role-based route protection, user management (admin).
+
+**Property management** — register/update/delete properties with image upload; landlord property lists; tenant "available properties" catalogue with search and filters.
+
+**Tenant management** — KYC-backed registration (exactly 3 documents), edit, delete (also removes the linked login account), and per-property tenant lists.
+
+**Rent & payments** — `MakeTenantPayment` with arrears/balance tracking, payment history, receipt generation (HTML), and CSV export; admin transaction status updates.
+
+**Wallets & payouts** — per-landlord and utility wallets, statements, admin debit/transfer, withdrawals to mobile money or bank, status polling, automatic reversal on terminal failure, wallet reconciliation view.
+
+**Utility meters & tokens** — meter registration (NWSC account, registered name, location, customer mobile), utility payments, STS token generation, meter search, monthly meter fees, and per-meter liens.
+
+**NWSC bill payments** — automatic bill-payment pipeline: queue on wallet credit, submit, poll status, debit wallet once on confirmed success (`PAID_UNDEBITED` on insufficient balance), with manual process/backfill/trigger/bulk-status tools.
+
+**SMS** — outbound SMS (AfricasTalking) for notifications.
+
+**Complaints & contracts** — tenants submit complaints, landlords handle them; rental contract generation (PDF).
+
+**Reports & exports** — general reports, utility statistics, monthly fees report, and dashboard exports (CSV / Excel / PDF).
+
+**Administration** — audit trail, HTTP request/response logs, service logs, payout and bill-payment reconciliation, payment provider settings, NWSC biller settings, and mobile-network routing rules.
+
+## 5. Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | Vite, React 18, TypeScript, shadcn/ui (Radix), Tailwind CSS, React Router v6, React Hook Form + Zod, framer-motion, Recharts, jsPDF/jspdf-autotable, ExcelJS, axios |
+| Backend | ASP.NET Core Web API (.NET 9), EF Core 8 + Pomelo MySQL, hosted background services with distributed leases |
+| Payments | Collecto (FlexiPay) and Dango Payment API (`api/Stanbic/...` endpoints) behind a provider router |
+| Testing | Backend: xUnit (`dotnet test`). Frontend: Jest + ts-jest (`npm test`) |
+
+## 6. Repository layout
+
+```
+rentalmanagement/
+├── Frontend/                  # React SPA (this workspace)
+│   ├── src/
+│   │   ├── components/        # shared + feature components (property, ui, layout, auth)
+│   │   ├── pages/             # role-based pages (Admin, Landlord, Tenant, Utility, Dashboard)
+│   │   ├── lib/               # api client, exports, wallet statement, date utils
+│   │   ├── context/           # AuthContext
+│   │   └── hooks/             # toast, currency formatter, mobile
+│   ├── package.json
+│   └── vite.config.ts
+└── Backend/
+    └── PropertyManagementApi/
+        ├── API/               # controllers (Auth, Property, Tenant, Payments, Wallet, Meter, Admin, ...)
+        ├── Application/       # service interfaces
+        ├── Domain/            # entities, DTOs
+        ├── Infrastructure/    # EF Core DbContext, migrations, services, payment adapters, background workers
+        └── Tests/             # xUnit test suite
+```
+
+## 7. Running locally
+
+**Backend**
+
+```bash
+cd Backend/PropertyManagementApi
+dotnet run --project API
+```
+
+Configure `appsettings.Development.json` (or environment variables) with the MySQL connection string and the payment-provider settings documented in the operational notes below. Migrations apply automatically on startup.
+
+**Frontend**
+
+```bash
+cd Frontend
+npm install        # or: bun install
+npm run dev        # Vite dev server
+```
+
+Set the API base URL in `Frontend/.env`:
+
+```
+VITE_API_BASE_URL=http://localhost:5030
+```
+
+**Tests**
+
+```bash
+# Backend
+cd Backend/PropertyManagementApi
+dotnet test
+
+# Frontend
+cd Frontend
+npm test
+```
+
+Demo accounts: `admin@example.com` (Admin), `landlord@example.com` (Landlord), `tenant@example.com` (Tenant).
+
+## 8. Key API endpoints
+
+| Area | Endpoints |
+| --- | --- |
+| Properties | `GET /GetAllProperties`, `GET /GetPropertyById/{id}`, `GET /GetPropertiesByLandLordId/{id}`, `POST /AddProperty`, `PUT /UpdateProperty`, `DELETE /DeleteProperty/{id}` |
+| Tenants | `POST /CreateTenant`, `PUT /UpdateTenant`, `DELETE /DeleteTenant/{id}`, `GET /GetTenantById/{id}`, `GET /GetAllTenants` |
+| Rent payments | `POST /MakeTenantPayment`, `GET /GetAllPayments`, `GET /GetPayments` (paginated), `GET /GetPaymentById/{id}`, plus status/date/method/tenant filters |
+| Wallets | `GET /GetBalance/{landlordId}`, `GET /GetStatement/{landlordId}`, `GET /api/AdminWalletTransactions`, `POST /Withdraw`, `POST /AdminWithdrawUtilityWallet` |
+| Bill payments | `GET /api/AdminBillPayments`, `POST /api/AdminBillPayments/process`, `PUT .../status`, `POST .../backfill`, `POST .../trigger` |
+| Reconciliation | `GET /api/AdminPayoutReconciliation`, `GET .../reconciliation` |
+| Meters | meter CRUD, search, liens, fees, and STS token endpoints under `api/Meter` |
+
+## 9. Data model (core)
+
+- `User` — login accounts; `SystemRole` (Administrator, Landlord, Tenant, Utility Payment).
+- `LandLordProperty` — a property owned by a landlord (`OwnerId`).
+- `PropertyTenant` — a tenant linked to a property and optionally a `User` account.
+- `TenantPayment` — a rent payment linked to a tenant.
+- `Wallet` / `WalletTransaction` — per-owner balances and a full ledger.
+- `UtilityMeter` / `UtilityPayment` / `MeterToken` / `MeterFeeCharge` / `MeterLien` — utility metering, payments, tokens, fees and liens.
+- `BillPaymentInstruction`, `PaymentGatewaySubmission`, `PaymentProviderSetting`, `BackgroundJobLock` — bill payments, durable submission claims, provider routing and worker leases.
+- `Complaint`, `AuditTrailEntry`, `HttpRequestResponse`, `ServiceLogs` — complaints, audit, and observability.
+
+---
+
+## Detailed operational notes
+
+The sections below document the behaviour of specific subsystems (payment providers, bill payments, wallet credits, liens, and deployment). Treat them as the authoritative reference for those features.
 
 ## Payment provider fallback
 

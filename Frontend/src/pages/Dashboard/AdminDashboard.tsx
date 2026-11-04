@@ -519,7 +519,7 @@ const AdminDashboard = () => {
         <Button
           onClick={(e) => {
             e.preventDefault();
-            fetchBalance("Wallet");
+            fetchBalance("WALLET");
           }}
           disabled={balanceLoading}
           variant={balanceType === "WALLET" ? "primary" : "outline"}

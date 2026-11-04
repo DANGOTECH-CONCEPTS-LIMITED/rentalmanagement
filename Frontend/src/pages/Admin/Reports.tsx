@@ -61,8 +61,8 @@ const Reports = () => {
         </div>
 
         <div className="flex items-center gap-4 sm:gap-6">
-          <Select value={timeframe} onValueChange={setTimeframe} className="w-full sm:w-[180px]">
-            <SelectTrigger>
+          <Select value={timeframe} onValueChange={setTimeframe}>
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Timeframe" />
             </SelectTrigger>
             <SelectContent>

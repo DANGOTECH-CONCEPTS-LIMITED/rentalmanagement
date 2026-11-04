@@ -53,6 +53,7 @@ const meterSchema = z.object({
   locationOfNwscMeter: z.string().min(1, { message: 'Location of NWSC meter is required' }),
   utilityMeterLocation: z.string().min(1, { message: 'Utility meter location is required' }),
   customerMobile: z.string().min(1, { message: 'Customer mobile is required' }),
+  landLordId: z.string().optional(),
 });
 
 interface UtilityMeter {

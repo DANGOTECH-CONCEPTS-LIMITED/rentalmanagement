@@ -1,5 +1,5 @@
-import { Property } from "@/pages/Landlord/RegisterTenants";
-import { Bed, Bath, Square, MapPin } from "lucide-react";
+import { Property } from "@/types/property";
+import { BedDouble, MapPin, Home } from "lucide-react";
 
 interface PropertyCardProps {
   property: Property;
@@ -17,14 +17,20 @@ const PropertyCard = ({
       className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
       onClick={onClick}
     >
-      <div className="relative h-52">
-        <img
-          src={property.images[0]}
-          alt={property.name}
-          className="w-full h-full object-cover"
-        />
+      <div className="relative h-52 bg-muted">
+        {property.imageUrl ? (
+          <img
+            src={property.imageUrl}
+            alt={property.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <Home size={32} />
+          </div>
+        )}
         <div className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded">
-          {formatCurrency(property.rentAmount)}
+          {formatCurrency(property.price)}
         </div>
       </div>
 
@@ -32,24 +38,15 @@ const PropertyCard = ({
         <h3 className="font-semibold text-lg truncate">{property.name}</h3>
         <p className="text-muted-foreground text-sm flex items-center mt-1">
           <MapPin size={14} className="mr-1 flex-shrink-0" />
-          <span className="truncate">{property.address}</span>
+          <span className="truncate">{property.address ?? property.district ?? property.region ?? "-"}</span>
         </p>
 
-        <div className="flex justify-between mt-3">
-          <div className="flex items-center text-sm">
-            <Bed size={14} className="mr-1" />
-            {property.bedrooms} {property.bedrooms === 1 ? "Bed" : "Beds"}
+        <div className="flex justify-between mt-3 text-sm">
+          <div className="flex items-center">
+            <BedDouble size={14} className="mr-1" />
+            {property.numberOfRooms} {property.numberOfRooms === 1 ? "Room" : "Rooms"}
           </div>
-
-          <div className="flex items-center text-sm">
-            <Bath size={14} className="mr-1" />
-            {property.bathrooms} {property.bathrooms === 1 ? "Bath" : "Baths"}
-          </div>
-
-          <div className="flex items-center text-sm">
-            <Square size={14} className="mr-1" />
-            {property.area} m²
-          </div>
+          <div className="text-muted-foreground">{property.type ?? "Property"}</div>
         </div>
       </div>
     </div>

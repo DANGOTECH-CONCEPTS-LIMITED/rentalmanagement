@@ -316,7 +316,7 @@ const Properties = () => {
       }
 
       const data = await response.json();
-      console.log("Properties data:", data);
+      
       setProperties(data);
       setError(null); // Clear any previous errors
     } catch (err) {
@@ -498,7 +498,7 @@ const Properties = () => {
       });
 
       for (let [key, value] of formDataToSend.entries()) {
-        console.log(`${key}:`, value);
+        
       }
 
       const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -623,7 +623,7 @@ const Properties = () => {
         },
         body: formDataToSend,
       });
-      console.log("response", response);
+      
       if (!response.ok) {
         throw new Error("Failed to update property");
       }

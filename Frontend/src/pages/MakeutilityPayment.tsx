@@ -186,7 +186,7 @@ const MakeUtilityPayment = () => {
     try {
       const response = await axios.get(`${apiUrl}/GetUtilityPaymentByMeterNumber/${meterNumber}`);
       setPayments(response.data);
-      console.log(response.data);
+      
     } catch (error) {
       toast({
         variant: 'destructive',

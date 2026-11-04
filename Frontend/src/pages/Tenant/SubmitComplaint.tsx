@@ -82,7 +82,7 @@ const ComplaintsTable = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = (e: { target: { files: FileList | null } }) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
 

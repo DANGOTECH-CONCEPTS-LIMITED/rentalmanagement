@@ -53,7 +53,7 @@ const TenantDashboard = () => {
 
       setTenant(data);
 
-      console.log("tenant", data);
+      
     } catch (error) {
       toast({
         title: "Error",

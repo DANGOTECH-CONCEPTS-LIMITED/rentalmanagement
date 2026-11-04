@@ -26,26 +26,21 @@ namespace Infrastructure.Services.Property
 
         public async Task AddPropertyAsync(IFormFile image, PropertyDto property)
         {
-            if (property == null)
-                throw new Exception(nameof(property));
+            ArgumentNullException.ThrowIfNull(property);
 
             // Get the role for "Landlord"
             var landlordRole = await _context.SystemRoles
-                .FirstOrDefaultAsync(r => r.Name == "Landlord");
-
-            if (landlordRole == null)
-                throw new Exception("Landlord role not found.");
+                .FirstOrDefaultAsync(r => r.Name == "Landlord")
+                ?? throw new InvalidOperationException("Landlord role not found.");
 
             // Check if the owner exists and holds the Landlord role
             var existingOwner = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == property.OwnerId && u.SystemRoleId == landlordRole.Id);
-
-            if (existingOwner == null)
-                throw new Exception("Owner with Landlord role not found.");
+                .FirstOrDefaultAsync(u => u.Id == property.OwnerId && u.SystemRoleId == landlordRole.Id)
+                ?? throw new ArgumentException("Owner with Landlord role not found.");
 
             // Check if the image is not null
             if (image == null)
-                throw new Exception("Image is required.");
+                throw new ArgumentException("Image is required.");
 
             // Save the image to the server and get the URL
             var imageUrl = await _fileService.SaveFileAndReturnPathAsync(image);
@@ -75,74 +70,52 @@ namespace Infrastructure.Services.Property
         {
             var property = await _context.LandLordProperties
                 .Include(p => p.Owner)
-                .FirstOrDefaultAsync(p => p.Id == id);
-            if (property == null)
-                throw new Exception("Property not found.");
+                .FirstOrDefaultAsync(p => p.Id == id)
+                ?? throw new KeyNotFoundException("Property not found.");
             return property;
         }
 
         public async Task<IEnumerable<LandLordProperty>> GetPropertiesByLandLordIdAsync(int landlordId)
         {
-            var properties = await _context.LandLordProperties
+            return await _context.LandLordProperties
                 .Where(p => p.OwnerId == landlordId)
                 .Include(p => p.Owner)
                 .ToListAsync();
-
-            if (!properties.Any())
-                throw new Exception("No properties found for this landlord.");
-
-            return properties;
         }
 
         public async Task<IEnumerable<LandLordProperty>> GetAllPropertiesAsync()
         {
-            var properties = await _context.LandLordProperties
+            return await _context.LandLordProperties
                 .Include(p => p.Owner)
                 .ToListAsync();
-            if (!properties.Any())
-                throw new Exception("No properties found.");
-            return properties;
         }
 
         public async Task DeletePropertyAsync(int id)
         {
             var property = await _context.LandLordProperties
-                .FirstOrDefaultAsync(p => p.Id == id);
-            if (property == null)
-                throw new Exception("Property not found.");
+                .FirstOrDefaultAsync(p => p.Id == id)
+                ?? throw new KeyNotFoundException("Property not found.");
             _context.LandLordProperties.Remove(property);
             await _context.SaveChangesAsync();
         }
 
         public async Task UpdatePropertyAsync(IFormFile image, LandLordProperty property)
         {
-            if (property == null)
-                throw new Exception(nameof(property));
-
-            // Check if the image is not null
-            if (image != null) 
-            {
-                // Save the image to the server and get the URL
-                var imageUrl = await _fileService.SaveFileAndReturnPathAsync(image);
-                property.ImageUrl = imageUrl;
-            }
+            ArgumentNullException.ThrowIfNull(property);
 
             // Get the role for "Landlord"
             var landlordRole = await _context.SystemRoles
-                .FirstOrDefaultAsync(r => r.Name == "Landlord");
-            if (landlordRole == null)
-                throw new Exception("Landlord role not found.");
+                .FirstOrDefaultAsync(r => r.Name == "Landlord")
+                ?? throw new InvalidOperationException("Landlord role not found.");
 
             // Check if the owner exists and holds the Landlord role
             var existingOwner = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == property.OwnerId && u.SystemRoleId == landlordRole.Id);
-            if (existingOwner == null)
-                throw new Exception("Owner with Landlord role not found.");
+                .FirstOrDefaultAsync(u => u.Id == property.OwnerId && u.SystemRoleId == landlordRole.Id)
+                ?? throw new ArgumentException("Owner with Landlord role not found.");
             // Check if the property exists
             var existingProperty = await _context.LandLordProperties
-                .FirstOrDefaultAsync(p => p.Id == property.Id);
-            if (existingProperty == null)
-                throw new Exception("Property not found.");
+                .FirstOrDefaultAsync(p => p.Id == property.Id)
+                ?? throw new KeyNotFoundException("Property not found.");
 
             //check if the image is not null
             if (image != null)

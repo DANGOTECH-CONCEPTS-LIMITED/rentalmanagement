@@ -59,7 +59,7 @@ const Header = () => {
       );
       setRoles(data);
     } catch (error) {
-      console.log("error", error);
+      
     }
   };
   const toggleDarkMode = () => {

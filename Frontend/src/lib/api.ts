@@ -10,15 +10,30 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  try {
-    const storedUser = localStorage.getItem("user");
-    const token = storedUser ? JSON.parse(storedUser).token : null;
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-  } catch {
-    // Ignore malformed storage; requests proceed unauthenticated and the 401
-    // interceptor in AuthContext will redirect to sign-in.
-  }
+  const token = getAuthToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
 export const apiUrl = baseURL;
+
+export interface StoredUser {
+  id?: number;
+  token?: string;
+  [key: string]: unknown;
+}
+
+// Safely parses the authenticated user object from storage, returning null on
+// any malformed input instead of throwing.
+export function getUser(): StoredUser | null {
+  try {
+    const stored = localStorage.getItem("user");
+    return stored ? (JSON.parse(stored) as StoredUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getAuthToken(): string | null {
+  return getUser()?.token ?? null;
+}
