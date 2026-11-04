@@ -43,6 +43,18 @@ interface UssdCharge {
   billingDate: string;
 }
 
+interface ImportBatch {
+  id: number;
+  fileName: string;
+  status: string;
+  totalRows: number;
+  importedRows: number;
+  skippedRows: number;
+  error?: string | null;
+  createdAt: string;
+  processedAt?: string | null;
+}
+
 const money = (value: number) => `UGX ${(value ?? 0).toLocaleString()}`;
 
 const FinancialReports = () => {
@@ -51,6 +63,7 @@ const FinancialReports = () => {
   const [to, setTo] = useState('');
   const [report, setReport] = useState<ReportDto | null>(null);
   const [ussdCharges, setUssdCharges] = useState<UssdCharge[]>([]);
+  const [batches, setBatches] = useState<ImportBatch[]>([]);
   const [ussdPage, setUssdPage] = useState(1);
   const [ussdTotal, setUssdTotal] = useState(0);
   const [ussdHasMore, setUssdHasMore] = useState(false);
@@ -88,6 +101,15 @@ const FinancialReports = () => {
     }
   };
 
+  const loadBatches = async () => {
+    try {
+      const { data } = await api.get<ImportBatch[]>('/GetUssdImportBatches');
+      setBatches(data ?? []);
+    } catch {
+      /* non-fatal */
+    }
+  };
+
   const upload = async () => {
     if (!file) {
       toast({ title: 'No file', description: 'Choose a CSV file to upload.', variant: 'destructive' });
@@ -98,13 +120,12 @@ const FinancialReports = () => {
       const formData = new FormData();
       formData.append('file', file);
       if (from) formData.append('billingDate', new Date(from).toISOString());
-      const { data } = await api.post('/ImportUssdSessionCharges', formData, {
+      const { data } = await api.post<{ batchId: number; status: string; message: string }>('/ImportUssdSessionCharges', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      toast({ title: 'Imported', description: `${data.imported} USSD session charge(s) imported.` });
+      toast({ title: 'Queued', description: data.message ?? 'File queued for background processing.' });
       setFile(null);
-      await loadUssd(1);
-      await loadReport();
+      await loadBatches();
     } catch (error) {
       toast({ title: 'Error', description: error?.response?.data?.message ?? 'Import failed.', variant: 'destructive' });
     } finally {
@@ -134,7 +155,7 @@ const FinancialReports = () => {
       <Tabs defaultValue="profit">
         <TabsList>
           <TabsTrigger value="profit" onClick={loadReport}>Profitability</TabsTrigger>
-          <TabsTrigger value="ussd" onClick={() => loadUssd(1)}>USSD Charges</TabsTrigger>
+          <TabsTrigger value="ussd" onClick={() => { loadUssd(1); loadBatches(); }}>USSD Charges</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profit" className="space-y-4">
@@ -206,6 +227,46 @@ const FinancialReports = () => {
               <p className="text-xs text-muted-foreground w-full">Operator statement CSV columns: Date, SessionId, Service Code, Phone Number, Hops, Hops Metadata, Duration, Cost, Status, Input</p>
             </CardContent>
           </Card>
+
+          {batches.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-sm">Import batches</CardTitle>
+                <Button variant="outline" size="sm" onClick={loadBatches}>Refresh</Button>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>File</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Imported</TableHead>
+                      <TableHead className="text-right">Skipped</TableHead>
+                      <TableHead>Error</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {batches.map((batch) => (
+                      <TableRow key={batch.id}>
+                        <TableCell>{batch.fileName}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            batch.status === 'COMPLETED' ? 'bg-green-100 text-green-800'
+                            : batch.status === 'FAILED' ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'}`}>
+                            {batch.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">{batch.importedRows}</TableCell>
+                        <TableCell className="text-right">{batch.skippedRows}</TableCell>
+                        <TableCell className="text-xs text-red-600">{batch.error ?? '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardContent>

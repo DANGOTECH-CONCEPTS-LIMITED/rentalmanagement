@@ -17,14 +17,27 @@ namespace API.Controllers.Accounts
             _service = service;
         }
 
-        /// <summary>Uploads a CSV of USSD session charges (columns: sessionId, phoneNumber, durationSeconds, charge, outcome, billingDate).</summary>
+        /// <summary>Uploads a CSV of USSD session charges; the file is queued and processed in the background.</summary>
         [HttpPost("/ImportUssdSessionCharges")]
         public async Task<IActionResult> Import(IFormFile file, [FromForm] DateTime? billingDate, CancellationToken ct)
         {
             try
             {
-                var imported = await _service.ImportAsync(file, billingDate, ct);
-                return Ok(new { imported });
+                var batch = await _service.QueueAsync(file, billingDate, ct);
+                return Accepted(new { batchId = batch.Id, status = batch.Status, message = "File queued for background processing." });
+            }
+            catch (Exception ex)
+            {
+                return HandleError(ex);
+            }
+        }
+
+        [HttpGet("/GetUssdImportBatches")]
+        public async Task<IActionResult> GetBatches(CancellationToken ct)
+        {
+            try
+            {
+                return Ok(await _service.GetBatchesAsync(ct));
             }
             catch (Exception ex)
             {

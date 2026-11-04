@@ -45,13 +45,73 @@ namespace Infrastructure.Services.Accounting
             };
         }
 
-        public async Task<int> ImportAsync(IFormFile file, DateTime? billingDate, CancellationToken ct = default)
+        public async Task<IEnumerable<UssdImportBatch>> GetBatchesAsync(CancellationToken ct = default)
+        {
+            return await _db.UssdImportBatches.AsNoTracking()
+                .OrderByDescending(b => b.CreatedAt)
+                .Take(50)
+                .ToListAsync(ct);
+        }
+
+        // Upload path: store the file immediately and let the background worker process it.
+        public async Task<UssdImportBatch> QueueAsync(IFormFile file, DateTime? billingDate, CancellationToken ct = default)
         {
             if (file == null || file.Length == 0)
                 throw new ArgumentException("A CSV file is required.");
 
             using var reader = new StreamReader(file.OpenReadStream());
             var content = await reader.ReadToEndAsync(ct);
+            if (string.IsNullOrWhiteSpace(content))
+                throw new ArgumentException("The file is empty.");
+
+            var batch = new UssdImportBatch
+            {
+                FileName = file.FileName ?? "ussd.csv",
+                Content = content,
+                BillingDate = billingDate,
+                Status = "PENDING"
+            };
+            _db.UssdImportBatches.Add(batch);
+            await _db.SaveChangesAsync(ct);
+            return batch;
+        }
+
+        // Background processing path: claim one PENDING batch atomically and import its rows.
+        public async Task<(int Imported, int Skipped, int Total)> ProcessBatchAsync(int batchId, CancellationToken ct = default)
+        {
+            var claimed = await _db.UssdImportBatches
+                .Where(b => b.Id == batchId && b.Status == "PENDING")
+                .ExecuteUpdateAsync(s => s.SetProperty(b => b.Status, "PROCESSING"), ct);
+            if (claimed != 1)
+                return (0, 0, 0); // another instance claimed it, or it was already processed
+
+            var batch = await _db.UssdImportBatches.FirstOrDefaultAsync(b => b.Id == batchId, ct);
+            if (batch == null)
+                return (0, 0, 0);
+
+            try
+            {
+                var (imported, skipped, total) = await ImportContentAsync(batch.Content, batch.BillingDate, ct);
+                batch.Status = "COMPLETED";
+                batch.ImportedRows = imported;
+                batch.SkippedRows = skipped;
+                batch.TotalRows = total;
+                batch.ProcessedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+                return (imported, skipped, total);
+            }
+            catch (Exception ex)
+            {
+                batch.Status = "FAILED";
+                batch.Error = ex.Message;
+                batch.ProcessedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(CancellationToken.None);
+                throw;
+            }
+        }
+
+        private async Task<(int Imported, int Skipped, int Total)> ImportContentAsync(string content, DateTime? billingDate, CancellationToken ct)
+        {
             var rows = ParseCsv(content);
             if (rows.Count == 0)
                 throw new ArgumentException("The file is empty.");
@@ -69,6 +129,9 @@ namespace Infrastructure.Services.Accounting
             var colDate = hasHeader ? IndexOf(header, "date") : 0;
 
             var imported = 0;
+            var skipped = 0;
+            var total = Math.Max(0, rows.Count - start);
+
             for (var i = start; i < rows.Count; i++)
             {
                 var row = rows[i];
@@ -77,7 +140,10 @@ namespace Infrastructure.Services.Accounting
                 var sessionId = Get(row, colSession);
                 var charge = ParseCost(Get(row, colCharge));
                 if (string.IsNullOrWhiteSpace(sessionId) || charge <= 0)
+                {
+                    skipped++;
                     continue;
+                }
 
                 var rowDate = billingDate ?? DateTime.UtcNow.Date;
                 if (colDate >= 0 && DateTime.TryParse(Get(row, colDate), CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
@@ -85,7 +151,10 @@ namespace Infrastructure.Services.Accounting
 
                 var correlationId = $"USSD_FEE:{sessionId}:{rowDate:yyyyMMdd}";
                 if (await _db.UssdSessionCharges.AnyAsync(x => x.CorrelationId == correlationId, ct))
-                    continue; // idempotent re-import
+                {
+                    skipped++; // idempotent re-import
+                    continue;
+                }
 
                 var outcome = Get(row, colOutcome);
                 var record = new UssdSessionCharge
@@ -109,7 +178,7 @@ namespace Infrastructure.Services.Accounting
             }
 
             await _db.SaveChangesAsync(ct);
-            return imported;
+            return (imported, skipped, total);
         }
 
         // RFC-4180-ish parser that handles quoted fields containing commas and newlines.

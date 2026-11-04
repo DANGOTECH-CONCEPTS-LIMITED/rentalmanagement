@@ -166,6 +166,7 @@ builder.Services.AddHostedService<MonthlyMeterFeeProcessor>();
 builder.Services.AddHostedService<ProcessMpesaPayments>();
 builder.Services.AddHostedService<MeterTokenGeneratorService>();
 builder.Services.AddHostedService<ReminderProcessor>();
+builder.Services.AddHostedService<UssdImportProcessor>();
 
 
 builder.Services.AddControllers(options =>

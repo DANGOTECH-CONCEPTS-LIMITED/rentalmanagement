@@ -46,6 +46,7 @@ namespace Infrastructure.Data
         public DbSet<UssdOption> UssdOptions { get; set; }
         public DbSet<UssdSession> UssdSessions { get; set; }
         public DbSet<UssdSessionCharge> UssdSessionCharges { get; set; }
+        public DbSet<UssdImportBatch> UssdImportBatches { get; set; }
 
         #endregion
 
