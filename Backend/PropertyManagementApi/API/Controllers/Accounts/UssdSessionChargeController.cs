@@ -48,11 +48,12 @@ namespace API.Controllers.Accounts
         [HttpGet("/GetUssdSessionCharges")]
         public async Task<IActionResult> Get(CancellationToken ct,
             [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
-            [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+            [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null,
+            [FromQuery] string? outcome = null)
         {
             try
             {
-                return Ok(await _service.GetAsync(page, pageSize, from, to, ct));
+                return Ok(await _service.GetAsync(page, pageSize, from, to, outcome, ct));
             }
             catch (Exception ex)
             {

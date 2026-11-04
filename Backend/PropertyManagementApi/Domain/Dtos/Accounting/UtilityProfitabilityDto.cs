@@ -11,6 +11,7 @@ namespace Domain.Dtos.Accounting
         public int PageSize { get; set; }
         public int Total { get; set; }
         public bool HasMore { get; set; }
+        public decimal TotalCharge { get; set; }
     }
 
     public class MeterProfitabilityRowDto

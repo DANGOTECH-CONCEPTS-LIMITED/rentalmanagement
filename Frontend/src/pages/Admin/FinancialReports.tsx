@@ -66,7 +66,9 @@ const FinancialReports = () => {
   const [batches, setBatches] = useState<ImportBatch[]>([]);
   const [ussdPage, setUssdPage] = useState(1);
   const [ussdTotal, setUssdTotal] = useState(0);
+  const [ussdTotalCharge, setUssdTotalCharge] = useState(0);
   const [ussdHasMore, setUssdHasMore] = useState(false);
+  const [filterOutcome, setFilterOutcome] = useState('all');
   const [meterPage, setMeterPage] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,12 +91,19 @@ const FinancialReports = () => {
 
   const loadUssd = async (page = 1) => {
     try {
-      const { data } = await api.get<{ items: UssdCharge[]; page: number; total: number; hasMore: boolean }>('/GetUssdSessionCharges', {
-        params: { page, pageSize: 20, ...(from ? { from } : {}), ...(to ? { to } : {}) },
+      const { data } = await api.get<{ items: UssdCharge[]; page: number; total: number; hasMore: boolean; totalCharge: number }>('/GetUssdSessionCharges', {
+        params: {
+          page,
+          pageSize: 20,
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
+          ...(filterOutcome !== 'all' ? { outcome: filterOutcome } : {}),
+        },
       });
       setUssdCharges(data.items ?? []);
       setUssdPage(data.page ?? 1);
       setUssdTotal(data.total ?? 0);
+      setUssdTotalCharge(data.totalCharge ?? 0);
       setUssdHasMore(data.hasMore ?? false);
     } catch {
       toast({ title: 'Error', description: 'Unable to load USSD charges.', variant: 'destructive' });
@@ -270,6 +279,22 @@ const FinancialReports = () => {
 
           <Card>
             <CardContent>
+              <div className="flex flex-wrap items-end gap-3 mb-4">
+                <div className="space-y-1">
+                  <Label>Outcome</Label>
+                  <select
+                    value={filterOutcome}
+                    onChange={(e) => { setFilterOutcome(e.target.value); loadUssd(1); }}
+                    className="border border-input rounded-md p-2 h-10 text-sm bg-white"
+                  >
+                    <option value="all">All outcomes</option>
+                    <option value="SUCCESS">Success</option>
+                    <option value="FAILED">Failed</option>
+                    <option value="INCOMPLETE">Incomplete</option>
+                    <option value="UNKNOWN">Unknown</option>
+                  </select>
+                </div>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -297,7 +322,9 @@ const FinancialReports = () => {
                 </TableBody>
               </Table>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{ussdTotal} session charge(s)</span>
+                <span className="text-sm text-muted-foreground">
+                  {ussdTotal} session charge(s) · <strong className="text-red-600">{money(ussdTotalCharge)}</strong>
+                </span>
                 <div className="flex items-center gap-3">
                   <Button variant="outline" size="sm" disabled={ussdPage <= 1} onClick={() => loadUssd(ussdPage - 1)}>Previous</Button>
                   <span className="text-sm">Page {ussdPage}</span>

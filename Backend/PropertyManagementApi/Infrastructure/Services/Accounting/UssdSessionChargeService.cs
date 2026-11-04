@@ -20,7 +20,7 @@ namespace Infrastructure.Services.Accounting
             _accounting = accounting;
         }
 
-        public async Task<UssdSessionChargePage> GetAsync(int page, int pageSize, DateTime? from, DateTime? to, CancellationToken ct = default)
+        public async Task<UssdSessionChargePage> GetAsync(int page, int pageSize, DateTime? from, DateTime? to, string? outcome, CancellationToken ct = default)
         {
             if (page < 1 || page > 100000 || pageSize < 1 || pageSize > 200)
                 throw new ArgumentException("Invalid pagination.");
@@ -28,8 +28,11 @@ namespace Infrastructure.Services.Accounting
             var query = _db.UssdSessionCharges.AsNoTracking();
             if (from.HasValue) query = query.Where(x => x.BillingDate >= from.Value.Date);
             if (to.HasValue) query = query.Where(x => x.BillingDate < to.Value.Date.AddDays(1));
+            if (!string.IsNullOrWhiteSpace(outcome))
+                query = query.Where(x => x.Outcome == outcome.Trim().ToUpperInvariant());
 
             var total = await query.CountAsync(ct);
+            var totalCharge = await query.SumAsync(x => x.Charge, ct);
             var items = await query.OrderByDescending(x => x.BillingDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -41,7 +44,8 @@ namespace Infrastructure.Services.Accounting
                 Page = page,
                 PageSize = pageSize,
                 Total = total,
-                HasMore = page * pageSize < total
+                HasMore = page * pageSize < total,
+                TotalCharge = totalCharge
             };
         }
 
