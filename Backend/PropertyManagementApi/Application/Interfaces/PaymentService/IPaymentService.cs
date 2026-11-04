@@ -13,6 +13,7 @@ namespace Application.Interfaces.PaymentService
         Task MakeTenantPaymentAsync(TenantPaymentDto paymentDto);
         Task<IEnumerable<TenantPayment>> GetAllPaymentsAsync();
         Task<TenantPaymentPage> GetPaymentsAsync(int? landlordId, string? search, string? status, string? method, int page, int pageSize, CancellationToken ct);
+        Task<LandlordProfitLossDto> GetLandlordProfitLossAsync(int landlordId, DateTime from, DateTime to, CancellationToken ct);
         Task<TenantPayment> GetPaymentByIdAsync(int id);
         Task UpdatePaymentAsync(TenantPayment pymt);
         Task DeletePaymentAsync(int id);

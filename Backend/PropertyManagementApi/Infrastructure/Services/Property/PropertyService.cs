@@ -90,6 +90,19 @@ namespace Infrastructure.Services.Property
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<PropertyOccupancyDto>> GetOccupancyByLandlordIdAsync(int landlordId, CancellationToken ct = default)
+        {
+            return await _context.LandLordProperties.AsNoTracking()
+                .Where(p => p.OwnerId == landlordId)
+                .Select(p => new PropertyOccupancyDto(
+                    p.Id,
+                    p.Name,
+                    p.NumberOfRooms,
+                    _context.Tenants.Count(t => t.PropertyId == p.Id && t.Active),
+                    _context.Tenants.Any(t => t.PropertyId == p.Id && t.Active)))
+                .ToListAsync(ct);
+        }
+
         public async Task DeletePropertyAsync(int id)
         {
             var property = await _context.LandLordProperties

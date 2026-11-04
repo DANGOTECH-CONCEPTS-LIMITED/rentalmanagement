@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces.PaymentService;
+using Application.Interfaces.SMS;
 using Domain.Dtos.Payments;
 using Domain.Entities;
 using Domain.Entities.PropertyMgt;
@@ -23,10 +24,12 @@ namespace Infrastructure.Services.PaymentServices
         private const string TieredChargeType = "Tiered";
         private readonly AppDbContext _context;
         private readonly EmailService _emailService;
-        public PaymentService(AppDbContext context, EmailService emailService)
+        private readonly ISmsProcessor? _sms;
+        public PaymentService(AppDbContext context, EmailService emailService, ISmsProcessor? sms = null)
         {
             _context = context;
             _emailService = emailService;
+            _sms = sms;
         }
 
         public async Task MakeTenantPaymentAsync(TenantPaymentDto tenantPaymentDto)
@@ -150,6 +153,16 @@ namespace Infrastructure.Services.PaymentServices
             //// bump balance
             //wallet.Balance += (decimal)tenantPaymentDto.Amount;
 
+            // 6) Track arrears payment-plan progress for this tenant.
+            var plan = await _context.ArrearsPaymentPlans
+                .FirstOrDefaultAsync(p => p.TenantId == tenant.Id && p.Status == "ACTIVE");
+            if (plan != null && tenantPaymentDto.Amount > 0)
+            {
+                plan.PaidInstallments = Math.Min(plan.TotalInstallments, plan.PaidInstallments + 1);
+                if (tenant.Arrears <= 0)
+                    plan.Status = "COMPLETED";
+            }
+
             // 7) Persist everything in one go
             await _context.SaveChangesAsync();
         }
@@ -231,6 +244,47 @@ namespace Infrastructure.Services.PaymentServices
                 Page = page,
                 PageSize = pageSize,
                 HasMore = rows.Count > pageSize
+            };
+        }
+
+        public async Task<LandlordProfitLossDto> GetLandlordProfitLossAsync(int landlordId, DateTime from, DateTime to, CancellationToken ct)
+        {
+            var fromDate = from.Date;
+            var toEnd = to.Date.AddDays(1);
+
+            var income = await _context.TenantPayments.AsNoTracking()
+                .Where(tp => tp.PaymentStatus == "SUCCESSFUL" && tp.PaymentDate >= fromDate && tp.PaymentDate < toEnd &&
+                             tp.PropertyTenant.Property.OwnerId == landlordId)
+                .SumAsync(tp => tp.Amount, ct);
+
+            var maintenance = await _context.MaintenanceRequests.AsNoTracking()
+                .Where(m => m.Status == "RESOLVED" && m.UpdatedAt >= fromDate && m.UpdatedAt < toEnd &&
+                            m.Property.OwnerId == landlordId)
+                .SumAsync(m => m.Cost, ct);
+
+            var payouts = await _context.WalletTransactions.AsNoTracking()
+                .Where(w => w.Amount < 0 && w.TransactionDate >= fromDate && w.TransactionDate < toEnd &&
+                            w.Wallet.LandlordId == landlordId)
+                .SumAsync(w => -w.Amount, ct);
+
+            var paymentCount = await _context.TenantPayments.AsNoTracking()
+                .CountAsync(tp => tp.PaymentStatus == "SUCCESSFUL" && tp.PaymentDate >= fromDate && tp.PaymentDate < toEnd &&
+                                  tp.PropertyTenant.Property.OwnerId == landlordId, ct);
+
+            var maintenanceCount = await _context.MaintenanceRequests.AsNoTracking()
+                .CountAsync(m => m.Status == "RESOLVED" && m.UpdatedAt >= fromDate && m.UpdatedAt < toEnd &&
+                                 m.Property.OwnerId == landlordId, ct);
+
+            var expenses = maintenance + payouts;
+            return new LandlordProfitLossDto
+            {
+                From = fromDate,
+                To = to.Date,
+                Income = income,
+                Expenses = expenses,
+                Net = income - expenses,
+                PaymentCount = paymentCount,
+                MaintenanceCount = maintenanceCount
             };
         }
 
@@ -522,6 +576,7 @@ namespace Infrastructure.Services.PaymentServices
             else
             {
                 var payment = await _context.TenantPayments
+                .Include(tp => tp.PropertyTenant)
                 .FirstOrDefaultAsync(tp => tp.TransactionId == transactionid);
                 if (payment == null)
                     throw new Exception("Payment not found.");
@@ -530,6 +585,14 @@ namespace Infrastructure.Services.PaymentServices
                 if (!string.IsNullOrWhiteSpace(vendortranref)) payment.VendorTransactionId = vendortranref;
                 _context.TenantPayments.Update(payment);
                 await _context.SaveChangesAsync();
+
+                // Auto-generated SMS receipt when a rent payment settles successfully.
+                if (status.Equals("SUCCESSFUL", StringComparison.OrdinalIgnoreCase) &&
+                    _sms != null && !string.IsNullOrWhiteSpace(payment.PropertyTenant?.PhoneNumber))
+                {
+                    await _sms.SendAsync(payment.PropertyTenant.PhoneNumber,
+                        $"Receipt: {payment.Amount:N0} rent payment received. Transaction {payment.TransactionId}. Thank you.");
+                }
             }
 
         }

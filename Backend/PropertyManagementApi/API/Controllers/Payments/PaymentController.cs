@@ -68,6 +68,24 @@ namespace API.Controllers.Payments
             }
         }
 
+        /// <summary>Returns a landlord's income vs expense summary for a date range.</summary>
+        [HttpGet("/GetLandlordProfitLoss/{landlordId}")]
+        [Authorize]
+        public async Task<IActionResult> GetLandlordProfitLoss(int landlordId, CancellationToken ct,
+            [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        {
+            try
+            {
+                var start = from?.Date ?? DateTime.UtcNow.AddMonths(-1).Date;
+                var end = to?.Date ?? DateTime.UtcNow.Date;
+                return Ok(await _paymentService.GetLandlordProfitLossAsync(landlordId, start, end, ct));
+            }
+            catch (Exception ex)
+            {
+                return HandleError(ex);
+            }
+        }
+
         [HttpGet("/GetPaymentById/{id}")]
         [Authorize]
         public async Task<IActionResult> GetPaymentById(int id)

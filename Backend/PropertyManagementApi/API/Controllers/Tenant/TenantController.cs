@@ -102,6 +102,26 @@ namespace API.Controllers.Tenant
             }
         }
 
+        public sealed class SetVerificationStatusRequest
+        {
+            public string Status { get; set; } = string.Empty;
+        }
+
+        /// <summary>Marks a tenant's KYC documents as UNVERIFIED, VERIFIED or REJECTED.</summary>
+        [HttpPut("/SetTenantVerificationStatus/{id}")]
+        [Authorize]
+        public async Task<IActionResult> SetVerificationStatus(int id, [FromBody] SetVerificationStatusRequest request)
+        {
+            try
+            {
+                return Ok(await _tenantService.SetVerificationStatusAsync(id, request.Status));
+            }
+            catch (Exception ex)
+            {
+                return HandleError(ex);
+            }
+        }
+
         private IActionResult HandleError(Exception ex) => ex switch
         {
             ArgumentException or ArgumentNullException => BadRequest(new { message = ex.Message }),

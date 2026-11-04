@@ -75,23 +75,31 @@ Each tenant and landlord is both a domain record and a login account (`User`). T
 
 **Property management** — register/update/delete properties with image upload; landlord property lists; tenant "available properties" catalogue with search and filters.
 
-**Tenant management** — KYC-backed registration (exactly 3 documents), edit, delete (also removes the linked login account), and per-property tenant lists.
+**Tenant management** — KYC-backed registration (exactly 3 documents), edit, delete (also removes the linked login account), per-property tenant lists, and document screening (UNVERIFIED / VERIFIED / REJECTED).
 
-**Rent & payments** — `MakeTenantPayment` with arrears/balance tracking, payment history, receipt generation (HTML), and CSV export; admin transaction status updates.
+**Occupancy tracking** — per-property active-tenant counts and occupied/vacant status.
+
+**Rent & payments** — `MakeTenantPayment` with arrears/balance tracking, payment history, receipt generation (HTML), CSV export, admin transaction status updates, and **arrears payment plans** (installments that complete once cleared).
 
 **Wallets & payouts** — per-landlord and utility wallets, statements, admin debit/transfer, withdrawals to mobile money or bank, status polling, automatic reversal on terminal failure, wallet reconciliation view.
+
+**Rental contracts** — full lease lifecycle: create, renew, terminate and delete contracts with server-side persistence and PDF download.
+
+**Maintenance requests** — tenants raise repair requests with priority; landlords triage, set cost, and resolve them.
 
 **Utility meters & tokens** — meter registration (NWSC account, registered name, location, customer mobile), utility payments, STS token generation, meter search, monthly meter fees, and per-meter liens.
 
 **NWSC bill payments** — automatic bill-payment pipeline: queue on wallet credit, submit, poll status, debit wallet once on confirmed success (`PAID_UNDEBITED` on insufficient balance), with manual process/backfill/trigger/bulk-status tools.
 
-**SMS** — outbound SMS (AfricasTalking) for notifications.
+**SMS & email** — outbound SMS (AfricasTalking), automatic SMS receipts on successful rent settlement, and **automated reminders** (rent due, overdue, lease expiry) via a background worker.
 
-**Complaints & contracts** — tenants submit complaints, landlords handle them; rental contract generation (PDF).
+**Complaints** — tenants submit complaints and landlords handle them.
 
-**Reports & exports** — general reports, utility statistics, monthly fees report, and dashboard exports (CSV / Excel / PDF).
+**Reports, accounting & exports** — general reports, utility statistics, monthly fees report, dashboard exports (CSV / Excel / PDF), profit & loss / trial balance from the accounting ledger, and landlord income vs expense.
 
 **Administration** — audit trail, HTTP request/response logs, service logs, payout and bill-payment reconciliation, payment provider settings, NWSC biller settings, and mobile-network routing rules.
+
+**Platform** — installable PWA (manifest + service worker) and a signed payment-provider settlement webhook.
 
 ## 5. Tech stack
 
@@ -167,11 +175,16 @@ Demo accounts: `admin@example.com` (Admin), `landlord@example.com` (Landlord), `
 
 | Area | Endpoints |
 | --- | --- |
-| Properties | `GET /GetAllProperties`, `GET /GetPropertyById/{id}`, `GET /GetPropertiesByLandLordId/{id}`, `POST /AddProperty`, `PUT /UpdateProperty`, `DELETE /DeleteProperty/{id}` |
-| Tenants | `POST /CreateTenant`, `PUT /UpdateTenant`, `DELETE /DeleteTenant/{id}`, `GET /GetTenantById/{id}`, `GET /GetAllTenants` |
-| Rent payments | `POST /MakeTenantPayment`, `GET /GetAllPayments`, `GET /GetPayments` (paginated), `GET /GetPaymentById/{id}`, plus status/date/method/tenant filters |
+| Properties | `GET /GetAllProperties`, `GET /GetPropertyById/{id}`, `GET /GetPropertiesByLandLordId/{id}`, `POST /AddProperty`, `PUT /UpdateProperty`, `DELETE /DeleteProperty/{id}`, `GET /GetOccupancyByLandlordId/{id}` |
+| Tenants | `POST /CreateTenant`, `PUT /UpdateTenant`, `DELETE /DeleteTenant/{id}`, `GET /GetTenantById/{id}`, `GET /GetAllTenants`, `PUT /SetTenantVerificationStatus/{id}` |
+| Rental contracts | `GET /GetRentalContractsByLandlordId/{id}`, `POST /AddRentalContract`, `PUT /RenewRentalContract/{id}`, `PUT /TerminateRentalContract/{id}`, `DELETE /DeleteRentalContract/{id}` |
+| Maintenance | `GET /GetMaintenanceByLandlordId/{id}`, `GET /GetMaintenanceByTenantId/{id}`, `POST /AddMaintenanceRequest`, `PUT /UpdateMaintenanceRequest/{id}`, `DELETE /DeleteMaintenanceRequest/{id}` |
+| Arrears plans | `GET /GetArrearsPlansByLandlordId/{id}`, `GET /GetArrearsPlansByTenantId/{id}`, `POST /AddArrearsPaymentPlan`, `PUT /CancelArrearsPlan/{id}` |
+| Rent payments | `POST /MakeTenantPayment`, `GET /GetAllPayments`, `GET /GetPayments` (paginated), `GET /GetPaymentById/{id}`, `GET /GetLandlordProfitLoss/{landlordId}`, plus status/date/method/tenant filters |
 | Wallets | `GET /GetBalance/{landlordId}`, `GET /GetStatement/{landlordId}`, `GET /api/AdminWalletTransactions`, `POST /Withdraw`, `POST /AdminWithdrawUtilityWallet` |
 | Bill payments | `GET /api/AdminBillPayments`, `POST /api/AdminBillPayments/process`, `PUT .../status`, `POST .../backfill`, `POST .../trigger` |
+| Accounting | `GET /api/accounting/profit`, `GET /api/accounting/trial-balance`, `GET /api/accounting/balance-sheet`, `GET /api/accounting/statement` |
+| Webhooks | `POST /api/webhooks/payment-settlement` (HMAC-signed) |
 | Reconciliation | `GET /api/AdminPayoutReconciliation`, `GET .../reconciliation` |
 | Meters | meter CRUD, search, liens, fees, and STS token endpoints under `api/Meter` |
 
@@ -181,9 +194,13 @@ Demo accounts: `admin@example.com` (Admin), `landlord@example.com` (Landlord), `
 - `LandLordProperty` — a property owned by a landlord (`OwnerId`).
 - `PropertyTenant` — a tenant linked to a property and optionally a `User` account.
 - `TenantPayment` — a rent payment linked to a tenant.
+- `RentalContract` — a lease between a tenant and a property with status and termination details.
+- `MaintenanceRequest` — a tenant repair request with priority, status and cost.
+- `ArrearsPaymentPlan` — an installment plan for tenant arrears.
 - `Wallet` / `WalletTransaction` — per-owner balances and a full ledger.
 - `UtilityMeter` / `UtilityPayment` / `MeterToken` / `MeterFeeCharge` / `MeterLien` — utility metering, payments, tokens, fees and liens.
 - `BillPaymentInstruction`, `PaymentGatewaySubmission`, `PaymentProviderSetting`, `BackgroundJobLock` — bill payments, durable submission claims, provider routing and worker leases.
+- `JournalEntry` / `JournalLine` — the accounting ledger behind the profit/trial-balance reports.
 - `Complaint`, `AuditTrailEntry`, `HttpRequestResponse`, `ServiceLogs` — complaints, audit, and observability.
 
 ---

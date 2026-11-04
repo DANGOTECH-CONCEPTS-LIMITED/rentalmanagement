@@ -31,6 +31,7 @@ import {
   Upload,
   Camera,
   Check,
+  BadgeCheck,
   Key,
   Mail,
   Phone,
@@ -45,6 +46,7 @@ import Modal from "@/components/common/Model";
 import { Property } from "./RegisterTenants";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { api } from "@/lib/api";
 import ConfirmDeleteModal from "@/components/common/DeleteModal";
 
 interface Tenant {
@@ -56,6 +58,7 @@ interface Tenant {
   email: string;
   phoneNumber: string;
   active: boolean;
+  verificationStatus: string;
   passportPhoto: string;
   nationalIdNumber: string;
   paymentStatus: string;
@@ -380,6 +383,34 @@ const ManageTenants = () => {
     }
   };
 
+  const toggleVerification = async (tenant: Tenant) => {
+    const next =
+      tenant.verificationStatus === "VERIFIED" ? "UNVERIFIED" : "VERIFIED";
+    try {
+      await api.put(`/SetTenantVerificationStatus/${tenant.id}`, {
+        status: next,
+      });
+      setTenants((current) =>
+        current.map((t) =>
+          t.id === tenant.id ? { ...t, verificationStatus: next, active: next === "VERIFIED" || t.active } : t
+        )
+      );
+      toast({
+        title: "Success",
+        description:
+          next === "VERIFIED"
+            ? "Tenant documents verified."
+            : "Tenant verification revoked.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message ?? "Unable to update verification.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const PLACEHOLDER_IMAGE = "https://placehold.co/150?text=No+Image";
 
   const getImageUrl = (relativePath: string) => {
@@ -588,6 +619,23 @@ const ManageTenants = () => {
                             }}
                           >
                             <Trash className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className={
+                              tenant.verificationStatus === "VERIFIED"
+                                ? "text-green-600"
+                                : "text-amber-600"
+                            }
+                            onClick={() => toggleVerification(tenant)}
+                            aria-label={
+                              tenant.verificationStatus === "VERIFIED"
+                                ? "Revoke verification"
+                                : "Verify documents"
+                            }
+                          >
+                            <BadgeCheck className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>

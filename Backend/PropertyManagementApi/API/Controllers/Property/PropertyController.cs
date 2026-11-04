@@ -130,6 +130,21 @@ namespace API.Controllers.Property
             }
         }
 
+        /// <summary>Returns per-property occupancy (active tenant counts) for a landlord.</summary>
+        [HttpGet("/GetOccupancyByLandlordId/{landlordId}")]
+        [Authorize]
+        public async Task<IActionResult> GetOccupancyByLandlordId(int landlordId, CancellationToken ct)
+        {
+            try
+            {
+                return Ok(await _landlordPropertyService.GetOccupancyByLandlordIdAsync(landlordId, ct));
+            }
+            catch (Exception ex)
+            {
+                return HandleError(ex);
+            }
+        }
+
         private IActionResult HandleError(Exception ex) => ex switch
         {
             ArgumentException or ArgumentNullException => BadRequest(new { message = ex.Message }),

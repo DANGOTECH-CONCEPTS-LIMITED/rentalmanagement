@@ -14,6 +14,8 @@ namespace Domain.Entities.PropertyMgt
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public bool Active { get; set; } = false;
+        /// <summary>UNVERIFIED, VERIFIED or REJECTED.</summary>
+        public string VerificationStatus { get; set; } = "UNVERIFIED";
         public string PassportPhoto { get; set; } = string.Empty;
         public string IdFront { get; set; } = string.Empty;
         public string IdBack { get; set; } = string.Empty;

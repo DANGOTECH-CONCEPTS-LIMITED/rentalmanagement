@@ -19,6 +19,7 @@ import {
   Plus,
   X,
   FileSearch,
+  Wrench,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -371,6 +372,11 @@ function getNavItems(role: number): NavItem[] {
             icon: <FileText size={18} />,
             path: "/admin-dashboard/meter-fees-report",
           },
+          {
+            label: "Accounting",
+            icon: <BarChart3 size={18} />,
+            path: "/admin-dashboard/accounting",
+          },
         ],
       },
       {
@@ -485,6 +491,11 @@ function getNavItems(role: number): NavItem[] {
         path: "/landlord-dashboard/complaints",
       },
       {
+        label: "Maintenance",
+        icon: <Wrench size={18} />,
+        path: "/landlord-dashboard/maintenance",
+      },
+      {
         label: "Manage Tenants",
         icon: <Users size={18} />,
         path: "/landlord-dashboard/manage-tenants",
@@ -508,6 +519,11 @@ function getNavItems(role: number): NavItem[] {
             label: "Utility Report",
             icon: <FileText size={18} />,
             path: "/landlord-dashboard/utility-report",
+          },
+          {
+            label: "Income vs Expense",
+            icon: <BarChart3 size={18} />,
+            path: "/landlord-dashboard/profit-loss",
           },
         ],
       },
@@ -541,6 +557,11 @@ function getNavItems(role: number): NavItem[] {
         label: "Submit Complaint",
         icon: <MessageSquare size={18} />,
         path: "/tenant-dashboard/submit-complaint",
+      },
+      {
+        label: "Request Maintenance",
+        icon: <Wrench size={18} />,
+        path: "/tenant-dashboard/request-maintenance",
       },
       {
         label: "Send SMS",

@@ -180,5 +180,20 @@ namespace Infrastructure.Services.Tenant
             return tenants;
         }
 
+        public async Task<PropertyTenant> SetVerificationStatusAsync(int tenantId, string status)
+        {
+            var normalized = (status ?? string.Empty).Trim().ToUpperInvariant();
+            if (normalized is not ("UNVERIFIED" or "VERIFIED" or "REJECTED"))
+                throw new ArgumentException("Verification status must be UNVERIFIED, VERIFIED or REJECTED.");
+
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId)
+                ?? throw new KeyNotFoundException("Tenant not found.");
+            tenant.VerificationStatus = normalized;
+            // A verified tenant is active; a rejected tenant cannot remain active.
+            tenant.Active = normalized == "VERIFIED" || (normalized == "UNVERIFIED" && tenant.Active);
+            await _context.SaveChangesAsync();
+            return tenant;
+        }
+
     } 
 }

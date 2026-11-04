@@ -20,6 +20,9 @@ namespace Infrastructure.Data
         public DbSet<PropertyTenant> Tenants { get; set; }
         public DbSet<TenantPayment> TenantPayments { get; set; }
         public DbSet<Complaint> TenantComplaints { get; set; }
+        public DbSet<RentalContract> RentalContracts { get; set; }
+        public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
+        public DbSet<ArrearsPaymentPlan> ArrearsPaymentPlans { get; set; }
         public DbSet<Wallet> Wallets { get; set; } = null!;
         public DbSet<WalletTransaction> WalletTransactions { get; set; } = null!;
 

@@ -30,6 +30,7 @@ import AvailableProperties from "./pages/Tenant/AvailableProperties";
 import MakePayment from "./pages/Tenant/MakePayment";
 import PaymentHistory from "./pages/Tenant/PaymentHistory";
 import SubmitComplaint from "./pages/Tenant/SubmitComplaint";
+import RequestMaintenance from "./pages/Tenant/RequestMaintenance";
 import CashTransactions from "./pages/Tenant/CashTransaction";
 
 // Landlord Pages
@@ -37,11 +38,14 @@ import RegisterTenants from "./pages/Landlord/RegisterTenants";
 import ManageTenants from "./pages/Landlord/ManageTenants";
 import RentalContracts from "./pages/Landlord/RentalContracts";
 import HandleComplaints from "./pages/Landlord/HandleComplaints";
+import Maintenance from "./pages/Landlord/Maintenance";
+import ProfitLoss from "./pages/Landlord/ProfitLoss";
 import TrackPayments from "./pages/Landlord/TrackPayments";
 import Index from "./pages/Index";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
 import Transactions from "./pages/Admin/Transactions";
+import Accounting from "./pages/Admin/Accounting";
 import SendSMSForm from "./pages/SendSMSForm";
 import Properties from "./pages/Landlord/LandloardProperties";
 import AdminDashboard from "./pages/Dashboard/AdminDashboard";
@@ -130,6 +134,7 @@ const App = () => (
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />
                 <Route path="utility-meter-fees" element={<UtilityMeter />} />
                 <Route path="meter-fees-report" element={<MeterFeesReport />} />
+                <Route path="accounting" element={<Accounting />} />
                 <Route
                   path="utility-payments/:landlordId"
                   element={<UtilityPayments />}
@@ -148,6 +153,8 @@ const App = () => (
                 <Route path="manage-tenants" element={<ManageTenants />} />
                 <Route path="rental-contracts" element={<RentalContracts />} />
                 <Route path="complaints" element={<HandleComplaints />} />
+                <Route path="maintenance" element={<Maintenance />} />
+                <Route path="profit-loss" element={<ProfitLoss />} />
                 <Route path="payments" element={<TrackPayments />} />
                 <Route path="properties" element={<Properties />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
@@ -168,6 +175,7 @@ const App = () => (
                 <Route path="make-payment" element={<MakePayment />} />
                 <Route path="payment-history" element={<PaymentHistory />} />
                 <Route path="submit-complaint" element={<SubmitComplaint />} />
+                <Route path="request-maintenance" element={<RequestMaintenance />} />
                 <Route path="send-sms" element={<SendSMSForm />} />
               </Route>
             </Route>

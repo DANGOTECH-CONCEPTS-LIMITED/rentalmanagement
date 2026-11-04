@@ -77,7 +77,10 @@ builder.Services.AddTransient<LoggingHandler>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISettings, Settings>();
 builder.Services.AddScoped<ILandlordPropertyService, PropertyService>();
+builder.Services.AddScoped<IRentalContractService, RentalContractService>();
+builder.Services.AddScoped<IMaintenanceService, MaintenanceService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IArrearsPaymentPlanService, ArrearsPaymentPlanService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IExternalPaymentService, ExternalPaymentService>();
 builder.Services.AddScoped<Application.Interfaces.Meter.IMeterTokenService, Infrastructure.Services.Meter.MeterTokenService>();
@@ -159,6 +162,7 @@ builder.Services.AddHostedService<MonthlyMeterFeeProcessor>();
 //builder.Services.AddHostedService<MpesaCallbackProcessor>();
 builder.Services.AddHostedService<ProcessMpesaPayments>();
 builder.Services.AddHostedService<MeterTokenGeneratorService>();
+builder.Services.AddHostedService<ReminderProcessor>();
 
 
 builder.Services.AddControllers(options =>

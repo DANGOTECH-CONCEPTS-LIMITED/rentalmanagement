@@ -17,5 +17,6 @@ namespace Application.Interfaces.Tenant
         Task<PropertyTenant> GetTenantByIdAsync(int id);
         Task<IEnumerable<PropertyTenant>> GetAllTenantsAsync();
         Task<IEnumerable<PropertyTenant>> GetTenantsByPropertyIdAsync(int propertyId);
+        Task<PropertyTenant> SetVerificationStatusAsync(int tenantId, string status);
     }
 }

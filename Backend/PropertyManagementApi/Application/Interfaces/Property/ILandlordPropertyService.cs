@@ -15,6 +15,7 @@ namespace Application.Interfaces.Property
         Task<IEnumerable<LandLordProperty>> GetAllPropertiesAsync();
         Task<LandLordProperty> GetPropertyByIdAsync(int id);
         Task<IEnumerable<LandLordProperty>> GetPropertiesByLandLordIdAsync(int landlordId);
+        Task<IEnumerable<PropertyOccupancyDto>> GetOccupancyByLandlordIdAsync(int landlordId, CancellationToken ct = default);
         Task AddPropertyAsync(IFormFile image,PropertyDto property);
         Task UpdatePropertyAsync(IFormFile image,LandLordProperty property);
         Task DeletePropertyAsync(int id);
