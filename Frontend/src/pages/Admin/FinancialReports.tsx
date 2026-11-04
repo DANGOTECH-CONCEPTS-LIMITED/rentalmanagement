@@ -51,6 +51,10 @@ const FinancialReports = () => {
   const [to, setTo] = useState('');
   const [report, setReport] = useState<ReportDto | null>(null);
   const [ussdCharges, setUssdCharges] = useState<UssdCharge[]>([]);
+  const [ussdPage, setUssdPage] = useState(1);
+  const [ussdTotal, setUssdTotal] = useState(0);
+  const [ussdHasMore, setUssdHasMore] = useState(false);
+  const [meterPage, setMeterPage] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -62,6 +66,7 @@ const FinancialReports = () => {
         params: { ...(from ? { from } : {}), ...(to ? { to } : {}) },
       });
       setReport(data);
+      setMeterPage(1);
     } catch {
       toast({ title: 'Error', description: 'Unable to load report.', variant: 'destructive' });
     } finally {
@@ -69,12 +74,15 @@ const FinancialReports = () => {
     }
   };
 
-  const loadUssd = async () => {
+  const loadUssd = async (page = 1) => {
     try {
-      const { data } = await api.get<UssdCharge[]>('/GetUssdSessionCharges', {
-        params: { ...(from ? { from } : {}), ...(to ? { to } : {}) },
+      const { data } = await api.get<{ items: UssdCharge[]; page: number; total: number; hasMore: boolean }>('/GetUssdSessionCharges', {
+        params: { page, pageSize: 20, ...(from ? { from } : {}), ...(to ? { to } : {}) },
       });
-      setUssdCharges(data ?? []);
+      setUssdCharges(data.items ?? []);
+      setUssdPage(data.page ?? 1);
+      setUssdTotal(data.total ?? 0);
+      setUssdHasMore(data.hasMore ?? false);
     } catch {
       toast({ title: 'Error', description: 'Unable to load USSD charges.', variant: 'destructive' });
     }
@@ -95,7 +103,7 @@ const FinancialReports = () => {
       });
       toast({ title: 'Imported', description: `${data.imported} USSD session charge(s) imported.` });
       setFile(null);
-      await loadUssd();
+      await loadUssd(1);
       await loadReport();
     } catch (error) {
       toast({ title: 'Error', description: error?.response?.data?.message ?? 'Import failed.', variant: 'destructive' });
@@ -126,7 +134,7 @@ const FinancialReports = () => {
       <Tabs defaultValue="profit">
         <TabsList>
           <TabsTrigger value="profit" onClick={loadReport}>Profitability</TabsTrigger>
-          <TabsTrigger value="ussd" onClick={loadUssd}>USSD Charges</TabsTrigger>
+          <TabsTrigger value="ussd" onClick={() => loadUssd(1)}>USSD Charges</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profit" className="space-y-4">
@@ -157,7 +165,7 @@ const FinancialReports = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {report.meters.map((m) => (
+                      {report.meters.slice((meterPage - 1) * 10, meterPage * 10).map((m) => (
                         <TableRow key={m.meterNumber}>
                           <TableCell>{m.meterNumber}</TableCell>
                           <TableCell className="text-right">{money(m.grossCollected)}</TableCell>
@@ -170,6 +178,13 @@ const FinancialReports = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  {report.meters.length > 10 && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <Button variant="outline" size="sm" disabled={meterPage <= 1} onClick={() => setMeterPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                      <span className="text-sm">Page {meterPage} of {Math.ceil(report.meters.length / 10)}</span>
+                      <Button variant="outline" size="sm" disabled={meterPage * 10 >= report.meters.length} onClick={() => setMeterPage((p) => p + 1)}>Next</Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </>
@@ -188,7 +203,7 @@ const FinancialReports = () => {
                 <Input type="file" accept=".csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </div>
               <Button onClick={upload} disabled={uploading}>{uploading ? 'Uploading...' : 'Upload'}</Button>
-              <p className="text-xs text-muted-foreground w-full">Columns: sessionId, phoneNumber, durationSeconds, charge, outcome, billingDate</p>
+              <p className="text-xs text-muted-foreground w-full">Operator statement CSV columns: Date, SessionId, Service Code, Phone Number, Hops, Hops Metadata, Duration, Cost, Status, Input</p>
             </CardContent>
           </Card>
 
@@ -220,6 +235,14 @@ const FinancialReports = () => {
                   )}
                 </TableBody>
               </Table>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{ussdTotal} session charge(s)</span>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" disabled={ussdPage <= 1} onClick={() => loadUssd(ussdPage - 1)}>Previous</Button>
+                  <span className="text-sm">Page {ussdPage}</span>
+                  <Button variant="outline" size="sm" disabled={!ussdHasMore} onClick={() => loadUssd(ussdPage + 1)}>Next</Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

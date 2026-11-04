@@ -1,8 +1,18 @@
 using System;
 using System.Collections.Generic;
+using Domain.Entities.USSD;
 
 namespace Domain.Dtos.Accounting
 {
+    public class UssdSessionChargePage
+    {
+        public List<UssdSessionCharge> Items { get; set; } = new();
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int Total { get; set; }
+        public bool HasMore { get; set; }
+    }
+
     public class MeterProfitabilityRowDto
     {
         public string MeterNumber { get; set; } = string.Empty;

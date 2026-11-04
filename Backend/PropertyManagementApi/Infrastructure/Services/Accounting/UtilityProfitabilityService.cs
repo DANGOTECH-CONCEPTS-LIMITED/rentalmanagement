@@ -32,13 +32,13 @@ namespace Infrastructure.Services.Accounting
             var commission = payments.Sum(p => (decimal)p.Charges);
             var bankFee = Math.Round(gross * bankPct / 100m, 2);
 
-            var tokenByMeter = await _db.MeterTokens.AsNoTracking()
-                .Where(t => t.GeneratedAt >= fromDate && t.GeneratedAt < toEnd)
-                .GroupBy(t => t.MeterNumber)
-                .Select(g => new { MeterNumber = g.Key, Count = g.Count() })
-                .ToListAsync(ct);
+            // SMS is sent once per vended token; UtilityPayment.IsSmsSent tracks it.
+            var smsByMeter = payments
+                .Where(p => p.IsSmsSent)
+                .GroupBy(p => p.MeterNumber)
+                .ToDictionary(g => g.Key, g => g.Count());
 
-            var tokenCount = tokenByMeter.Sum(t => t.Count);
+            var tokenCount = smsByMeter.Values.Sum();
             var smsFee = smsFlat * tokenCount;
 
             var ussdFee = await _db.UssdSessionCharges.AsNoTracking()
@@ -54,7 +54,7 @@ namespace Infrastructure.Services.Accounting
                     var gGross = g.Sum(p => (decimal)p.Amount + (decimal)p.Charges);
                     var gComm = g.Sum(p => (decimal)p.Charges);
                     var gBank = Math.Round(gGross * bankPct / 100m, 2);
-                    var gTokens = tokenByMeter.FirstOrDefault(t => t.MeterNumber == g.Key)?.Count ?? 0;
+                    var gTokens = smsByMeter.TryGetValue(g.Key, out var smsCount) ? smsCount : 0;
                     var gSms = smsFlat * gTokens;
                     return new MeterProfitabilityRowDto
                     {
