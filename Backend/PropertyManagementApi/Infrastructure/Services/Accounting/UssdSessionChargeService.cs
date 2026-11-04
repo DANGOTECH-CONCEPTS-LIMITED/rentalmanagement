@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Application.Interfaces.Accounting;
 using Domain.Dtos.Accounting;
+using Domain.Dtos.Ussd;
 using Domain.Entities.USSD;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
@@ -112,6 +113,62 @@ namespace Infrastructure.Services.Accounting
                 await _db.SaveChangesAsync(CancellationToken.None);
                 throw;
             }
+        }
+
+        // Ingest an Africa's Talking end-of-session notification directly.
+        public async Task IngestNotificationAsync(UssdSessionNotificationDto notification, CancellationToken ct = default)
+        {
+            if (notification == null || string.IsNullOrWhiteSpace(notification.SessionId))
+                return;
+
+            var charge = ParseCost(notification.Cost ?? string.Empty);
+            if (charge <= 0)
+                return; // free/sandbox sessions are not an expense
+
+            var correlationId = $"USSD_FEE:{notification.SessionId}";
+            if (await _db.UssdSessionCharges.AnyAsync(x => x.CorrelationId == correlationId, ct))
+                return; // duplicate notification
+
+            var billingDate = DateTime.UtcNow.Date;
+            if (DateTime.TryParse(notification.Date, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsedDate))
+                billingDate = parsedDate.Date;
+
+            var record = new UssdSessionCharge
+            {
+                SessionId = notification.SessionId,
+                PhoneNumber = notification.PhoneNumber,
+                DurationSeconds = ParseDurationMillis(notification.DurationInMillis),
+                Charge = charge,
+                Outcome = MapOutcome(notification.Status),
+                BillingDate = billingDate,
+                CorrelationId = correlationId
+            };
+            _db.UssdSessionCharges.Add(record);
+
+            await _accounting.PostAsync(PostingRules.UssdSessionFee(
+                correlationId: correlationId,
+                transactionId: notification.SessionId,
+                amount: charge,
+                memo: $"USSD session fee {notification.SessionId} ({record.Outcome})"));
+
+            await _db.SaveChangesAsync(ct);
+        }
+
+        private static string MapOutcome(string? status) =>
+            (status ?? string.Empty).Trim().ToUpperInvariant() switch
+            {
+                "SUCCESS" => "SUCCESS",
+                "FAILED" => "FAILED",
+                "INCOMPLETE" => "INCOMPLETE",
+                _ => "UNKNOWN"
+            };
+
+        private static int? ParseDurationMillis(string? text)
+        {
+            if (int.TryParse(new string((text ?? string.Empty).Where(char.IsDigit).ToArray()), out var millis))
+                return millis / 1000;
+            return null;
         }
 
         private async Task<(int Imported, int Skipped, int Total)> ImportContentAsync(string content, DateTime? billingDate, CancellationToken ct)
