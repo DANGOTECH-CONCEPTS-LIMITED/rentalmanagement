@@ -451,16 +451,43 @@ public sealed class DangoPaymentClient
         // A definite connection failure means the payout never reached the provider; return an empty
         // response so the durable submission gate can safely retry on the next cycle.
         if (response.TransportFailed) return string.Empty;
+        var emptyRejection = IsEmptyRejection(response);
+        var rejected = IsInvalidRequestIdRejection(response) || emptyRejection;
+        var message = emptyRejection
+            ? "Dango did not accept the payout (empty response). Verify the merchant wallet balance and the beneficiary mobile number."
+            : Message(response);
         return Envelope(response, new
         {
             // Only this provider-confirmed rejection is terminal at submission time.
-            payout = !IsInvalidRequestIdRejection(response),
+            payout = !rejected,
             otherReference = reference,
             vendorReference = Field(response, "flexipayReferenceNumber") ?? string.Empty,
-            status = IsInvalidRequestIdRejection(response) ? "FAILED" : "PENDING",
-            message = Message(response),
+            status = rejected ? "FAILED" : "PENDING",
+            message,
             flexipayReferenceNumber = Field(response, "flexipayReferenceNumber")
         });
+    }
+
+    // Dango sometimes acknowledges a payout with HTTP 200 but returns a body whose fields are all
+    // explicitly null. That is a rejection (the payout was never accepted), not a pending transfer.
+    private static bool IsEmptyRejection(Response response)
+    {
+        if (!response.IsSuccess || response.Body is not JsonElement body || body.ValueKind != JsonValueKind.Object)
+            return false;
+        return IsJsonNull(body, "statusCode") &&
+               IsJsonNull(body, "statusDescription") &&
+               IsJsonNull(body, "flexipayReferenceNumber") &&
+               IsJsonNull(body, "requestId");
+    }
+
+    private static bool IsJsonNull(JsonElement body, string name)
+    {
+        foreach (var property in body.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                return property.Value.ValueKind == JsonValueKind.Null;
+        }
+        return false;
     }
 
     private async Task<Response> PostAsync(string endpoint, object payload, CancellationToken ct = default)

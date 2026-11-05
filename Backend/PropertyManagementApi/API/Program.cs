@@ -168,6 +168,7 @@ builder.Services.AddHostedService<ProcessMpesaPayments>();
 builder.Services.AddHostedService<MeterTokenGeneratorService>();
 builder.Services.AddHostedService<ReminderProcessor>();
 builder.Services.AddHostedService<UssdImportProcessor>();
+builder.Services.AddHostedService<SslCertificateExpiryNotifier>();
 
 
 builder.Services.AddControllers(options =>

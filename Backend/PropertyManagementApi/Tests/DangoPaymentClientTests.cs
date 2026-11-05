@@ -127,6 +127,16 @@ public class DangoPaymentClientTests
         Assert.Equal("15000", sent.RootElement.GetProperty("amount").GetString());
     }
 
+    [Fact]
+    public async Task EmptyNullResponseIsTreatedAsRejectedPayout()
+    {
+        var handler = new StubHandler(_ => Reply("""{"statusCode":null,"statusDescription":null,"flexipayReferenceNumber":null,"requestId":null}"""));
+        using var result = JsonDocument.Parse(await Client(handler).InitiatePayoutAsync(Mobile()));
+        Assert.False(result.RootElement.GetProperty("data").GetProperty("payout").GetBoolean());
+        Assert.Equal("FAILED", result.RootElement.GetProperty("data").GetProperty("status").GetString());
+        Assert.Contains("did not accept", result.RootElement.GetProperty("data").GetProperty("message").GetString());
+    }
+
     [Theory]
     [InlineData("FAILED", true)]
     [InlineData("REJECTED", true)]
