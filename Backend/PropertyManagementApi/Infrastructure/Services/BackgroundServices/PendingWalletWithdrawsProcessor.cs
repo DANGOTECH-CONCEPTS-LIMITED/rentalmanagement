@@ -249,6 +249,15 @@ namespace Infrastructure.Services.BackgroundServices
                             _logger.LogError("Invalid payout response for transaction {TransactionId}", walletTransaction.TransactionId);
                             return;
                         }
+                        if (payoutResponse.data.payout && string.Equals(payoutResponse.data.status, "SUCCESSFUL", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // The submission itself reported statusCode 00: settle immediately, no status poll.
+                            walletTransaction.Status = SuccessfulAtTelecom;
+                            var vendorReference = payoutResponse.data.vendorReference ?? payoutResponse.data.otherReference;
+                            if (!string.IsNullOrWhiteSpace(vendorReference)) walletTransaction.VendorTranId = vendorReference;
+                            if (!string.IsNullOrWhiteSpace(payoutResponse.data.message)) walletTransaction.Description = payoutResponse.data.message;
+                            await wallet.UpdateWalletTransaction(walletTransaction);
+                        }
                         if (payoutResponse.data.payout)
                         {
                             walletTransaction.Status = "PENDING AT THE BANK";

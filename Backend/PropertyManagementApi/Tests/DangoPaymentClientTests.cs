@@ -115,6 +115,18 @@ public class DangoPaymentClientTests
         Assert.Equal("BANK", sent.RootElement.GetProperty("destination").GetString());
     }
 
+    [Fact]
+    public async Task PayoutAmountWithDatabaseScaleIsSentAsPlainWholeNumber()
+    {
+        var request = Mobile();
+        // The wallet column is decimal(65,30), so 15000 loads as a scale-24 decimal with trailing zeros.
+        request.Amount = 15000.000000000000000000000000m;
+        var handler = new StubHandler(_ => Reply("""{"statusCode":"00","requestId":"payout-ref"}"""));
+        await Client(handler).InitiatePayoutAsync(request);
+        using var sent = JsonDocument.Parse(handler.Body!);
+        Assert.Equal("15000", sent.RootElement.GetProperty("amount").GetString());
+    }
+
     [Theory]
     [InlineData("FAILED", true)]
     [InlineData("REJECTED", true)]
@@ -254,7 +266,7 @@ public class DangoPaymentClientTests
             CultureInfo.CurrentCulture = previous;
         }
         using var sent = JsonDocument.Parse(handler.Body!);
-        Assert.Equal("1234.50", sent.RootElement.GetProperty("amount").GetString());
+        Assert.Equal("1234.5", sent.RootElement.GetProperty("amount").GetString());
         Assert.Null(handler.ApiKey);
     }
 

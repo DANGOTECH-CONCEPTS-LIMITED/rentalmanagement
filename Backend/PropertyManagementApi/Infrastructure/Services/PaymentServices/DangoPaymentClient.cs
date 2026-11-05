@@ -617,9 +617,17 @@ public sealed class DangoPaymentClient
         return amount.ToString("0", CultureInfo.InvariantCulture);
     }
 
-    private static string Amount(decimal amount) => amount > 0
-        ? amount.ToString(CultureInfo.InvariantCulture)
-        : throw new ArgumentOutOfRangeException(nameof(amount), "Payment amount must be positive.");
+    private static string Amount(decimal amount)
+    {
+        if (amount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(amount), "Payment amount must be positive.");
+        // Dango expects a plain whole-number UGX amount. The wallet columns are decimal(65,30), so a
+        // loaded value like 15000m serializes as "15000.000000000000000000000000" and is rejected.
+        var text = amount.ToString(CultureInfo.InvariantCulture);
+        if (text.Contains('.'))
+            text = text.TrimEnd('0').TrimEnd('.');
+        return text;
+    }
 
     private static void RequireGateway(string? actual, string expected)
     {
