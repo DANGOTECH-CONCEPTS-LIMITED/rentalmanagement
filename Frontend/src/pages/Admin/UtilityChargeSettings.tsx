@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 interface ApiUser {
@@ -57,7 +58,7 @@ const UtilityChargeSettings = () => {
       try {
         const { data } = await api.get<ApiUser[]>('/GetAllUsers');
         const list = (data ?? [])
-          .filter((u) => u.systemRole?.name === 'Landlord' || /utility/i.test(u.systemRole?.name ?? ''))
+          .filter((u) => u.systemRoleId === 2 || u.systemRoleId === 4 || /landlord|util/i.test(u.systemRole?.name ?? ''))
           .map((u) => ({ id: u.id, name: u.fullName, email: u.email, role: u.systemRole?.name ?? '' }));
         setLandlords(list);
         if (list.length > 0) {
@@ -175,18 +176,21 @@ const UtilityChargeSettings = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <select
-            className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
-            value={selectedId ?? ''}
-            onChange={(e) => selectLandlord(Number(e.target.value))}
+          <Select
+            value={selectedId != null ? String(selectedId) : undefined}
+            onValueChange={(value) => selectLandlord(Number(value))}
           >
-            {landlords.length === 0 && <option value="">No accounts found</option>}
-            {landlords.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name} — {l.email} ({l.role})
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select an account" />
+            </SelectTrigger>
+            <SelectContent>
+              {landlords.map((l) => (
+                <SelectItem key={l.id} value={String(l.id)} searchKeywords={l.email}>
+                  {l.name} — {l.email} ({l.role})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
