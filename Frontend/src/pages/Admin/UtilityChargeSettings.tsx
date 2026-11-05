@@ -79,12 +79,17 @@ const UtilityChargeSettings = () => {
     setLoading(true);
     try {
       const { data } = await api.get<ChargeSettings>(`/GetLandlordUtilityCharge/${landlordId}`);
+      const chargeType = (data.chargeType ?? 'Percentage').trim();
+      const tiers = data.tiers ?? [];
       setSettings({
         landlordId: data.landlordId ?? landlordId,
-        chargeType: data.chargeType ?? 'Percentage',
+        chargeType,
         chargePercentage: data.chargePercentage ?? null,
         flatFee: data.flatFee ?? null,
-        tiers: data.tiers ?? [],
+        // A saved "Tiered" account must always show at least one editable band.
+        tiers: chargeType === 'Tiered' && tiers.length === 0
+          ? [{ minAmount: null, maxAmount: null, charge: 0 }]
+          : tiers,
       });
     } catch {
       toast({ title: 'Error', description: 'Unable to load utility charge settings.', variant: 'destructive' });
@@ -209,7 +214,21 @@ const UtilityChargeSettings = () => {
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
                     value={settings.chargeType}
-                    onChange={(e) => setSettings({ ...settings, chargeType: e.target.value })}
+                    onChange={(e) => {
+                      const chargeType = e.target.value;
+                      setSettings((s) =>
+                        s
+                          ? {
+                              ...s,
+                              chargeType,
+                              tiers:
+                                chargeType === 'Tiered' && s.tiers.length === 0
+                                  ? [{ minAmount: null, maxAmount: null, charge: 0 }]
+                                  : s.tiers,
+                            }
+                          : s
+                      );
+                    }}
                   >
                     {CHARGE_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>
