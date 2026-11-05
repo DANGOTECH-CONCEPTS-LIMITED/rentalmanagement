@@ -21,6 +21,7 @@ import {
   FileSearch,
   Wrench,
   PhoneCall,
+  Percent,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -413,6 +414,12 @@ function getNavItems(role: number): NavItem[] {
         label: "USSD Menu",
         icon: <PhoneCall size={18} />,
         path: "/admin-dashboard/ussd-menu",
+        group: "Utilities",
+      },
+      {
+        label: "Utility Charges",
+        icon: <Percent size={18} />,
+        path: "/admin-dashboard/utility-charge-settings",
         group: "Utilities",
       },
       {

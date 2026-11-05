@@ -70,6 +70,7 @@ import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
 import BillPayments from "./pages/Admin/BillPayments";
 import UpdateTransaction from "./pages/Admin/UpdateTransaction";
 import UssdMenu from "./pages/Admin/UssdMenu";
+import UtilityChargeSettings from "./pages/Admin/UtilityChargeSettings";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +141,7 @@ const App = () => (
                 <Route path="accounting" element={<Accounting />} />
                 <Route path="financial-reports" element={<FinancialReports />} />
                 <Route path="ussd-menu" element={<UssdMenu />} />
+                <Route path="utility-charge-settings" element={<UtilityChargeSettings />} />
                 <Route
                   path="utility-payments/:landlordId"
                   element={<UtilityPayments />}
