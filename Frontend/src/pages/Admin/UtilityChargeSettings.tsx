@@ -21,6 +21,7 @@ interface Landlord {
   id: number;
   name: string;
   email: string;
+  role: string;
 }
 
 interface Tier {
@@ -56,8 +57,8 @@ const UtilityChargeSettings = () => {
       try {
         const { data } = await api.get<ApiUser[]>('/GetAllUsers');
         const list = (data ?? [])
-          .filter((u) => u.systemRole?.name === 'Landlord')
-          .map((u) => ({ id: u.id, name: u.fullName, email: u.email }));
+          .filter((u) => u.systemRole?.name === 'Landlord' || /utility/i.test(u.systemRole?.name ?? ''))
+          .map((u) => ({ id: u.id, name: u.fullName, email: u.email, role: u.systemRole?.name ?? '' }));
         setLandlords(list);
         if (list.length > 0) {
           setSelectedId(list[0].id);
@@ -66,7 +67,7 @@ const UtilityChargeSettings = () => {
           setLoading(false);
         }
       } catch {
-        toast({ title: 'Error', description: 'Unable to load landlords.', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Unable to load accounts.', variant: 'destructive' });
         setLoading(false);
       }
     })();
@@ -158,7 +159,7 @@ const UtilityChargeSettings = () => {
         <div>
           <h1 className="text-2xl font-semibold">Utility Charge Settings</h1>
           <p className="text-sm text-muted-foreground">
-            Configure how each landlord charges their tenants for utility (water) usage.
+            Configure how each landlord and utility account charges for utility (water) usage.
           </p>
         </div>
         <Button onClick={save} disabled={saving || !settings}>
@@ -170,7 +171,7 @@ const UtilityChargeSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Wallet size={18} /> Landlord
+            <Wallet size={18} /> Account
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -179,10 +180,10 @@ const UtilityChargeSettings = () => {
             value={selectedId ?? ''}
             onChange={(e) => selectLandlord(Number(e.target.value))}
           >
-            {landlords.length === 0 && <option value="">No landlords found</option>}
+            {landlords.length === 0 && <option value="">No accounts found</option>}
             {landlords.map((l) => (
               <option key={l.id} value={l.id}>
-                {l.name} — {l.email}
+                {l.name} — {l.email} ({l.role})
               </option>
             ))}
           </select>
