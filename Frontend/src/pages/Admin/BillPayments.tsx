@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { buildApiEndpoint } from "@/lib/api-endpoint";
 
 interface BillPayment {
   id: number;
@@ -77,7 +78,7 @@ const money = (value: number) =>
 
 const BillPayments = () => {
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const endpoint = `${apiUrl.replace(/\/+$/, "").replace(/\/api(?:\/.*)?$/i, "")}/api/AdminBillPayments`;
+  const endpoint = buildApiEndpoint(apiUrl, "/api/AdminBillPayments");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");

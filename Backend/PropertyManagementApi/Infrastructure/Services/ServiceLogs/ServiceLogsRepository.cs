@@ -110,6 +110,47 @@ namespace Infrastructure.Services.ServiceLogs
                 .ToListAsync();
         }
 
+        public async Task<(IReadOnlyList<Domain.Entities.ServiceLogs.ServiceLogs> Items, int Total)> GetPagedByDateRangeAsync(
+            DateTime startDate,
+            DateTime endDate,
+            string? sourceType = null,
+            string? search = null,
+            int page = 1,
+            int pageSize = 50,
+            CancellationToken ct = default)
+        {
+            var start = startDate.Date;
+            var end = endDate.Date.AddDays(1).AddTicks(-1);
+
+            var query = _context.ServiceLogs
+                .AsNoTracking()
+                .Where(x => x.LogDate >= start && x.LogDate <= end);
+
+            if (!string.IsNullOrWhiteSpace(sourceType))
+            {
+                query = query.Where(x => x.SourceType == sourceType);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var value = search.Trim();
+                query = query.Where(x => x.Message.Contains(value) ||
+                                         x.Exception.Contains(value) ||
+                                         (x.RawContent != null && x.RawContent.Contains(value)) ||
+                                         (x.SourceIdentifier != null && x.SourceIdentifier.Contains(value)));
+            }
+
+            var total = await query.CountAsync(ct);
+            var items = await query
+                .OrderByDescending(x => x.LogDate)
+                .ThenByDescending(x => x.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, total);
+        }
+
         public async Task<SerilogImportResultDto> ImportSerilogFilesAsync(string logsDirectory, string? fileName = null)
         {
             var result = new SerilogImportResultDto();
@@ -186,9 +227,25 @@ namespace Infrastructure.Services.ServiceLogs
             return new[] { filePath };
         }
 
+        private static async Task<string[]> ReadSharedLinesAsync(string filePath)
+        {
+            await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+            var lines = new List<string>();
+            while (await reader.ReadLineAsync() is { } line)
+            {
+                lines.Add(line);
+            }
+
+            return lines.ToArray();
+        }
+
         private static async Task<List<Domain.Entities.ServiceLogs.ServiceLogs>> ParseSerilogFileAsync(string filePath)
         {
-            var lines = await File.ReadAllLinesAsync(filePath);
+            // The logger keeps the active file open for writing, so a plain File.ReadAllLinesAsync
+            // throws "used by another process". Read through a shared handle instead.
+            var lines = await ReadSharedLinesAsync(filePath);
             var entries = new List<Domain.Entities.ServiceLogs.ServiceLogs>();
             var currentBlock = new List<string>();
 

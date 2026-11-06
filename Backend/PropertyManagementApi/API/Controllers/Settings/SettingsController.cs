@@ -94,9 +94,13 @@ namespace API.Controllers.Settings
             }
         }
 
+        // Serilog.Sinks.File keeps the active log open for writing with FileShare.Read, which makes a
+        // plain File.ReadAllText fail with "used by another process". Very large files are tail-read.
+        private const long MaxLogContentBytes = 5 * 1024 * 1024;
+
         [HttpGet("/GetSerilogLogFileContent")]
         [Authorize]
-        public IActionResult GetSerilogLogFileContent([FromQuery] string fileName)
+        public async Task<IActionResult> GetSerilogLogFileContent([FromQuery] string fileName, CancellationToken ct)
         {
             try
             {
@@ -114,7 +118,7 @@ namespace API.Controllers.Settings
                     return NotFound(new { message = "Requested log file was not found." });
                 }
 
-                var content = System.IO.File.ReadAllText(filePath);
+                var (content, truncated) = await ReadSharedLogFileAsync(filePath, ct);
                 var fileInfo = new FileInfo(filePath);
 
                 return Ok(new
@@ -122,6 +126,7 @@ namespace API.Controllers.Settings
                     fileName = fileInfo.Name,
                     sizeBytes = fileInfo.Length,
                     lastModified = fileInfo.LastWriteTimeUtc,
+                    truncated,
                     content = MaskSensitiveText(content)
                 });
             }
@@ -129,6 +134,29 @@ namespace API.Controllers.Settings
             {
                 return BadRequest(new { message = "An error occurred while retrieving log file content.", error = ex.Message });
             }
+        }
+
+        // Opens the file alongside the logger's write handle instead of fighting it for exclusive access.
+        private static async Task<(string Content, bool Truncated)> ReadSharedLogFileAsync(string filePath, CancellationToken ct)
+        {
+            await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var truncated = stream.Length > MaxLogContentBytes;
+            if (truncated)
+            {
+                stream.Seek(-MaxLogContentBytes, SeekOrigin.End);
+            }
+
+            using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+            var content = await reader.ReadToEndAsync(ct);
+            if (truncated)
+            {
+                // Drop the partial first line produced by seeking into the middle of the file.
+                var firstNewline = content.IndexOf('\n');
+                content = firstNewline >= 0 ? content[(firstNewline + 1)..] : string.Empty;
+            }
+
+            return (content, truncated);
         }
 
         [HttpPost("/ImportSerilogLogsToDb")]
@@ -155,7 +183,9 @@ namespace API.Controllers.Settings
 
         [HttpGet("/GetDbServiceLogs")]
         [Authorize]
-        public async Task<IActionResult> GetDbServiceLogs([FromQuery] DateTime startDate, [FromQuery] DateTime endDate, [FromQuery] string? sourceType = null)
+        public async Task<IActionResult> GetDbServiceLogs([FromQuery] DateTime startDate, [FromQuery] DateTime endDate,
+            [FromQuery] string? sourceType = null, [FromQuery] string? search = null,
+            [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
         {
             try
             {
@@ -165,7 +195,23 @@ namespace API.Controllers.Settings
                     return Unauthorized();
                 }
 
-                var logs = await _serviceLogsRepository.GetByDateRangeAsync(startDate, endDate, sourceType);
+                if (endDate.Date < startDate.Date)
+                {
+                    return BadRequest(new { message = "The end date cannot be before the start date." });
+                }
+
+                if (page < 1 || pageSize is < 1 or > 200)
+                {
+                    return BadRequest(new { message = "page must be at least 1 and pageSize between 1 and 200." });
+                }
+
+                if (search?.Length > 128)
+                {
+                    return BadRequest(new { message = "search must be 128 characters or fewer." });
+                }
+
+                var (logs, total) = await _serviceLogsRepository.GetPagedByDateRangeAsync(
+                    startDate, endDate, sourceType, search, page, pageSize, ct);
                 var maskedLogs = logs.Select(log => new
                 {
                     id = log.Id,
@@ -178,9 +224,9 @@ namespace API.Controllers.Settings
                     sourceIdentifier = log.SourceIdentifier,
                     rawContent = MaskSensitiveText(log.RawContent),
                     eventHash = log.EventHash,
-                });
+                }).ToList();
 
-                return Ok(maskedLogs);
+                return Ok(new { items = maskedLogs, page, pageSize, total });
             }
             catch (Exception ex)
             {

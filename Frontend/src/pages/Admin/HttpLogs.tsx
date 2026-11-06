@@ -50,6 +50,26 @@ interface SerilogFileEntry {
 
 interface SerilogFileContent extends SerilogFileEntry {
   content: string;
+  truncated?: boolean;
+}
+
+interface DbServiceLog {
+  id: number;
+  serviceName: string;
+  logDate: string;
+  logLevel: string;
+  message: string;
+  exception?: string | null;
+  sourceType?: string | null;
+  sourceIdentifier?: string | null;
+  rawContent?: string | null;
+}
+
+interface DbServiceLogPage {
+  items: DbServiceLog[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
 const formatDate = (dateValue?: string) => {
@@ -98,6 +118,16 @@ const HttpLogs = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSerilogFiles, setIsLoadingSerilogFiles] = useState(false);
   const [isLoadingSerilogContent, setIsLoadingSerilogContent] = useState(false);
+  const [dbLogs, setDbLogs] = useState<DbServiceLog[]>([]);
+  const [dbTotal, setDbTotal] = useState(0);
+  const [dbPage, setDbPage] = useState(1);
+  const [dbPageSize, setDbPageSize] = useState(50);
+  const [dbSource, setDbSource] = useState("all");
+  const [dbSearch, setDbSearch] = useState("");
+  const [isLoadingDbLogs, setIsLoadingDbLogs] = useState(false);
+  const [dbLogsLoaded, setDbLogsLoaded] = useState(false);
+  const [selectedDbLog, setSelectedDbLog] = useState<DbServiceLog | null>(null);
+  const [isImportingLogs, setIsImportingLogs] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -228,9 +258,18 @@ const HttpLogs = () => {
       setSelectedSerilogFile(response.data);
     } catch (error) {
       console.error("Error fetching Serilog file content:", error);
+      const serverMessage =
+        axios.isAxiosError(error) && typeof error.response?.data?.message === "string"
+          ? error.response.data.message
+          : null;
+      const serverDetail =
+        axios.isAxiosError(error) && typeof error.response?.data?.error === "string"
+          ? error.response.data.error
+          : null;
       toast({
         title: "Error",
-        description: "Failed to retrieve selected log file.",
+        description: [serverMessage, serverDetail].filter(Boolean).join(" ") ||
+          "Failed to retrieve selected log file.",
         variant: "destructive",
       });
     } finally {
@@ -242,6 +281,90 @@ const HttpLogs = () => {
     fetchLogs();
     fetchSerilogFiles();
   }, []);
+
+  // Reads log events persisted in the database, so earlier days stay inspectable after rotation.
+  const fetchDbLogs = async (page = 1) => {
+    const token = getToken();
+
+    if (!token) {
+      return;
+    }
+
+    setIsLoadingDbLogs(true);
+
+    try {
+      const response = await axios.get<DbServiceLogPage>(
+        `${apiUrl}/GetDbServiceLogs`,
+        {
+          params: {
+            startDate,
+            endDate,
+            ...(dbSource !== "all" ? { sourceType: dbSource } : {}),
+            ...(dbSearch.trim() ? { search: dbSearch.trim() } : {}),
+            page,
+            pageSize: dbPageSize,
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            accept: "*/*",
+          },
+        }
+      );
+
+      setDbLogs(response.data.items ?? []);
+      setDbTotal(response.data.total ?? 0);
+      setDbPage(response.data.page ?? page);
+    } catch (error) {
+      console.error("Error fetching database service logs:", error);
+      const message =
+        axios.isAxiosError(error) && typeof error.response?.data?.message === "string"
+          ? error.response.data.message
+          : "Failed to retrieve previous logs.";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setIsLoadingDbLogs(false);
+    }
+  };
+
+  const importSerilogLogs = async (fileName?: string) => {
+    const token = getToken();
+
+    if (!token) {
+      return;
+    }
+
+    setIsImportingLogs(true);
+
+    try {
+      const response = await axios.post(
+        `${apiUrl}/ImportSerilogLogsToDb`,
+        null,
+        {
+          params: fileName ? { fileName } : {},
+          headers: {
+            Authorization: `Bearer ${token}`,
+            accept: "*/*",
+          },
+        }
+      );
+
+      const result = response.data ?? {};
+      toast({
+        title: "Import complete",
+        description: `${result.eventsImported ?? 0} new event(s) stored from ${result.filesProcessed ?? 0} file(s); ${result.eventsSkipped ?? 0} already present.`,
+      });
+      await fetchDbLogs(1);
+    } catch (error) {
+      console.error("Error importing Serilog files:", error);
+      const message =
+        axios.isAxiosError(error) && typeof error.response?.data?.message === "string"
+          ? error.response.data.message
+          : "Failed to import Serilog log files.";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setIsImportingLogs(false);
+    }
+  };
 
   const availableMethods = useMemo(
     () => Array.from(new Set(logs.map((log) => log.requestType).filter(Boolean))).sort(),
@@ -357,10 +480,20 @@ const HttpLogs = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="database" className="space-y-4">
+      <Tabs
+        defaultValue="database"
+        className="space-y-4"
+        onValueChange={(value) => {
+          if (value === "previous" && !dbLogsLoaded) {
+            setDbLogsLoaded(true);
+            void fetchDbLogs(1);
+          }
+        }}
+      >
         <TabsList>
           <TabsTrigger value="database">HTTP Request / Response</TabsTrigger>
           <TabsTrigger value="files">Raw Serilog Files</TabsTrigger>
+          <TabsTrigger value="previous">Previous Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="database" className="space-y-4">
@@ -533,6 +666,135 @@ const HttpLogs = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="previous" className="space-y-4">
+          <Card className="p-4 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Previous logs</h2>
+                <p className="text-sm text-muted-foreground">
+                  Log events persisted in the database, so earlier days stay available after Serilog
+                  rotates or deletes its raw file. Use “Import log files to DB” to load every file
+                  still present in the server&apos;s logs folder.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => void importSerilogLogs()}
+                disabled={isImportingLogs}
+              >
+                {isImportingLogs ? "Importing..." : "Import log files to DB"}
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[180px_180px_180px_minmax(0,1fr)_auto]">
+              <div className="space-y-2">
+                <Label htmlFor="db-start-date">Start date</Label>
+                <Input
+                  id="db-start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  max={endDate || undefined}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="db-end-date">End date</Label>
+                <Input
+                  id="db-end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  min={startDate || undefined}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Source</Label>
+                <Select value={dbSource} onValueChange={setDbSource}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All sources" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sources</SelectItem>
+                    <SelectItem value="SerilogSink">SerilogSink</SelectItem>
+                    <SelectItem value="SerilogFile">SerilogFile</SelectItem>
+                    <SelectItem value="ApplicationError">ApplicationError</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="db-log-search">Search message, exception or raw content</Label>
+                <Input
+                  id="db-log-search"
+                  value={dbSearch}
+                  onChange={(event) => setDbSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void fetchDbLogs(1);
+                  }}
+                  placeholder="e.g. DANGO_B_20261106_49"
+                />
+              </div>
+              <Button onClick={() => void fetchDbLogs(1)} disabled={isLoadingDbLogs}>
+                {isLoadingDbLogs ? "Searching..." : "Search"}
+              </Button>
+            </div>
+
+            {isLoadingDbLogs ? (
+              <div className="py-8 text-center text-muted-foreground">Loading previous logs...</div>
+            ) : dbLogs.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                No stored log events for this range. Import the log files to persist earlier days.
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Level</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dbLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="whitespace-nowrap">{formatDate(log.logDate)}</TableCell>
+                          <TableCell>{log.logLevel || "-"}</TableCell>
+                          <TableCell>{log.sourceType || "-"}</TableCell>
+                          <TableCell>{log.serviceName || "-"}</TableCell>
+                          <TableCell className="max-w-[420px] truncate">{log.message || "-"}</TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedDbLog(log)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <DataTablePagination
+                  page={dbPage}
+                  pageSize={dbPageSize}
+                  totalCount={dbTotal}
+                  onPageChange={(nextPage) => void fetchDbLogs(nextPage)}
+                  onPageSizeChange={(nextSize) => {
+                    setDbPageSize(nextSize);
+                    void fetchDbLogs(1);
+                  }}
+                  itemLabel="log events"
+                  className="rounded-lg border"
+                />
+              </>
+            )}
+          </Card>
+        </TabsContent>
+
         <TabsContent value="files" className="space-y-4">
           <Card className="p-4 space-y-4">
             <div className="flex items-center justify-between">
@@ -571,14 +833,24 @@ const HttpLogs = () => {
                         <TableCell>{formatDate(file.lastModified)}</TableCell>
                         <TableCell>{formatSize(file.sizeBytes)}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fetchSerilogFileContent(file.fileName)}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Open
-                          </Button>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => fetchSerilogFileContent(file.fileName)}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              Open
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void importSerilogLogs(file.fileName)}
+                              disabled={isImportingLogs}
+                            >
+                              Import
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -630,6 +902,52 @@ const HttpLogs = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!selectedDbLog} onOpenChange={(open) => !open && setSelectedDbLog(null)}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Stored log event</DialogTitle>
+          </DialogHeader>
+          {selectedDbLog && (
+            <div className="space-y-4">
+              <Card className="p-4">
+                <div className="grid gap-2 text-sm md:grid-cols-2">
+                  <p><span className="font-medium">Date:</span> {formatDate(selectedDbLog.logDate)}</p>
+                  <p><span className="font-medium">Level:</span> {selectedDbLog.logLevel || "-"}</p>
+                  <p><span className="font-medium">Source:</span> {selectedDbLog.sourceType || "-"}</p>
+                  <p><span className="font-medium">Service:</span> {selectedDbLog.serviceName || "-"}</p>
+                  <p><span className="font-medium">Identifier:</span> {selectedDbLog.sourceIdentifier || "-"}</p>
+                </div>
+              </Card>
+
+              <Card className="p-4 space-y-2">
+                <h3 className="font-semibold">Message</h3>
+                <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
+                  {selectedDbLog.message || "No message recorded."}
+                </pre>
+              </Card>
+
+              {selectedDbLog.exception && (
+                <Card className="p-4 space-y-2">
+                  <h3 className="font-semibold">Exception</h3>
+                  <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
+                    {selectedDbLog.exception}
+                  </pre>
+                </Card>
+              )}
+
+              {selectedDbLog.rawContent && (
+                <Card className="p-4 space-y-2">
+                  <h3 className="font-semibold">Raw content</h3>
+                  <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
+                    {selectedDbLog.rawContent}
+                  </pre>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={!!selectedSerilogFile || isLoadingSerilogContent}
         onOpenChange={(open) => {
@@ -660,6 +978,11 @@ const HttpLogs = () => {
                 </Card>
               </div>
               <Card className="p-4">
+                {selectedSerilogFile.truncated && (
+                  <p className="mb-2 text-xs text-amber-600">
+                    Showing the most recent portion of this file (it is larger than 5 MB).
+                  </p>
+                )}
                 <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-950 p-4 text-xs text-slate-50">
                   {selectedSerilogFile.content || "No file content available."}
                 </pre>

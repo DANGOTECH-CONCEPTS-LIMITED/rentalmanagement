@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DataTablePagination } from '@/components/common/DataTablePagination';
+import { buildApiEndpoint } from '@/lib/api-endpoint';
 
 interface Props {
   apiUrl: string;
@@ -44,7 +45,7 @@ export default function AdminPayoutReconciliation(props: Props) {
 }
 
 function Reconciliation({ apiUrl, authToken }: Props) {
-  const endpoint = `${apiUrl.replace(/\/+$/, '').replace(/\/api(?:\/.*)?$/i, '')}/api/AdminPayoutReconciliation`;
+  const endpoint = buildApiEndpoint(apiUrl, '/api/AdminPayoutReconciliation');
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState({ reference: '', page: 1, pageSize: 20, reload: 0 });
   const [result, setResult] = useState<PayoutPage | null>(null);

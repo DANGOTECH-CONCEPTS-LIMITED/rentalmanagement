@@ -67,6 +67,7 @@ import {
   exportWalletStatementPdf,
 } from "@/lib/wallet-statement-export";
 import { buildRunningBalanceStatement } from "@/lib/wallet-statement";
+import { buildApiEndpoint } from "@/lib/api-endpoint";
 import { cn } from "@/lib/utils";
 
 interface StoredUser {
@@ -350,7 +351,7 @@ const AdminWalletManagement = () => {
     setTriggeringTransactionId(transactionId);
     try {
       const { data } = await axios.post<{ created: boolean }>(
-        `${apiUrl}/AdminBillPayments/trigger`,
+        buildApiEndpoint(apiUrl, "/api/AdminBillPayments/trigger"),
         { transactionId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -358,15 +359,19 @@ const AdminWalletManagement = () => {
         title: data.created ? "Bill payment triggered" : "Already exists",
         description: data.created
           ? "A bill payment instruction was created for this transaction. Use Bill Payments to submit it."
-          : "This transaction already has a bill payment instruction.",
+          : "This transaction already has a bill payment instruction, or its meter has no NWSC account to pay.",
       });
     } catch (error) {
+      const serverMessage = axios.isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
       toast({
         title: "Trigger failed",
         description:
-          axios.isAxiosError(error) && error.response?.data?.message
-            ? error.response.data.message
-            : "Unable to trigger bill payment.",
+          serverMessage ??
+          (axios.isAxiosError(error) && error.response
+            ? `Request failed with HTTP ${error.response.status}.`
+            : "Unable to trigger bill payment. Check your connection and try again."),
         variant: "destructive",
       });
     } finally {
