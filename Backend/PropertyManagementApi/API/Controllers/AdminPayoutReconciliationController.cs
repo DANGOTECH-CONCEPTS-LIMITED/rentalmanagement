@@ -1,5 +1,6 @@
 using Application.Interfaces.PaymentService;
 using Domain.Dtos.Payments;
+using Domain.Entities.PropertyMgt;
 using Infrastructure.Services.PaymentServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -139,6 +140,31 @@ public sealed class AdminPayoutReconciliationController(IAdminPayoutReconciliati
         {
             return NotFound(new { message = ex.Message });
         }
+    }
+
+    public sealed class ResubmitBillPaymentRequest
+    {
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    /// <summary>Requeues a bill payment the provider was never asked about. Rows with a recorded submission attempt are refused.</summary>
+    [HttpPost("/api/AdminBillPayments/{id:int}/resubmit")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ResubmitBillPayment(int id, [FromBody] ResubmitBillPaymentRequest request, CancellationToken ct)
+    {
+        var actor = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrWhiteSpace(actor)) return Unauthorized();
+        try
+        {
+            var reference = await service.ResubmitBillPaymentAsync(id, request.Reason, actor, ct);
+            return Ok(new { id, reference, status = BillPaymentInstructionStatus.PendingSubmission });
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
     /// <summary>Manually fails and refunds an independently verified unpaid, transaction-not-found Dango payout exactly once.</summary>

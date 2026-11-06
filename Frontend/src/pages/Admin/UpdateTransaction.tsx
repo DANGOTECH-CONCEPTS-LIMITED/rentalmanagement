@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateTimeDmy } from "@/lib/date-time";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import { Pencil } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -151,6 +153,8 @@ const UpdateTransaction = () => {
     });
   }, [transactions, statusFilter, searchFilter, startDate, endDate]);
 
+  const transactionPagination = useTablePagination(filtered, 10);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -162,18 +166,30 @@ const UpdateTransaction = () => {
           <Input
             placeholder="Search TranID / Meter / Phone"
             value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
+            onChange={(e) => {
+              setSearchFilter(e.target.value);
+              transactionPagination.resetPage();
+            }}
             className="w-64"
           />
-          <SearchableNativeSelect className="rounded border px-2 py-1" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <SearchableNativeSelect className="rounded border px-2 py-1" value={statusFilter} onChange={(e) => {
+            setStatusFilter(e.target.value);
+            transactionPagination.resetPage();
+          }}>
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </SearchableNativeSelect>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          <Button variant="outline" onClick={() => { setSearchFilter(""); setStatusFilter(""); setStartDate(""); setEndDate(""); }}>Clear</Button>
+          <Input type="date" value={startDate} onChange={(e) => {
+            setStartDate(e.target.value);
+            transactionPagination.resetPage();
+          }} />
+          <Input type="date" value={endDate} onChange={(e) => {
+            setEndDate(e.target.value);
+            transactionPagination.resetPage();
+          }} />
+          <Button variant="outline" onClick={() => { setSearchFilter(""); setStatusFilter(""); setStartDate(""); setEndDate(""); transactionPagination.resetPage(); }}>Clear</Button>
           <Button onClick={fetchTransactions} variant="outline">Refresh</Button>
         </div>
       </div>
@@ -200,7 +216,7 @@ const UpdateTransaction = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((t) => (
+                {transactionPagination.pageRows.map((t) => (
                   <TableRow key={t.id || t.transactionID}>
                     <TableCell>{t.transactionID || t.transactionId || t.id}</TableCell>
                     <TableCell>{t.status || "-"}</TableCell>
@@ -217,6 +233,15 @@ const UpdateTransaction = () => {
                 ))}
               </TableBody>
             </Table>
+            <DataTablePagination
+              page={transactionPagination.page}
+              pageSize={transactionPagination.pageSize}
+              totalCount={transactionPagination.totalCount}
+              onPageChange={transactionPagination.setPage}
+              onPageSizeChange={transactionPagination.setPageSize}
+              itemLabel="transactions"
+              className="px-2 pb-2"
+            />
           </div>
         )}
       </div>

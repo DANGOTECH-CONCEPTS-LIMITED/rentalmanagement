@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
 import { useToast } from '@/hooks/use-toast';
 
 interface MeterRow {
@@ -70,6 +71,8 @@ const FinancialReports = () => {
   const [ussdHasMore, setUssdHasMore] = useState(false);
   const [filterOutcome, setFilterOutcome] = useState('all');
   const [meterPage, setMeterPage] = useState(1);
+  const [meterPageSize, setMeterPageSize] = useState(10);
+  const [ussdPageSize, setUssdPageSize] = useState(20);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -89,12 +92,12 @@ const FinancialReports = () => {
     }
   };
 
-  const loadUssd = async (page = 1) => {
+  const loadUssd = async (page = 1, pageSize = ussdPageSize) => {
     try {
       const { data } = await api.get<{ items: UssdCharge[]; page: number; total: number; hasMore: boolean; totalCharge: number }>('/GetUssdSessionCharges', {
         params: {
           page,
-          pageSize: 20,
+          pageSize,
           ...(from ? { from } : {}),
           ...(to ? { to } : {}),
           ...(filterOutcome !== 'all' ? { outcome: filterOutcome } : {}),
@@ -195,7 +198,7 @@ const FinancialReports = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {report.meters.slice((meterPage - 1) * 10, meterPage * 10).map((m) => (
+                      {report.meters.slice((meterPage - 1) * meterPageSize, meterPage * meterPageSize).map((m) => (
                         <TableRow key={m.meterNumber}>
                           <TableCell>{m.meterNumber}</TableCell>
                           <TableCell className="text-right">{money(m.grossCollected)}</TableCell>
@@ -208,12 +211,19 @@ const FinancialReports = () => {
                       ))}
                     </TableBody>
                   </Table>
-                  {report.meters.length > 10 && (
-                    <div className="mt-3 flex items-center gap-3">
-                      <Button variant="outline" size="sm" disabled={meterPage <= 1} onClick={() => setMeterPage((p) => Math.max(1, p - 1))}>Previous</Button>
-                      <span className="text-sm">Page {meterPage} of {Math.ceil(report.meters.length / 10)}</span>
-                      <Button variant="outline" size="sm" disabled={meterPage * 10 >= report.meters.length} onClick={() => setMeterPage((p) => p + 1)}>Next</Button>
-                    </div>
+                  {report.meters.length > 0 && (
+                    <DataTablePagination
+                      page={meterPage}
+                      pageSize={meterPageSize}
+                      totalCount={report.meters.length}
+                      onPageChange={setMeterPage}
+                      onPageSizeChange={(nextSize) => {
+                        setMeterPageSize(nextSize);
+                        setMeterPage(1);
+                      }}
+                      itemLabel="meters"
+                      className="mt-3 rounded-lg border"
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -330,16 +340,23 @@ const FinancialReports = () => {
                   )}
                 </TableBody>
               </Table>
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-sm text-muted-foreground">
                   {ussdTotal} session charge(s) · <strong className="text-red-600">{money(ussdTotalCharge)}</strong>
                 </span>
-                <div className="flex items-center gap-3">
-                  <Button variant="outline" size="sm" disabled={ussdPage <= 1} onClick={() => loadUssd(ussdPage - 1)}>Previous</Button>
-                  <span className="text-sm">Page {ussdPage}</span>
-                  <Button variant="outline" size="sm" disabled={!ussdHasMore} onClick={() => loadUssd(ussdPage + 1)}>Next</Button>
-                </div>
               </div>
+              <DataTablePagination
+                page={ussdPage}
+                pageSize={ussdPageSize}
+                totalCount={ussdTotal}
+                onPageChange={(nextPage) => void loadUssd(nextPage)}
+                onPageSizeChange={(nextSize) => {
+                  setUssdPageSize(nextSize);
+                  void loadUssd(1, nextSize);
+                }}
+                itemLabel="session charges"
+                className="mt-3 rounded-lg border"
+              />
             </CardContent>
           </Card>
         </TabsContent>

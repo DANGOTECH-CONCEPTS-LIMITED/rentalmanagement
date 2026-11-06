@@ -49,6 +49,8 @@ import {
 import axios from "axios";
 
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
+import { useTablePagination } from "@/hooks/use-table-pagination";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import Modal from "@/components/common/Model";
 import { toast } from "@/components/ui/use-toast";
 import { LandlordFormData } from "./RegisterLandlord";
@@ -1771,6 +1773,7 @@ const UserTable = ({
   const token = user ? JSON.parse(user).token : null;
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletedUser, setDeletedUser] = useState<User | null>(null);
+  const userPagination = useTablePagination(users, 10);
 
   const deleteUser = async (userId: string) => {
     if (!token) {
@@ -1831,7 +1834,7 @@ const UserTable = ({
               </TableCell>
             </TableRow>
           ) : (
-            users.map((user) => (
+            userPagination.pageRows.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   <div className="space-y-1">
@@ -1902,6 +1905,17 @@ const UserTable = ({
           )}
         </TableBody>
       </Table>
+      {users.length > 0 && (
+        <DataTablePagination
+          page={userPagination.page}
+          pageSize={userPagination.pageSize}
+          totalCount={userPagination.totalCount}
+          onPageChange={userPagination.setPage}
+          onPageSizeChange={userPagination.setPageSize}
+          itemLabel="users"
+          className="mt-4"
+        />
+      )}
       <ConfirmDeleteModal
         title="Delete User"
         isOpen={isDeleteModalOpen}

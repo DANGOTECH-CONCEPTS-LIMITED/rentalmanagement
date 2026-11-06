@@ -13,6 +13,8 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { api, getUser } from '@/lib/api';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useToast } from '@/hooks/use-toast';
 
 interface Maintenance {
@@ -41,6 +43,7 @@ const Maintenance = () => {
   const [cost, setCost] = useState('0');
   const [resolution, setResolution] = useState('');
   const [saving, setSaving] = useState(false);
+  const requestPagination = useTablePagination(requests, 10);
 
   const landlordId = getUser()?.id ?? null;
 
@@ -145,7 +148,7 @@ const Maintenance = () => {
             </TableHeader>
             <TableBody>
               {!loading && requests.length > 0 ? (
-                requests.map((request) => (
+                requestPagination.pageRows.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">
                       {request.subject}
@@ -176,6 +179,17 @@ const Maintenance = () => {
               )}
             </TableBody>
           </Table>
+          {!loading && requests.length > 0 && (
+            <DataTablePagination
+              page={requestPagination.page}
+              pageSize={requestPagination.pageSize}
+              totalCount={requestPagination.totalCount}
+              onPageChange={requestPagination.setPage}
+              onPageSizeChange={requestPagination.setPageSize}
+              itemLabel="requests"
+              className="mt-4 rounded-lg border"
+            />
+          )}
         </CardContent>
       </Card>
 

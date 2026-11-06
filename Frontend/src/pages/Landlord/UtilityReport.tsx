@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 
 type UtilityTransaction = {
   id: number;
@@ -37,6 +38,7 @@ const UtilityReport: React.FC = () => {
   const [data, setData] = useState<UtilityTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
 
     const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -79,9 +81,9 @@ const handleExportPDF = () => {
   doc.save("utility-report.pdf");
 };
 
-  const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedData = data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = data.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="p-6">
@@ -159,27 +161,18 @@ const handleExportPDF = () => {
           </Table>
 
           {/* Pagination Controls */}
-          <div className="mt-4 flex justify-between items-center">
-            <p className="text-sm text-gray-500">
-              Page {currentPage} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-              >
-                Prev
-              </button>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <DataTablePagination
+            page={currentPage}
+            pageSize={itemsPerPage}
+            totalCount={data.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(nextSize) => {
+              setItemsPerPage(nextSize);
+              setCurrentPage(1);
+            }}
+            itemLabel="payments"
+            className="mt-4 rounded-lg border"
+          />
         </>
       ) : (
         !loading && <p className="text-gray-500">No data found.</p>

@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import {
   Users,
   Search,
@@ -334,6 +336,8 @@ const ManageTenants = () => {
       tenant.property.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const tenantPagination = useTablePagination(filteredTenants, 10);
+
   const formatCurrency = (amount: number, currency: string = "UGX") => {
     return new Intl.NumberFormat("en-UG", {
       style: "currency",
@@ -455,7 +459,10 @@ const ManageTenants = () => {
                 placeholder="Search by name, email, or property..."
                 className="pl-10"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  tenantPagination.resetPage();
+                }}
               />
             </div>
             <Button
@@ -512,7 +519,7 @@ const ManageTenants = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTenants.map((tenant) => (
+                  {tenantPagination.pageRows.map((tenant) => (
                     <TableRow key={tenant.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -643,6 +650,15 @@ const ManageTenants = () => {
                   ))}
                 </TableBody>
               </Table>
+              <DataTablePagination
+                page={tenantPagination.page}
+                pageSize={tenantPagination.pageSize}
+                totalCount={tenantPagination.totalCount}
+                onPageChange={tenantPagination.setPage}
+                onPageSizeChange={tenantPagination.setPageSize}
+                itemLabel="tenants"
+                className="mt-4 rounded-lg border"
+              />
             </div>
           )}
         </CardContent>

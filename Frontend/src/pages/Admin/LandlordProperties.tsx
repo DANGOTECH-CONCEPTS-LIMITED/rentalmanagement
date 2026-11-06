@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import {
   House,
   Search,
@@ -106,6 +107,8 @@ const LandlordProperties = () => {
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const user = localStorage.getItem("user") || null;
 
@@ -192,6 +195,13 @@ const LandlordProperties = () => {
       property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const propertyTotalPages = Math.max(1, Math.ceil(filteredProperties.length / pageSize));
+  const propertyCurrentPage = Math.min(page, propertyTotalPages);
+  const pagedProperties = filteredProperties.slice(
+    (propertyCurrentPage - 1) * pageSize,
+    propertyCurrentPage * pageSize,
   );
 
   const handleDeleteProperty = async (id: number) => {
@@ -418,7 +428,10 @@ const LandlordProperties = () => {
               placeholder="Search by property name, address, or landlord..."
               className="pl-10"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 
@@ -459,7 +472,7 @@ const LandlordProperties = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProperties.map((property) => (
+                  {pagedProperties.map((property) => (
                     <TableRow key={property.id}>
                       <TableCell className="font-medium">
                         {property.name}
@@ -502,6 +515,18 @@ const LandlordProperties = () => {
                   ))}
                 </TableBody>
               </Table>
+              <DataTablePagination
+                page={propertyCurrentPage}
+                pageSize={pageSize}
+                totalCount={filteredProperties.length}
+                onPageChange={setPage}
+                onPageSizeChange={(nextSize) => {
+                  setPageSize(nextSize);
+                  setPage(1);
+                }}
+                itemLabel="properties"
+                className="mt-4 rounded-lg border"
+              />
             </div>
           )}
         </CardContent>

@@ -5,7 +5,7 @@ namespace Domain.Dtos.Payments;
 /// <summary>An unresolved submitted Dango withdrawal available for manual reconciliation.</summary>
 public sealed record AdminPayoutReconciliationItem(int Id, string TransactionId, decimal Amount, string Status, string VendorReference, string Owner);
 /// <summary>A bounded page of unresolved Dango withdrawals.</summary>
-public sealed record AdminPayoutReconciliationPage(IReadOnlyList<AdminPayoutReconciliationItem> Items, int Page, int PageSize, bool HasMore);
+public sealed record AdminPayoutReconciliationPage(IReadOnlyList<AdminPayoutReconciliationItem> Items, int Page, int PageSize, bool HasMore, int TotalCount);
 /// <summary>Explicit administrator confirmation of an unpaid payout and the reason for refunding it.</summary>
 public sealed record FailAndReversePayoutRequest
 {
@@ -20,6 +20,6 @@ public sealed record FailAndReversePayoutResponse(string TransactionId, string S
 /// <summary>One automatic NWSC bill payment and its provider/debit outcome.</summary>
 public sealed record BillPaymentAdminItem(int Id, string RequestReference, string NwscAccount, string? MeterNumber, string? MeterName,
     decimal Amount, string Status, string? ProviderReference, string? Reason, string? ExternalRefNoBillerId, DateTime CreatedAtUtc,
-    DateTime? SubmittedAtUtc, DateTime? ConfirmedAtUtc, DateTime? WalletDebitedAtUtc);
+    DateTime? SubmittedAtUtc, DateTime? ConfirmedAtUtc, DateTime? WalletDebitedAtUtc, int SubmissionAttempts);
 /// <summary>A bounded page of automatic NWSC bill payments.</summary>
-public sealed record BillPaymentAdminPage(IReadOnlyList<BillPaymentAdminItem> Items, int Page, int PageSize, bool HasMore);
+public sealed record BillPaymentAdminPage(IReadOnlyList<BillPaymentAdminItem> Items, int Page, int PageSize, bool HasMore, int TotalCount);

@@ -19,10 +19,11 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
             throw new ArgumentException("Invalid search or pagination.");
         var query = PendingDangoPayouts();
         if (!string.IsNullOrWhiteSpace(reference)) query = query.Where(x => x.TransactionId == reference.Trim());
+        var totalCount = await query.CountAsync(ct);
         var rows = await query.OrderByDescending(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize + 1)
             .Select(x => new AdminPayoutReconciliationItem(x.Id, x.TransactionId, -x.Amount, x.Status, x.VendorTranId,
                 x.Wallet.Landlord.FullName)).ToListAsync(ct);
-        return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
+        return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize, totalCount);
     }
 
     public async Task<BillPaymentAdminPage> GetBillPaymentsAsync(string? reference, string? status, int page, int pageSize, DateTime? from = null, DateTime? to = null, CancellationToken ct = default)
@@ -38,28 +39,40 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.Trim().ToUpperInvariant());
         if (from.HasValue) query = query.Where(x => x.CreatedAtUtc >= from.Value);
         if (to.HasValue) query = query.Where(x => x.CreatedAtUtc < to.Value.Date.AddDays(1));
+        var totalCount = await query.CountAsync(ct);
         var rows = await query.OrderByDescending(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize + 1)
             .Select(x => new BillPaymentAdminItem(x.Id, x.RequestReference, x.NwscAccount, x.MeterNumber,
                 db.UtilityMeters.AsNoTracking().Where(m => m.MeterNumber == x.MeterNumber).Select(m => m.NwscRegisteredName).FirstOrDefault(),
                 x.Amount, x.Status, x.ProviderReference, x.Reason, x.ExternalRefNoBillerId, x.CreatedAtUtc,
-                x.SubmittedAtUtc, x.ConfirmedAtUtc, x.WalletDebitedAtUtc)).ToListAsync(ct);
-        return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
+                x.SubmittedAtUtc, x.ConfirmedAtUtc, x.WalletDebitedAtUtc, x.SubmissionAttempts)).ToListAsync(ct);
+        return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize, totalCount);
     }
 
     private static readonly string[] BillPaymentStatuses =
     [
         BillPaymentInstructionStatus.PendingSubmission,
         BillPaymentInstructionStatus.PendingConfirmation,
+        BillPaymentInstructionStatus.ReconciliationRequired,
         BillPaymentInstructionStatus.Successful,
         BillPaymentInstructionStatus.PaidUndebited,
         BillPaymentInstructionStatus.Failed
     ];
 
-    public async Task UpdateBillPaymentStatusAsync(int id, string status, CancellationToken ct)
+    // Pending states are produced by the provider flow, never typed in by an operator: a hand-set
+    // PENDING_CONFIRMATION with no submission attempt is exactly the state that can never settle.
+    private static string NormalizeManuallyAssignableStatus(string? status)
     {
         var normalized = (status ?? string.Empty).Trim().ToUpperInvariant();
         if (!BillPaymentStatuses.Contains(normalized))
             throw new ArgumentException($"Status must be one of: {string.Join(", ", BillPaymentStatuses)}.");
+        if (normalized is BillPaymentInstructionStatus.PendingSubmission or BillPaymentInstructionStatus.PendingConfirmation)
+            throw new ArgumentException("PENDING_SUBMISSION and PENDING_CONFIRMATION are driven by the provider flow and cannot be set manually. Use resubmit for a bill that was never sent.");
+        return normalized;
+    }
+
+    public async Task UpdateBillPaymentStatusAsync(int id, string status, CancellationToken ct)
+    {
+        var normalized = NormalizeManuallyAssignableStatus(status);
         var updated = await db.Set<BillPaymentInstruction>().Where(x => x.Id == id)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, normalized), ct);
         if (updated == 0)
@@ -68,9 +81,7 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
 
     public async Task<int> UpdateBillPaymentStatusesAsync(IReadOnlyCollection<int> ids, string status, CancellationToken ct)
     {
-        var normalized = (status ?? string.Empty).Trim().ToUpperInvariant();
-        if (!BillPaymentStatuses.Contains(normalized))
-            throw new ArgumentException($"Status must be one of: {string.Join(", ", BillPaymentStatuses)}.");
+        var normalized = NormalizeManuallyAssignableStatus(status);
         if (ids == null || ids.Count == 0)
             throw new ArgumentException("Select at least one bill payment to update.");
         if (ids.Count > 500)
@@ -140,6 +151,35 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
             CreatedAtUtc = DateTime.UtcNow
         });
         return true;
+    }
+
+    // Requeues a bill the provider was never asked about. Any recorded submission attempt is refused:
+    // the request may have reached Dango, so only reconciliation (never a blind resubmission) is safe.
+    public async Task<string> ResubmitBillPaymentAsync(int id, string reason, string actor, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(actor)) throw new UnauthorizedAccessException("An authenticated administrator is required.");
+        var trimmed = (reason ?? string.Empty).Trim();
+        if (trimmed.Length is < 5 or > 500) throw new ArgumentException("A resubmission reason of 5–500 characters is required.");
+        var row = await db.Set<BillPaymentInstruction>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new KeyNotFoundException("Bill payment not found.");
+        if (row.WalletDebitedAtUtc != null || row.Status is BillPaymentInstructionStatus.Successful or BillPaymentInstructionStatus.PaidUndebited)
+            throw new InvalidOperationException("This bill payment is already settled and cannot be resubmitted.");
+        if (row.SubmittedAtUtc != null || row.SubmissionAttempts > 0)
+            throw new InvalidOperationException("A submission was already attempted for this bill payment. Confirm the final state with Dango and reconcile instead of resubmitting.");
+        if (row.Status != BillPaymentInstructionStatus.PendingSubmission && row.Status != BillPaymentInstructionStatus.PendingConfirmation &&
+            row.Status != BillPaymentInstructionStatus.Failed)
+            throw new InvalidOperationException($"Only a bill that never reached the provider can be resubmitted; this one is {row.Status}.");
+        var updated = await db.Set<BillPaymentInstruction>()
+            .Where(x => x.Id == id && x.SubmittedAtUtc == null && x.SubmissionAttempts == 0 && x.WalletDebitedAtUtc == null &&
+                        (x.Status == BillPaymentInstructionStatus.PendingSubmission || x.Status == BillPaymentInstructionStatus.PendingConfirmation ||
+                         x.Status == BillPaymentInstructionStatus.Failed))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.Status, BillPaymentInstructionStatus.PendingSubmission)
+                .SetProperty(x => x.LastCheckedAtUtc, (DateTime?)null)
+                .SetProperty(x => x.Response, (string?)null)
+                .SetProperty(x => x.Reason, $"Administrator {actor}: resubmitted before any provider attempt. Reason: {trimmed}"), ct);
+        if (updated == 0) throw new InvalidOperationException("The bill payment changed during resubmission. Refresh the list.");
+        return row.RequestReference;
     }
 
     public async Task<FailAndReversePayoutResponse> FailAndReverseAsync(int id, FailAndReversePayoutRequest request, string actor, CancellationToken ct)

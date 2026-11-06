@@ -35,6 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useTablePagination } from "@/hooks/use-table-pagination";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   exportWalletStatementCsv,
@@ -82,6 +84,7 @@ const UtilityDashboard = () => {
   const [tenants, setTenants] = useState([]);
   const [utilityMeters, setUtilityMeters] = useState<UtilityMeter[]>([]);
   const [isLoadingMeters, setIsLoadingMeters] = useState(false);
+  const meterPagination = useTablePagination(utilityMeters, 10);
 
   const user = localStorage.getItem("user");
 
@@ -669,7 +672,7 @@ const UtilityDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {utilityMeters.map((meter) => (
+                  {meterPagination.pageRows.map((meter) => (
                     <TableRow key={meter.id}>
                       <TableCell>{meter.id}</TableCell>
                       <TableCell>{meter.meterType}</TableCell>
@@ -680,6 +683,17 @@ const UtilityDashboard = () => {
                   ))}
                 </TableBody>
               </Table>
+              {utilityMeters.length > 0 && (
+                <DataTablePagination
+                  page={meterPagination.page}
+                  pageSize={meterPagination.pageSize}
+                  totalCount={meterPagination.totalCount}
+                  onPageChange={meterPagination.setPage}
+                  onPageSizeChange={meterPagination.setPageSize}
+                  itemLabel="meters"
+                  className="mt-4"
+                />
+              )}
             </div>
           ) : (
             <div className="text-center py-8">

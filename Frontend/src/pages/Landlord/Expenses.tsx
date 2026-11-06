@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useToast } from '@/hooks/use-toast';
 
 interface Expense {
@@ -30,6 +32,7 @@ const Expenses = () => {
   const [category, setCategory] = useState('');
   const [expenseDate, setExpenseDate] = useState('');
   const [saving, setSaving] = useState(false);
+  const expensePagination = useTablePagination(expenses, 10);
 
   const landlordId = getUser()?.id ?? null;
 
@@ -117,7 +120,7 @@ const Expenses = () => {
             </TableHeader>
             <TableBody>
               {!loading && expenses.length > 0 ? (
-                expenses.map((expense) => (
+                expensePagination.pageRows.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell>{new Date(expense.expenseDate).toLocaleDateString()}</TableCell>
                     <TableCell>{expense.description}</TableCell>
@@ -139,6 +142,17 @@ const Expenses = () => {
               )}
             </TableBody>
           </Table>
+          {!loading && expenses.length > 0 && (
+            <DataTablePagination
+              page={expensePagination.page}
+              pageSize={expensePagination.pageSize}
+              totalCount={expensePagination.totalCount}
+              onPageChange={expensePagination.setPage}
+              onPageSizeChange={expensePagination.setPageSize}
+              itemLabel="expenses"
+              className="mt-4 rounded-lg border"
+            />
+          )}
         </CardContent>
       </Card>
 

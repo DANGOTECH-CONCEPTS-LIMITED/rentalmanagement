@@ -8,7 +8,7 @@ const http = axios as jest.Mocked<typeof axios>;
 const props = { apiUrl: 'https://example.invalid/api/User/', authToken: 'test-token' };
 const endpoint = 'https://example.invalid/api/AdminPayoutReconciliation';
 const payout = { id: 42, transactionId: 'PAYOUT-42', amount: 1500, status: 'PENDING', vendorReference: 'DANGO-42', owner: 'Owner One' };
-const page = { items: [payout], page: 1, pageSize: 20, hasMore: false };
+const page = { items: [payout], page: 1, pageSize: 20, hasMore: false, totalCount: 1 };
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -42,8 +42,8 @@ test('loads authenticated pending payouts from the normalized base without rever
   expect(screen.getByText('Owner One')).toBeInTheDocument();
   expect(screen.getByText('1,500')).toBeInTheDocument();
   expect(screen.getByText(/404 \/ not-found response is not automatically terminal/)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Previous payouts' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Next payouts' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
   expect(http.post).not.toHaveBeenCalled();
 });
 
@@ -133,7 +133,7 @@ test('treats an unconfirmed success response as uncertain and requires refresh',
 });
 
 test('searches only on submission with an exact reference, paginates, and resets page on a new search', async () => {
-  http.get.mockResolvedValue({ data: { ...page, hasMore: true } });
+  http.get.mockResolvedValue({ data: { ...page, hasMore: true, totalCount: 21 } });
   await load();
   fireEvent.change(screen.getByLabelText('Exact reference'), { target: { value: 'DANGO-42' } });
   expect(http.get).toHaveBeenCalledTimes(1);
@@ -141,12 +141,14 @@ test('searches only on submission with an exact reference, paginates, and resets
   await waitFor(() => expect(http.get).toHaveBeenCalledTimes(2));
   expect(http.get.mock.calls[1][1]?.params).toEqual({ reference: 'DANGO-42', page: 1, pageSize: 20 });
   await screen.findByRole('button', { name: 'Review reversal for PAYOUT-42' });
-  http.get.mockResolvedValueOnce({ data: { ...page, page: 2 } });
-  fireEvent.click(screen.getByRole('button', { name: 'Next payouts' }));
-  expect(await screen.findByText('Page 2')).toBeInTheDocument();
+  http.get.mockResolvedValueOnce({ data: { ...page, page: 2, totalCount: 21 } });
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page'));
   expect(http.get.mock.calls[2][1]?.params).toEqual({ reference: 'DANGO-42', page: 2, pageSize: 20 });
-  fireEvent.click(screen.getByRole('button', { name: 'Previous payouts' }));
-  expect(await screen.findByText('Page 1')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page'));
   fireEvent.change(screen.getByLabelText('Exact reference'), { target: { value: '' } });
   fireEvent.click(screen.getByRole('button', { name: 'Search payouts' }));
   await waitFor(() => expect(http.get).toHaveBeenCalledTimes(5));

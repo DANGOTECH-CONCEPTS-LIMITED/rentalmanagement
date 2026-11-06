@@ -11,10 +11,9 @@ import {
   ArrowDown,
   Receipt,
   DownloadIcon,
-  ChevronRight,
-  ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -288,7 +287,7 @@ const TrackPayments = () => {
 
   // Add pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // ... (keep all existing code until filteredPayments)
 
@@ -600,47 +599,18 @@ const TrackPayments = () => {
               </TableBody>
             </Table>
             {/* Add pagination controls */}
-            {sortedPayments.length > rowsPerPage && (
-              <div className="mt-4 flex items-center justify-between w-full gap-3 flex-wrap">
-                <div className="text-sm text-muted-foreground">
-                  Showing {indexOfFirstRow + 1} to{" "}
-                  {Math.min(indexOfLastRow, sortedPayments.length)} of{" "}
-                  {sortedPayments.length} payments
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => paginate(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="ml-2">Prev</span>
-                  </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (number) => (
-                      <Button
-                        key={number}
-                        variant={currentPage === number ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => paginate(number)}
-                      >
-                        {number}
-                      </Button>
-                    )
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => paginate(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    <span className="mr-2">Next</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <DataTablePagination
+              page={currentPage}
+              pageSize={rowsPerPage}
+              totalCount={sortedPayments.length}
+              onPageChange={paginate}
+              onPageSizeChange={(nextSize) => {
+                setRowsPerPage(nextSize);
+                setCurrentPage(1);
+              }}
+              itemLabel="payments"
+              className="mt-4 rounded-lg border"
+            />
           </div>
         </CardContent>
       </Card>

@@ -25,6 +25,8 @@ import {
 } from '@/components/ui/table';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { api, getUser } from '@/lib/api';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrencyFormatter } from '@/hooks/use-currency-formatter';
 import jsPDF from 'jspdf';
@@ -122,6 +124,8 @@ const RentalContracts = () => {
         String(contract.id).includes(searchTerm.toLowerCase())) &&
       (filterStatus === 'all' || contract.status === filterStatus)
   );
+
+  const contractPagination = useTablePagination(filteredContracts, 10);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -272,7 +276,10 @@ const RentalContracts = () => {
                 placeholder="Search by tenant, property, or contract ID"
                 className="pl-10"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  contractPagination.resetPage();
+                }}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -280,7 +287,10 @@ const RentalContracts = () => {
               <SearchableNativeSelect
                 className="input-field h-12 py-3 text-sm"
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  contractPagination.resetPage();
+                }}
               >
                 <option value="all">All Status</option>
                 {STATUSES.map((status) => (
@@ -308,7 +318,7 @@ const RentalContracts = () => {
               </TableHeader>
               <TableBody>
                 {!loading && filteredContracts.length > 0 ? (
-                  filteredContracts.map((contract) => (
+                  contractPagination.pageRows.map((contract) => (
                     <motion.tr
                       key={contract.id}
                       initial={{ opacity: 0 }}
@@ -358,6 +368,17 @@ const RentalContracts = () => {
               </TableBody>
             </Table>
           </div>
+          {!loading && filteredContracts.length > 0 && (
+            <DataTablePagination
+              page={contractPagination.page}
+              pageSize={contractPagination.pageSize}
+              totalCount={contractPagination.totalCount}
+              onPageChange={contractPagination.setPage}
+              onPageSizeChange={contractPagination.setPageSize}
+              itemLabel="contracts"
+              className="mt-4 rounded-lg border"
+            />
+          )}
         </CardContent>
       </Card>
 

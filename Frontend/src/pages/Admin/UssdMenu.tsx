@@ -22,6 +22,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useToast } from '@/hooks/use-toast';
 import UssdMenuSimulator from './UssdMenuSimulator';
 
@@ -107,6 +109,7 @@ const UssdMenu = () => {
   const [newNodeType, setNewNodeType] = useState(1);
   const [history, setHistory] = useState<AuditEntry[]>([]);
   const [stats, setStats] = useState<UssdSessionStats | null>(null);
+  const historyPagination = useTablePagination(history, 10);
   const tempId = useRef(-1);
 
   const newTempId = () => {
@@ -611,7 +614,7 @@ const UssdMenu = () => {
                       </TableCell>
                     </TableRow>
                   )}
-                  {history.map((h) => (
+                  {historyPagination.pageRows.map((h) => (
                     <TableRow key={h.id}>
                       <TableCell className="whitespace-nowrap">
                         {new Date(h.createdAt).toLocaleString()}
@@ -629,6 +632,17 @@ const UssdMenu = () => {
                   ))}
                 </TableBody>
               </Table>
+              {history.length > 0 && (
+                <DataTablePagination
+                  page={historyPagination.page}
+                  pageSize={historyPagination.pageSize}
+                  totalCount={historyPagination.totalCount}
+                  onPageChange={historyPagination.setPage}
+                  onPageSizeChange={historyPagination.setPageSize}
+                  itemLabel="edits"
+                  className="px-4 pb-3"
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

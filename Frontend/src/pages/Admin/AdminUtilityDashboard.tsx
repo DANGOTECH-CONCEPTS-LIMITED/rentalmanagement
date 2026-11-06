@@ -72,6 +72,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateDmy, formatDateTimeDmy } from "@/lib/date-time";
 import {
@@ -243,6 +244,7 @@ const AdminUtilityDashboard = () => {
   const [vendorFilter, setVendorFilter] = useState("all");
   const [transactionIdFilter, setTransactionIdFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [transactionRowsPerPage, setTransactionRowsPerPage] = useState(rowsPerPage);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({
     key: "createdAt",
     direction: "desc",
@@ -1133,12 +1135,12 @@ const AdminUtilityDashboard = () => {
     });
   }, [filteredTransactionRows, sortConfig]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedTransactionRows.length / rowsPerPage));
+  const totalPages = Math.max(1, Math.ceil(sortedTransactionRows.length / transactionRowsPerPage));
 
   const paginatedRows = useMemo(() => {
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    return sortedTransactionRows.slice(startIndex, startIndex + rowsPerPage);
-  }, [currentPage, sortedTransactionRows]);
+    const startIndex = (currentPage - 1) * transactionRowsPerPage;
+    return sortedTransactionRows.slice(startIndex, startIndex + transactionRowsPerPage);
+  }, [currentPage, sortedTransactionRows, transactionRowsPerPage]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -2228,30 +2230,19 @@ const AdminUtilityDashboard = () => {
                 </Table>
               </div>
 
-              {sortedTransactionRows.length > rowsPerPage && (
-                <div className="mt-4 flex justify-end">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+              {sortedTransactionRows.length > 0 && (
+                <DataTablePagination
+                  page={currentPage}
+                  pageSize={transactionRowsPerPage}
+                  totalCount={sortedTransactionRows.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(nextSize) => {
+                    setTransactionRowsPerPage(nextSize);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="transactions"
+                  className="mt-4 rounded-lg border"
+                />
               )}
             </CardContent>
           </Card>

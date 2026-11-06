@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 
 interface BillPayment {
   id: number;
@@ -42,6 +43,7 @@ interface BillPayment {
   submittedAtUtc?: string | null;
   confirmedAtUtc?: string | null;
   walletDebitedAtUtc?: string | null;
+  submissionAttempts?: number;
 }
 
 interface BillPaymentPage {
@@ -49,15 +51,20 @@ interface BillPaymentPage {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  totalCount: number;
 }
 
 const STATUSES = [
   "PENDING_SUBMISSION",
   "PENDING_CONFIRMATION",
+  "RECONCILIATION_REQUIRED",
   "SUCCESSFUL",
   "PAID_UNDEBITED",
   "FAILED",
 ];
+
+// Pending states are produced by the worker/provider flow, never assigned by hand.
+const MANUAL_STATUSES = ["RECONCILIATION_REQUIRED", "SUCCESSFUL", "PAID_UNDEBITED", "FAILED"];
 
 const formatDate = (value?: string | null) =>
   value ? new Date(value).toLocaleString() : "-";
@@ -77,6 +84,7 @@ const BillPayments = () => {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [result, setResult] = useState<BillPaymentPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -90,6 +98,9 @@ const BillPayments = () => {
   const [selected, setSelected] = useState<BillPayment | null>(null);
   const [newStatus, setNewStatus] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
+  const [resubmitTarget, setResubmitTarget] = useState<BillPayment | null>(null);
+  const [resubmitReason, setResubmitReason] = useState("");
+  const [resubmitting, setResubmitting] = useState(false);
 
   const getToken = () => {
     const storedUser = localStorage.getItem("user");
@@ -192,6 +203,39 @@ const BillPayments = () => {
     }
   };
 
+  const canResubmit = (item: BillPayment) =>
+    !item.submittedAtUtc &&
+    (item.submissionAttempts ?? 0) === 0 &&
+    (item.status === "PENDING_SUBMISSION" ||
+      item.status === "PENDING_CONFIRMATION" ||
+      item.status === "FAILED");
+
+  const resubmitBillPayment = async () => {
+    if (!resubmitTarget) return;
+    setResubmitting(true);
+    setError("");
+    setNotice("");
+    try {
+      const { data } = await axios.post<{ reference: string }>(
+        `${endpoint}/${resubmitTarget.id}/resubmit`,
+        { reason: resubmitReason.trim() },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      setNotice(`Bill payment ${data.reference} requeued; the next cycle submits it.`);
+      setResubmitTarget(null);
+      setResubmitReason("");
+      setReload((value) => value + 1);
+    } catch (failure) {
+      setError(
+        axios.isAxiosError(failure) && failure.response?.data?.message
+          ? failure.response.data.message
+          : "Unable to resubmit bill payment."
+      );
+    } finally {
+      setResubmitting(false);
+    }
+  };
+
   const updateStatus = async () => {
     if (!selected || !newStatus) return;
     setSavingStatus(true);
@@ -232,7 +276,7 @@ const BillPayments = () => {
           ...(from ? { from } : {}),
           ...(to ? { to } : {}),
           page,
-          pageSize: 20,
+          pageSize,
         },
         signal: controller.signal,
       })
@@ -249,7 +293,7 @@ const BillPayments = () => {
       });
 
     return () => controller.abort();
-  }, [endpoint, search, status, from, to, page, reload]);
+  }, [endpoint, search, status, from, to, page, pageSize, reload]);
 
   return (
     <div className="space-y-6">
@@ -358,7 +402,7 @@ const BillPayments = () => {
                   <SelectValue placeholder="Set status..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUSES.map((item) => (
+                  {MANUAL_STATUSES.map((item) => (
                     <SelectItem key={item} value={item}>
                       {item}
                     </SelectItem>
@@ -443,16 +487,30 @@ const BillPayments = () => {
                       <TableCell>{formatDate(item.confirmedAtUtc)}</TableCell>
                       <TableCell>{formatDate(item.walletDebitedAtUtc)}</TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelected(item);
-                            setNewStatus(item.status || "");
-                          }}
-                        >
-                          Update
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelected(item);
+                              setNewStatus(item.status || "");
+                            }}
+                          >
+                            Update
+                          </Button>
+                          {canResubmit(item) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setResubmitTarget(item);
+                                setResubmitReason("");
+                              }}
+                            >
+                              Resubmit
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -461,23 +519,23 @@ const BillPayments = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              disabled={loading || result.page <= 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-            >
-              Previous
-            </Button>
-            <span className="text-sm">Page {result.page}</span>
-            <Button
-              variant="outline"
-              disabled={loading || !result.hasMore}
-              onClick={() => setPage((value) => value + 1)}
-            >
-              Next
-            </Button>
-          </div>
+          <DataTablePagination
+            page={result.page}
+            pageSize={result.pageSize}
+            totalCount={
+              typeof result.totalCount === "number"
+                ? result.totalCount
+                : result.page * result.pageSize + (result.hasMore ? 1 : 0)
+            }
+            itemLabel="bill payments"
+            disabled={loading}
+            onPageChange={setPage}
+            onPageSizeChange={(nextSize) => {
+              setPageSize(nextSize);
+              setPage(1);
+              setSelectedIds(new Set());
+            }}
+          />
         </>
       )}
 
@@ -501,7 +559,7 @@ const BillPayments = () => {
                   <SelectValue placeholder="Select a status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUSES.map((item) => (
+                  {MANUAL_STATUSES.map((item) => (
                     <SelectItem key={item} value={item}>
                       {item}
                     </SelectItem>
@@ -521,6 +579,57 @@ const BillPayments = () => {
                   onClick={() => void updateStatus()}
                 >
                   {savingStatus ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!resubmitTarget}
+        onOpenChange={(open) => {
+          if (!open && !resubmitting) setResubmitTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resubmit bill payment</DialogTitle>
+            <DialogDescription>
+              {resubmitTarget?.requestReference || ""} has no recorded provider submission
+              (attempts: {resubmitTarget?.submissionAttempts ?? 0}). Resubmitting only queues it
+              again with the same reference — it never debits twice. Confirm with Dango that no
+              payment exists for this reference first.
+            </DialogDescription>
+          </DialogHeader>
+          {resubmitTarget && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="bill-payment-resubmit-reason">Reason for resubmitting</Label>
+                <Input
+                  id="bill-payment-resubmit-reason"
+                  value={resubmitReason}
+                  onChange={(event) => setResubmitReason(event.target.value)}
+                  placeholder="e.g. Dango confirmed no request for this reference"
+                  disabled={resubmitting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum 5 characters. Stored on the instruction for audit.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  disabled={resubmitting}
+                  onClick={() => setResubmitTarget(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={resubmitting || resubmitReason.trim().length < 5}
+                  onClick={() => void resubmitBillPayment()}
+                >
+                  {resubmitting ? "Resubmitting..." : "Resubmit"}
                 </Button>
               </div>
             </div>

@@ -58,6 +58,8 @@ public static class BillPaymentInstructionStatus
     public const string PendingConfirmation = "PENDING_CONFIRMATION";
     public const string Successful = "SUCCESSFUL";
     public const string PaidUndebited = "PAID_UNDEBITED";
+    // Still polled like PENDING_CONFIRMATION, but surfaced to administrators for manual follow-up.
+    public const string ReconciliationRequired = "RECONCILIATION_REQUIRED";
     public const string Failed = "FAILED";
 }
 

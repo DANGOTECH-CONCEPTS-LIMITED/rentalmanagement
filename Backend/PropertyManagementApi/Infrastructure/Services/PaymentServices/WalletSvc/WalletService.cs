@@ -129,11 +129,12 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
             if (from.HasValue) query = query.Where(t => t.TransactionDate >= from.Value);
             if (to.HasValue) query = query.Where(t => t.TransactionDate < to.Value.Date.AddDays(1));
 
+            var totalCount = await query.CountAsync(ct);
             var rows = await query.OrderByDescending(t => t.TransactionDate).Skip((page - 1) * pageSize).Take(pageSize + 1)
                 .Select(t => new WalletTransactionAdminItem(t.Id, t.WalletId, t.Wallet.Landlord.FullName, t.Amount,
                     t.Description, t.TransactionId, t.Status, t.VendorTranId, t.TransactionDate))
                 .ToListAsync(ct);
-            return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize);
+            return new(rows.Take(pageSize).ToList(), page, pageSize, rows.Count > pageSize, totalCount);
         }
 
         public async Task<Wallet> GetWalletByLandlordId(int landlordId)

@@ -7,4 +7,4 @@ public sealed record WalletTransactionAdminItem(
 
 /// <summary>A bounded page of wallet transactions across all wallets.</summary>
 public sealed record WalletTransactionsPage(
-    IReadOnlyList<WalletTransactionAdminItem> Items, int Page, int PageSize, bool HasMore);
+    IReadOnlyList<WalletTransactionAdminItem> Items, int Page, int PageSize, bool HasMore, int TotalCount);

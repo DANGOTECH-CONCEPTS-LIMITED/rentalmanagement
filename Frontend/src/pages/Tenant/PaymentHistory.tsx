@@ -8,10 +8,9 @@ import {
   X,
   Search,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -293,7 +292,7 @@ const PaymentHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const tableRef = useRef<HTMLTableElement>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -578,37 +577,18 @@ const PaymentHistory = () => {
           </Table>
         </div>
 
-        {filteredPayments.length > itemsPerPage && (
-          <div className="mt-6 flex items-center justify-between gap-3 flex-wrap">
-            <div className="text-sm text-gray-500">
-              Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, filteredPayments.length)} of{" "}
-              {filteredPayments.length} entries
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <span>Previous</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
-                disabled={currentPage === totalPages}
-              >
-                <span>Next</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <DataTablePagination
+          page={currentPage}
+          pageSize={itemsPerPage}
+          totalCount={filteredPayments.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(nextSize) => {
+            setItemsPerPage(nextSize);
+            setCurrentPage(1);
+          }}
+          itemLabel="payments"
+          className="mt-6 rounded-lg border"
+        />
         </CardContent>
       </Card>
 

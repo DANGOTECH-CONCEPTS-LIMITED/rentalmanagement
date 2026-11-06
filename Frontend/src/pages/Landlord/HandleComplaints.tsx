@@ -11,10 +11,9 @@ import {
   AlertCircle,
   FileText,
   Calendar,
-  ChevronRight,
-  ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { Input } from "@/components/ui/input";
 import {
   Breadcrumb,
@@ -257,7 +256,7 @@ const HandleComplaints = () => {
 
   // Add pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 5;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Pagination logic
   const indexOfLastRow = currentPage * rowsPerPage;
@@ -430,49 +429,18 @@ const HandleComplaints = () => {
                 </Table>
 
                 {/* Pagination controls */}
-                {filteredComplaints.length > rowsPerPage && (
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-gray-500">
-                      Showing {indexOfFirstRow + 1} to{" "}
-                      {Math.min(indexOfLastRow, filteredComplaints.length)} of{" "}
-                      {filteredComplaints.length} entries
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => paginate(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="ml-2">Previous</span>
-                      </Button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                        (number) => (
-                          <Button
-                            key={number}
-                            variant={
-                              currentPage === number ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => paginate(number)}
-                          >
-                            {number}
-                          </Button>
-                        )
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => paginate(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
-                        <span className="mr-2">Next</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <DataTablePagination
+                  page={currentPage}
+                  pageSize={rowsPerPage}
+                  totalCount={filteredComplaints.length}
+                  onPageChange={paginate}
+                  onPageSizeChange={(nextSize) => {
+                    setRowsPerPage(nextSize);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="complaints"
+                  className="mt-4 rounded-lg border"
+                />
               </>
             )}
           </div>

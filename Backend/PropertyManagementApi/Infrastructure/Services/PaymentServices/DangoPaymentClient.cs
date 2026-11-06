@@ -219,7 +219,7 @@ public sealed class DangoPaymentClient
             amount = BankAmount(amount),
             schoolCode = string.Empty
         }, ct);
-        return BillPaymentEnvelope(response, reference);
+        return BillPaymentEnvelope(response, reference, allowMissingReference: false);
     }
 
     public async Task<string> GetBillPaymentStatusAsync(string reference, CancellationToken ct = default)
@@ -227,12 +227,14 @@ public sealed class DangoPaymentClient
         RequiredValue(reference, nameof(reference));
         var response = await PostAsync("bill-payment-status",
             new { requestReference = reference, clientId = RequiredSetting("ClientId") }, ct);
-        return BillPaymentEnvelope(response, reference);
+        // The status lookup is scoped to this reference and Dango commonly echoes a null reference,
+        // so a missing echo must not hide its terminal answer.
+        return BillPaymentEnvelope(response, reference, allowMissingReference: true);
     }
 
-    private string BillPaymentEnvelope(Response response, string reference)
+    private string BillPaymentEnvelope(Response response, string reference, bool allowMissingReference)
     {
-        var state = BillPaymentState(response, reference, ReadStatusContract(_configuration));
+        var state = BillPaymentState(response, reference, ReadStatusContract(_configuration), allowMissingReference);
         var message = Message(response);
         return JsonSerializer.Serialize(new
         {
@@ -252,19 +254,29 @@ public sealed class DangoPaymentClient
         });
     }
 
-    private static string BillPaymentState(Response response, string reference, StatusContract? contract)
+    private static string BillPaymentState(Response response, string reference, StatusContract? contract, bool allowMissingReference)
     {
         if (IsTerminalPreProcessingRejection(response)) return "FAILED";
         if (contract == null || !response.IsSuccess) return "PENDING";
         // A provider-reported ambiguous transaction is about the bill just queried even when Dango
         // does not echo requestReference on this endpoint, so detect it before the correlation check.
         if (IsAmbiguousTransaction(response, contract)) return "AMBIGUOUS";
-        if (!string.Equals(Field(response, "requestReference"), reference, StringComparison.OrdinalIgnoreCase))
-            return "PENDING"; // Uncorrelated responses are not evidence about this bill.
         var remoteState = Field(response, contract.StateField)?.Trim() ?? string.Empty;
-        if (contract.SuccessValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase)) return "SUCCESSFUL";
-        if (contract.FailureValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase)) return "FAILED";
-        return "PENDING";
+        var isSuccess = contract.SuccessValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase);
+        var isFailure = contract.FailureValues.Contains(remoteState, StringComparer.OrdinalIgnoreCase);
+        // Non-terminal or unknown codes are never treated as settlement evidence.
+        if (!isSuccess && !isFailure) return "PENDING";
+        var remoteReference = Field(response, "requestReference") ?? Field(response, contract.ReferenceField);
+        if (string.IsNullOrWhiteSpace(remoteReference))
+        {
+            // A submission response must still be correlated; only the status lookup may omit the echo.
+            if (!allowMissingReference) return "PENDING";
+        }
+        else if (!string.Equals(remoteReference, reference, StringComparison.OrdinalIgnoreCase))
+        {
+            return "PENDING"; // An answer naming a different bill is not evidence about this one.
+        }
+        return isSuccess ? "SUCCESSFUL" : "FAILED";
     }
 
     // Dango reports "100 Transaction Ambiguous" for a processed payment whose final state it cannot

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
 
 interface Props {
   apiUrl: string;
@@ -25,11 +26,13 @@ interface PayoutPage {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  totalCount: number;
 }
 
 function isPayoutPage(data: PayoutPage): boolean {
   return !!data && Array.isArray(data.items) && Number.isInteger(data.page) && data.page > 0 &&
-    data.pageSize === 20 && typeof data.hasMore === 'boolean' && data.items.every(item =>
+    Number.isInteger(data.pageSize) && data.pageSize > 0 && data.pageSize <= 100 &&
+    typeof data.hasMore === 'boolean' && data.items.every(item =>
       item && Number.isSafeInteger(item.id) && item.id > 0 && typeof item.transactionId === 'string' &&
       item.transactionId.length > 0 && Number.isFinite(item.amount) && item.amount > 0 &&
       typeof item.status === 'string' && typeof item.vendorReference === 'string' && typeof item.owner === 'string');
@@ -43,7 +46,7 @@ export default function AdminPayoutReconciliation(props: Props) {
 function Reconciliation({ apiUrl, authToken }: Props) {
   const endpoint = `${apiUrl.replace(/\/+$/, '').replace(/\/api(?:\/.*)?$/i, '')}/api/AdminPayoutReconciliation`;
   const [search, setSearch] = useState('');
-  const [query, setQuery] = useState({ reference: '', page: 1, reload: 0 });
+  const [query, setQuery] = useState({ reference: '', page: 1, pageSize: 20, reload: 0 });
   const [result, setResult] = useState<PayoutPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -68,7 +71,7 @@ function Reconciliation({ apiUrl, authToken }: Props) {
     }
     axios.get<PayoutPage>(endpoint, {
       headers: { Authorization: `Bearer ${authToken}` },
-      params: { ...(query.reference ? { reference: query.reference } : {}), page: query.page, pageSize: 20 },
+      params: { ...(query.reference ? { reference: query.reference } : {}), page: query.page, pageSize: query.pageSize },
       signal: controller.signal,
     }).then(({ data }) => {
       if (!isPayoutPage(data) || data.page !== query.page) throw new Error('Invalid payout list');
@@ -89,7 +92,15 @@ function Reconciliation({ apiUrl, authToken }: Props) {
     setLoading(true);
     setSelected(null);
     setNotice('');
-    setQuery(current => ({ reference, page, reload: current.reload + 1 }));
+    setQuery(current => ({ reference, page, pageSize: current.pageSize, reload: current.reload + 1 }));
+  };
+
+  const changePageSize = (pageSize: number) => {
+    if (inFlight.current) return;
+    setLoading(true);
+    setSelected(null);
+    setNotice('');
+    setQuery(current => ({ reference: current.reference, page: 1, pageSize, reload: current.reload + 1 }));
   };
 
   const reverse = async () => {
@@ -152,11 +163,17 @@ function Reconciliation({ apiUrl, authToken }: Props) {
             }}>Review reversal</Button></TableCell>
           </TableRow>)}</TableBody>
         </Table>}
-        <div className="flex items-center gap-3">
-          <Button variant="outline" disabled={processing || result.page <= 1} onClick={() => loadPage(result.page - 1)}>Previous payouts</Button>
-          <span>Page {result.page}</span>
-          <Button variant="outline" disabled={processing || !result.hasMore} onClick={() => loadPage(result.page + 1)}>Next payouts</Button>
-        </div>
+        <DataTablePagination
+          page={result.page}
+          pageSize={result.pageSize}
+          totalCount={typeof result.totalCount === 'number'
+            ? result.totalCount
+            : result.page * result.pageSize + (result.hasMore ? 1 : 0)}
+          itemLabel="payouts"
+          disabled={processing}
+          onPageChange={page => loadPage(page)}
+          onPageSizeChange={changePageSize}
+        />
       </>}
       <Dialog open={!!selected} onOpenChange={open => { if (!open && !inFlight.current) setSelected(null); }}>
         <DialogContent>

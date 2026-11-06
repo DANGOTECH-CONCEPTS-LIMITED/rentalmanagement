@@ -37,13 +37,12 @@ import {
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import {
   Edit,
   Trash2,
   Plus,
   Eye,
-  ChevronsLeft,
-  ChevronsRight,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -122,7 +121,7 @@ const ManageUtilityMeters = () => {
 
   // Search and pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState("");
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -272,7 +271,7 @@ const ManageUtilityMeters = () => {
   const paginatedMeters = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
     return filteredMeters.slice(start, start + rowsPerPage);
-  }, [filteredMeters, currentPage]);
+  }, [filteredMeters, currentPage, rowsPerPage]);
 
   const handleEdit = (meter: UtilityMeter) => {
     setEditingMeter(meter);
@@ -475,33 +474,18 @@ const ManageUtilityMeters = () => {
         </Table>
 
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex justify-end mt-4 p-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <DataTablePagination
+          page={currentPage}
+          pageSize={rowsPerPage}
+          totalCount={filteredMeters.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(nextSize) => {
+            setRowsPerPage(nextSize);
+            setCurrentPage(1);
+          }}
+          itemLabel="meters"
+          className="mt-4 rounded-lg border"
+        />
       </div>
 
       {/* Edit Dialog */}

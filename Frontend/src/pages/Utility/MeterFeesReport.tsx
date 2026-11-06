@@ -20,6 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 
 interface MeterFeeReport {
   totalCharged: number;
@@ -47,6 +49,7 @@ const MeterFeesReport = () => {
   const [utilityUsers, setUtilityUsers] = useState<{ id: number; fullName: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const reportPagination = useTablePagination(report?.rows ?? [], 10);
 
   const Url = import.meta.env.VITE_API_BASE_URL;
   let token = '';
@@ -211,7 +214,7 @@ const MeterFeesReport = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      report.rows.map((row) => (
+                      reportPagination.pageRows.map((row) => (
                         <TableRow key={`${row.utilityMeterId}-${row.period}`}>
                           <TableCell>{row.period}</TableCell>
                           {isAdmin && <TableCell>{row.ownerName || '-'}</TableCell>}
@@ -225,6 +228,17 @@ const MeterFeesReport = () => {
                     )}
                   </TableBody>
                 </Table>
+                {report.rows.length > 0 && (
+                  <DataTablePagination
+                    page={reportPagination.page}
+                    pageSize={reportPagination.pageSize}
+                    totalCount={reportPagination.totalCount}
+                    onPageChange={reportPagination.setPage}
+                    onPageSizeChange={reportPagination.setPageSize}
+                    itemLabel="rows"
+                    className="mt-4"
+                  />
+                )}
               </div>
             </>
           )}

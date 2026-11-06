@@ -58,7 +58,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import { useToast } from "@/hooks/use-toast";
 import {
   exportWalletStatementCsv,
@@ -302,6 +304,9 @@ const AdminWalletManagement = () => {
     () => walletBalances.reduce((sum, record) => sum + (record.balance || 0), 0),
     [walletBalances]
   );
+
+  const balancePagination = useTablePagination(filteredBalanceRecords, 10);
+  const statementPagination = useTablePagination(filteredStatementEntries, 10);
 
   const exportStatement = () => {
     if (!selectedUser || filteredStatementEntries.length === 0) {
@@ -816,12 +821,18 @@ const AdminWalletManagement = () => {
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={listSearchTerm}
-                  onChange={(event) => setListSearchTerm(event.target.value)}
+                  onChange={(event) => {
+                    setListSearchTerm(event.target.value);
+                    balancePagination.resetPage();
+                  }}
                   placeholder="Search by name, email, or role"
                   className="pl-10"
                 />
               </div>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <Select value={roleFilter} onValueChange={(value) => {
+                setRoleFilter(value);
+                balancePagination.resetPage();
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
@@ -858,7 +869,7 @@ const AdminWalletManagement = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredBalanceRecords.map((record) => (
+                    {balancePagination.pageRows.map((record) => (
                       <TableRow
                         key={record.user.id}
                         className={cn(
@@ -893,6 +904,15 @@ const AdminWalletManagement = () => {
                     ))}
                   </TableBody>
                 </Table>
+                <DataTablePagination
+                  page={balancePagination.page}
+                  pageSize={balancePagination.pageSize}
+                  totalCount={balancePagination.totalCount}
+                  onPageChange={balancePagination.setPage}
+                  onPageSizeChange={balancePagination.setPageSize}
+                  itemLabel="wallets"
+                  className="mt-3"
+                />
               </div>
             )}
           </CardContent>
@@ -1050,7 +1070,10 @@ const AdminWalletManagement = () => {
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={statementSearchTerm}
-                onChange={(event) => setStatementSearchTerm(event.target.value)}
+                onChange={(event) => {
+                  setStatementSearchTerm(event.target.value);
+                  statementPagination.resetPage();
+                }}
                 placeholder="Search statement description, amount, or date"
                 className="pl-10"
                 disabled={!selectedUser}
@@ -1105,7 +1128,7 @@ const AdminWalletManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStatementEntries.map((entry, index) => {
+                  {statementPagination.pageRows.map((entry, index) => {
                     const flow = getStatementSign(entry);
                     return (
                       <TableRow key={`${entry.transactionDate}-${entry.amount}-${index}`}>
@@ -1165,6 +1188,15 @@ const AdminWalletManagement = () => {
                   })}
                 </TableBody>
               </Table>
+              <DataTablePagination
+                page={statementPagination.page}
+                pageSize={statementPagination.pageSize}
+                totalCount={statementPagination.totalCount}
+                onPageChange={statementPagination.setPage}
+                onPageSizeChange={statementPagination.setPageSize}
+                itemLabel="statement rows"
+                className="mt-3"
+              />
             </div>
           )}
         </CardContent>

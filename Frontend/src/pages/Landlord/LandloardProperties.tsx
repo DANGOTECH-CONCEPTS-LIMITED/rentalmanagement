@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Modal from "@/components/common/Model";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 
 interface Property {
   ownerId: string | Blob;
@@ -119,6 +120,8 @@ const Properties = () => {
   const [propertyPhotos, setPropertyPhotos] = useState<PropertyPhoto[]>([]);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [isLoadingLandlords, setIsLoadingLandlords] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [formData, setFormData] = useState({
     Name: "",
     Address: "",
@@ -361,6 +364,13 @@ const Properties = () => {
       property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.owner.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const propertyTotalPages = Math.max(1, Math.ceil(filteredProperties.length / pageSize));
+  const propertyCurrentPage = Math.min(page, propertyTotalPages);
+  const pagedProperties = filteredProperties.slice(
+    (propertyCurrentPage - 1) * pageSize,
+    propertyCurrentPage * pageSize,
   );
 
   const handleDeleteProperty = async (id: number) => {
@@ -733,7 +743,10 @@ const Properties = () => {
               placeholder="Search by property name, address, or landlord..."
               className="pl-10"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 
@@ -774,7 +787,7 @@ const Properties = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProperties.map((property) => (
+                  {pagedProperties.map((property) => (
                     <TableRow key={property.id}>
                       <TableCell className="font-medium">
                         {property.name}
@@ -817,6 +830,18 @@ const Properties = () => {
                   ))}
                 </TableBody>
               </Table>
+              <DataTablePagination
+                page={propertyCurrentPage}
+                pageSize={pageSize}
+                totalCount={filteredProperties.length}
+                onPageChange={setPage}
+                onPageSizeChange={(nextSize) => {
+                  setPageSize(nextSize);
+                  setPage(1);
+                }}
+                itemLabel="properties"
+                className="mt-4"
+              />
             </div>
           )}
         </CardContent>

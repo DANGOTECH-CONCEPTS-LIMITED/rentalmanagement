@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrencyFormatter } from "@/hooks/use-currency-formatter";
-import { ChevronsLeft, ChevronsRight, Download, Eye } from "lucide-react";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
+import { Download, Eye } from "lucide-react";
 
 interface CollectoWithdrawHistoryEntry {
   id: number;
@@ -89,7 +90,8 @@ const CollectoWithdrawLogs = () => {
   const [selectedEntry, setSelectedEntry] = useState<CollectoWithdrawHistoryEntry | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const rowsPerPage = 10;
+  const [pageSize, setPageSize] = useState(10);
+  const rowsPerPage = pageSize;
 
   const getToken = () => {
     const storedUser = localStorage.getItem("user");
@@ -178,7 +180,7 @@ const CollectoWithdrawLogs = () => {
   const paginatedEntries = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     return filteredEntries.slice(startIndex, startIndex + rowsPerPage);
-  }, [currentPage, filteredEntries]);
+  }, [currentPage, filteredEntries, pageSize]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -331,9 +333,6 @@ const CollectoWithdrawLogs = () => {
               <p className="text-sm text-muted-foreground">
                 Showing {filteredEntries.length} matching withdrawal records.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </p>
             </div>
 
             <div className="overflow-x-auto">
@@ -384,29 +383,18 @@ const CollectoWithdrawLogs = () => {
               </Table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex justify-end">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm">Page {currentPage} of {totalPages}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <DataTablePagination
+              page={currentPage}
+              pageSize={pageSize}
+              totalCount={filteredEntries.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(nextSize) => {
+                setPageSize(nextSize);
+                setCurrentPage(1);
+              }}
+              itemLabel="withdrawals"
+              className="rounded-lg border"
+            />
           </div>
         )}
       </Card>

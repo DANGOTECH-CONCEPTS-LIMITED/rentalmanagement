@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { Pencil } from "lucide-react";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { formatDateTimeDmy } from "@/lib/date-time";
 
 interface UtilityPaymentRecord {
@@ -57,7 +57,7 @@ const UtilityPayments = () => {
   const [editStatus, setEditStatus] = useState<string>("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const filteredPayments = useMemo(() => {
     if (!search.trim()) return payments;
@@ -73,7 +73,7 @@ const UtilityPayments = () => {
   const paginatedPayments = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
     return filteredPayments.slice(start, start + rowsPerPage);
-  }, [filteredPayments, currentPage]);
+  }, [filteredPayments, currentPage, rowsPerPage]);
 
   
 
@@ -296,33 +296,18 @@ const UtilityPayments = () => {
               ))}
             </TableBody>
           </Table>
-          {totalPages > 1 && (
-            <div className="flex justify-end mt-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <DataTablePagination
+            page={currentPage}
+            pageSize={rowsPerPage}
+            totalCount={filteredPayments.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(nextSize) => {
+              setRowsPerPage(nextSize);
+              setCurrentPage(1);
+            }}
+            itemLabel="payments"
+            className="mt-4 rounded-lg border"
+          />
         </div>
       )}
         </CardContent>

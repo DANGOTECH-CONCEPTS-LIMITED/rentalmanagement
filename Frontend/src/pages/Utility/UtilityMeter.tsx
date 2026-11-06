@@ -1,7 +1,7 @@
-import { SearchableNativeSelect } from '@/components/ui/searchable-native-select';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -717,26 +717,16 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
                     )}
                   </TableBody>
                 </Table>
-                <nav aria-label="Meter pagination" className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="meter-page-size" className="text-sm">Rows per page</label>
-                    <SearchableNativeSelect
-                      id="meter-page-size"
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={meterPageSize}
-                      onChange={(event) => { setMeterPageSize(Number(event.target.value)); setMeterPage(1); }}
-                    >
-                      {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
-                    </SearchableNativeSelect>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" disabled={meterPagination.page === 1} onClick={() => setMeterPage(1)}>First</Button>
-                    <Button variant="outline" disabled={meterPagination.page === 1} onClick={() => setMeterPage(meterPagination.page - 1)}>Previous</Button>
-                    <span className="text-sm">Page {meterPagination.page} of {meterPagination.totalPages}</span>
-                    <Button variant="outline" disabled={meterPagination.page === meterPagination.totalPages} onClick={() => setMeterPage(meterPagination.page + 1)}>Next</Button>
-                    <Button variant="outline" disabled={meterPagination.page === meterPagination.totalPages} onClick={() => setMeterPage(meterPagination.totalPages)}>Last</Button>
-                  </div>
-                </nav>
+                <DataTablePagination
+                  page={meterPagination.page}
+                  pageSize={meterPageSize}
+                  totalCount={filteredMeters.length}
+                  pageSizeOptions={[10, 25, 50]}
+                  onPageChange={setMeterPage}
+                  onPageSizeChange={(nextSize) => { setMeterPageSize(nextSize); setMeterPage(1); }}
+                  itemLabel="meters"
+                  className="mt-4 rounded-lg border"
+                />
               </div>
             ) : (
               <div className="text-center py-8">

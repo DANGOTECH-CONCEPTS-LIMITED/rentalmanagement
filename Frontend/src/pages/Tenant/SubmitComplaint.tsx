@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Plus, X, Check, FileEdit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, Plus, X, Check, FileEdit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DataTablePagination } from '@/components/common/DataTablePagination';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,7 +41,7 @@ const ComplaintsTable = () => {
   const [imagesPreviews, setImagesPreviews] = useState([]);
   const [priority, setPriority] = useState('medium');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [currentComplaint, setCurrentComplaint] = useState(null);
@@ -481,35 +482,18 @@ const ComplaintsTable = () => {
             )}
           </TableBody>
         </Table>
-        {complaints.length > itemsPerPage && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <div className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-              {Math.min(currentPage * itemsPerPage, complaints.length)} of{' '}
-              {complaints.length} complaints
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <DataTablePagination
+          page={currentPage}
+          pageSize={itemsPerPage}
+          totalCount={complaints.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(nextSize) => {
+            setItemsPerPage(nextSize);
+            setCurrentPage(1);
+          }}
+          itemLabel="complaints"
+          className="mt-4 rounded-lg border"
+        />
         </CardContent>
       </Card>
 

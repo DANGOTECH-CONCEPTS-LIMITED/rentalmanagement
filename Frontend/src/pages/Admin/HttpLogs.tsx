@@ -26,8 +26,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronsLeft, ChevronsRight, Download, Eye, FileText } from "lucide-react";
+import { Download, Eye, FileText } from "lucide-react";
 
 interface HttpLogEntry {
   id: number;
@@ -100,7 +101,7 @@ const HttpLogs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const rowsPerPage = 10;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const getToken = () => {
     const storedUser = localStorage.getItem("user");
@@ -290,7 +291,7 @@ const HttpLogs = () => {
   const paginatedLogs = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     return filteredLogs.slice(startIndex, startIndex + rowsPerPage);
-  }, [currentPage, filteredLogs]);
+  }, [currentPage, filteredLogs, rowsPerPage]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -471,9 +472,6 @@ const HttpLogs = () => {
                   <p className="text-sm text-muted-foreground">
                     Showing {filteredLogs.length} matching log entries.
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
-                  </p>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -518,33 +516,18 @@ const HttpLogs = () => {
                   </Table>
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex justify-end">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronsLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setCurrentPage((page) => Math.min(totalPages, page + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                      >
-                        <ChevronsRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <DataTablePagination
+                  page={currentPage}
+                  pageSize={rowsPerPage}
+                  totalCount={filteredLogs.length}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(nextSize) => {
+                    setRowsPerPage(nextSize);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="log entries"
+                  className="rounded-lg border"
+                />
               </div>
             )}
           </Card>

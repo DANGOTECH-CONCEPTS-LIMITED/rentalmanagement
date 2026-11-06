@@ -11,6 +11,8 @@ namespace Infrastructure.Services.PaymentServices;
 public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentClient dango, ILogger<BillPaymentProcessingService> logger, IEmailService email)
 {
     private static readonly TimeSpan RecheckInterval = TimeSpan.FromMinutes(1);
+    // A bill the provider never resolves stays polled, but is surfaced for manual follow-up after this.
+    private static readonly TimeSpan ReconciliationAfter = TimeSpan.FromMinutes(30);
 
     public async Task<int> ProcessAsync(CancellationToken ct)
     {
@@ -20,7 +22,8 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         var processed = 0;
         // Snapshot confirmations first so bills submitted in this cycle get provider processing time.
         var awaiting = await db.Set<BillPaymentInstruction>().AsNoTracking()
-            .Where(x => x.Status == BillPaymentInstructionStatus.PendingConfirmation &&
+            .Where(x => (x.Status == BillPaymentInstructionStatus.PendingConfirmation ||
+                         x.Status == BillPaymentInstructionStatus.ReconciliationRequired) &&
                         (x.LastCheckedAtUtc == null || x.LastCheckedAtUtc < cycleStart - RecheckInterval))
             .OrderBy(x => x.Id).Take(50).ToListAsync(ct);
         var pending = await db.Set<BillPaymentInstruction>().AsNoTracking()
@@ -29,7 +32,48 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
 
         foreach (var item in pending) { await SubmitAsync(item, biller!, ct); processed++; }
         foreach (var item in awaiting) { await ConfirmAsync(item, ct); processed++; }
+        processed += await FlagStaleConfirmationsAsync(cycleStart, ct);
         return processed;
+    }
+
+    // Never stops polling a bill the provider may still settle; only raises it for human follow-up.
+    private async Task<int> FlagStaleConfirmationsAsync(DateTime cycleStart, CancellationToken ct)
+    {
+        var cutoff = cycleStart - ReconciliationAfter;
+        var stale = await db.Set<BillPaymentInstruction>().AsNoTracking()
+            .Where(x => x.Status == BillPaymentInstructionStatus.PendingConfirmation &&
+                        x.SubmittedAtUtc != null && x.SubmittedAtUtc < cutoff && x.WalletDebitedAtUtc == null)
+            .OrderBy(x => x.Id).Take(50).ToListAsync(ct);
+        var flagged = 0;
+        foreach (var item in stale)
+        {
+            var reason = $"No provider confirmation after {(int)ReconciliationAfter.TotalMinutes} minutes; flagged for reconciliation. Polling continues.";
+            var updated = await db.Set<BillPaymentInstruction>()
+                .Where(x => x.Id == item.Id && x.Status == BillPaymentInstructionStatus.PendingConfirmation)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, BillPaymentInstructionStatus.ReconciliationRequired)
+                    .SetProperty(x => x.Reason, reason), ct);
+            if (updated == 0) continue;
+            flagged++;
+            await SendStaleConfirmationEmailAsync(item, reason, ct);
+        }
+        return flagged;
+    }
+
+    private async Task SendStaleConfirmationEmailAsync(BillPaymentInstruction item, string detail, CancellationToken ct)
+    {
+        try
+        {
+            var subject = $"NWSC bill payment still unconfirmed: {item.RequestReference}";
+            var body = $"<p>{detail}</p>" +
+                $"<p>Reference: <b>{item.RequestReference}</b><br/>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
+                "<p>No utility wallet debit has been made. Confirm the final state with Dango before retrying or resubmitting.</p>";
+            await email.SendEmailAsync("ngobidaniel04@gmail.com", subject, body);
+            logger.LogInformation("Stale NWSC bill confirmation flagged for {Reference}", item.RequestReference);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to send stale confirmation email for NWSC bill {Reference}", item.RequestReference);
+        }
     }
 
     private async Task SubmitAsync(BillPaymentInstruction item, DangoBillerSetting biller, CancellationToken ct)
@@ -163,7 +207,8 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var claimed = await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id &&
-                (x.Status == BillPaymentInstructionStatus.PendingConfirmation || x.Status == BillPaymentInstructionStatus.PendingSubmission) &&
+                (x.Status == BillPaymentInstructionStatus.PendingConfirmation || x.Status == BillPaymentInstructionStatus.PendingSubmission ||
+                 x.Status == BillPaymentInstructionStatus.ReconciliationRequired) &&
                 x.WalletDebitedAtUtc == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, BillPaymentInstructionStatus.Successful)
                 .SetProperty(x => x.ConfirmedAtUtc, DateTime.UtcNow)

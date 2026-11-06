@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DataTablePagination } from "@/components/common/DataTablePagination";
 import {
   Table,
   TableBody,
@@ -29,6 +29,7 @@ interface WalletTransactionsPage {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  totalCount: number;
 }
 
 const formatDate = (value?: string | null) =>
@@ -47,6 +48,7 @@ const WalletTransactions = () => {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [result, setResult] = useState<WalletTransactionsPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -63,7 +65,7 @@ const WalletTransactions = () => {
           ...(from ? { from } : {}),
           ...(to ? { to } : {}),
           page,
-          pageSize: 20,
+          pageSize,
         },
         signal: controller.signal,
       })
@@ -78,7 +80,15 @@ const WalletTransactions = () => {
       });
 
     return () => controller.abort();
-  }, [endpoint, search, from, to, page]);
+  }, [endpoint, search, from, to, page, pageSize]);
+
+  // Older API builds don't return totalCount; fall back to a hasMore-based estimate.
+  const totalCount =
+    result && typeof result.totalCount === "number"
+      ? result.totalCount
+      : result
+        ? result.page * result.pageSize + (result.hasMore ? 1 : 0)
+        : 0;
 
   return (
     <div className="space-y-6">
@@ -178,23 +188,18 @@ const WalletTransactions = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              disabled={loading || result.page <= 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-            >
-              Previous
-            </Button>
-            <span className="text-sm">Page {result.page}</span>
-            <Button
-              variant="outline"
-              disabled={loading || !result.hasMore}
-              onClick={() => setPage((value) => value + 1)}
-            >
-              Next
-            </Button>
-          </div>
+          <DataTablePagination
+            page={result.page}
+            pageSize={result.pageSize}
+            totalCount={totalCount}
+            itemLabel="transactions"
+            disabled={loading}
+            onPageChange={setPage}
+            onPageSizeChange={(nextSize) => {
+              setPageSize(nextSize);
+              setPage(1);
+            }}
+          />
         </>
       )}
     </div>

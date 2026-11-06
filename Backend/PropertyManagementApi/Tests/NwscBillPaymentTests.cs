@@ -266,6 +266,117 @@ public class NwscBillPaymentTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ProviderFailureWithoutEchoedReferenceFailsTheBillWithoutDebiting()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        // Field report: Dango answers bill-payment-status with a terminal code but echoes no reference.
+        _handler.StatusBody = """{"statusCode":"57","statusDescription":"FAILED","flexipayRefNum":null,"receiptNumber":null,"requestReference":null}""";
+        _configuration["DangoPayment:TransactionStatus:FailureValues:0"] = "57";
+
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("FAILED", instruction.Status);
+        Assert.Equal(6000m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+        Assert.DoesNotContain(await _db.WalletTransactions.ToListAsync(), x => x.Amount < 0);
+    }
+
+    [Fact]
+    public async Task ProviderSuccessWithoutEchoedReferenceSettlesTheBill()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        _handler.StatusBody = """{"statusCode":"00","statusDescription":"Successful","requestReference":null,"receiptNumber":"RCPT-7"}""";
+
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("SUCCESSFUL", instruction.Status);
+        Assert.Equal("RCPT-7", instruction.ProviderReference);
+        Assert.NotNull(instruction.WalletDebitedAtUtc);
+        Assert.Equal(0m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+    }
+
+    [Fact]
+    public async Task ConfirmationThatNeverResolvesIsFlaggedForReconciliationButKeepsPolling()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        _handler.BillBody = """{"statusCode":"01","statusDescription":"Pending"}""";
+        _handler.StatusBody = """{"statusCode":"01","statusDescription":"Pending","requestReference":null}""";
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+        await _db.Set<BillPaymentInstruction>().ExecuteUpdateAsync(s => s.SetProperty(x => x.SubmittedAtUtc, DateTime.UtcNow.AddMinutes(-31)));
+
+        Assert.True(await Processor(_db).ProcessAsync(CancellationToken.None) >= 1);
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("RECONCILIATION_REQUIRED", instruction.Status);
+        Assert.Contains("reconciliation", instruction.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(_email.Sent, m => m.Subject.Contains(instruction.RequestReference));
+        Assert.Equal(6000m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+
+        // Polling continues, so a late provider confirmation still settles exactly once.
+        _handler.StatusBody = """{"statusCode":"00","statusDescription":"Successful","requestReference":null}""";
+        await _db.Set<BillPaymentInstruction>().ExecuteUpdateAsync(s => s.SetProperty(x => x.LastCheckedAtUtc, (DateTime?)null));
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+
+        instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("SUCCESSFUL", instruction.Status);
+        Assert.Equal(0m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+        Assert.Equal(1, await _db.WalletTransactions.CountAsync(x => x.Amount < 0));
+    }
+
+    [Fact]
+    public async Task ResubmitRequeuesOnlyBillsThatWereNeverSent()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+
+        // Field report: an operator set PENDING_CONFIRMATION by hand, so no submission attempt exists.
+        await _db.Set<BillPaymentInstruction>().Where(x => x.Id == instruction.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "PENDING_CONFIRMATION"));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.ResubmitBillPaymentAsync(instruction.Id, "no", "admin@test", CancellationToken.None));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateBillPaymentStatusAsync(instruction.Id, "PENDING_CONFIRMATION", CancellationToken.None));
+
+        Assert.Equal(instruction.RequestReference,
+            await service.ResubmitBillPaymentAsync(instruction.Id, "Provider has no record of this bill", "admin@test", CancellationToken.None));
+        var requeued = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("PENDING_SUBMISSION", requeued.Status);
+        Assert.Null(requeued.LastCheckedAtUtc);
+        Assert.Null(requeued.Response);
+        Assert.Contains("admin@test", requeued.Reason);
+
+        // A recorded submission attempt can never be resubmitted: it may already exist at Dango.
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ResubmitBillPaymentAsync(instruction.Id, "Trying again after a real attempt", "admin@test", CancellationToken.None));
+        Assert.Equal(1, (await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync()).SubmissionAttempts);
+        Assert.Single(_handler.BillRequests);
+    }
+
+    [Fact]
+    public async Task ResubmitIsAllowedForAFailedBillThatWasNeverSent()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        await _db.Set<BillPaymentInstruction>().Where(x => x.Id == instruction.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "FAILED"));
+
+        Assert.Equal(instruction.RequestReference,
+            await service.ResubmitBillPaymentAsync(instruction.Id, "Provider had no record; requeue", "admin@test", CancellationToken.None));
+        Assert.Equal("PENDING_SUBMISSION", (await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync()).Status);
+    }
+
+    [Fact]
     public async Task MissingWalletAtConfirmationRecordsPaidUndebitedInsteadOfNegativeBalance()
     {
         await ConfigureBillerAsync();
