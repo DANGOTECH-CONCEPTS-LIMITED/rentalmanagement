@@ -350,17 +350,38 @@ const AdminWalletManagement = () => {
     if (!transactionId) return;
     setTriggeringTransactionId(transactionId);
     try {
-      const { data } = await axios.post<{ created: boolean }>(
+      const { data } = await axios.post<{
+        created: boolean;
+        retried: boolean;
+        reference?: string | null;
+        message?: string | null;
+      }>(
         buildApiEndpoint(apiUrl, "/api/AdminBillPayments/trigger"),
         { transactionId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast({
-        title: data.created ? "Bill payment triggered" : "Already exists",
-        description: data.created
-          ? "A bill payment instruction was created for this transaction. Use Bill Payments to submit it."
-          : "This transaction already has a bill payment instruction, or its meter has no NWSC account to pay.",
-      });
+      if (data.created && data.retried) {
+        toast({
+          title: "Retry queued",
+          description:
+            data.message ??
+            `A new bill payment (${data.reference}) was created for this transaction; the failed attempt is kept for audit.`,
+        });
+      } else if (data.created) {
+        toast({
+          title: "Bill payment triggered",
+          description:
+            data.message ??
+            `A bill payment instruction (${data.reference}) was created. Use Bill Payments to submit it.`,
+        });
+      } else {
+        toast({
+          title: "Already exists",
+          description:
+            data.message ??
+            "This transaction already has an open bill payment instruction.",
+        });
+      }
     } catch (error) {
       const serverMessage = axios.isAxiosError(error)
         ? (error.response?.data as { message?: string } | undefined)?.message

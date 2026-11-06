@@ -103,22 +103,23 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
 
         var created = 0;
         foreach (var payment in payments)
-            if (await TryCreateInstructionAsync(payment, ct)) created++;
+            if ((await TryCreateInstructionAsync(payment, actor: null, ct, allowRetry: false)).Created) created++;
         if (created > 0) await db.SaveChangesAsync(ct);
         return created;
     }
 
-    public async Task<bool> TriggerBillPaymentAsync(string transactionId, CancellationToken ct)
+    public async Task<TriggerBillPaymentResult> TriggerBillPaymentAsync(string transactionId, string actor, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(actor)) throw new UnauthorizedAccessException("An authenticated administrator is required.");
         await EnsureBillPaymentsConfiguredAsync(ct);
         var value = (transactionId ?? string.Empty).Trim();
         if (value.Length == 0) throw new ArgumentException("A statement transaction ID is required.");
         var payment = await db.UtilityPayments.AsNoTracking()
             .FirstOrDefaultAsync(x => x.TransactionID == value && x.Status == "SUCCESSFUL" && x.Amount > 0, ct)
             ?? throw new KeyNotFoundException("No credited utility collection matches this statement transaction.");
-        if (!await TryCreateInstructionAsync(payment, ct)) return false;
-        await db.SaveChangesAsync(ct);
-        return true;
+        var result = await TryCreateInstructionAsync(payment, actor, ct);
+        if (result.Created) await db.SaveChangesAsync(ct);
+        return result;
     }
 
     private async Task EnsureBillPaymentsConfiguredAsync(CancellationToken ct)
@@ -131,14 +132,65 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
             throw new InvalidOperationException("Dango Payment API is not the active provider.");
     }
 
-    private async Task<bool> TryCreateInstructionAsync(UtilityPayment payment, CancellationToken ct)
+    private async Task<TriggerBillPaymentResult> TryCreateInstructionAsync(UtilityPayment payment, string? actor, CancellationToken ct, bool allowRetry = true)
     {
-        if (await db.Set<BillPaymentInstruction>().AsNoTracking().AnyAsync(x => x.UtilityPaymentId == payment.Id, ct))
-            return false;
-        var meter = await db.UtilityMeters.AsNoTracking().FirstOrDefaultAsync(x => x.MeterNumber == payment.MeterNumber, ct);
-        if (meter == null || !BillPaymentSchedulingService.RequiresBillPayment(meter.NWSCAccount)) return false;
+        var existing = await db.Set<BillPaymentInstruction>().AsNoTracking()
+            .Where(x => x.UtilityPaymentId == payment.Id)
+            .OrderByDescending(x => x.Id)
+            .ToListAsync(ct);
 
+        BillPaymentInstruction? failedAttempt = null;
+        if (existing.Count > 0)
+        {
+            // Any open or settled attempt blocks a new one; only provider-rejected attempts can be replaced.
+            var active = existing.FirstOrDefault(x => x.Status != BillPaymentInstructionStatus.Failed);
+            if (active != null)
+                return new(false, false, active.RequestReference,
+                    $"This collection already has a {active.Status} bill payment ({active.RequestReference}).");
+            if (!allowRetry)
+                return new(false, false, existing[0].RequestReference, "This collection already has a bill payment instruction.");
+            failedAttempt = existing[0];
+            if (failedAttempt.WalletDebitedAtUtc != null || !string.IsNullOrWhiteSpace(failedAttempt.ProviderReference) ||
+                !string.IsNullOrWhiteSpace(failedAttempt.ExternalRefNoBillerId))
+                return new(false, false, failedAttempt.RequestReference,
+                    "The failed attempt carries a provider reference, so Dango may have processed it. Reconcile it with Dango before retrying.");
+        }
+
+        var meter = await db.UtilityMeters.AsNoTracking().FirstOrDefaultAsync(x => x.MeterNumber == payment.MeterNumber, ct);
+        if (meter == null)
+            return new(false, false, null, "The meter for this collection could not be found.");
+        if (!BillPaymentSchedulingService.RequiresBillPayment(meter.NWSCAccount))
+            return new(false, false, null, "This meter has no NWSC account, so it does not need a bill payment.");
+
+        // Every attempt gets a fresh DANGO_B_<date>_<sequence> reference, never the failed one.
         var reference = await DangoReferenceNumberAllocator.AllocateAsync(db, "B", DateTime.UtcNow);
+
+        if (failedAttempt != null)
+        {
+            // The collection keeps a single instruction row (unique UtilityPaymentId), so the retry
+            // replaces the failed attempt in place: new reference, cleared submission claim, and the
+            // previous reference recorded in the reason for audit.
+            var reason = $"Retry of {failedAttempt.RequestReference}{(string.IsNullOrWhiteSpace(actor) ? string.Empty : $" by {actor}")}; the previous attempt was rejected by Dango.";
+            var storedReason = reason.Length > 256 ? reason.Substring(0, 256) : reason;
+            var updated = await db.Set<BillPaymentInstruction>()
+                .Where(x => x.Id == failedAttempt.Id && x.Status == BillPaymentInstructionStatus.Failed &&
+                            x.WalletDebitedAtUtc == null)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.RequestReference, reference)
+                    .SetProperty(x => x.Status, BillPaymentInstructionStatus.PendingSubmission)
+                    .SetProperty(x => x.SubmittedAtUtc, (DateTime?)null)
+                    .SetProperty(x => x.LastCheckedAtUtc, (DateTime?)null)
+                    .SetProperty(x => x.ConfirmedAtUtc, (DateTime?)null)
+                    .SetProperty(x => x.Response, (string?)null)
+                    .SetProperty(x => x.ProviderReference, (string?)null)
+                    .SetProperty(x => x.ExternalRefNoBillerId, (string?)null)
+                    .SetProperty(x => x.Reason, storedReason), ct);
+            if (updated == 0)
+                return new(false, false, failedAttempt.RequestReference, "The bill payment changed during the retry. Refresh the list.");
+            return new(true, true, reference,
+                $"Retry queued with new reference {reference}; the failed reference {failedAttempt.RequestReference} is recorded in the reason.");
+        }
+
         db.Add(new BillPaymentInstruction
         {
             UtilityPaymentId = payment.Id,
@@ -147,10 +199,11 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
             UtilityOwnerId = meter.LandLordId,
             Amount = (decimal)payment.Amount,
             RequestReference = reference,
+            Reason = string.IsNullOrWhiteSpace(actor) ? null : $"Triggered by {actor}.",
             Status = BillPaymentInstructionStatus.PendingSubmission,
             CreatedAtUtc = DateTime.UtcNow
         });
-        return true;
+        return new(true, false, reference, $"Bill payment {reference} created and queued for submission.");
     }
 
     // Requeues a bill the provider was never asked about. Any recorded submission attempt is refused:

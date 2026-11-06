@@ -23,3 +23,6 @@ public sealed record BillPaymentAdminItem(int Id, string RequestReference, strin
     DateTime? SubmittedAtUtc, DateTime? ConfirmedAtUtc, DateTime? WalletDebitedAtUtc, int SubmissionAttempts);
 /// <summary>A bounded page of automatic NWSC bill payments.</summary>
 public sealed record BillPaymentAdminPage(IReadOnlyList<BillPaymentAdminItem> Items, int Page, int PageSize, bool HasMore, int TotalCount);
+
+/// <summary>Outcome of an administrator-triggered bill payment, including a retry with a fresh reference.</summary>
+public sealed record TriggerBillPaymentResult(bool Created, bool Retried, string? Reference, string Message);

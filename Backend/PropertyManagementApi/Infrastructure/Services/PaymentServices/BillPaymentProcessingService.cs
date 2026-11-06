@@ -138,8 +138,10 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             .SetProperty(x => x.Response, raw)
             .SetProperty(x => x.ProviderReference, string.IsNullOrWhiteSpace(vendorReference) ? null : vendorReference)
             .SetProperty(x => x.ExternalRefNoBillerId, string.IsNullOrWhiteSpace(externalRefNoBillerId) ? null : externalRefNoBillerId)
+            // Keeps a transport failure ("settlement unconfirmed") visible instead of looking accepted.
+            .SetProperty(x => x.Reason, string.IsNullOrWhiteSpace(message) ? null : message)
             .SetProperty(x => x.Status, BillPaymentInstructionStatus.PendingConfirmation), ct);
-        logger.LogInformation("NWSC bill {Reference} accepted by Dango and awaiting confirmation", item.RequestReference);
+        logger.LogInformation("NWSC bill {Reference} awaiting provider confirmation: {Message}", item.RequestReference, message);
     }
 
     private async Task ConfirmAsync(BillPaymentInstruction item, CancellationToken ct)

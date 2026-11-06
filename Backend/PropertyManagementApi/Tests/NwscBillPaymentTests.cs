@@ -1,14 +1,19 @@
 using Domain.Entities.PropertyMgt;
+using Application.Interfaces.Settings;
 using Infrastructure.Data;
+using Infrastructure.Services.Collecto;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.PaymentServices;
 using Infrastructure.Services.PaymentServices.WalletSvc;
+using Infrastructure.Services.Settings;
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
@@ -497,16 +502,89 @@ public class NwscBillPaymentTests : IAsyncLifetime
         await _db.UtilityPayments.Where(x => x.Id == 401).ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "SUCCESSFUL"));
 
         var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
-        Assert.True(await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", CancellationToken.None));
+        var triggered = await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", "admin@test", CancellationToken.None);
+        Assert.True(triggered.Created);
+        Assert.False(triggered.Retried);
 
         var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
         Assert.Equal(401, instruction.UtilityPaymentId);
         Assert.Equal("12345678", instruction.NwscAccount);
         Assert.Equal(6000m, instruction.Amount);
         Assert.Equal("PENDING_SUBMISSION", instruction.Status);
+        Assert.Equal(instruction.RequestReference, triggered.Reference);
+        Assert.Contains("admin@test", instruction.Reason);
 
-        // Idempotent: a second trigger returns false and does not duplicate.
-        Assert.False(await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", CancellationToken.None));
+        // Idempotent while the attempt is open: a second trigger is refused and does not duplicate.
+        var again = await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", "admin@test", CancellationToken.None);
+        Assert.False(again.Created);
+        Assert.Equal(1, await _db.Set<BillPaymentInstruction>().CountAsync());
+    }
+
+    [Fact]
+    public async Task TriggerReplacesAFailedAttemptWithANewReference()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        _handler.FailBillTransport = true;
+        _handler.StatusBody = """{"statusCode":"57","statusDescription":"FAILED","requestReference":null}""";
+        _configuration["DangoPayment:TransactionStatus:FailureValues:0"] = "57";
+        await Processor(_db).ProcessAsync(CancellationToken.None); // submission times out
+        await Processor(_db).ProcessAsync(CancellationToken.None); // status check fails it
+        var failed = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("FAILED", failed.Status);
+
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        var retried = await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", "admin@test", CancellationToken.None);
+
+        Assert.True(retried.Created);
+        Assert.True(retried.Retried);
+        Assert.NotNull(retried.Reference);
+        Assert.NotEqual(failed.RequestReference, retried.Reference);
+
+        // The collection keeps a single row: the failed attempt is re-armed with a brand new reference.
+        var retriedRow = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal(failed.Id, retriedRow.Id);
+        Assert.Equal("PENDING_SUBMISSION", retriedRow.Status);
+        Assert.Equal(retried.Reference, retriedRow.RequestReference);
+        Assert.NotEqual(failed.RequestReference, retriedRow.RequestReference);
+        Assert.Null(retriedRow.SubmittedAtUtc);
+        Assert.Null(retriedRow.LastCheckedAtUtc);
+        Assert.Null(retriedRow.Response);
+        Assert.Contains($"Retry of {failed.RequestReference}", retriedRow.Reason);
+        Assert.Contains("admin@test", retriedRow.Reason);
+
+        // While the retry is open a further trigger must not re-arm it again.
+        var blocked = await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", "admin@test", CancellationToken.None);
+        Assert.False(blocked.Created);
+        Assert.Contains("PENDING_SUBMISSION", blocked.Message);
+        Assert.Equal(retried.Reference, (await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync()).RequestReference);
+
+        // The retried instruction is picked up by the next worker cycle exactly once.
+        _handler.FailBillTransport = false;
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+        var submitted = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal(2, submitted.SubmissionAttempts);
+        var lastRequest = JsonDocument.Parse(_handler.BillRequests.Last());
+        Assert.Equal(retried.Reference, lastRequest.RootElement.GetProperty("requestReference").GetString());
+    }
+
+    [Fact]
+    public async Task TriggerRefusesToReplaceAFailedAttemptThatCarriesAProviderReference()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        await _db.Set<BillPaymentInstruction>()
+            .Where(x => x.UtilityPaymentId == 401)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.Status, "FAILED")
+                .SetProperty(x => x.ProviderReference, "RCPT-EXISTING")
+                .SetProperty(x => x.SubmittedAtUtc, DateTime.UtcNow));
+
+        var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
+        var result = await service.TriggerBillPaymentAsync("DANGO_U_20261029_1", "admin@test", CancellationToken.None);
+
+        Assert.False(result.Created);
+        Assert.Contains("provider reference", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, await _db.Set<BillPaymentInstruction>().CountAsync());
     }
 
@@ -515,7 +593,8 @@ public class NwscBillPaymentTests : IAsyncLifetime
     {
         await ConfigureBillerAsync();
         var service = new AdminPayoutReconciliationService(_db, new DangoPaymentClient(new HttpClient(_handler), _configuration));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.TriggerBillPaymentAsync("NON_EXISTENT", CancellationToken.None));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.TriggerBillPaymentAsync("NON_EXISTENT", "admin@test", CancellationToken.None));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.TriggerBillPaymentAsync("DANGO_U_20261029_1", "  ", CancellationToken.None));
     }
 
     [Fact]
@@ -607,6 +686,62 @@ public class NwscBillPaymentTests : IAsyncLifetime
         Assert.All(statuses, status => Assert.Equal("FAILED", status));
     }
 
+    [Fact]
+    public async Task TransportFailureIsPersistedInTheHttpLog()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<ISettings>(_ => new Settings(_configuration, _db));
+        var provider = services.BuildServiceProvider();
+        var handler = new LoggingHandler(NullLogger<LoggingHandler>.Instance,
+            provider.GetRequiredService<IServiceScopeFactory>())
+        {
+            InnerHandler = new ThrowingHandler()
+        };
+        using var client = new HttpClient(handler);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.PostAsync(
+            "https://dango.test/api/Stanbic/bill-payment",
+            JsonContent.Create(new { requestReference = "DANGO_B_20261106_99" })));
+
+        var row = await _db.HttpRequesRequestResponses.AsNoTracking().SingleAsync();
+        Assert.Equal("TransportFailure", row.Status);
+        Assert.Equal("POST", row.RequestType);
+        Assert.Contains("DANGO_B_20261106_99", row.Request);
+        Assert.Contains("NO RESPONSE", row.Response);
+        Assert.Contains("Connection refused", row.Response);
+        Assert.Equal("DangoPay", row.Source);
+    }
+
+    [Fact]
+    public async Task SubmissionTransportFailureIsVisibleAndResolvedByTheStatusCheck()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        _handler.FailBillTransport = true;
+        _handler.StatusBody = """{"statusCode":"57","statusDescription":"FAILED","requestReference":null}""";
+        _configuration["DangoPayment:TransactionStatus:FailureValues:0"] = "57";
+
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("PENDING_CONFIRMATION", instruction.Status);
+        Assert.Contains("unconfirmed", instruction.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(instruction.ProviderReference);
+
+        // The status check resolves the unknown outcome instead of leaving a phantom pending row.
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+        instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("FAILED", instruction.Status);
+        Assert.Equal(6000m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+        Assert.DoesNotContain(await _db.WalletTransactions.ToListAsync(), x => x.Amount < 0);
+    }
+
+    public sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            => throw new HttpRequestException("Connection refused");
+    }
+
     public sealed class FakeEmailService : IEmailService
     {
         public List<(string To, string Subject, string Message)> Sent { get; } = [];
@@ -623,6 +758,8 @@ public class NwscBillPaymentTests : IAsyncLifetime
         public string StatusBody { get; set; } = """{"statusCode":"00","statusDescription":"Successful","requestReference":"{ref}"}""";
         public string CustomerValidationBody { get; set; } = """{"statusCode":"00","statusDescription":"Biller Details Fetched Successfully","requestReference":"{ref}","customerName":"DDAMBA WILSON","paymentMode":"any","amount":"-8872"}""";
         public HttpStatusCode StatusHttpStatus { get; set; } = HttpStatusCode.OK;
+        // Simulates a connection-level failure: the request leaves the client but no response arrives.
+        public bool FailBillTransport { get; set; }
         public List<string> BillRequests { get; } = [];
         public List<string> StatusRequests { get; } = [];
         public List<string> CustomerValidationRequests { get; } = [];
@@ -637,6 +774,7 @@ public class NwscBillPaymentTests : IAsyncLifetime
             if (path.EndsWith("bill-payment"))
             {
                 BillRequests.Add(body);
+                if (FailBillTransport) throw new HttpRequestException("Connection refused");
                 payload = BillBody.Replace("{ref}", reference);
             }
             else if (path.EndsWith("bill-payment-status"))

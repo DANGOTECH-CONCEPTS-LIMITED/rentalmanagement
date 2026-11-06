@@ -31,32 +31,57 @@ namespace Infrastructure.Services.Collecto
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            // build & log request, then get response
-            var (reqLog, resLog, response) = await BuildAndLogAsync(request, cancellationToken);
+            // Build and log the request before sending: a connection failure or timeout must still be
+            // recorded, otherwise a payment can fail with no bill-payment request anywhere in the log.
+            var reqLog = await BuildRequestLogAsync(request, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation(reqLog);
 
-            // persist to your DB using a new scope
-            var dto = new HttpRequesRequestResponseDto
+            HttpResponseMessage response;
+            string resLog;
+            try
             {
-                Request = reqLog,
-                Response = resLog,
-                Status = response.StatusCode.ToString(),
-                RequestType = request.Method.Method,
-                RequestUrl = request.RequestUri?.ToString(),
-                Source = ResolveSource(request.RequestUri?.ToString())
-            };
+                response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                resLog = BuildTransportFailureLog(ex);
+                _logger.LogWarning(ex, "HTTP request {RequestUri} failed before a response was received.", request.RequestUri);
+                await PersistAsync(request, reqLog, resLog, "TransportFailure").ConfigureAwait(false);
+                throw;
+            }
 
-            using var scope = _scopeFactory.CreateScope();
-            var settings = scope.ServiceProvider.GetRequiredService<ISettings>();
-            await settings.LogHttpRequestResponse(dto);
+            resLog = await BuildResponseLogAsync(response, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation(resLog);
+            await PersistAsync(request, reqLog, resLog, response.StatusCode.ToString()).ConfigureAwait(false);
 
             return response;
         }
 
-        private async Task<(string ReqLog, string ResLog, HttpResponseMessage Response)> BuildAndLogAsync(
-            HttpRequestMessage request,
-            CancellationToken ct)
+        // Logging must never break a payment, so persistence failures are swallowed after being logged.
+        private async Task PersistAsync(HttpRequestMessage request, string reqLog, string resLog, string status)
         {
-            // — REQUEST —
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var settings = scope.ServiceProvider.GetRequiredService<ISettings>();
+                await settings.LogHttpRequestResponse(new HttpRequesRequestResponseDto
+                {
+                    Request = reqLog,
+                    Response = resLog,
+                    Status = status,
+                    RequestType = request.Method.Method,
+                    RequestUrl = request.RequestUri?.ToString(),
+                    Source = ResolveSource(request.RequestUri?.ToString())
+                }).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to persist the HTTP log for {RequestUri}.", request.RequestUri);
+            }
+        }
+
+        private static async Task<string> BuildRequestLogAsync(HttpRequestMessage request, CancellationToken ct)
+        {
             var reqSb = new StringBuilder()
                 .AppendLine(ReqSep)
                 .AppendLine($"{request.Method} {request.RequestUri}");
@@ -73,22 +98,11 @@ namespace Infrastructure.Services.Collecto
             }
             reqSb.AppendLine(ReqEndSep);
 
-            _logger.LogInformation(reqSb.ToString());
+            return reqSb.ToString();
+        }
 
-            // — SEND —
-            HttpResponseMessage response;
-            try
-            {
-                response = await base.SendAsync(request, ct)
-                                     .ConfigureAwait(false);
-            }
-            catch (TaskCanceledException ex)
-            {
-                _logger.LogWarning(ex, "HTTP request was cancelled for {RequestUri} request : {Content}", request.RequestUri,request.Content);
-                throw; // Re-throw to maintain behavior
-            }
-
-            // — RESPONSE —
+        private static async Task<string> BuildResponseLogAsync(HttpResponseMessage response, CancellationToken ct)
+        {
             var resSb = new StringBuilder()
                 .AppendLine()
                 .AppendLine(ResSep)
@@ -106,10 +120,17 @@ namespace Infrastructure.Services.Collecto
             }
             resSb.AppendLine(ResEndSep);
 
-            _logger.LogInformation(resSb.ToString());
-
-            return (reqSb.ToString(), resSb.ToString(), response);
+            return resSb.ToString();
         }
+
+        private static string BuildTransportFailureLog(Exception ex) =>
+            new StringBuilder()
+                .AppendLine()
+                .AppendLine(ResSep)
+                .AppendLine("NO RESPONSE")
+                .AppendLine($"Transport failure: {ex.GetType().Name}: {ex.Message}")
+                .AppendLine(ResEndSep)
+                .ToString();
 
         private static void AppendHeaders(StringBuilder sb, HttpHeaders headers)
         {

@@ -119,14 +119,15 @@ public sealed class AdminPayoutReconciliationController(IAdminPayoutReconciliati
         public string TransactionId { get; set; } = string.Empty;
     }
 
-    /// <summary>Creates one bill payment instruction for a single credited utility collection, matched by its statement transaction ID.</summary>
+    /// <summary>Creates a bill payment instruction for a credited utility collection; replaces a provider-rejected attempt with a new reference.</summary>
     [HttpPost("/api/AdminBillPayments/trigger")]
     public async Task<IActionResult> TriggerBillPayment([FromBody] TriggerBillPaymentRequest request, CancellationToken ct)
     {
+        var actor = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrWhiteSpace(actor)) return Unauthorized();
         try
         {
-            var created = await service.TriggerBillPaymentAsync(request.TransactionId, ct);
-            return Ok(new { created });
+            return Ok(await service.TriggerBillPaymentAsync(request.TransactionId, actor, ct));
         }
         catch (ArgumentException ex)
         {
