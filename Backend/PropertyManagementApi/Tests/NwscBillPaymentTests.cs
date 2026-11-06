@@ -736,6 +736,58 @@ public class NwscBillPaymentTests : IAsyncLifetime
         Assert.DoesNotContain(await _db.WalletTransactions.ToListAsync(), x => x.Amount < 0);
     }
 
+    [Fact]
+    public async Task FailedBillPaymentEmailsTheAlertRecipientImmediately()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        // Dango rejects the submission outright.
+        _handler.BillBody = """{"statusCode":"57","statusDescription":"Declined by biller","requestReference":"{ref}"}""";
+        _configuration["DangoPayment:TransactionStatus:FailureValues:0"] = "57";
+
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("FAILED", instruction.Status);
+
+        var sent = Assert.Single(_email.Sent);
+        Assert.Equal("ngobidaniel04@gmail.com", sent.To);
+        Assert.Contains(instruction.RequestReference, sent.Subject);
+        Assert.Contains("Declined by biller", sent.Message);
+        Assert.Contains("meter-1", sent.Message);
+        Assert.Contains("12345678", sent.Message);
+        Assert.Equal(6000m, (await _db.Wallets.AsNoTracking().SingleAsync()).Balance);
+    }
+
+    [Fact]
+    public async Task PreflightValidationFailureAlsoEmailsTheAlertRecipient()
+    {
+        await ConfigureBillerAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(401);
+        await _db.Set<BillPaymentInstruction>().ExecuteDeleteAsync();
+        await _db.UtilityMeters.ExecuteUpdateAsync(s => s
+            .SetProperty(x => x.UtilityMeterLocation, (string?)null)
+            .SetProperty(x => x.CustomerMobile, (string?)null));
+        await _settings.SetBillerAsync(new("NWSC", "BILLPAY", null, null, null, null, null, null, true));
+        _db.UtilityPayments.Add(new UtilityPayment
+        {
+            Id = 402, TransactionID = "DANGO_U_20261029_2", MeterNumber = "meter-1", Amount = 5000,
+            PhoneNumber = "256770000001", Status = "SUCCESSFUL AT TELECOM"
+        });
+        await _db.SaveChangesAsync();
+        await new CollectionWalletCreditService(_db, _settings).CreditUtilityAsync(402);
+
+        await Processor(_db).ProcessAsync(CancellationToken.None);
+
+        var instruction = await _db.Set<BillPaymentInstruction>().AsNoTracking().SingleAsync();
+        Assert.Equal("FAILED", instruction.Status);
+        var sent = Assert.Single(_email.Sent);
+        Assert.Equal("ngobidaniel04@gmail.com", sent.To);
+        Assert.Contains(instruction.RequestReference, sent.Subject);
+        // No provider call was made for a pre-flight rejection.
+        Assert.Empty(_handler.BillRequests);
+    }
+
     public sealed class ThrowingHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)

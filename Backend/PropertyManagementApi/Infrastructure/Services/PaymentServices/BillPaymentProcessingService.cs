@@ -13,6 +13,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
     private static readonly TimeSpan RecheckInterval = TimeSpan.FromMinutes(1);
     // A bill the provider never resolves stays polled, but is surfaced for manual follow-up after this.
     private static readonly TimeSpan ReconciliationAfter = TimeSpan.FromMinutes(30);
+    private const string AlertsRecipient = "ngobidaniel04@gmail.com";
 
     public async Task<int> ProcessAsync(CancellationToken ct)
     {
@@ -67,7 +68,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             var body = $"<p>{detail}</p>" +
                 $"<p>Reference: <b>{item.RequestReference}</b><br/>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
                 "<p>No utility wallet debit has been made. Confirm the final state with Dango before retrying or resubmitting.</p>";
-            await email.SendEmailAsync("ngobidaniel04@gmail.com", subject, body);
+            await email.SendEmailAsync(AlertsRecipient, subject, body);
             logger.LogInformation("Stale NWSC bill confirmation flagged for {Reference}", item.RequestReference);
         }
         catch (Exception ex)
@@ -93,7 +94,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         try { dango.ValidateBillPayment(biller, item.NwscAccount, location, item.Amount); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            await FailAsync(item.Id, ex.Message, ct);
+            await FailAsync(item, ex.Message, ct);
             return;
         }
 
@@ -122,7 +123,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         var (state, vendorReference, message, externalRefNoBillerId) = Parse(raw);
         if (state == "FAILED")
         {
-            await FailAsync(item.Id, message, ct, raw);
+            await FailAsync(item, message, ct, raw);
             return;
         }
         if (state == "SUCCESSFUL")
@@ -174,7 +175,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         }
         if (state == "FAILED")
         {
-            await FailAsync(item.Id, message, ct, raw);
+            await FailAsync(item, message, ct, raw);
             return;
         }
         if (state == "AMBIGUOUS")
@@ -195,7 +196,7 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
                 $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
                 $"<p>The payment was treated as settled and the utility wallet debited, but please reconcile with Dango.</p>" +
                 $"<pre>{System.Net.WebUtility.HtmlEncode(raw)}</pre>";
-            await email.SendEmailAsync("ngobidaniel04@gmail.com", subject, body);
+            await email.SendEmailAsync(AlertsRecipient, subject, body);
             logger.LogInformation("Reconciliation email sent for ambiguous NWSC bill {Reference}", item.RequestReference);
         }
         catch (Exception ex)
@@ -264,13 +265,43 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             item.RequestReference, reason);
     }
 
-    private async Task FailAsync(int id, string reason, CancellationToken ct, string? raw = null)
+    private async Task FailAsync(BillPaymentInstruction item, string reason, CancellationToken ct, string? raw = null)
     {
         var storedReason = reason.Length > 256 ? reason.Substring(0, 256) : reason;
-        await db.Set<BillPaymentInstruction>().Where(x => x.Id == id)
+        // Only a real transition to FAILED sends the alert, so repeated handling cannot email twice.
+        var updated = await db.Set<BillPaymentInstruction>()
+            .Where(x => x.Id == item.Id &&
+                        x.Status != BillPaymentInstructionStatus.Successful &&
+                        x.Status != BillPaymentInstructionStatus.PaidUndebited &&
+                        x.Status != BillPaymentInstructionStatus.Failed)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, BillPaymentInstructionStatus.Failed)
                 .SetProperty(x => x.Reason, storedReason)
                 .SetProperty(x => x.Response, raw), ct);
+        if (updated > 0)
+        {
+            await SendFailureEmailAsync(item, reason, raw, ct);
+        }
+    }
+
+    private async Task SendFailureEmailAsync(BillPaymentInstruction item, string reason, string? raw, CancellationToken ct)
+    {
+        try
+        {
+            var subject = $"NWSC bill payment FAILED: {item.RequestReference}";
+            var body = $"<p>NWSC bill payment <b>{item.RequestReference}</b> failed and was not paid.</p>" +
+                $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}<br/>Utility owner id: {item.UtilityOwnerId}</p>" +
+                $"<p>Reason: {System.Net.WebUtility.HtmlEncode(reason ?? string.Empty)}</p>" +
+                (string.IsNullOrWhiteSpace(raw)
+                    ? string.Empty
+                    : $"<p>Provider response:</p><pre>{System.Net.WebUtility.HtmlEncode(raw)}</pre>") +
+                "<p>No utility wallet debit was made. Review it in Bill Payments to retry or reconcile.</p>";
+            await email.SendEmailAsync(AlertsRecipient, subject, body);
+            logger.LogInformation("Bill payment failure notification sent for {Reference}", item.RequestReference);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to send the bill payment failure notification for {Reference}", item.RequestReference);
+        }
     }
 
     private static (string State, string VendorReference, string Message, string ExternalRefNoBillerId) Parse(string raw)
