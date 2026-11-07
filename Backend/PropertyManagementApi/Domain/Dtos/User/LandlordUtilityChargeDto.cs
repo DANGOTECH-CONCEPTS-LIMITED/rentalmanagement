@@ -7,6 +7,8 @@ namespace Domain.Dtos.User
         public double? ChargePercentage { get; set; }
         public double? FlatFee { get; set; }
         public List<LandlordUtilityChargeTierDto> Tiers { get; set; } = new();
+        /// <summary>Set when the stored tier JSON could not be read, so the UI can explain the missing bands.</summary>
+        public string? TiersWarning { get; set; }
     }
 
     public class LandlordUtilityChargeTierDto

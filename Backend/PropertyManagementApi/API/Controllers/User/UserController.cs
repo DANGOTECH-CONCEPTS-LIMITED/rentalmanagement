@@ -422,15 +422,16 @@ namespace API.Controllers.UserControllers
                     return NotFound("Landlord not found.");
                 }
 
+                var (tiers, tiersWarning) = ParseUtilityChargeTiers(landlord.UtilityChargeTiersJson);
+
                 return Ok(new LandlordUtilityChargeDto
                 {
                     LandlordId = landlord.Id,
                     ChargeType = string.IsNullOrWhiteSpace(landlord.UtilityChargeType) ? "Percentage" : landlord.UtilityChargeType,
-                    ChargePercentage = landlord.UtilityChargePercentage ?? 10d,
+                    ChargePercentage = landlord.UtilityChargePercentage,
                     FlatFee = landlord.UtilityChargeFlatFee,
-                    Tiers = string.IsNullOrWhiteSpace(landlord.UtilityChargeTiersJson)
-                        ? new List<LandlordUtilityChargeTierDto>()
-                        : System.Text.Json.JsonSerializer.Deserialize<List<LandlordUtilityChargeTierDto>>(landlord.UtilityChargeTiersJson) ?? new List<LandlordUtilityChargeTierDto>()
+                    Tiers = tiers,
+                    TiersWarning = tiersWarning
                 });
             }
             catch (Exception ex)
@@ -475,21 +476,54 @@ namespace API.Controllers.UserControllers
                 _db.Users.Update(landlord);
                 await _db.SaveChangesAsync();
 
+                var (savedTiers, savedTiersWarning) = ParseUtilityChargeTiers(landlord.UtilityChargeTiersJson);
+
                 return Ok(new LandlordUtilityChargeDto
                 {
                     LandlordId = landlord.Id,
                     ChargeType = landlord.UtilityChargeType ?? "Percentage",
                     ChargePercentage = landlord.UtilityChargePercentage,
                     FlatFee = landlord.UtilityChargeFlatFee,
-                    Tiers = string.IsNullOrWhiteSpace(landlord.UtilityChargeTiersJson)
-                        ? new List<LandlordUtilityChargeTierDto>()
-                        : System.Text.Json.JsonSerializer.Deserialize<List<LandlordUtilityChargeTierDto>>(landlord.UtilityChargeTiersJson) ?? new List<LandlordUtilityChargeTierDto>()
+                    Tiers = savedTiers,
+                    TiersWarning = savedTiersWarning
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error configuring utility charge for landlord {LandlordId}", request?.LandlordId);
                 return BadRequest("An error occurred while configuring the landlord utility charge.");
+            }
+        }
+
+        private static readonly System.Text.Json.JsonSerializerOptions UtilityChargeTierJsonOptions = new()
+        {
+            // Rows entered by hand or copied from an API response may use different key casing.
+            PropertyNameCaseInsensitive = true
+        };
+
+        // A malformed tier list must never hide the rest of the account's charge configuration.
+        private static (List<LandlordUtilityChargeTierDto> Tiers, string? Warning) ParseUtilityChargeTiers(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return (new List<LandlordUtilityChargeTierDto>(), null);
+            }
+
+            // Smart quotes are a common copy/paste artefact from documents and chat apps.
+            var normalized = json
+                .Replace('\u201C', '"').Replace('\u201D', '"')
+                .Replace('\u2018', '\'').Replace('\u2019', '\'');
+
+            try
+            {
+                var tiers = System.Text.Json.JsonSerializer.Deserialize<List<LandlordUtilityChargeTierDto>>(
+                    normalized, UtilityChargeTierJsonOptions) ?? new List<LandlordUtilityChargeTierDto>();
+                return (tiers, null);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return (new List<LandlordUtilityChargeTierDto>(),
+                    "The stored tier configuration is not valid JSON, so its bands cannot be shown. Re-save the tiers to repair it.");
             }
         }
 

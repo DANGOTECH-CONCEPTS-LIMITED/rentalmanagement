@@ -37,6 +37,7 @@ interface ChargeSettings {
   chargePercentage?: number | null;
   flatFee?: number | null;
   tiers: Tier[];
+  tiersWarning?: string | null;
 }
 
 const CHARGE_TYPES = [
@@ -50,6 +51,7 @@ const UtilityChargeSettings = () => {
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [settings, setSettings] = useState<ChargeSettings | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -77,6 +79,7 @@ const UtilityChargeSettings = () => {
 
   const loadCharge = async (landlordId: number) => {
     setLoading(true);
+    setLoadError(null);
     try {
       const { data } = await api.get<ChargeSettings>(`/GetLandlordUtilityCharge/${landlordId}`);
       const chargeType = (data.chargeType ?? 'Percentage').trim();
@@ -90,8 +93,16 @@ const UtilityChargeSettings = () => {
         tiers: chargeType === 'Tiered' && tiers.length === 0
           ? [{ minAmount: null, maxAmount: null, charge: 0 }]
           : tiers,
+        tiersWarning: data.tiersWarning ?? null,
       });
-    } catch {
+    } catch (error) {
+      // Keep the failure visible; previously the page just rendered nothing.
+      const responseData = (error as { response?: { data?: unknown } })?.response?.data;
+      const message = typeof responseData === 'string'
+        ? responseData
+        : (responseData as { message?: string } | undefined)?.message;
+      setSettings(null);
+      setLoadError(message || 'Unable to load utility charge settings.');
       toast({ title: 'Error', description: 'Unable to load utility charge settings.', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -143,6 +154,7 @@ const UtilityChargeSettings = () => {
     setSaving(true);
     try {
       await api.put('/ConfigureLandlordUtilityCharge', settings);
+      setSettings((s) => (s ? { ...s, tiersWarning: null } : s));
       toast({ title: 'Saved', description: 'Utility charge settings updated.' });
     } catch {
       toast({ title: 'Error', description: 'Unable to save utility charge settings.', variant: 'destructive' });
@@ -198,6 +210,22 @@ const UtilityChargeSettings = () => {
           </Select>
         </CardContent>
       </Card>
+
+      {loadError && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <p role="alert" className="text-sm text-destructive">{loadError}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => selectedId != null && void loadCharge(selectedId)}
+              disabled={selectedId == null || loading}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {settings && (
         <>
@@ -285,6 +313,11 @@ const UtilityChargeSettings = () => {
                   </Button>
                 </CardTitle>
               </CardHeader>
+              {settings.tiersWarning && (
+                <p role="alert" className="mx-6 mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {settings.tiersWarning}
+                </p>
+              )}
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
