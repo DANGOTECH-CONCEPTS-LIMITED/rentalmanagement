@@ -1,0 +1,82 @@
+name: CI
+
+# Build + test gate. Deployment workflows stay separate so a red build never ships.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (build + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+
+      # Test project covers the payment flows, bill payment worker and ops queue.
+      - name: Restore Dependencies
+        run: dotnet restore Backend/PropertyManagementApi/PropertyManagementApi.sln
+
+      - name: Build Solution
+        run: dotnet build Backend/PropertyManagementApi/PropertyManagementApi.sln --configuration Release --no-restore
+
+      - name: Run Tests
+        run: >
+          dotnet test Backend/PropertyManagementApi/Tests/Tests.csproj
+          --configuration Release --no-build
+          --logger "trx;LogFileName=backend-tests.trx"
+          --results-directory ./test-results
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: ./test-results
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend (typecheck + tests + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc -p tsconfig.app.json --noEmit
+
+      - name: Run Tests
+        run: npx jest --ci --silent
+
+      - name: Build
+        run: npm run build
+
+      # Existing lint debt must not block delivery yet, but new warnings stay visible.
+      - name: Lint (non-blocking)
+        continue-on-error: true
+        run: npm run lint

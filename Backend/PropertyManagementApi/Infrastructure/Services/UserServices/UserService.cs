@@ -28,15 +28,21 @@ namespace Infrastructure.Services.UserServices
         private readonly EmailService _emailService;
         private readonly AppDbContext _context;
         private readonly ISettings _settings;
+        private readonly Application.Interfaces.Security.IJwtTokenFactory _tokens;
+        private readonly Application.Interfaces.Security.IMfaService _mfa;
 
         public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher,
-            EmailService emailService, ISettings settings, IConfiguration configuration)
+            EmailService emailService, ISettings settings, IConfiguration configuration,
+            Application.Interfaces.Security.IJwtTokenFactory tokens,
+            Application.Interfaces.Security.IMfaService mfa)
         {
             _context = context;
             _passwordHasher = passwordHasher;
             _emailService = emailService;
             _settings = settings;
             _configuration = configuration;
+            _tokens = tokens;
+            _mfa = mfa;
         }
 
         public async Task RegisterUserAsync(
@@ -203,36 +209,18 @@ namespace Infrastructure.Services.UserServices
                 user.Id = tenant.Id;
             }
 
-            // Retrieve JWT configuration settings
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-            var secretKey = jwtSettings["SecretKey"];
-            var issuer = jwtSettings["Issuer"];
-            var audience = jwtSettings["Audience"];
-            var expirationMinutes = int.Parse(jwtSettings["ExpiryMinutes"]);
-
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-            var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
-
-            // Create the claims to include in the token (expand as needed)
-            var claims = new List<Claim>
+            // Second factor: an enrolled account never receives a token from the password step alone.
+            var mfaStatus = await _mfa.GetStatusAsync(user.Id);
+            if (mfaStatus.IsEnabled)
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim("role", user.SystemRole.Name),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+                user.RequiresMfa = true;
+                user.MfaChallengeId = await _mfa.CreateChallengeAsync(user.Id, ipAddress: null);
+                user.Token = null;
+                return user;
+            }
 
-            // Create the JWT token
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
-                signingCredentials: signingCredentials
-            );
-
-            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-            user.Token = tokenString; // Optionally set the token on your user object
+            // Token minting lives in JwtTokenFactory so the MFA path issues identical claims.
+            user.Token = _tokens.CreateToken(user.Id, user.Email, user.SystemRole.Name);
 
             return user;
         }

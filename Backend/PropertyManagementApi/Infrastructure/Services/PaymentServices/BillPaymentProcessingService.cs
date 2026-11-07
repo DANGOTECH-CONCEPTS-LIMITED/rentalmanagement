@@ -1,19 +1,20 @@
 using System.Text.Json;
+using Application.Interfaces.Analytics;
+using Application.Interfaces.Notifications;
 using Domain.Entities.PropertyMgt;
+using Domain.Notifications;
 using Infrastructure.Data;
-using Infrastructure.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services.PaymentServices;
 
 // Submits queued NWSC bill payments and debits the utility wallet only after Dango confirms success.
-public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentClient dango, ILogger<BillPaymentProcessingService> logger, IEmailService email)
+public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentClient dango, ILogger<BillPaymentProcessingService> logger, INotificationDispatcher notifications, IPaymentStatusHistory history)
 {
     private static readonly TimeSpan RecheckInterval = TimeSpan.FromMinutes(1);
     // A bill the provider never resolves stays polled, but is surfaced for manual follow-up after this.
     private static readonly TimeSpan ReconciliationAfter = TimeSpan.FromMinutes(30);
-    private const string AlertsRecipient = "ngobidaniel04@gmail.com";
 
     public async Task<int> ProcessAsync(CancellationToken ct)
     {
@@ -55,26 +56,23 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
                     .SetProperty(x => x.Reason, reason), ct);
             if (updated == 0) continue;
             flagged++;
-            await SendStaleConfirmationEmailAsync(item, reason, ct);
+            await history.RecordAsync(PaymentStatusSubject.BillPayment, item.Id,
+                BillPaymentInstructionStatus.PendingConfirmation, BillPaymentInstructionStatus.ReconciliationRequired,
+                reason, reference: item.RequestReference, amount: item.Amount, ct: ct);
+            await NotifyStaleConfirmationAsync(item, reason);
         }
         return flagged;
     }
 
-    private async Task SendStaleConfirmationEmailAsync(BillPaymentInstruction item, string detail, CancellationToken ct)
+    private async Task NotifyStaleConfirmationAsync(BillPaymentInstruction item, string detail)
     {
-        try
-        {
-            var subject = $"NWSC bill payment still unconfirmed: {item.RequestReference}";
-            var body = $"<p>{detail}</p>" +
-                $"<p>Reference: <b>{item.RequestReference}</b><br/>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
-                "<p>No utility wallet debit has been made. Confirm the final state with Dango before retrying or resubmitting.</p>";
-            await email.SendEmailAsync(AlertsRecipient, subject, body);
-            logger.LogInformation("Stale NWSC bill confirmation flagged for {Reference}", item.RequestReference);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to send stale confirmation email for NWSC bill {Reference}", item.RequestReference);
-        }
+        var subject = $"NWSC bill payment still unconfirmed: {item.RequestReference}";
+        var body = $"<p>{detail}</p>" +
+            $"<p>Reference: <b>{item.RequestReference}</b><br/>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
+            "<p>No utility wallet debit has been made. Confirm the final state with Dango before retrying or resubmitting.</p>";
+        await notifications.DispatchAsync(new NotificationRequest(
+            NotificationEvents.BillPaymentUnconfirmed, subject, body, item.RequestReference));
+        logger.LogInformation("Stale NWSC bill confirmation flagged for {Reference}", item.RequestReference);
     }
 
     private async Task SubmitAsync(BillPaymentInstruction item, DangoBillerSetting biller, CancellationToken ct)
@@ -142,6 +140,8 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
             // Keeps a transport failure ("settlement unconfirmed") visible instead of looking accepted.
             .SetProperty(x => x.Reason, string.IsNullOrWhiteSpace(message) ? null : message)
             .SetProperty(x => x.Status, BillPaymentInstructionStatus.PendingConfirmation), ct);
+        await history.RecordAsync(PaymentStatusSubject.BillPayment, item.Id, item.Status,
+            BillPaymentInstructionStatus.PendingConfirmation, message, reference: item.RequestReference, amount: item.Amount, ct: ct);
         logger.LogInformation("NWSC bill {Reference} awaiting provider confirmation: {Message}", item.RequestReference, message);
     }
 
@@ -180,29 +180,23 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         }
         if (state == "AMBIGUOUS")
         {
-            await SendReconciliationEmailAsync(item, raw, ct);
+            await NotifyReconciliationAsync(item, raw);
             await CompleteAsync(item, raw, vendorReference, ct, "Transaction Ambiguous — reconciliation required", externalRefNoBillerId);
             return;
         }
         await CompleteAsync(item, raw, vendorReference, ct, externalRefNoBillerId: externalRefNoBillerId);
     }
 
-    private async Task SendReconciliationEmailAsync(BillPaymentInstruction item, string raw, CancellationToken ct)
+    private async Task NotifyReconciliationAsync(BillPaymentInstruction item, string raw)
     {
-        try
-        {
-            var subject = $"NWSC bill payment reconciliation required: {item.RequestReference}";
-            var body = $"<p>Dango returned an ambiguous status (<b>100 Transaction Ambiguous</b>) for NWSC bill payment <b>{item.RequestReference}</b>.</p>" +
-                $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
-                $"<p>The payment was treated as settled and the utility wallet debited, but please reconcile with Dango.</p>" +
-                $"<pre>{System.Net.WebUtility.HtmlEncode(raw)}</pre>";
-            await email.SendEmailAsync(AlertsRecipient, subject, body);
-            logger.LogInformation("Reconciliation email sent for ambiguous NWSC bill {Reference}", item.RequestReference);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to send reconciliation email for ambiguous NWSC bill {Reference}", item.RequestReference);
-        }
+        var subject = $"NWSC bill payment reconciliation required: {item.RequestReference}";
+        var body = $"<p>Dango returned an ambiguous status (<b>100 Transaction Ambiguous</b>) for NWSC bill payment <b>{item.RequestReference}</b>.</p>" +
+            $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
+            $"<p>The payment was treated as settled and the utility wallet debited, but please reconcile with Dango.</p>" +
+            $"<pre>{System.Net.WebUtility.HtmlEncode(raw)}</pre>";
+        await notifications.DispatchAsync(new NotificationRequest(
+            NotificationEvents.BillPaymentUnconfirmed, subject, body, item.RequestReference));
+        logger.LogInformation("Reconciliation alert sent for ambiguous NWSC bill {Reference}", item.RequestReference);
     }
 
     private async Task CompleteAsync(BillPaymentInstruction item, string raw, string vendorReference, CancellationToken ct,
@@ -251,6 +245,8 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         }
         await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.WalletDebitedAtUtc, DateTime.UtcNow), ct);
+        await history.RecordAsync(PaymentStatusSubject.BillPayment, item.Id, item.Status,
+            BillPaymentInstructionStatus.Successful, reason, reference: item.RequestReference, amount: item.Amount, ct: ct);
         await transaction.CommitAsync(ct);
         logger.LogInformation("NWSC bill {Reference} confirmed and utility wallet debited", item.RequestReference);
     }
@@ -260,9 +256,21 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
         await db.Set<BillPaymentInstruction>().Where(x => x.Id == item.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, BillPaymentInstructionStatus.PaidUndebited)
                 .SetProperty(x => x.Reason, reason), ct);
+        await history.RecordAsync(PaymentStatusSubject.BillPayment, item.Id, item.Status,
+            BillPaymentInstructionStatus.PaidUndebited, reason, reference: item.RequestReference, amount: item.Amount, ct: ct);
         await transaction.CommitAsync(ct);
         logger.LogError("NWSC bill {Reference} was confirmed but the utility wallet could not be debited: {Reason}",
             item.RequestReference, reason);
+
+        // The provider already took the money, so this must reach a human even if the wallet did not move.
+        await notifications.DispatchAsync(new NotificationRequest(
+            NotificationEvents.BillPaymentUndebited,
+            $"NWSC bill paid but wallet NOT debited: {item.RequestReference}",
+            $"<p>Dango confirmed NWSC bill <b>{item.RequestReference}</b>, but the utility wallet was not debited.</p>" +
+            $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}<br/>Utility owner id: {item.UtilityOwnerId}</p>" +
+            $"<p>Reason: {System.Net.WebUtility.HtmlEncode(reason)}</p>" +
+            "<p>Debit the wallet manually or reconcile with Dango; the bill is already paid at the provider.</p>",
+            item.RequestReference));
     }
 
     private async Task FailAsync(BillPaymentInstruction item, string reason, CancellationToken ct, string? raw = null)
@@ -279,29 +287,25 @@ public sealed class BillPaymentProcessingService(AppDbContext db, DangoPaymentCl
                 .SetProperty(x => x.Response, raw), ct);
         if (updated > 0)
         {
-            await SendFailureEmailAsync(item, reason, raw, ct);
+            await history.RecordAsync(PaymentStatusSubject.BillPayment, item.Id, item.Status,
+                BillPaymentInstructionStatus.Failed, reason, reference: item.RequestReference, amount: item.Amount, ct: ct);
+            await NotifyFailureAsync(item, reason, raw);
         }
     }
 
-    private async Task SendFailureEmailAsync(BillPaymentInstruction item, string reason, string? raw, CancellationToken ct)
+    private async Task NotifyFailureAsync(BillPaymentInstruction item, string reason, string? raw)
     {
-        try
-        {
-            var subject = $"NWSC bill payment FAILED: {item.RequestReference}";
-            var body = $"<p>NWSC bill payment <b>{item.RequestReference}</b> failed and was not paid.</p>" +
-                $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}<br/>Utility owner id: {item.UtilityOwnerId}</p>" +
-                $"<p>Reason: {System.Net.WebUtility.HtmlEncode(reason ?? string.Empty)}</p>" +
-                (string.IsNullOrWhiteSpace(raw)
-                    ? string.Empty
-                    : $"<p>Provider response:</p><pre>{System.Net.WebUtility.HtmlEncode(raw)}</pre>") +
-                "<p>No utility wallet debit was made. Review it in Bill Payments to retry or reconcile.</p>";
-            await email.SendEmailAsync(AlertsRecipient, subject, body);
-            logger.LogInformation("Bill payment failure notification sent for {Reference}", item.RequestReference);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to send the bill payment failure notification for {Reference}", item.RequestReference);
-        }
+        var subject = $"NWSC bill payment FAILED: {item.RequestReference}";
+        var body = $"<p>NWSC bill payment <b>{item.RequestReference}</b> failed and was not paid.</p>" +
+            $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}<br/>Utility owner id: {item.UtilityOwnerId}</p>" +
+            $"<p>Reason: {System.Net.WebUtility.HtmlEncode(reason ?? string.Empty)}</p>" +
+            (string.IsNullOrWhiteSpace(raw)
+                ? string.Empty
+                : $"<p>Provider response:</p><pre>{System.Net.WebUtility.HtmlEncode(raw)}</pre>") +
+            "<p>No utility wallet debit was made. Review it in Bill Payments to retry or reconcile.</p>";
+        await notifications.DispatchAsync(new NotificationRequest(
+            NotificationEvents.BillPaymentFailed, subject, body, item.RequestReference));
+        logger.LogInformation("Bill payment failure notification sent for {Reference}", item.RequestReference);
     }
 
     private static (string State, string VendorReference, string Message, string ExternalRefNoBillerId) Parse(string raw)

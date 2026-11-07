@@ -1,4 +1,5 @@
 using Application.Interfaces.Meter;
+using Domain;
 using Domain.Dtos.Meters;
 using Domain.Entities.PropertyMgt;
 using Infrastructure.Data;
@@ -22,14 +23,15 @@ namespace Infrastructure.Services.Meter
             _context = context;
         }
 
-        public async Task<MeterFeeSummaryDto> SetMonthlyFeeAsync(int ownerId, double monthlyFee, string requesterEmail, bool isAdmin)
+        public async Task<MeterFeeSummaryDto> SetMonthlyFeeAsync(int ownerId, decimal monthlyFee, string requesterEmail, bool isAdmin)
         {
-            if (monthlyFee < 0 || double.IsNaN(monthlyFee) || double.IsInfinity(monthlyFee))
-                throw new ArgumentException("Monthly fee must be zero or greater.");
+            // decimal has no NaN/Infinity, so only range and sign need guarding.
+            if (monthlyFee < 0 || monthlyFee > 1_000_000_000m)
+                throw new ArgumentException("Monthly fee must be between zero and 1,000,000,000.");
 
             var owner = await GetAuthorizedOwnerAsync(ownerId, requesterEmail, isAdmin);
 
-            monthlyFee = Math.Round(monthlyFee, 2);
+            monthlyFee = Money.Round(monthlyFee);
             if (monthlyFee > 0 && (owner.MonthlyMeterFee <= 0 || owner.MonthlyMeterFeeEffectiveFrom == null))
                 owner.MonthlyMeterFeeEffectiveFrom = DateTime.Now;
             else if (monthlyFee == 0)
@@ -108,7 +110,7 @@ namespace Infrastructure.Services.Meter
             }
         }
 
-        public async Task<double?> GetOutstandingForMeterAsync(string meterNumber)
+        public async Task<decimal?> GetOutstandingForMeterAsync(string meterNumber)
         {
             var meter = await _context.UtilityMeters
                 .AsNoTracking()
@@ -121,12 +123,12 @@ namespace Infrastructure.Services.Meter
             var outstanding = await _context.MeterFeeCharges
                 .AsNoTracking()
                 .Where(c => c.MeterNumber == meterNumber && c.AmountPaid < c.Amount)
-                .SumAsync(c => (double?)(c.Amount - c.AmountPaid)) ?? 0d;
+                .SumAsync(c => (decimal?)(c.Amount - c.AmountPaid)) ?? 0m;
 
-            return meter.Fee > 0 || outstanding > 0 ? Math.Round(outstanding, 2) : null;
+            return meter.Fee > 0 || outstanding > 0 ? Money.Round(outstanding) : null;
         }
 
-        public async Task<double> SettleFeesForPaymentAsync(int paymentId)
+        public async Task<decimal> SettleFeesForPaymentAsync(int paymentId)
         {
             // Join lien allocation's transaction when called from the payment pipeline.
             await using var tx = _context.Database.CurrentTransaction == null
@@ -151,25 +153,25 @@ namespace Infrastructure.Services.Meter
             var charges = await _context.MeterFeeCharges
                 .Where(c => c.MeterNumber == payment.MeterNumber && c.AmountPaid < c.Amount)
                 .OrderBy(c => c.Period).ToListAsync();
-            var remaining = decimal.Round(checked((decimal)payment.Amount), 2, MidpointRounding.AwayFromZero);
+            var remaining = Money.Round(payment.Amount);
             if (remaining <= 0) throw new InvalidOperationException("Payment amount must be positive.");
             var settled = 0m;
             foreach (var charge in charges)
             {
                 if (remaining <= 0) break;
                 await _context.Entry(charge).ReloadAsync();
-                var due = decimal.Round((decimal)charge.Amount - (decimal)charge.AmountPaid, 2, MidpointRounding.AwayFromZero);
+                var due = Money.Round(charge.Amount - charge.AmountPaid);
                 var applied = Math.Min(Math.Max(due, 0), remaining);
-                charge.AmountPaid = (double)((decimal)charge.AmountPaid + applied);
+                charge.AmountPaid = charge.AmountPaid + applied;
                 if (charge.AmountPaid >= charge.Amount) charge.SettledAt = DateTime.Now;
                 remaining -= applied;
                 settled += applied;
             }
-            payment.FeesSettledAmount = (double)settled;
+            payment.FeesSettledAmount = settled;
             payment.FeesProcessed = true;
             await _context.SaveChangesAsync();
             if (tx != null) await tx.CommitAsync();
-            return (double)settled;
+            return settled;
         }
 
         public async Task<MeterFeeReportDto> GetFeeReportAsync(string requesterEmail, bool isAdmin, string? fromPeriod, string? toPeriod, int? ownerId = null)
@@ -212,16 +214,16 @@ namespace Infrastructure.Services.Meter
                     Period = x.c.Period,
                     Amount = x.c.Amount,
                     AmountPaid = x.c.AmountPaid,
-                    Balance = Math.Round(x.c.Amount - x.c.AmountPaid, 2),
+                    Balance = Money.Round(x.c.Amount - x.c.AmountPaid),
                     ChargedAt = x.c.CreatedAt,
                     SettledAt = x.c.SettledAt
                 }).ToList();
 
             return new MeterFeeReportDto
             {
-                TotalCharged = Math.Round(rows.Sum(r => r.Amount), 2),
-                TotalCollected = Math.Round(rows.Sum(r => r.AmountPaid), 2),
-                TotalOutstanding = Math.Round(rows.Sum(r => r.Balance), 2),
+                TotalCharged = Money.Round(rows.Sum(r => r.Amount)),
+                TotalCollected = Money.Round(rows.Sum(r => r.AmountPaid)),
+                TotalOutstanding = Money.Round(rows.Sum(r => r.Balance)),
                 Rows = rows
             };
         }
@@ -254,7 +256,7 @@ namespace Infrastructure.Services.Meter
                 OwnerId = owner.Id,
                 OwnerName = owner.FullName,
                 MonthlyFee = owner.MonthlyMeterFee,
-                OutstandingBalance = Math.Round(charges.Sum(c => c.Amount - c.AmountPaid), 2),
+                OutstandingBalance = Money.Round(charges.Sum(c => c.Amount - c.AmountPaid)),
                 Charges = charges.Select(c => new MeterFeeChargeDto
                 {
                     Id = c.Id,

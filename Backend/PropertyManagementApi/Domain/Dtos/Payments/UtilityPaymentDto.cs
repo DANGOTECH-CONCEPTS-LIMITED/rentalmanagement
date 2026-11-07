@@ -10,6 +10,6 @@ namespace Domain.Dtos.Payments
     {
         public string PhoneNumber { get; set; } = string.Empty;
         public string MeterNumber { get; set; } = string.Empty;
-        public double Amount { get; set; }
+        public decimal Amount { get; set; }
     }
 }

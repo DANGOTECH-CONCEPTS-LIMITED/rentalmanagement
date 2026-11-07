@@ -9,8 +9,8 @@ namespace Domain.Dtos.User
         public int InactiveMeters { get; set; }
 
         public int TotalUtilityPayments { get; set; }
-        public double TotalUtilityAmount { get; set; }
-        public double TotalUtilityCharges { get; set; }
+        public decimal TotalUtilityAmount { get; set; }
+        public decimal TotalUtilityCharges { get; set; }
 
         public int SuccessfulPayments { get; set; }
         public int PendingPayments { get; set; }
@@ -26,8 +26,7 @@ namespace Domain.Dtos.User
     {
         public string MeterNumber { get; set; } = string.Empty;
         public int Payments { get; set; }
-        public double Amount { get; set; }
-        //public double Charges { get; set; }
+        public decimal Amount { get; set; }
         public DateTime? LastPaymentAt { get; set; }
     }
 }

@@ -34,7 +34,7 @@ public class MeterLienTests : IAsyncLifetime
     private Task<MeterLienSummaryDto> Add(decimal amount, string mode = "FullFirst", decimal percentage = 100m, string email = "owner@test") =>
         _service.AddAsync(201, new AddMeterLienDto { Amount = amount, Description = "Meter installation", RepaymentMode = mode, RepaymentPercentage = percentage }, email);
 
-    private async Task<int> Payment(double amount = 100, string status = "SUCCESSFUL")
+    private async Task<int> Payment(decimal amount = 100m, string status = "SUCCESSFUL")
     {
         var payment = new UtilityPayment { Amount = amount, MeterNumber = "1234567890123", Status = status, TransactionID = Guid.NewGuid().ToString() };
         _db.UtilityPayments.Add(payment);
@@ -69,14 +69,14 @@ public class MeterLienTests : IAsyncLifetime
         _db.MeterFeeCharges.Add(new MeterFeeCharge { UtilityMeterId = 201, MeterNumber = "1234567890123", Period = "2026-09", Amount = 20 });
         await _db.SaveChangesAsync();
         var id = await Payment();
-        Assert.Equal(20d, await new MeterFeeService(_db).SettleFeesForPaymentAsync(id));
+        Assert.Equal(20m, await new MeterFeeService(_db).SettleFeesForPaymentAsync(id));
         var allocated = await _service.AllocatePaymentAsync(id);
         var retried = await _service.AllocatePaymentAsync(id);
         Assert.Equal(allocated.Id, retried.Id);
         Assert.Equal(20m, retried.FeeAmount);
         Assert.Equal(80m, retried.LienAmount);
         Assert.Equal(0m, retried.TokenAmount);
-        Assert.Equal(20d, (await _db.MeterFeeCharges.AsNoTracking().SingleAsync()).AmountPaid);
+        Assert.Equal(20m, (await _db.MeterFeeCharges.AsNoTracking().SingleAsync()).AmountPaid);
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public class MeterLienTests : IAsyncLifetime
         await Assert.ThrowsAsync<DbUpdateException>(() => _service.AllocatePaymentAsync(id));
         _db.ChangeTracker.Clear();
         Assert.False((await _db.UtilityPayments.SingleAsync(x => x.Id == id)).FeesProcessed);
-        Assert.Equal(0d, (await _db.MeterFeeCharges.SingleAsync()).AmountPaid);
+        Assert.Equal(0m, (await _db.MeterFeeCharges.SingleAsync()).AmountPaid);
         Assert.Equal(0m, (await _db.MeterLiens.SingleAsync()).AmountPaid);
         Assert.Empty(await _db.MeterLienRepayments.ToListAsync());
         await _db.Database.ExecuteSqlRawAsync("DROP TRIGGER fail_allocation;");

@@ -17,3 +17,14 @@ Object.defineProperty(window, "matchMedia", {
 
 // Mock environment variables
 global.process.env.VITE_API_BASE_URL = "http://3.216.182.63:8091";
+
+// jsdom has no ResizeObserver, which recharts' ResponsiveContainer needs to render charts.
+if (!(global as unknown as { ResizeObserver?: unknown }).ResizeObserver) {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  (global as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub;
+}
+

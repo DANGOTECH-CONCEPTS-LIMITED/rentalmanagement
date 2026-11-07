@@ -1,8 +1,14 @@
 using Domain.Entities.PropertyMgt;
+using Application.Interfaces.Analytics;
+using Application.Interfaces.Notifications;
 using Application.Interfaces.Settings;
+using Application.Interfaces.SMS;
+using Domain.Entities.External;
 using Infrastructure.Data;
 using Infrastructure.Services.Collecto;
 using Infrastructure.Services.Email;
+using Infrastructure.Services.Notifications;
+using Infrastructure.Services.Analytics;
 using Infrastructure.Services.PaymentServices;
 using Infrastructure.Services.PaymentServices.WalletSvc;
 using Infrastructure.Services.Settings;
@@ -66,7 +72,14 @@ public class NwscBillPaymentTests : IAsyncLifetime
     public async Task DisposeAsync() { await _db.DisposeAsync(); await _connection.DisposeAsync(); }
 
     private BillPaymentProcessingService Processor(AppDbContext db) =>
-        new(db, new DangoPaymentClient(new HttpClient(_handler), _configuration), NullLogger<BillPaymentProcessingService>.Instance, _email);
+        new(db, new DangoPaymentClient(new HttpClient(_handler), _configuration), NullLogger<BillPaymentProcessingService>.Instance, Notifications(db), History(db));
+
+    private IPaymentStatusHistory History(AppDbContext db) =>
+        new PaymentStatusHistory(db, NullLogger<PaymentStatusHistory>.Instance);
+
+    // Uses the real matrix defaults so the tests prove an alert actually leaves the system.
+    private INotificationDispatcher Notifications(AppDbContext db) =>
+        new NotificationDispatcher(db, _email, new FakeSmsProcessor(), NullLogger<NotificationDispatcher>.Instance);
 
     private async Task ConfigureBillerAsync(bool enabled = true, string serviceId = "NWSC")
     {
@@ -802,6 +815,17 @@ public class NwscBillPaymentTests : IAsyncLifetime
             Sent.Add((toEmail, subject, message));
             return Task.CompletedTask;
         }
+    }
+
+    public sealed class FakeSmsProcessor : ISmsProcessor
+    {
+        public List<(string Phone, string Message)> Sent { get; } = [];
+        public Task<bool> SendAsync(string phoneNumber, string message)
+        {
+            Sent.Add((phoneNumber, message));
+            return Task.FromResult(true);
+        }
+        public Task<bool> SendAfricaTalkingSms(AfricasTalkingSmsRequest request) => Task.FromResult(true);
     }
 
     public sealed class BillHandler : HttpMessageHandler

@@ -50,6 +50,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { api } from "@/lib/api";
 import ConfirmDeleteModal from "@/components/common/DeleteModal";
+import { clearAuthenticatedImageCache, fetchAuthenticatedImageUrl } from "@/lib/secure-media";
 
 interface Tenant {
   idFront: string;
@@ -285,6 +286,8 @@ const ManageTenants = () => {
       if (response.status !== 200) {
         throw new Error("Failed to update tenant");
       }
+      // Uploaded documents replaced the old files, so cached object URLs are stale.
+      clearAuthenticatedImageCache();
       setIsSubmitting(false);
       setIsSuccess(true);
 
@@ -417,12 +420,12 @@ const ManageTenants = () => {
 
   const PLACEHOLDER_IMAGE = "https://placehold.co/150?text=No+Image";
 
-  const getImageUrl = (relativePath: string) => {
-    if (!relativePath) return PLACEHOLDER_IMAGE;
-    if (relativePath.startsWith("http")) return relativePath;
-
-    const token = getAuthToken();
-    return `${apiUrl}/${relativePath}${token ? `?token=${token}` : ""}`;
+  // Bearer tokens must never appear in a URL: images are fetched with the shared
+  // axios instance and handed to the UI as object URLs.
+  const applySecureImage = async (relativePath: string | undefined, setter: (value: string) => void) => {
+    setter(PLACEHOLDER_IMAGE);
+    const url = await fetchAuthenticatedImageUrl(apiUrl, relativePath);
+    if (url) setter(url);
   };
 
   const getImageUrl2 = (fullPath?: string): string => {
@@ -603,13 +606,12 @@ const ManageTenants = () => {
                                 idBack: tenant.idBack || "",
                                 passportPhoto: tenant.passportPhoto || "",
                               });
-                              setPassportPhotoPreview(
-                                getImageUrl(tenant.passportPhoto)
-                              );
-                              setIdFrontPhotoPreview(
-                                getImageUrl(tenant.idFront)
-                              );
-                              setIdBackPhotoPreview(getImageUrl(tenant.idBack));
+                              setPassportPhotoPreview(PLACEHOLDER_IMAGE);
+                              setIdFrontPhotoPreview(PLACEHOLDER_IMAGE);
+                              setIdBackPhotoPreview(PLACEHOLDER_IMAGE);
+                              void applySecureImage(tenant.passportPhoto, setPassportPhotoPreview);
+                              void applySecureImage(tenant.idFront, setIdFrontPhotoPreview);
+                              void applySecureImage(tenant.idBack, setIdBackPhotoPreview);
 
                               setIsEdit(true);
                             }}

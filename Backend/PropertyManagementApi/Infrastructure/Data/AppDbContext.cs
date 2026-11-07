@@ -4,6 +4,8 @@ using Domain.Entities.ServiceLogs;
 using Domain.Entities.AuditTrail;
 using Domain.Entities.USSD;
 using Domain.Entities.External;
+using Domain.Entities.Notifications;
+using Domain.Entities.Security;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -39,6 +41,20 @@ namespace Infrastructure.Data
         public DbSet<AuditTrailEntry> AuditTrailEntries { get; set; } = null!;
         public DbSet<MpesaCallbackAudit> MpesaCallbackAudits { get; set; } = null!;
         public DbSet<MeterToken> MeterTokens { get; set; }
+        public DbSet<RentInvoice> RentInvoices { get; set; } = null!;
+        public DbSet<PaymentStatusEvent> PaymentStatusEvents { get; set; } = null!;
+        public DbSet<SecurityDeposit> SecurityDeposits { get; set; } = null!;
+        public DbSet<DepositDeduction> DepositDeductions { get; set; } = null!;
+
+        #region Notifications
+        public DbSet<NotificationSetting> NotificationSettings { get; set; } = null!;
+        public DbSet<NotificationDelivery> NotificationDeliveries { get; set; } = null!;
+        #endregion
+
+        #region Security
+        public DbSet<UserMfaSetting> UserMfaSettings { get; set; } = null!;
+        public DbSet<MfaChallenge> MfaChallenges { get; set; } = null!;
+        #endregion
 
         #region USSD
         public DbSet<UssdMenu> UssdMenus { get; set; }
@@ -240,6 +256,124 @@ namespace Infrastructure.Data
                 e.Property(x => x.Payload).HasColumnType("longtext");
                 e.Property(x => x.Headers).HasColumnType("longtext");
                 e.HasIndex(x => x.TransId);
+            });
+
+            // Money columns carry an explicit 18,2 precision: MySQL otherwise defaults decimals
+            // to decimal(65,30), which invites silent scale drift between related tables.
+            modelBuilder.Entity<UtilityPayment>(e =>
+            {
+                e.Property(x => x.Amount).HasPrecision(18, 2);
+                e.Property(x => x.Charges).HasPrecision(18, 2);
+                e.Property(x => x.FeesSettledAmount).HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<MeterFeeCharge>(e =>
+            {
+                e.Property(x => x.Amount).HasPrecision(18, 2);
+                e.Property(x => x.AmountPaid).HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<User>(e =>
+            {
+                // Percentages keep four decimals so 2.5% stays exact.
+                e.Property(x => x.UtilityChargePercentage).HasPrecision(9, 4);
+                e.Property(x => x.UtilityChargeFlatFee).HasPrecision(18, 2);
+                e.Property(x => x.MonthlyMeterFee).HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<Wallet>(e => e.Property(x => x.Balance).HasPrecision(18, 2));
+            modelBuilder.Entity<WalletTransaction>(e => e.Property(x => x.Amount).HasPrecision(18, 2));
+            modelBuilder.Entity<BillPaymentInstruction>(e => e.Property(x => x.Amount).HasPrecision(18, 2));
+
+            modelBuilder.Entity<NotificationSetting>(e =>
+            {
+                e.Property(x => x.EventType).HasMaxLength(64);
+                e.Property(x => x.Channel).HasMaxLength(32);
+                e.Property(x => x.Recipients).HasMaxLength(512);
+                e.Property(x => x.Roles).HasMaxLength(256);
+                e.Property(x => x.UpdatedBy).HasMaxLength(128);
+                // One cell per event/channel so an upsert can never create duplicates.
+                e.HasIndex(x => new { x.EventType, x.Channel }).IsUnique();
+            });
+
+            modelBuilder.Entity<NotificationDelivery>(e =>
+            {
+                e.Property(x => x.EventType).HasMaxLength(64);
+                e.Property(x => x.Channel).HasMaxLength(32);
+                e.Property(x => x.Recipient).HasMaxLength(256);
+                e.Property(x => x.Subject).HasMaxLength(512);
+                e.Property(x => x.Status).HasMaxLength(16);
+                e.Property(x => x.Error).HasMaxLength(512);
+                e.Property(x => x.Reference).HasMaxLength(128);
+                e.HasIndex(x => new { x.EventType, x.CreatedAtUtc });
+                e.HasIndex(x => x.CreatedAtUtc);
+            });
+
+            modelBuilder.Entity<RentInvoice>(e =>
+            {
+                e.Property(x => x.Period).HasMaxLength(7);
+                e.Property(x => x.InvoiceNumber).HasMaxLength(64);
+                e.Property(x => x.Status).HasMaxLength(32);
+                e.Property(x => x.Notes).HasMaxLength(512);
+                e.Property(x => x.Amount).HasPrecision(18, 2);
+                e.Property(x => x.AmountPaid).HasPrecision(18, 2);
+                // One invoice per contract per month; this is what makes generation idempotent.
+                e.HasIndex(x => new { x.RentalContractId, x.Period }).IsUnique();
+                e.HasIndex(x => x.Status);
+                e.HasIndex(x => x.DueDate);
+                e.Ignore(x => x.Balance);
+            });
+
+            modelBuilder.Entity<PaymentStatusEvent>(e =>
+            {
+                e.Property(x => x.SubjectType).HasMaxLength(64);
+                e.Property(x => x.Reference).HasMaxLength(128);
+                e.Property(x => x.FromStatus).HasMaxLength(48);
+                e.Property(x => x.ToStatus).HasMaxLength(48);
+                e.Property(x => x.Reason).HasMaxLength(512);
+                e.Property(x => x.Actor).HasMaxLength(128);
+                e.Property(x => x.Amount).HasPrecision(18, 2);
+                // Detail lookups (one subject) and the global feed both need their own index.
+                e.HasIndex(x => new { x.SubjectType, x.SubjectId });
+                e.HasIndex(x => x.Reference);
+                e.HasIndex(x => x.OccurredAtUtc);
+            });
+
+            modelBuilder.Entity<SecurityDeposit>(e =>
+            {
+                e.Property(x => x.AmountHeld).HasPrecision(18, 2);
+                e.Property(x => x.DeductedAmount).HasPrecision(18, 2);
+                e.Property(x => x.RefundAmount).HasPrecision(18, 2);
+                e.Property(x => x.Status).HasMaxLength(32);
+                e.Property(x => x.SettledBy).HasMaxLength(128);
+                e.Property(x => x.Notes).HasMaxLength(512);
+                // One deposit per contract; this is what makes lazy creation idempotent.
+                e.HasIndex(x => x.RentalContractId).IsUnique();
+                e.HasIndex(x => x.Status);
+            });
+
+            modelBuilder.Entity<DepositDeduction>(e =>
+            {
+                e.Property(x => x.Amount).HasPrecision(18, 2);
+                e.Property(x => x.Category).HasMaxLength(32);
+                e.Property(x => x.Description).HasMaxLength(512);
+                e.Property(x => x.CreatedBy).HasMaxLength(128);
+                e.HasIndex(x => x.SecurityDepositId);
+            });
+
+            modelBuilder.Entity<UserMfaSetting>(e =>
+            {
+                e.Property(x => x.Secret).HasMaxLength(128);
+                // One enrollment per account.
+                e.HasIndex(x => x.UserId).IsUnique();
+            });
+
+            modelBuilder.Entity<MfaChallenge>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).HasMaxLength(32);
+                e.Property(x => x.IpAddress).HasMaxLength(64);
+                e.HasIndex(x => x.ExpiresAtUtc);
             });
 
             // Indexes to improve utility payments/meters lookups and aggregations

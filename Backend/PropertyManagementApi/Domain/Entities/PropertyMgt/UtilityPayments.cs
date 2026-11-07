@@ -16,8 +16,8 @@ namespace Domain.Entities.PropertyMgt
         public string? UtilityType { get; set; }
         public string? Status { get; set; }
         public string? VendorTranId { get; set; }
-        public double Amount { get; set; }
-        public double Charges { get; set; }
+        public decimal Amount { get; set; }
+        public decimal Charges { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string PhoneNumber { get; set; } = string.Empty;
         public string MeterNumber { get; set; } = string.Empty;
@@ -30,7 +30,7 @@ namespace Domain.Entities.PropertyMgt
         public string? UtilityAccountNumber { get; set; }
         public bool IsSmsSent { get; set; } = false;
         // Portion of Amount used to settle monthly meter fees before the token purchase.
-        public double FeesSettledAmount { get; set; }
+        public decimal FeesSettledAmount { get; set; }
         public bool FeesProcessed { get; set; }
     }
 }

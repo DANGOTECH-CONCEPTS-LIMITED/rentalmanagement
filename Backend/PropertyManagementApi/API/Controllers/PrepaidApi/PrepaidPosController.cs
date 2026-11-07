@@ -24,7 +24,7 @@ namespace API.Controllers.PrepaidApi
             try
             {
                 var outstanding = await _meterFeeService.GetOutstandingForMeterAsync(meterNumber);
-                return Ok(new { hasFee = outstanding != null, outstanding = outstanding ?? 0d });
+                return Ok(new { hasFee = outstanding != null, outstanding = outstanding ?? 0m });
             }
             catch (Exception ex)
             {

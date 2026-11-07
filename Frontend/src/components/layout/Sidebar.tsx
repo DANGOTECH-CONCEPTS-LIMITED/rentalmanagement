@@ -22,6 +22,11 @@ import {
   Wrench,
   PhoneCall,
   Percent,
+  AlertTriangle,
+  Bell,
+  ShieldCheck,
+  CalendarClock,
+  PiggyBank,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -447,6 +452,36 @@ function getNavItems(role: number): NavItem[] {
         group: "Payments & Wallets",
       },
       {
+        label: "Rent Invoices",
+        icon: <CalendarClock size={18} />,
+        path: "/admin-dashboard/rent-invoices",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Arrears Analytics",
+        icon: <BarChart3 size={18} />,
+        path: "/admin-dashboard/arrears-analytics",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Security Deposits",
+        icon: <PiggyBank size={18} />,
+        path: "/admin-dashboard/deposits",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Exception Queue",
+        icon: <AlertTriangle size={18} />,
+        path: "/admin-dashboard/exceptions",
+        group: "Payments & Wallets",
+      },
+      {
+        label: "Notifications",
+        icon: <Bell size={18} />,
+        path: "/admin-dashboard/notifications",
+        group: "Payments & Wallets",
+      },
+      {
         label: "Collecto Withdraw Logs",
         icon: <FileSearch size={18} />,
         path: "/admin-dashboard/collecto-withdraw-logs",
@@ -469,6 +504,12 @@ function getNavItems(role: number): NavItem[] {
         label: "Audit Trail",
         icon: <FileText size={18} />,
         path: "/admin-dashboard/audit-trail",
+        group: "System",
+      },
+      {
+        label: "Account Security",
+        icon: <ShieldCheck size={18} />,
+        path: "/admin-dashboard/security",
         group: "System",
       },
       {

@@ -38,7 +38,7 @@ public class UtilityChargeSettingsTests : IAsyncLifetime
     private AppDbContext Context() => new(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
 
     private UserController Controller(AppDbContext db) =>
-        new(null!, NullLogger<UserController>.Instance, db, null!, null!, null!);
+        new(null!, NullLogger<UserController>.Instance, db, null!, null!, null!, null!, null!);
 
     private static LandlordUtilityChargeDto Dto(IActionResult result)
     {
@@ -53,7 +53,7 @@ public class UtilityChargeSettingsTests : IAsyncLifetime
 
         Assert.Equal(601, dto.LandlordId);
         Assert.Equal("Percentage", dto.ChargeType);
-        Assert.Equal(5d, dto.ChargePercentage);
+        Assert.Equal(5m, dto.ChargePercentage);
         Assert.Empty(dto.Tiers);
     }
 
@@ -64,11 +64,11 @@ public class UtilityChargeSettingsTests : IAsyncLifetime
 
         Assert.Equal("Tiered", dto.ChargeType);
         Assert.Equal(2, dto.Tiers.Count);
-        Assert.Equal(0d, dto.Tiers[0].MinAmount);
-        Assert.Equal(5000d, dto.Tiers[0].MaxAmount);
-        Assert.Equal(500d, dto.Tiers[0].Charge);
+        Assert.Equal(0m, dto.Tiers[0].MinAmount);
+        Assert.Equal(5000m, dto.Tiers[0].MaxAmount);
+        Assert.Equal(500m, dto.Tiers[0].Charge);
         Assert.Null(dto.Tiers[1].MaxAmount);
-        Assert.Equal(1000d, dto.Tiers[1].Charge);
+        Assert.Equal(1000m, dto.Tiers[1].Charge);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class UtilityChargeSettingsTests : IAsyncLifetime
         // A hand-written / pasted tier list must not make the whole settings response fail.
         var dto = Dto(result);
         Assert.Single(dto.Tiers);
-        Assert.Equal(500d, dto.Tiers[0].Charge);
+        Assert.Equal(500m, dto.Tiers[0].Charge);
         Assert.Null(dto.TiersWarning);
     }
 
@@ -89,8 +89,8 @@ public class UtilityChargeSettingsTests : IAsyncLifetime
         var dto = Dto(await Controller(_db).GetLandlordUtilityCharge(604));
 
         Assert.Single(dto.Tiers);
-        Assert.Equal(750d, dto.Tiers[0].Charge);
-        Assert.Equal(5000d, dto.Tiers[0].MaxAmount);
+        Assert.Equal(750m, dto.Tiers[0].Charge);
+        Assert.Equal(5000m, dto.Tiers[0].MaxAmount);
         Assert.Null(dto.TiersWarning);
     }
 
@@ -100,7 +100,7 @@ public class UtilityChargeSettingsTests : IAsyncLifetime
         var dto = Dto(await Controller(_db).GetLandlordUtilityCharge(605));
 
         Assert.Equal("Tiered", dto.ChargeType);
-        Assert.Equal(2500d, dto.FlatFee);
+        Assert.Equal(2500m, dto.FlatFee);
         Assert.Empty(dto.Tiers);
         Assert.False(string.IsNullOrWhiteSpace(dto.TiersWarning));
     }

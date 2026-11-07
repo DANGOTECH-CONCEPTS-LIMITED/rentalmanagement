@@ -1,13 +1,22 @@
+using Application.Interfaces.Analytics;
+using Application.Interfaces.Notifications;
 using Application.Interfaces.PaymentService;
 using Domain.Dtos.Payments;
 using Domain.Entities.PropertyMgt;
+using Domain.Notifications;
 using Infrastructure.Data;
 using Infrastructure.Services.PaymentServices.WalletSvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services.PaymentServices;
 
-public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPaymentClient dango) : IAdminPayoutReconciliation
+public sealed class AdminPayoutReconciliationService(
+    AppDbContext db,
+    DangoPaymentClient dango,
+    // Optional so tooling and tests can build the service without the notification matrix;
+    // the DI container always supplies it.
+    INotificationDispatcher? notifications = null,
+    IPaymentStatusHistory? history = null) : IAdminPayoutReconciliation
 {
     private IQueryable<WalletTransaction> PendingDangoPayouts() => db.WalletTransactions.AsNoTracking()
         .Where(x => x.Amount < 0 && (x.Status == "PENDING AT TELCOM" || x.Status == "PENDING AT TELECOM" || x.Status == "PENDING AT THE BANK") &&
@@ -73,10 +82,29 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
     public async Task UpdateBillPaymentStatusAsync(int id, string status, CancellationToken ct)
     {
         var normalized = NormalizeManuallyAssignableStatus(status);
+        var item = await db.Set<BillPaymentInstruction>().AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new KeyNotFoundException("Bill payment not found.");
         var updated = await db.Set<BillPaymentInstruction>().Where(x => x.Id == id)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, normalized), ct);
         if (updated == 0)
             throw new KeyNotFoundException("Bill payment not found.");
+
+        if (history != null)
+            await history.RecordAsync(PaymentStatusSubject.BillPayment, item.Id, item.Status, normalized,
+                "Status set manually in Admin Bill Payments.", actor: null, reference: item.RequestReference, amount: item.Amount, ct: ct);
+
+        // A hand-set FAILED used to change the row silently: nobody was told the bill stayed unpaid.
+        if (normalized == BillPaymentInstructionStatus.Failed && notifications != null)
+        {
+            await notifications.DispatchAsync(new NotificationRequest(
+                NotificationEvents.BillPaymentFailed,
+                $"NWSC bill payment marked FAILED: {item.RequestReference}",
+                $"<p>Bill payment <b>{item.RequestReference}</b> was manually marked FAILED by an administrator.</p>" +
+                $"<p>Meter: {item.MeterNumber}<br/>NWSC account: {item.NwscAccount}<br/>Amount: {item.Amount}</p>" +
+                "<p>Confirm with the provider whether the bill was paid before retrying.</p>",
+                item.RequestReference), ct);
+        }
     }
 
     public async Task<int> UpdateBillPaymentStatusesAsync(IReadOnlyCollection<int> ids, string status, CancellationToken ct)
@@ -89,8 +117,34 @@ public sealed class AdminPayoutReconciliationService(AppDbContext db, DangoPayme
         var distinct = ids.Where(x => x > 0).Distinct().ToArray();
         if (distinct.Length == 0)
             throw new ArgumentException("Select at least one valid bill payment to update.");
-        return await db.Set<BillPaymentInstruction>().Where(x => distinct.Contains(x.Id))
+
+        // Loaded for the audit trail (and reused by the failure alert below).
+        var affected = await db.Set<BillPaymentInstruction>().AsNoTracking()
+            .Where(x => distinct.Contains(x.Id)).ToListAsync(ct);
+
+        var updated = await db.Set<BillPaymentInstruction>().Where(x => distinct.Contains(x.Id))
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, normalized), ct);
+
+        if (history != null)
+        {
+            foreach (var row in affected)
+                await history.RecordAsync(PaymentStatusSubject.BillPayment, row.Id, row.Status, normalized,
+                    "Status set in bulk in Admin Bill Payments.", reference: row.RequestReference, amount: row.Amount, ct: ct);
+        }
+
+        if (updated > 0 && normalized == BillPaymentInstructionStatus.Failed && notifications != null)
+        {
+            var references = string.Join(string.Empty, affected.Select(x =>
+                $"<li>{System.Net.WebUtility.HtmlEncode(x.RequestReference)} — {x.Amount:N2} ({System.Net.WebUtility.HtmlEncode(x.NwscAccount)})</li>"));
+            await notifications.DispatchAsync(new NotificationRequest(
+                NotificationEvents.BillPaymentFailed,
+                $"{updated} NWSC bill payment(s) marked FAILED",
+                $"<p>{updated} bill payment(s) were manually marked FAILED by an administrator.</p><ul>{references}</ul>" +
+                "<p>Confirm with the provider whether these bills were paid before retrying.</p>",
+                affected.Count == 1 ? affected[0].RequestReference : null), ct);
+        }
+
+        return updated;
     }
 
     public async Task<int> BackfillBillPaymentsAsync(CancellationToken ct)

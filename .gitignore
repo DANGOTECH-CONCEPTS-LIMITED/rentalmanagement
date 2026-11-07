@@ -426,3 +426,11 @@ MigrationSript/MigrationScript/.vs/
 !MigrationSript/MigrationScript/**/*.cs
 !MigrationSript/MigrationScript/*.csproj
 !MigrationSript/MigrationScript/*.sln
+
+# Frontend build artifacts generated locally (not deployed from git)
+/Frontend/build/
+/Frontend/dist/
+/Frontend/uploads/
+/Frontend/files/
+/Frontend/frontend/
+

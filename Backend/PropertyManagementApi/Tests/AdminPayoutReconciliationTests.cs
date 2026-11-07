@@ -39,7 +39,7 @@ public class AdminPayoutReconciliationTests : IAsyncLifetime
         new DangoPaymentClient(new HttpClient(_handler), new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["DangoPayment:BaseUrl"] = "https://test.invalid/", ["DangoPayment:ClientId"] = "test-client"
-        }).Build()), null!, null!);
+        }).Build()), null!, null!, null!);
     public async Task InitializeAsync()
     {
         await _connection.OpenAsync();

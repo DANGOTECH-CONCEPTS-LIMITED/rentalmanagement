@@ -8,33 +8,58 @@ import Button from "../../components/ui/button/Button";
 const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [challengeId, setChallengeId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loading: authLoading, error: authError } = useAuth();
+  const { login, verifyMfa, loading: authLoading, error: authError } =
+    useAuth();
   const navigate = useNavigate();
+
+  const routeByRole = (systemRoleId: number) => {
+    switch (systemRoleId) {
+      case 1: // Admin
+        navigate("/admin-dashboard");
+        break;
+      case 2: // Landlord
+        navigate("/landlord-dashboard");
+        break;
+      case 3: // Tenant
+        navigate("/tenant-dashboard");
+        break;
+      case 4: // Utility
+        navigate("/utility-dashboard");
+        break;
+      default:
+        navigate("/");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { systemRoleId } = await login(email, password);
+      const result = await login(email, password);
 
-      switch (systemRoleId) {
-        case 1: // Admin
-          navigate("/admin-dashboard");
-          break;
-        case 2: // Landlord
-          navigate("/landlord-dashboard");
-          break;
-        case 3: // Tenant
-          navigate("/tenant-dashboard");
-          break;
-        case 4: // Tenant
-          navigate("/utility-dashboard");
-          break;
-        default:
-          navigate("/");
+      // The password was accepted but the account has MFA: ask for the code next.
+      if ("requiresMfa" in result && result.requiresMfa) {
+        setChallengeId(result.challengeId);
+        setMfaCode("");
+        return;
       }
+
+      routeByRole((result as { systemRoleId: number }).systemRoleId);
     } catch (error) {
       console.error("Login error:", error);
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challengeId) return;
+    try {
+      const { systemRoleId } = await verifyMfa(challengeId, mfaCode.trim());
+      routeByRole(systemRoleId);
+    } catch (error) {
+      console.error("MFA verification error:", error);
     }
   };
 
@@ -57,6 +82,43 @@ const SignIn = () => {
               </p>
             </div>
 
+            {challengeId ? (
+              <form onSubmit={handleVerify} className="space-y-6">
+                <p className="text-sm text-gray-600">
+                  Enter the 6-digit code from your authenticator app to finish signing in.
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
+                  className="input-field text-center text-lg tracking-[0.5em]"
+                  placeholder="000000"
+                  autoFocus
+                  required
+                />
+                {authError && (
+                  <p className="text-sm text-red-600">{String(authError)}</p>
+                )}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  isLoading={authLoading}
+                  rightIcon={<ArrowRight size={18} />}
+                >
+                  Verify code
+                </Button>
+                <button
+                  type="button"
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                  onClick={() => setChallengeId(null)}
+                >
+                  Use a different account
+                </button>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div>
@@ -130,6 +192,7 @@ const SignIn = () => {
                 Sign In
               </Button>
             </form>
+            )}
 
             <Link
               to="/forgot-password"

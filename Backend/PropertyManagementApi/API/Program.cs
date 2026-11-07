@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces.Collecto;
 using Application.Interfaces.Stanbic;
+using System.Threading.RateLimiting;
 using Infrastructure.Services.Stanbic;
 using Application.Interfaces.Complaints;
 using Application.Interfaces.PaymentService;
@@ -112,6 +113,17 @@ builder.Services.AddScoped<ISTSProcessing, STSProcessing>();
 
 
 builder.Services.AddScoped<IAdminPayoutReconciliation, AdminPayoutReconciliationService>();
+builder.Services.AddScoped<Application.Interfaces.Ops.IExceptionQueueService, Infrastructure.Services.Ops.ExceptionQueueService>();
+builder.Services.AddScoped<Application.Interfaces.Notifications.INotificationDispatcher, Infrastructure.Services.Notifications.NotificationDispatcher>();
+builder.Services.AddScoped<Application.Interfaces.Notifications.INotificationSettingsService, Infrastructure.Services.Notifications.NotificationSettingsService>();
+builder.Services.AddScoped<Application.Interfaces.Billing.IRentInvoicingService, Infrastructure.Services.Billing.RentInvoicingService>();
+builder.Services.AddScoped<Application.Interfaces.Analytics.IPaymentStatusHistory, Infrastructure.Services.Analytics.PaymentStatusHistory>();
+builder.Services.AddScoped<Application.Interfaces.Analytics.IArrearsAnalyticsService, Infrastructure.Services.Analytics.ArrearsAnalyticsService>();
+builder.Services.AddScoped<Application.Interfaces.Deposits.IDepositService, Infrastructure.Services.Deposits.DepositService>();
+builder.Services.AddScoped<Infrastructure.Services.Maintenance.LogRetentionService>();
+builder.Services.AddSingleton<Application.Interfaces.Security.ITotpService, Infrastructure.Services.Security.TotpService>();
+builder.Services.AddSingleton<Application.Interfaces.Security.IJwtTokenFactory, Infrastructure.Services.Security.JwtTokenFactory>();
+builder.Services.AddScoped<Application.Interfaces.Security.IMfaService, Infrastructure.Services.Security.MfaService>();
 builder.Services.AddScoped<PaymentProviderSettingsService>();
 builder.Services.AddScoped<ICollectoApiClient, PaymentGatewayRouter>();
 builder.Services.AddHttpClient<DangoPaymentClient>(client =>
@@ -169,6 +181,9 @@ builder.Services.AddHostedService<MeterTokenGeneratorService>();
 builder.Services.AddHostedService<ReminderProcessor>();
 builder.Services.AddHostedService<UssdImportProcessor>();
 builder.Services.AddHostedService<SslCertificateExpiryNotifier>();
+// Nightly purge of the diagnostic tables; windows come from LogRetention:* configuration.
+builder.Services.AddHostedService<Infrastructure.Services.BackgroundServices.LogRetentionProcessor>();
+builder.Services.AddHostedService<Infrastructure.Services.BackgroundServices.RentInvoicingProcessor>();
 
 
 builder.Services.AddControllers(options =>
@@ -307,12 +322,48 @@ builder.Services.AddSwaggerGen(options =>
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
+// Credential endpoints are the cheapest target for brute force, so they get their own
+// per-IP fixed window instead of a global limit that would also throttle webhooks.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            status = StatusCodes.Status429TooManyRequests,
+            message = "Too many attempts. Wait a minute and try again."
+        }, cancellationToken);
+    };
+});
+
 var app = builder.Build();
+
+var configuredJwtKey = builder.Configuration["JwtSettings:SecretKey"];
+if (!builder.Environment.IsDevelopment() &&
+    (string.IsNullOrWhiteSpace(configuredJwtKey) ||
+     configuredJwtKey.Contains("Use a secure key", StringComparison.OrdinalIgnoreCase) ||
+     configuredJwtKey.Length < 32))
+{
+    app.Logger.LogWarning(
+        "JWT SecretKey is weak or the committed default. Set the JwtSettings__SecretKey environment variable on the server instead of editing appsettings.json.");
+}
 
 app.UseStaticFiles(); // For accessing static files if any
 
 // ✅ Apply CORS FIRST
 app.UseCors("AllowDangopayFrontend");
+
+app.UseRateLimiter();
 
 // ✅ Then authentication and authorization
 app.UseAuthentication();

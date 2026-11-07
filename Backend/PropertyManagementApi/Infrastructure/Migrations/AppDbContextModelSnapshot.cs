@@ -313,6 +313,106 @@ namespace Infrastructure.Migrations
                     b.ToTable("VendorPayments");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Notifications.NotificationDelivery", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Body")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("EventType", "CreatedAtUtc");
+
+                    b.ToTable("NotificationDeliveries");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Notifications.NotificationSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Recipients")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("Roles")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventType", "Channel")
+                        .IsUnique();
+
+                    b.ToTable("NotificationSettings");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.ArrearsPaymentPlan", b =>
                 {
                     b.Property<int>("Id")
@@ -378,7 +478,8 @@ namespace Infrastructure.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(65,30)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("ConfirmedAtUtc")
                         .HasColumnType("datetime(6)");
@@ -671,6 +772,44 @@ namespace Infrastructure.Migrations
                     b.ToTable("DangoPaymentReferenceAllocation");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.DepositDeduction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<int>("SecurityDepositId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SecurityDepositId");
+
+                    b.ToTable("DepositDeductions");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.HttpRequesRequestResponse", b =>
                 {
                     b.Property<int>("Id")
@@ -823,11 +962,13 @@ namespace Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<double>("Amount")
-                        .HasColumnType("double");
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<double>("AmountPaid")
-                        .HasColumnType("double");
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -1124,6 +1265,61 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.PaymentStatusEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Actor")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(48)
+                        .HasColumnType("varchar(48)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubjectType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("varchar(48)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("Reference");
+
+                    b.HasIndex("SubjectType", "SubjectId");
+
+                    b.ToTable("PaymentStatusEvents");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.PropertyTenant", b =>
                 {
                     b.Property<int>("Id")
@@ -1198,6 +1394,83 @@ namespace Infrastructure.Migrations
                     b.ToTable("Tenants");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.RentInvoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("DunningLevel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("LastDunningAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<DateTime?>("PaidAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)");
+
+                    b.Property<DateTime>("PeriodEnd")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("PeriodStart")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RentalContractId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DueDate");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("RentalContractId", "Period")
+                        .IsUnique();
+
+                    b.ToTable("RentInvoices");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.RentalContract", b =>
                 {
                     b.Property<int>("Id")
@@ -1244,6 +1517,64 @@ namespace Infrastructure.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("RentalContracts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.SecurityDeposit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AmountHeld")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("DeductedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RefundAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("RentalContractId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SettledAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("SettledBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RentalContractId")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("SecurityDeposits");
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.SystemRole", b =>
@@ -1400,8 +1731,9 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<double>("MonthlyMeterFee")
-                        .HasColumnType("double");
+                    b.Property<decimal>("MonthlyMeterFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("MonthlyMeterFeeEffectiveFrom")
                         .HasColumnType("datetime(6)");
@@ -1434,11 +1766,13 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Token")
                         .HasColumnType("longtext");
 
-                    b.Property<double?>("UtilityChargeFlatFee")
-                        .HasColumnType("double");
+                    b.Property<decimal?>("UtilityChargeFlatFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<double?>("UtilityChargePercentage")
-                        .HasColumnType("double");
+                    b.Property<decimal?>("UtilityChargePercentage")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("decimal(9,4)");
 
                     b.Property<string>("UtilityChargeTiersJson")
                         .HasColumnType("longtext");
@@ -1509,11 +1843,13 @@ namespace Infrastructure.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<double>("Amount")
-                        .HasColumnType("double");
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<double>("Charges")
-                        .HasColumnType("double");
+                    b.Property<decimal>("Charges")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -1524,8 +1860,9 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("FeesProcessed")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<double>("FeesSettledAmount")
-                        .HasColumnType("double");
+                    b.Property<decimal>("FeesSettledAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsSmsSent")
                         .HasColumnType("tinyint(1)");
@@ -1595,7 +1932,8 @@ namespace Infrastructure.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Balance")
-                        .HasColumnType("decimal(65,30)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -1620,7 +1958,8 @@ namespace Infrastructure.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(65,30)");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -1659,6 +1998,74 @@ namespace Infrastructure.Migrations
                     b.HasIndex("WalletId");
 
                     b.ToTable("WalletTransactions");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Security.MfaChallenge", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.ToTable("MfaChallenges");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Security.UserMfaSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("EnabledAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("LastUsedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Secret")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserMfaSettings");
                 });
 
             modelBuilder.Entity("Domain.Entities.ServiceLogs.ServiceLogs", b =>
@@ -2087,6 +2494,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("Property");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.DepositDeduction", b =>
+                {
+                    b.HasOne("Domain.Entities.PropertyMgt.SecurityDeposit", "SecurityDeposit")
+                        .WithMany()
+                        .HasForeignKey("SecurityDepositId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SecurityDeposit");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.LandLordProperty", b =>
                 {
                     b.HasOne("Domain.Entities.PropertyMgt.User", "Owner")
@@ -2179,6 +2597,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.RentInvoice", b =>
+                {
+                    b.HasOne("Domain.Entities.PropertyMgt.RentalContract", "RentalContract")
+                        .WithMany()
+                        .HasForeignKey("RentalContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RentalContract");
+                });
+
             modelBuilder.Entity("Domain.Entities.PropertyMgt.RentalContract", b =>
                 {
                     b.HasOne("Domain.Entities.PropertyMgt.LandLordProperty", "Property")
@@ -2196,6 +2625,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("Property");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PropertyMgt.SecurityDeposit", b =>
+                {
+                    b.HasOne("Domain.Entities.PropertyMgt.RentalContract", "RentalContract")
+                        .WithMany()
+                        .HasForeignKey("RentalContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RentalContract");
                 });
 
             modelBuilder.Entity("Domain.Entities.PropertyMgt.TenantPayment", b =>

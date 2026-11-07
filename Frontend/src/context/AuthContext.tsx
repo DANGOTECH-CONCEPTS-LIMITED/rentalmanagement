@@ -25,10 +25,14 @@ interface AuthContextType {
   login: (
     email: string,
     password: string
-  ) => Promise<{
-    systemRoleId: number;
-    requiresPasswordChange: boolean;
-  }>;
+  ) => Promise<
+    | { systemRoleId: number; requiresPasswordChange: boolean; requiresMfa?: false }
+    | { requiresMfa: true; challengeId: string }
+  >;
+  verifyMfa: (
+    challengeId: string,
+    code: string
+  ) => Promise<{ systemRoleId: number; requiresPasswordChange: boolean }>;
   logout: () => void;
   loading: boolean;
   error: string | null;
@@ -102,6 +106,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => axios.interceptors.response.eject(interceptor);
   }, [logout]);
 
+  // Shared by the password login and the MFA verification so both persist an identical session.
+  const applySession = useCallback(
+    (data: User & { verified?: boolean; passportPhoto?: string }) => {
+      if (!data.token) {
+        throw new Error("Authentication failed: No token received");
+      }
+
+      const userData = {
+        id: data.id,
+        fullName: data.fullName,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        token: data.token,
+        systemRoleId: data.systemRoleId,
+        verified: data.verified,
+        passportPhoto: data.passportPhoto,
+      };
+
+      setUser(userData as User);
+      localStorage.setItem("user", JSON.stringify(userData));
+      axios.defaults.headers.common["Authorization"] = `Bearer ${userData.token}`;
+
+      return {
+        systemRoleId: userData.systemRoleId,
+        requiresPasswordChange: !userData.verified,
+      };
+    },
+    []
+  );
+
   const login = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -112,32 +146,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         { userName: email, password }
       );
 
-      if (!response.data.token) {
-        throw new Error("Authentication failed: No token received");
+      // Administrators with MFA enabled do not receive a token yet: the password only
+      // earned them a challenge, which they must exchange for a code.
+      if (response.data && (response.data as unknown as { requiresMfa?: boolean }).requiresMfa) {
+        const payload = response.data as unknown as {
+          mfaChallengeId?: string;
+          challengeId?: string;
+        };
+        const challengeId = payload.mfaChallengeId ?? payload.challengeId;
+        if (!challengeId) {
+          throw new Error("This account requires a verification code but no challenge was issued.");
+        }
+        return { requiresMfa: true as const, challengeId };
       }
 
-      const userData = {
-        id: response.data.id,
-        fullName: response.data.fullName,
-        email: response.data.email,
-        phoneNumber: response.data.phoneNumber,
-        token: response.data.token,
-        systemRoleId: response.data.systemRoleId,
-        verified: response.data.verified,
-        passportPhoto: response.data.passportPhoto,
-      };
-
-      setUser(userData);
-
-      localStorage.setItem("user", JSON.stringify(userData));
-      axios.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${userData.token}`;
-
-      return {
-        systemRoleId: userData.systemRoleId,
-        requiresPasswordChange: !userData.verified,
-      };
+      return applySession(response.data);
     } catch (err) {
       setError(
         axios.isAxiosError(err) && err.response?.status >= 400
@@ -148,7 +171,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applySession]);
+
+  const verifyMfa = useCallback(
+    async (challengeId: string, code: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await axios.post<User>(
+          `${import.meta.env.VITE_API_BASE_URL}/VerifyMfa`,
+          { challengeId, code }
+        );
+
+        if (!response.data.token) {
+          throw new Error("Authentication failed: No token received");
+        }
+
+        return applySession(response.data);
+      } catch (err) {
+        setError(
+          axios.isAxiosError(err) && err.response?.data?.message
+            ? err.response.data.message
+            : "That code was not accepted. Please try again."
+        );
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applySession]
+  );
 
   const changePassword = async (
     currentPassword: string,
@@ -242,6 +295,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user?.token,
     user,
     login,
+    verifyMfa,
     logout,
     loading,
     error,

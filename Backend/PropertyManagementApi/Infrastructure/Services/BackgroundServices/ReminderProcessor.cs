@@ -2,8 +2,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.Interfaces.SMS;
+using Application.Interfaces.Notifications;
 using Domain.Entities.PropertyMgt;
+using Domain.Notifications;
 using Infrastructure.Data;
 using Infrastructure.Services.Email;
 using Microsoft.EntityFrameworkCore;
@@ -79,8 +80,7 @@ namespace Infrastructure.Services.BackgroundServices
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var sms = scope.ServiceProvider.GetRequiredService<ISmsProcessor>();
-            var email = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            var notifications = scope.ServiceProvider.GetRequiredService<INotificationDispatcher>();
             var today = DateTime.UtcNow.Date;
             var dueCutoff = today.AddDays(_dueDays);
             var leaseCutoff = today.AddDays(_leaseExpiryDays);
@@ -94,7 +94,9 @@ namespace Infrastructure.Services.BackgroundServices
             foreach (var tenant in dueSoon)
             {
                 var message = $"Hello {tenant.FullName}, your rent for {tenant.Property?.Name ?? "your property"} is due on {tenant.NextPaymentDate:yyyy-MM-dd}. Please make payment on time.";
-                await TrySendSmsAsync(sms, tenant.PhoneNumber, message, "rent due");
+                await notifications.DispatchAsync(new NotificationRequest(
+                    NotificationEvents.RentDue, "Rent due soon", message,
+                    EmailTo: tenant.Email, SmsTo: tenant.PhoneNumber), ct);
             }
 
             // 2) Overdue balances.
@@ -105,8 +107,11 @@ namespace Infrastructure.Services.BackgroundServices
 
             foreach (var tenant in overdue)
             {
-                var message = $"Hello {tenant.FullName}, you have an outstanding balance of {(tenant.Arrears + tenant.BalanceDue):N0} for {tenant.Property?.Name ?? "your property"}. Please clear it to avoid penalties.";
-                await TrySendSmsAsync(sms, tenant.PhoneNumber, message, "overdue balance");
+                var owed = tenant.Arrears + tenant.BalanceDue;
+                var message = $"Hello {tenant.FullName}, you have an outstanding balance of {owed:N0} for {tenant.Property?.Name ?? "your property"}. Please clear it to avoid penalties.";
+                await notifications.DispatchAsync(new NotificationRequest(
+                    NotificationEvents.RentOverdue, "Rent overdue", message,
+                    EmailTo: tenant.Email, SmsTo: tenant.PhoneNumber), ct);
             }
 
             // 3) Leases expiring within the configured window.
@@ -119,42 +124,26 @@ namespace Infrastructure.Services.BackgroundServices
 
             foreach (var contract in expiring)
             {
+                var propertyName = contract.Property?.Name ?? "your property";
                 if (contract.Tenant is { } tenant)
                 {
-                    var message = $"Hello {tenant.FullName}, your lease for {contract.Property?.Name ?? "your property"} ends on {contract.EndDate:yyyy-MM-dd}. Contact your landlord to renew.";
-                    await TrySendSmsAsync(sms, tenant.PhoneNumber, message, "lease expiry");
+                    var message = $"Hello {tenant.FullName}, your lease for {propertyName} ends on {contract.EndDate:yyyy-MM-dd}. Contact your landlord to renew.";
+                    await notifications.DispatchAsync(new NotificationRequest(
+                        NotificationEvents.ContractExpiring, "Lease expiring soon", message,
+                        EmailTo: tenant.Email, SmsTo: tenant.PhoneNumber), ct);
                 }
                 if (contract.Property?.Owner is { } owner && !string.IsNullOrWhiteSpace(owner.Email))
                 {
-                    try
-                    {
-                        await email.SendEmailAsync(owner.Email,
-                            "Lease expiring soon",
-                            $"The lease for {contract.Property.Name} (tenant {contract.Tenant?.FullName}) ends on {contract.EndDate:yyyy-MM-dd}.");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Could not email landlord {LandlordId} about lease expiry.", owner.Id);
-                    }
+                    await notifications.DispatchAsync(new NotificationRequest(
+                        NotificationEvents.ContractExpiring,
+                        "Lease expiring soon",
+                        $"The lease for {propertyName} (tenant {contract.Tenant?.FullName}) ends on {contract.EndDate:yyyy-MM-dd}.",
+                        EmailTo: owner.Email), ct);
                 }
             }
 
             _logger.LogInformation("Reminders processed: {DueSoon} due, {Overdue} overdue, {Expiring} leases expiring.",
                 dueSoon.Count, overdue.Count, expiring.Count);
-        }
-
-        private async Task TrySendSmsAsync(ISmsProcessor sms, string phoneNumber, string message, string kind)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(phoneNumber)) return;
-                var sent = await sms.SendAsync(phoneNumber, message);
-                if (!sent) _logger.LogWarning("SMS ({Kind}) to {Phone} failed.", kind, phoneNumber);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error sending SMS ({Kind}) to {Phone}.", kind, phoneNumber);
-            }
         }
     }
 }

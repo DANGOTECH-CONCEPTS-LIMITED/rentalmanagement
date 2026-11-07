@@ -68,6 +68,12 @@ import WalletTransactions from "./pages/Admin/WalletTransactions";
 import UtilityAccountManagement from "./pages/Admin/UtilityAccountManagement";
 import CollectoWithdrawLogs from "./pages/Admin/CollectoWithdrawLogs";
 import BillPayments from "./pages/Admin/BillPayments";
+import ExceptionQueue from "./pages/Admin/ExceptionQueue";
+import RentInvoices from "./pages/Admin/RentInvoices";
+import ArrearsAnalytics from "./pages/Admin/ArrearsAnalytics";
+import Deposits from "./pages/Admin/Deposits";
+import NotificationSettings from "./pages/Admin/NotificationSettings";
+import Security from "./pages/Security";
 import UpdateTransaction from "./pages/Admin/UpdateTransaction";
 import UssdMenu from "./pages/Admin/UssdMenu";
 import UtilityChargeSettings from "./pages/Admin/UtilityChargeSettings";
@@ -132,8 +138,14 @@ const App = () => (
                   element={<CollectoWithdrawLogs />}
                 />
                 <Route path="bill-payments" element={<BillPayments />} />
+                <Route path="exceptions" element={<ExceptionQueue />} />
+                <Route path="rent-invoices" element={<RentInvoices />} />
+                <Route path="arrears-analytics" element={<ArrearsAnalytics />} />
+                <Route path="deposits" element={<Deposits />} />
+                <Route path="notifications" element={<NotificationSettings />} />
                 <Route path="update-transaction" element={<UpdateTransaction />} />
                 <Route path="http-logs" element={<HttpLogs />} />
+                <Route path="security" element={<Security />} />
                 <Route path="audit-trail" element={<AuditTrail />} />
                 <Route path="add-utility-meter" element={<AddUtilityMeter />} />
                 <Route path="utility-meter-fees" element={<UtilityMeter />} />

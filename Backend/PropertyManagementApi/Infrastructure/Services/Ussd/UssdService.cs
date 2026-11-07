@@ -184,7 +184,7 @@ namespace Infrastructure.Services.Ussd
                             return End("Invalid amount.");
                         }
 
-                        string checkoutError = await TryAsync(() => _pymsvc.MakeUtilityPayment(new() { PhoneNumber = sess.PhoneNumber, MeterNumber = meter, Amount = (double)amount }));
+                        string checkoutError = await TryAsync(() => _pymsvc.MakeUtilityPayment(new() { PhoneNumber = sess.PhoneNumber, MeterNumber = meter, Amount = amount }));
                         var checkoutOk = string.IsNullOrEmpty(checkoutError);
                         await FinishSessionAsync(sess, checkoutOk ? "SUCCESS" : "FAILED");
                         return checkoutOk

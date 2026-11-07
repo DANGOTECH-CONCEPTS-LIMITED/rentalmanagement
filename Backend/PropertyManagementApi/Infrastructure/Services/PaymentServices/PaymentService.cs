@@ -13,12 +13,13 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Domain;
 
 namespace Infrastructure.Services.PaymentServices
 {
     public class PaymentService : IPaymentService
     {
-        private const double DefaultUtilityChargePercentage = 10d;
+        private const decimal DefaultUtilityChargePercentage = 10m;
         private const string PercentageChargeType = "Percentage";
         private const string FlatFeeChargeType = "FlatFee";
         private const string TieredChargeType = "Tiered";
@@ -606,7 +607,7 @@ namespace Infrastructure.Services.PaymentServices
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
 
-            const double MinAmount = 1000;
+            const decimal MinAmount = 1000m;
             if (dto.Amount < MinAmount)
                 throw new ArgumentOutOfRangeException(nameof(dto.Amount), $"Amount cannot be less than {MinAmount}");
 
@@ -620,9 +621,9 @@ namespace Infrastructure.Services.PaymentServices
             var charges = await CalculateUtilityChargeAsync(dto.MeterNumber, dto.Amount);
 
             // check whether charges are less than 600 if its less give it 600
-            if(charges < 600)
+            if(charges < 600m)
             {
-                charges = 600;
+                charges = 600m;
             } 
 
 
@@ -843,12 +844,12 @@ namespace Infrastructure.Services.PaymentServices
             var utilityPayments = new List<UtilityPayment>();
             foreach (var p in payments)
             {
-                var totalAmount = double.Parse(p.Amount);
+                var totalAmount = decimal.Parse(p.Amount, System.Globalization.CultureInfo.InvariantCulture);
                 var charges = await CalculateUtilityChargeAsync(p.BillRefNumber, totalAmount);
 
                 if (p.BillRefNumber == "0292000010952")
                 {
-                    charges = 5000;
+                    charges = 5000m;
                 }
 
                 utilityPayments.Add(new UtilityPayment
@@ -866,35 +867,35 @@ namespace Infrastructure.Services.PaymentServices
             return utilityPayments;
         }
 
-        private async Task<double> CalculateUtilityChargeAsync(string meterNumber, double amount)
+        private async Task<decimal> CalculateUtilityChargeAsync(string meterNumber, decimal amount)
         {
             var config = await GetUtilityChargeConfigAsync(meterNumber);
             if (config == null)
             {
-                return amount * (DefaultUtilityChargePercentage / 100d);
+                return Money.Round(amount * (DefaultUtilityChargePercentage / 100m));
             }
 
             if (string.Equals(config.ChargeType, FlatFeeChargeType, StringComparison.OrdinalIgnoreCase))
             {
-                return Math.Min(amount, Math.Max(0d, config.FlatFee.GetValueOrDefault()));
+                return Math.Min(amount, Money.NonNegative(config.FlatFee.GetValueOrDefault()));
             }
 
             if (string.Equals(config.ChargeType, TieredChargeType, StringComparison.OrdinalIgnoreCase))
             {
                 var tier = config.Tiers
-                    .OrderBy(t => t.MinAmount ?? 0d)
+                    .OrderBy(t => t.MinAmount ?? 0m)
                     .FirstOrDefault(t =>
-                        amount >= (t.MinAmount ?? 0d) &&
+                        amount >= (t.MinAmount ?? 0m) &&
                         (!t.MaxAmount.HasValue || amount <= t.MaxAmount.Value));
 
                 if (tier != null)
                 {
-                    return Math.Min(amount, Math.Max(0d, tier.Charge));
+                    return Math.Min(amount, Money.NonNegative(tier.Charge));
                 }
             }
 
             var percentage = config.ChargePercentage.GetValueOrDefault(DefaultUtilityChargePercentage);
-            return Math.Min(amount, Math.Max(0d, amount * (percentage / 100d)));
+            return Math.Min(amount, Money.NonNegative(amount * (percentage / 100m)));
         }
 
         private async Task<UtilityChargeConfig?> GetUtilityChargeConfigAsync(string meterNumber)
@@ -923,8 +924,8 @@ namespace Infrastructure.Services.PaymentServices
         private sealed class UtilityChargeConfig
         {
             public string? ChargeType { get; set; }
-            public double? ChargePercentage { get; set; }
-            public double? FlatFee { get; set; }
+            public decimal? ChargePercentage { get; set; }
+            public decimal? FlatFee { get; set; }
             public string? TiersJson { get; set; }
 
             public List<UtilityChargeTier> Tiers => string.IsNullOrWhiteSpace(TiersJson)
@@ -934,9 +935,9 @@ namespace Infrastructure.Services.PaymentServices
 
         private sealed class UtilityChargeTier
         {
-            public double? MinAmount { get; set; }
-            public double? MaxAmount { get; set; }
-            public double Charge { get; set; }
+            public decimal? MinAmount { get; set; }
+            public decimal? MaxAmount { get; set; }
+            public decimal Charge { get; set; }
         }
 
         public async Task MakeMPesaUtilityPayment(UtilityPayment payment)

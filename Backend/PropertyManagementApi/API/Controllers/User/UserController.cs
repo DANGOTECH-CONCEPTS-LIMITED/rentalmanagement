@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Domain.Dtos.User;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Domain.Entities.PropertyMgt;
 using Domain.Dtos.Meters;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,9 @@ namespace API.Controllers.UserControllers
         private readonly IMeterFeeService _meterFeeService;
         private readonly IMeterLienService _meterLienService;
         private readonly DangoPaymentClient _dango;
-        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db, IMeterFeeService meterFeeService, IMeterLienService meterLienService, DangoPaymentClient dango)
+        private readonly Application.Interfaces.Security.IJwtTokenFactory _tokens;
+        private readonly Application.Interfaces.Security.IMfaService _mfaService;
+        public UserController(IUserService userService, ILogger<UserController> logger, AppDbContext db, IMeterFeeService meterFeeService, IMeterLienService meterLienService, DangoPaymentClient dango, Application.Interfaces.Security.IMfaService mfaService, Application.Interfaces.Security.IJwtTokenFactory tokens)
         {
             _userService = userService;
             _logger = logger;
@@ -33,6 +36,8 @@ namespace API.Controllers.UserControllers
             _meterFeeService = meterFeeService;
             _meterLienService = meterLienService;
             _dango = dango;
+            _mfaService = mfaService;
+            _tokens = tokens;
         }
 
         private static bool IsUtilityRole(string? role) =>
@@ -133,6 +138,7 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/RegisterUser")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Register([FromForm] List<IFormFile> files, [FromForm] UserDto user)
         {
             try
@@ -186,6 +192,7 @@ namespace API.Controllers.UserControllers
 
         [HttpPost("/ChangePassword")]
         [Authorize]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePassword)
         {
             try
@@ -201,11 +208,26 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/AuthenticateUser")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Authenticate([FromBody] AuthenticateDto authenticateDto)
         {
             try
             {
                 var user = await _userService.AuthenticateUser(authenticateDto);
+
+                // Administrators and owners can be required to present a second factor; tenants keep
+                // the password-only flow because their id is remapped to the tenant record above.
+                if (!string.Equals(user.SystemRole?.Name, "Tenant", StringComparison.OrdinalIgnoreCase))
+                {
+                    var mfa = await _mfaService.GetStatusAsync(user.Id);
+                    if (mfa.IsEnabled)
+                    {
+                        var challengeId = await _mfaService.CreateChallengeAsync(
+                            user.Id, HttpContext.Connection.RemoteIpAddress?.ToString());
+                        return Ok(new { requiresMfa = true, challengeId });
+                    }
+                }
+
                 return Ok(user);
             }
             catch (Exception ex)
@@ -285,6 +307,7 @@ namespace API.Controllers.UserControllers
         }
 
         [HttpPost("/ForgotPassword")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
             try
@@ -714,8 +737,8 @@ namespace API.Controllers.UserControllers
                     ActiveMeters = metersStats.Count,
                     InactiveMeters = Math.Max(0, totalMeters - metersStats.Count),
                     TotalUtilityPayments = totalUtilityPayments,
-                    TotalUtilityAmount = (double)totalUtilityAmount,
-                    TotalUtilityCharges = (double)totalUtilityCharges,
+                    TotalUtilityAmount = totalUtilityAmount,
+                    TotalUtilityCharges = totalUtilityCharges,
                     SuccessfulPayments = successfulPayments,
                     PendingPayments = pendingPayments,
                     FailedPayments = failedPayments,

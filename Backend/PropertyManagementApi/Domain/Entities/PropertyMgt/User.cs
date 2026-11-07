@@ -27,12 +27,17 @@ namespace Domain.Entities.PropertyMgt
         public bool Verified { get; set; } = false;
         public string? Token { get; set; } = string.Empty;
         public string? UtilityChargeType { get; set; } = "Percentage";
-        public double? UtilityChargePercentage { get; set; }
-        public double? UtilityChargeFlatFee { get; set; }
+        public decimal? UtilityChargePercentage { get; set; }
+        public decimal? UtilityChargeFlatFee { get; set; }
         public string? UtilityChargeTiersJson { get; set; }
         // Fee charged monthly on every meter assigned to this user.
-        public double MonthlyMeterFee { get; set; }
+        public decimal MonthlyMeterFee { get; set; }
         public DateTime? MonthlyMeterFeeEffectiveFrom { get; set; }
+
+        // Login flow flags: the password step succeeded but a TOTP code is still owed.
+        // The secret itself lives in UserMfaSetting, never on the user row.
+        [NotMapped] public bool RequiresMfa { get; set; }
+        [NotMapped] public string? MfaChallengeId { get; set; }
         [ForeignKey("SystemRole")]
         public int SystemRoleId { get; set; }
 
