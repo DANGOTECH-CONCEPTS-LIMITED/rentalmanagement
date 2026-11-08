@@ -143,7 +143,7 @@ const ManageTenants = () => {
       try {
         const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
         const filteredData = data.filter(
-          (tenant: any) => tenant?.property?.ownerId === userData.id
+          (tenant: { property?: { ownerId?: number } }) => tenant?.property?.ownerId === userData.id
         );
         setTenants(filteredData);
       } catch (error) {

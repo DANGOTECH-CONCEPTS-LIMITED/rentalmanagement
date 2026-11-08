@@ -252,6 +252,15 @@ const RegisterProperty = () => {
   const user = localStorage.getItem("user") || null;
 
   const token = JSON.parse(user).token;
+  const navigate = useNavigate();
+
+  // Hooks run unconditionally; the guard below only stops rendering without a session.
+  useEffect(() => {
+    if (!token) return;
+    void fetchLandlords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   if (!token) {
     toast({
       title: "Error",
@@ -261,14 +270,9 @@ const RegisterProperty = () => {
     return;
   }
 
-  const navigate = useNavigate();
   const handleNavigate = () => {
     navigate("admin-dashboard/register-property");
   };
-
-  useEffect(() => {
-    fetchLandlords();
-  }, []);
 
   const fetchLandlords = async () => {
     setIsLoadingLandlords(true);
@@ -385,13 +389,9 @@ const RegisterProperty = () => {
       formDataToSend.append("Description", formData.Description);
       formDataToSend.append("Occupied", formData.Occupied);
 
-      propertyPhotos.forEach((photo, index) => {
+      propertyPhotos.forEach((photo) => {
         formDataToSend.append("files", photo.file);
       });
-
-      for (let [key, value] of formDataToSend.entries()) {
-        
-      }
 
       const apiUrl = import.meta.env.VITE_API_BASE_URL;
       if (!apiUrl) {

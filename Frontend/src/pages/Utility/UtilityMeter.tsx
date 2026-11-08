@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getErrorMessage } from '@/lib/errors';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
 import { DataTablePagination } from '@/components/common/DataTablePagination';
@@ -141,7 +142,7 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
       })
         .then((res) => res.json())
         .then((data) => {
-          setLandlords(data.filter((l: any) => l.verified));
+          setLandlords(data.filter((l: { verified?: boolean }) => l.verified));
         })
         .catch((err) => {
           toast({
@@ -180,12 +181,12 @@ const UtilityMeter = ({ onSuccess, authToken }: AddUtilityMeterProps) => {
 
       const metersData = await response.json();
       setUtilityMeters(metersData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching utility meters:", err);
       toast({
         variant: "destructive",
         title: "Error",
-        description: err.message || "Failed to load utility meters",
+        description: getErrorMessage(err, "Failed to load utility meters"),
       });
     } finally {
       setIsLoadingMeters(false);

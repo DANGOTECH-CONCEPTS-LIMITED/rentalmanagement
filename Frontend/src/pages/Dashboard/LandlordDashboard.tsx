@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { getErrorMessage } from "@/lib/errors";
 import {
   Loader2,
   Home,
@@ -157,12 +158,12 @@ const LandlordDashboard = () => {
         throw new Error(`Failed to fetch statement: ${statementRes.status}`);
       const statementData = await statementRes.json();
       setTransactions(statementData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       toast({
         variant: "destructive",
         title: "Error",
-        description: err.message || "Failed to load wallet data",
+        description: getErrorMessage(err, "Failed to load wallet data"),
       });
     } finally {
       setIsLoading(false);
@@ -178,7 +179,7 @@ const LandlordDashboard = () => {
     try {
       const { data } = await axios.get(`${apiUrl}/GetAllTenants`);
       const filteredData = data.filter(
-        (tenant: any) => tenant?.property?.ownerId === userData.id
+        (tenant: { property?: { ownerId?: number } }) => tenant?.property?.ownerId === userData.id
       );
       setTenants(filteredData);
     } catch (error) {
@@ -325,12 +326,12 @@ const LandlordDashboard = () => {
 
       setWithdrawAmount("");
       setShowConfirmation(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         variant: "destructive",
         title: "Withdrawal Failed",
         description:
-          err.message || "There was an error processing your withdrawal",
+          getErrorMessage(err, "There was an error processing your withdrawal"),
       });
     } finally {
       setIsWithdrawing(false);

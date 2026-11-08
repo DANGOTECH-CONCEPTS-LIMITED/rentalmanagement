@@ -91,10 +91,9 @@ const AdminDashboard = () => {
     if (user) {
       const userData = JSON.parse(user);
       token = userData.token;
-    } else {
-      
     }
   } catch (error) {
+    console.warn("Could not read the stored session", error);
   }
 
   const fetchBalance = async (type: BalanceType) => {

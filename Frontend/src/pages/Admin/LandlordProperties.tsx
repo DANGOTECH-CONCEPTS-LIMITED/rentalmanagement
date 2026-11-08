@@ -113,6 +113,18 @@ const LandlordProperties = () => {
   const user = localStorage.getItem("user") || null;
 
   const token = JSON.parse(user).token;
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const navigate = useNavigate();
+
+  // Hooks must run unconditionally: the token check below happens after them, and the
+  // effect skips loading when there is no session.
+  useEffect(() => {
+    if (!token) return;
+    void fetchProperties();
+    void fetchLandlords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   if (!token) {
     toast({
       title: "Error",
@@ -122,18 +134,9 @@ const LandlordProperties = () => {
     return;
   }
 
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-  const navigate = useNavigate();
-
   const handleNavigate = () => {
     navigate("/admin-dashboard/register-property");
   };
-
-  useEffect(() => {
-    fetchProperties();
-    fetchLandlords();
-  }, []);
 
   const fetchProperties = async () => {
     try {

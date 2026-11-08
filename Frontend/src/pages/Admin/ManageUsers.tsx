@@ -581,7 +581,7 @@ const ManageUsers = () => {
     });
   };
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -596,8 +596,10 @@ const ManageUsers = () => {
     }
   };
 
-  const handleEditChange = (e: any) => {
-    const { name, value, type, checked } = e.target;
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const target = e.target as HTMLInputElement;
+    const { name, value, type } = target;
+    const checked = target.checked;
     const newValue = type === "checkbox" ? checked : value;
 
     setEditFormData({
@@ -1799,7 +1801,7 @@ const UserTable = ({
           title: "Success",
           description: "User deleted successfully!",
         });
-        onDeleteSuccess && onDeleteSuccess();
+        onDeleteSuccess?.();
         setIsDeleteModalOpen(false);
       }
     } catch (error) {

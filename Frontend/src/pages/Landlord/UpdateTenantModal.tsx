@@ -137,14 +137,15 @@ const UpdateTenantModal = ({
     formData.append("tenantid", tenant.id.toString());
     formData.append("Active", active.toString());
     formData.append("DateMovedIn", dateMovedIn?.toISOString() || "");
-    formData.append("PropertyId", (e.currentTarget as any).propertyId.value);
-    formData.append(
-      "NationalIdNumber",
-      (e.currentTarget as any).nationalIdNumber.value
-    );
-    formData.append("PhoneNumber", (e.currentTarget as any).phoneNumber.value);
-    formData.append("FullName", (e.currentTarget as any).fullName.value);
-    formData.append("Email", (e.currentTarget as any).email.value);
+
+    // Read the submitted fields through FormData instead of casting the event target.
+    const submitted = new FormData(e.currentTarget as HTMLFormElement);
+    const field = (name: string) => String(submitted.get(name) ?? "");
+    formData.append("PropertyId", field("propertyId"));
+    formData.append("NationalIdNumber", field("nationalIdNumber"));
+    formData.append("PhoneNumber", field("phoneNumber"));
+    formData.append("FullName", field("fullName"));
+    formData.append("Email", field("email"));
 
     if (files.passportPhoto) formData.append("files", files.passportPhoto);
     if (files.idFront) formData.append("files", files.idFront);

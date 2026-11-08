@@ -22,7 +22,18 @@ export interface Payment {
   vendor: string;
   paymentType: string;
   paymentMethod: string;
-  propertyTenant: any;
+  propertyTenant?: {
+    id?: number;
+    fullName?: string;
+    phoneNumber?: string;
+    property?: {
+      name?: string;
+      propertyName?: string;
+      type?: string;
+      currency?: string;
+      owner?: { fullName?: string } | null;
+    } | null;
+  } | null;
   paymentDate: string;
   transactionId: string;
   id: string;

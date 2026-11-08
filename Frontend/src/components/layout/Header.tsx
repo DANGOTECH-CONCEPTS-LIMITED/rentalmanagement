@@ -59,7 +59,8 @@ const Header = () => {
       );
       setRoles(data);
     } catch (error) {
-      
+      // Roles only drive the admin menu; a failure here must not break the header.
+      console.warn("Could not load roles", error);
     }
   };
   const toggleDarkMode = () => {

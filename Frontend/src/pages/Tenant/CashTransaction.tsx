@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getErrorMessage } from '@/lib/errors';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,7 +48,7 @@ type PaymentFormValues = z.infer<typeof paymentFormSchema>;
 
 const CashTransactions = ({ propertyName }: CashTransactionProps) => {
   const { toast } = useToast();
-  const [tenant, setTenant] = useState<any>(null);
+  const [tenant, setTenant] = useState<{ id?: number; fullName?: string; propertyId?: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -107,9 +108,9 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
         const data = await response.json();
         setTenant(data);
         form.setValue('propertyTenantId', data.id);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch tenant data:', err);
-        setError(err.message);
+        setError(getErrorMessage(err, 'Failed to fetch tenant data'));
       }
     };
 
@@ -145,11 +146,11 @@ const CashTransactions = ({ propertyName }: CashTransactionProps) => {
       if (tenant) {
         form.setValue('propertyTenantId', tenant.id);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Payment Failed",
-        description: error.message || "There was an error processing your payment.",
+        description: getErrorMessage(error, "There was an error processing your payment."),
         action: <ToastAction altText="Try again">Try again</ToastAction>,
       });
     } finally {

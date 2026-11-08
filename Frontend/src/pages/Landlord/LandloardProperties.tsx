@@ -270,6 +270,17 @@ const Properties = () => {
 
   const userData = JSON.parse(user);
   const token = userData.token;
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const navigate = useNavigate();
+
+  // Hooks run unconditionally; the guard below only stops rendering without a session.
+  useEffect(() => {
+    if (!token) return;
+    void fetchProperties();
+    void fetchLandlords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   if (!token) {
     toast({
       title: "Error",
@@ -278,10 +289,6 @@ const Properties = () => {
     });
     return;
   }
-
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-  const navigate = useNavigate();
 
   const handleNavigate = () => {
     navigate("/admin-dashboard/register-property");
@@ -295,11 +302,6 @@ const Properties = () => {
     setSelectedDistrict("");
     setSearchTerm1("");
   };
-
-  useEffect(() => {
-    fetchProperties();
-    fetchLandlords();
-  }, []);
 
   const fetchProperties = async () => {
     try {
@@ -506,10 +508,6 @@ const Properties = () => {
       propertyPhotos.forEach((photo) => {
         formDataToSend.append("files", photo.file);
       });
-
-      for (let [key, value] of formDataToSend.entries()) {
-        
-      }
 
       const apiUrl = import.meta.env.VITE_API_BASE_URL;
       if (!apiUrl) {

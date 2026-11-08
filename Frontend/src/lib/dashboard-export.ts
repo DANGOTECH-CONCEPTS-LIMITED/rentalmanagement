@@ -44,7 +44,7 @@ const sanitizeFileNameSegment = (value: string) =>
     .replace(/^-+|-+$/g, "") || "dashboard-export";
 
 const sanitizeSheetName = (value: string) => {
-  const sanitized = value.replace(/[\\/?*\[\]:]/g, " ").trim();
+  const sanitized = value.replace(/[\\/?*[\]:]/g, " ").trim();
   return (sanitized || "Sheet").slice(0, 31);
 };
 

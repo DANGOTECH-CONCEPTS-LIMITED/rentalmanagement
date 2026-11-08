@@ -22,11 +22,27 @@ import {
   exportDashboardWorkbook,
 } from "@/lib/dashboard-export";
 
+interface TenantDashboardProperty {
+  propertyName?: string;
+  name?: string;
+  price?: number;
+  currency?: string;
+}
+
+interface TenantDashboardRecord {
+  id?: number;
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  nextPaymentDate?: string | null;
+  property?: TenantDashboardProperty | null;
+}
+
 const TenantDashboard = () => {
   const navigate = useNavigate();
   const formatCurrency = useCurrencyFormatter();
   const dashboardRef = useRef<HTMLDivElement>(null);
-  const [tenant, setTenant] = useState<any>([]);
+  const [tenant, setTenant] = useState<TenantDashboardRecord | null>(null);
   const user = localStorage.getItem("user");
 
   if (!user) throw new Error("No user found in localStorage");
@@ -167,7 +183,7 @@ const TenantDashboard = () => {
           title="Monthly Rent"
           value={`${
             tenant?.property?.currency
-          } ${tenant?.property?.price.toLocaleString()}`}
+          } ${tenant?.property?.price?.toLocaleString() ?? "0"}`}
           icon={<DollarSign />}
         />
         <StatCard title="Documents" value="5" icon={<FileText />} />

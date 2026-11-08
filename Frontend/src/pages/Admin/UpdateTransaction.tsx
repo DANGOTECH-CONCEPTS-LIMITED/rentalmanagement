@@ -26,10 +26,23 @@ const STATUS_OPTIONS = [
   "REVERSED",
 ];
 
+interface TransactionRow {
+  id?: number | string;
+  transactionID?: string;
+  transactionId?: string;
+  status?: string;
+  amount?: number;
+  meterNumber?: string | null;
+  phoneNumber?: string | null;
+  createdAt?: string;
+  reasonAtTelecom?: string | null;
+  vendorTranId?: string | null;
+}
+
 const UpdateTransaction = () => {
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
   const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -37,7 +50,7 @@ const UpdateTransaction = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const [selected, setSelected] = useState<any | null>(null);
+  const [selected, setSelected] = useState<TransactionRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState(STATUS_OPTIONS[0]);
   const [saving, setSaving] = useState(false);
@@ -59,14 +72,14 @@ const UpdateTransaction = () => {
       if (!res.ok) throw new Error("Failed to fetch transactions");
       const data = await res.json();
       setTransactions(data || []);
-    } catch (err: any) {
-      setError(err.message || "Error fetching transactions");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error fetching transactions");
     } finally {
       setLoading(false);
     }
   };
 
-  const openEdit = (tx: any) => {
+  const openEdit = (tx: TransactionRow) => {
     setSelected(tx);
     setNewStatus(tx.status || STATUS_OPTIONS[0]);
     setDialogOpen(true);
@@ -114,8 +127,8 @@ const UpdateTransaction = () => {
       setDialogOpen(false);
       setSelected(null);
       await fetchTransactions();
-    } catch (err: any) {
-      const msg = err?.message || "Error updating status";
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error updating status";
       setDialogError(msg);
       setError(msg);
     } finally {

@@ -42,7 +42,7 @@ import {
 
 export interface Property {
   rentAmount: number;
-  images: any;
+  images: string | string[] | null;
   area: string;
   bathrooms: number;
   bedrooms: number;
@@ -117,7 +117,7 @@ const RegisterTenants = () => {
         const data = await response.json();
 
         const filteredData = data.filter(
-          (property: any) => property.ownerId === userData?.id
+          (property: { ownerId?: number }) => property.ownerId === userData?.id
         );
         setProperties(filteredData);
       } catch (error) {

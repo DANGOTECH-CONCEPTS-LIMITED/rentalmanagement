@@ -76,7 +76,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Existing lint debt must not block delivery yet, but new warnings stay visible.
-      - name: Lint (non-blocking)
-        continue-on-error: true
-        run: npm run lint
+      # Lint errors are zero as of now; warnings remain visible without blocking delivery.
+      - name: Lint
+        run: npx eslint . --max-warnings=200
