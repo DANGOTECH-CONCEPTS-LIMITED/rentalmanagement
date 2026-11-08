@@ -305,6 +305,11 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                 finalStatus = "PENDING_BANK_PAYOUT";
             }
 
+            // Every payout sends the landlord's mobile number to the provider, and a bank payout also
+            // needs a SWIFT/BIC. Checking here stops an un-submittable debit from leaving the wallet:
+            // the worker can only reject it later, where the failure used to be invisible.
+            EnsurePayoutProfileIsSubmittable(users!, finalStatus);
+
             // Allocate before changing the balance: allocation saves its own durable sequence.
             var transactionId = finalStatus is "PENDING" or "PENDING_BANK_PAYOUT"
                 ? await DangoReferenceNumberAllocator.AllocateAsync(_context, "W", DateTime.UtcNow)
@@ -348,6 +353,45 @@ namespace Infrastructure.Services.PaymentServices.WalletSvc
                     .SetProperty(x => x.Description, walletTransaction.Description)
                     .SetProperty(x => x.VendorTranId, walletTransaction.VendorTranId));
             await _context.Entry(existingTransaction).ReloadAsync();
+        }
+
+        /// <summary>
+        /// Persists why a payout could not be submitted. The status is deliberately untouched: the
+        /// worker keeps retrying until the profile or provider configuration is corrected.
+        /// </summary>
+        public async Task RecordPayoutBlockedAsync(int transactionId, string reason)
+        {
+            var text = string.IsNullOrWhiteSpace(reason)
+                ? null
+                : reason.Length > 256 ? reason[..256] : reason;
+            await _context.WalletTransactions
+                .Where(x => x.Id == transactionId && x.Status != "REVERSED")
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.ReasonAtTelecom, text));
+        }
+
+        private static void EnsurePayoutProfileIsSubmittable(User landlord, string finalStatus)
+        {
+            if (finalStatus is not ("PENDING" or "PENDING_BANK_PAYOUT" or "PENDING_WALLET_PAYOUT"))
+                return;
+
+            // Only a bank payout needs a SWIFT/BIC; mobile and wallet-transfer payouts do not.
+            var isWalletTransfer = string.Equals(landlord.BankName, "Wallet", StringComparison.OrdinalIgnoreCase);
+            if (finalStatus == "PENDING_BANK_PAYOUT" && !isWalletTransfer)
+            {
+                // Dango/Collecto normalise the payout phone; an invalid value fails before any HTTP call.
+                DangoPaymentClient.NormalizePhone(landlord.PhoneNumber);
+                if (string.IsNullOrWhiteSpace(landlord.SwiftCode))
+                {
+                    throw new Exception(
+                        "This landlord's bank account has no SWIFT/BIC code, so the bank payout cannot be submitted. " +
+                        "Add the SWIFT code to the landlord's profile, then withdraw again.");
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(landlord.PhoneNumber))
+            {
+                // A malformed phone would fail the same way later; catch it while nothing is debited.
+                DangoPaymentClient.NormalizePhone(landlord.PhoneNumber);
+            }
         }
 
         public Task ReverseWalletTransaction(WalletTransaction walletTransaction) => WalletPayoutReversal.ReverseAsync(_context, walletTransaction, matchById: true);

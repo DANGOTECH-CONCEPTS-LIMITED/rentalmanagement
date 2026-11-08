@@ -18,6 +18,7 @@ public sealed class ExceptionQueueService(AppDbContext db) : IExceptionQueueServ
     private static readonly TimeSpan ConfirmationGrace = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan SubmissionGrace = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan CreditingGrace = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan PayoutGrace = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan UnbilledWindow = TimeSpan.FromDays(7);
 
     public async Task<ExceptionQueueResult> GetAsync(string? category, int page, int pageSize, CancellationToken ct = default)
@@ -77,6 +78,7 @@ public sealed class ExceptionQueueService(AppDbContext db) : IExceptionQueueServ
         ExceptionCategories.BillPaymentStuckSubmission => StuckSubmissions(nowUtc).CountAsync(ct),
         ExceptionCategories.CollectionNotCredited => UncreditedCollections(nowLocal).CountAsync(ct),
         ExceptionCategories.CollectionUnbilled => UnbilledCollections(nowLocal).CountAsync(ct),
+        ExceptionCategories.PayoutStuck => StuckPayouts(nowLocal).CountAsync(ct),
         _ => Task.FromResult(0)
     };
 
@@ -119,6 +121,15 @@ public sealed class ExceptionQueueService(AppDbContext db) : IExceptionQueueServ
                 var rows = await UnbilledCollections(nowLocal).OrderBy(x => x.CreatedAt).Take(MaxRowsPerCategory).ToListAsync(ct);
                 return rows.Select(x => CollectionItem(category, x, nowUtc,
                     "Credited collection with no bill payment. Use Trigger bill if the NWSC bill still needs settling.")).ToList();
+            }
+            case ExceptionCategories.PayoutStuck:
+            {
+                var rows = await StuckPayouts(nowLocal).OrderBy(x => x.CreatedAt).Take(MaxRowsPerCategory).ToListAsync(ct);
+                return rows.Select(x => new ExceptionItem(
+                    category, x.Id, x.TransactionId ?? $"TXN-{x.Id}", null, null,
+                    Math.Abs(x.Amount), x.Status ?? "-", x.ReasonAtTelecom,
+                    LocalToUtc(x.CreatedAt), Age(LocalToUtc(x.CreatedAt), nowUtc),
+                    "The payout was debited but never submitted. Fix the landlord's phone/SWIFT/bank profile, then let the worker retry; it auto-reverses after Payout:MaxRetryHours.")).ToList();
             }
             default:
                 return new List<ExceptionItem>();
@@ -180,6 +191,25 @@ public sealed class ExceptionQueueService(AppDbContext db) : IExceptionQueueServ
                                                   m.NWSCAccount != null && m.NWSCAccount != "" &&
                                                   m.NWSCAccount.ToLower() != "n/a") &&
                         !db.Set<BillPaymentInstruction>().Any(i => i.UtilityPaymentId == x.Id));
+    }
+
+    /// <summary>
+    /// Wallet debits that are still a pending payout well past the submission window. These are the
+    /// rows where the provider was never called (an incomplete landlord profile, a provider setting),
+    /// which is why they showed up in neither the HTTP log nor the provider dashboard.
+    /// </summary>
+    private IQueryable<WalletTransaction> StuckPayouts(DateTime nowLocal)
+    {
+        var cutoff = nowLocal - PayoutGrace;
+        var since = nowLocal - Lookback;
+        var pendingStatuses = new[]
+        {
+            "PENDING_BANK_PAYOUT", "PENDING_WALLET_PAYOUT",
+            "PENDING AT TELCOM", "PENDING AT TELECOM", "PENDING AT THE BANK"
+        };
+        return db.WalletTransactions.AsNoTracking()
+            .Where(x => x.Amount < 0 && pendingStatuses.Contains(x.Status) &&
+                        x.CreatedAt >= since && x.CreatedAt < cutoff);
     }
 
     private static ExceptionItem BillItem(string category, BillPaymentInstruction x, DateTime nowUtc, string hint)

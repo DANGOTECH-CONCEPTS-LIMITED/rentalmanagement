@@ -15,6 +15,8 @@ public static class ExceptionCategories
     public const string CollectionNotCredited = "collection_not_credited";
     /// <summary>Credited collection that should have produced a bill payment but has none.</summary>
     public const string CollectionUnbilled = "collection_unbilled";
+    /// <summary>A wallet payout debited but not submitted — usually an incomplete landlord profile.</summary>
+    public const string PayoutStuck = "payout_stuck";
 
     public static readonly string[] All =
     [
@@ -23,7 +25,8 @@ public static class ExceptionCategories
         BillPaymentUndebited,
         BillPaymentStuckSubmission,
         CollectionNotCredited,
-        CollectionUnbilled
+        CollectionUnbilled,
+        PayoutStuck
     ];
 }
 

@@ -241,12 +241,21 @@ namespace Infrastructure.Services.BackgroundServices
                     }
 
                     var rawResponse = await collecto.InitiateBankPayoutAsync(request);
-                    if (!string.IsNullOrWhiteSpace(rawResponse))
+                    if (string.IsNullOrWhiteSpace(rawResponse))
+                    {
+                        // Nothing was submitted (or the provider gave no body): without a reason on the row
+                        // this looks identical to a payout that is still in flight.
+                        await wallet.RecordPayoutBlockedAsync(walletTransaction.Id,
+                            "The payout could not be submitted; no provider response was returned.");
+                        return;
+                    }
                     {
                         var payoutResponse = JsonSerializer.Deserialize<PayoutResponse>(rawResponse);
                         if (payoutResponse?.data == null)
                         {
                             _logger.LogError("Invalid payout response for transaction {TransactionId}", walletTransaction.TransactionId);
+                            await wallet.RecordPayoutBlockedAsync(walletTransaction.Id,
+                                "The provider returned an unusable response; reconcile the original reference.");
                             return;
                         }
                         if (payoutResponse.data.payout && string.Equals(payoutResponse.data.status, "SUCCESSFUL", StringComparison.OrdinalIgnoreCase))
@@ -274,7 +283,7 @@ namespace Infrastructure.Services.BackgroundServices
                         }
                     }
                 }
-                else 
+                    else
                 {
                     //reverse the transaction and update status to failed with reason amount too low for bank payout
                     walletTransaction.Status = FailedStatus;
@@ -285,6 +294,8 @@ namespace Infrastructure.Services.BackgroundServices
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error processing payment {ex.Message}");
+                // The profile or provider configuration rejected the payout before any request was sent.
+                await wallet.RecordPayoutBlockedAsync(walletTransaction.Id, ex.Message);
             }
         }
 

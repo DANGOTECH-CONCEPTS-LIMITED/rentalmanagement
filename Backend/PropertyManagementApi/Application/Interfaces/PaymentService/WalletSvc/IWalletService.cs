@@ -26,6 +26,8 @@ namespace Application.Interfaces.PaymentService.WalletSvc
         Task<IEnumerable<WalletTransaction>> GetTransactionsByStatus(string status);
 
         Task UpdateWalletTransaction(WalletTransaction walletTransaction);
+        /// <summary>Records why a payout could not be submitted, leaving the status unchanged.</summary>
+        Task RecordPayoutBlockedAsync(int transactionId, string reason);
 
         Task ReverseWalletTransaction(WalletTransaction walletTransaction);
 

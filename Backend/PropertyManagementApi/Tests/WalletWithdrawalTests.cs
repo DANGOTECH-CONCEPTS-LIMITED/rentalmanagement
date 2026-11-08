@@ -157,6 +157,8 @@ public class WalletWithdrawalTests : IAsyncLifetime
         var owner = (await _db.Users.FindAsync(101))!;
         owner.BankName = bank;
         owner.BankAccountNumber = account;
+        // A bank payout cannot be submitted without a SWIFT/BIC, so the routing fixtures supply one.
+        owner.SwiftCode = "SBICUGKX";
         await _db.SaveChangesAsync();
         await _service.AdminWithdrawUtilityAsync(Request(), "admin@test");
         var transaction = Assert.Single(await _service.GetTransactionsByStatus(expectedStatus));
@@ -176,6 +178,7 @@ public class WalletWithdrawalTests : IAsyncLifetime
         {
             owner.BankName = "Test Bank";
             owner.BankAccountNumber = "123456";
+            owner.SwiftCode = "SBICUGKX";
         }
         _db.WalletTransactions.Add(new WalletTransaction
         {
